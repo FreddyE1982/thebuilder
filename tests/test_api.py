@@ -371,3 +371,28 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIn("Pull-up", resp.json())
 
+    def test_exercise_alias(self) -> None:
+        resp = self.client.post(
+            "/exercise_names/alias",
+            params={"new_name": "My Pulls", "existing": "Pull-up"},
+        )
+        self.assertEqual(resp.status_code, 200)
+
+        resp = self.client.post(
+            "/exercise_names/link",
+            params={"name1": "My Pulls", "name2": "Chin-up"},
+        )
+        self.assertEqual(resp.status_code, 200)
+
+        resp = self.client.get("/exercise_catalog/My Pulls")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn("Latissimus Dorsi", data["primary_muscle"])
+
+        resp = self.client.get(
+            "/exercise_catalog",
+            params={"muscle_groups": "Back"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("My Pulls", resp.json())
+
