@@ -1,4 +1,5 @@
 import datetime
+from typing import Optional
 import streamlit as st
 from db import (
     WorkoutRepository,
@@ -7,6 +8,7 @@ from db import (
     PlannedWorkoutRepository,
     PlannedExerciseRepository,
     PlannedSetRepository,
+    EquipmentRepository,
 )
 from planner_service import PlannerService
 
@@ -21,6 +23,7 @@ class GymApp:
         self.planned_workouts = PlannedWorkoutRepository()
         self.planned_exercises = PlannedExerciseRepository()
         self.planned_sets = PlannedSetRepository()
+        self.equipment = EquipmentRepository()
         self.planner = PlannerService(
             self.workouts,
             self.exercises,
@@ -88,20 +91,27 @@ class GymApp:
         st.header("Exercises")
         workout_id = st.session_state.selected_workout
         new_name = st.text_input("New Exercise Name", key="new_exercise")
+        eq = self._equipment_selector("log_new")
         if st.button("Add Exercise") and new_name:
-            self.exercises.add(workout_id, new_name)
+            self.exercises.add(workout_id, new_name, eq)
             st.session_state.exercise_inputs.pop("new_exercise", None)
         exercises = self.exercises.fetch_for_workout(workout_id)
-        for ex_id, name in exercises:
-            self._exercise_card(ex_id, name)
+        for ex_id, name, eq_name in exercises:
+            self._exercise_card(ex_id, name, eq_name)
 
-    def _exercise_card(self, exercise_id: int, name: str) -> None:
+    def _exercise_card(self, exercise_id: int, name: str, equipment: Optional[str]) -> None:
         sets = self.sets.fetch_for_exercise(exercise_id)
-        expander = st.expander(name)
+        header = name if not equipment else f"{name} ({equipment})"
+        expander = st.expander(header)
         with expander:
             if st.button("Remove Exercise", key=f"remove_ex_{exercise_id}"):
                 self.exercises.remove(exercise_id)
                 return
+            if equipment:
+                muscles = self.equipment.fetch_muscles(equipment)
+                st.markdown("**Muscles:**")
+                for m in muscles:
+                    st.markdown(f"- {m}")
             for set_id, reps, weight, rpe in sets:
                 cols = st.columns(5)
                 with cols[0]:
@@ -159,6 +169,19 @@ class GymApp:
             st.session_state.pop(f"new_weight_{exercise_id}", None)
             st.session_state.pop(f"new_rpe_{exercise_id}", None)
 
+    def _equipment_selector(self, prefix: str) -> Optional[str]:
+        types = [""] + self.equipment.fetch_types()
+        eq_type = st.selectbox("Equipment Type", types, key=f"{prefix}_type")
+        filter_text = st.text_input("Filter Equipment", key=f"{prefix}_filter")
+        names = self.equipment.fetch_names(eq_type if eq_type else None, filter_text or None)
+        eq_name = st.selectbox("Equipment Name", [""] + names, key=f"{prefix}_name")
+        if eq_name:
+            muscles = self.equipment.fetch_muscles(eq_name)
+            st.markdown("Muscles Trained:")
+            for m in muscles:
+                st.markdown(f"- {m}")
+        return eq_name or None
+
     def _planned_workout_section(self) -> None:
         st.header("Planned Workouts")
         plan_date = st.date_input("Plan Date", datetime.date.today(), key="plan_date")
@@ -180,20 +203,27 @@ class GymApp:
         st.header("Planned Exercises")
         workout_id = st.session_state.selected_planned_workout
         new_name = st.text_input("New Planned Exercise", key="new_plan_ex")
+        plan_eq = self._equipment_selector("plan_new")
         if st.button("Add Planned Exercise") and new_name:
-            self.planned_exercises.add(workout_id, new_name)
+            self.planned_exercises.add(workout_id, new_name, plan_eq)
             st.session_state.pop("new_plan_ex", None)
         exercises = self.planned_exercises.fetch_for_workout(workout_id)
-        for ex_id, name in exercises:
-            self._planned_exercise_card(ex_id, name)
+        for ex_id, name, eq_name in exercises:
+            self._planned_exercise_card(ex_id, name, eq_name)
 
-    def _planned_exercise_card(self, exercise_id: int, name: str) -> None:
+    def _planned_exercise_card(self, exercise_id: int, name: str, equipment: Optional[str]) -> None:
         sets = self.planned_sets.fetch_for_exercise(exercise_id)
-        expander = st.expander(name)
+        header = name if not equipment else f"{name} ({equipment})"
+        expander = st.expander(header)
         with expander:
             if st.button("Remove Planned Exercise", key=f"rem_plan_ex_{exercise_id}"):
                 self.planned_exercises.remove(exercise_id)
                 return
+            if equipment:
+                muscles = self.equipment.fetch_muscles(equipment)
+                st.markdown("**Muscles:**")
+                for m in muscles:
+                    st.markdown(f"- {m}")
             for set_id, reps, weight, rpe in sets:
                 cols = st.columns(5)
                 with cols[0]:

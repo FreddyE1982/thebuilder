@@ -7,6 +7,7 @@ from db import (
     PlannedWorkoutRepository,
     PlannedExerciseRepository,
     PlannedSetRepository,
+    EquipmentRepository,
 )
 from planner_service import PlannerService
 
@@ -21,6 +22,7 @@ class GymAPI:
         self.planned_workouts = PlannedWorkoutRepository(db_path)
         self.planned_exercises = PlannedExerciseRepository(db_path)
         self.planned_sets = PlannedSetRepository(db_path)
+        self.equipment = EquipmentRepository(db_path)
         self.planner = PlannerService(
             self.workouts,
             self.exercises,
@@ -33,6 +35,23 @@ class GymAPI:
         self._setup_routes()
 
     def _setup_routes(self) -> None:
+        @self.app.get("/equipment/types")
+        def list_equipment_types():
+            return self.equipment.fetch_types()
+
+        @self.app.get("/equipment")
+        def list_equipment(equipment_type: str = None, prefix: str = None):
+            return self.equipment.fetch_names(equipment_type, prefix)
+
+        @self.app.get("/equipment/{name}")
+        def get_equipment(name: str):
+            muscles = self.equipment.fetch_muscles(name)
+            rows = self.equipment.fetch_all(
+                "SELECT equipment_type FROM equipment WHERE name = ?;", (name,)
+            )
+            eq_type = rows[0][0] if rows else None
+            return {"name": name, "type": eq_type, "muscles": muscles}
+
         @self.app.post("/workouts")
         def create_workout():
             workout_id = self.workouts.create(datetime.date.today().isoformat())
@@ -44,8 +63,8 @@ class GymAPI:
             return [{"id": wid, "date": date} for wid, date in workouts]
 
         @self.app.post("/workouts/{workout_id}/exercises")
-        def add_exercise(workout_id: int, name: str):
-            ex_id = self.exercises.add(workout_id, name)
+        def add_exercise(workout_id: int, name: str, equipment: str = None):
+            ex_id = self.exercises.add(workout_id, name, equipment)
             return {"id": ex_id}
 
         @self.app.delete("/exercises/{exercise_id}")
@@ -56,7 +75,10 @@ class GymAPI:
         @self.app.get("/workouts/{workout_id}/exercises")
         def list_exercises(workout_id: int):
             exercises = self.exercises.fetch_for_workout(workout_id)
-            return [{"id": ex_id, "name": name} for ex_id, name in exercises]
+            return [
+                {"id": ex_id, "name": name, "equipment": eq}
+                for ex_id, name, eq in exercises
+            ]
 
         @self.app.post("/planned_workouts")
         def create_planned_workout(date: str):
@@ -69,14 +91,17 @@ class GymAPI:
             return [{"id": pid, "date": date} for pid, date in plans]
 
         @self.app.post("/planned_workouts/{plan_id}/exercises")
-        def add_planned_exercise(plan_id: int, name: str):
-            ex_id = self.planned_exercises.add(plan_id, name)
+        def add_planned_exercise(plan_id: int, name: str, equipment: str = None):
+            ex_id = self.planned_exercises.add(plan_id, name, equipment)
             return {"id": ex_id}
 
         @self.app.get("/planned_workouts/{plan_id}/exercises")
         def list_planned_exercises(plan_id: int):
             exercises = self.planned_exercises.fetch_for_workout(plan_id)
-            return [{"id": ex_id, "name": name} for ex_id, name in exercises]
+            return [
+                {"id": ex_id, "name": name, "equipment": eq}
+                for ex_id, name, eq in exercises
+            ]
 
         @self.app.delete("/planned_exercises/{exercise_id}")
         def delete_planned_exercise(exercise_id: int):
