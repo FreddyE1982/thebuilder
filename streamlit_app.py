@@ -10,6 +10,7 @@ from db import (
     PlannedSetRepository,
     EquipmentRepository,
     ExerciseCatalogRepository,
+    MuscleRepository,
 )
 from planner_service import PlannerService
 
@@ -26,6 +27,7 @@ class GymApp:
         self.planned_sets = PlannedSetRepository()
         self.equipment = EquipmentRepository()
         self.exercise_catalog = ExerciseCatalogRepository()
+        self.muscles_repo = MuscleRepository()
         self.planner = PlannerService(
             self.workouts,
             self.exercises,
@@ -206,7 +208,7 @@ class GymApp:
         selected_muscles: list,
     ) -> Optional[str]:
         groups = self.exercise_catalog.fetch_muscle_groups()
-        all_muscles = self.exercise_catalog.fetch_all_muscles()
+        all_muscles = self.muscles_repo.fetch_all()
         group_sel = st.multiselect(
             "Muscle Groups",
             groups,
@@ -393,49 +395,74 @@ class GymApp:
                 if st.button("Cancel"):
                     st.session_state.delete_target = None
 
-        st.header("Equipment Management")
-        muscles_list = self.equipment.fetch_all_muscles()
-        new_name = st.text_input("Equipment Name", key="equip_new_name")
-        types = self.equipment.fetch_types()
-        type_choice = st.selectbox("Equipment Type", types, key="equip_new_type")
-        new_muscles = st.multiselect("Muscles", muscles_list, key="equip_new_muscles")
-        if st.button("Add Equipment"):
-            if new_name and type_choice and new_muscles:
-                try:
-                    self.equipment.add(type_choice, new_name, new_muscles)
-                    st.success("Equipment added")
-                except ValueError as e:
-                    st.warning(str(e))
-            else:
-                st.warning("All fields required")
+        eq_tab, mus_tab = st.tabs(["Equipment", "Muscles"])
 
-        for name, eq_type, muscles, is_custom in self.equipment.fetch_all_records():
-            exp = st.expander(name)
-            with exp:
-                musc_list = muscles.split("|")
-                if is_custom:
-                    edit_name = st.text_input("Name", name, key=f"edit_name_{name}")
-                    edit_type = st.text_input("Type", eq_type, key=f"edit_type_{name}")
-                    edit_muscles = st.multiselect(
-                        "Muscles", muscles_list, musc_list, key=f"edit_mus_{name}"
-                    )
-                    if st.button("Update", key=f"upd_eq_{name}"):
-                        try:
-                            self.equipment.update(name, edit_type, edit_muscles, edit_name)
-                            st.success("Updated")
-                        except ValueError as e:
-                            st.warning(str(e))
-                    if st.button("Delete", key=f"del_eq_{name}"):
-                        try:
-                            self.equipment.remove(name)
-                            st.success("Deleted")
-                        except ValueError as e:
-                            st.warning(str(e))
+        with eq_tab:
+            st.header("Equipment Management")
+            muscles_list = self.muscles_repo.fetch_all()
+            new_name = st.text_input("Equipment Name", key="equip_new_name")
+            types = self.equipment.fetch_types()
+            type_choice = st.selectbox("Equipment Type", types, key="equip_new_type")
+            new_muscles = st.multiselect("Muscles", muscles_list, key="equip_new_muscles")
+            if st.button("Add Equipment"):
+                if new_name and type_choice and new_muscles:
+                    try:
+                        self.equipment.add(type_choice, new_name, new_muscles)
+                        st.success("Equipment added")
+                    except ValueError as e:
+                        st.warning(str(e))
                 else:
-                    st.markdown(f"**Type:** {eq_type}")
-                    st.markdown("**Muscles:**")
-                    for m in musc_list:
-                        st.markdown(f"- {m}")
+                    st.warning("All fields required")
+
+            for name, eq_type, muscles, is_custom in self.equipment.fetch_all_records():
+                exp = st.expander(name)
+                with exp:
+                    musc_list = muscles.split("|")
+                    if is_custom:
+                        edit_name = st.text_input("Name", name, key=f"edit_name_{name}")
+                        edit_type = st.text_input("Type", eq_type, key=f"edit_type_{name}")
+                        edit_muscles = st.multiselect(
+                            "Muscles", muscles_list, musc_list, key=f"edit_mus_{name}"
+                        )
+                        if st.button("Update", key=f"upd_eq_{name}"):
+                            try:
+                                self.equipment.update(name, edit_type, edit_muscles, edit_name)
+                                st.success("Updated")
+                            except ValueError as e:
+                                st.warning(str(e))
+                        if st.button("Delete", key=f"del_eq_{name}"):
+                            try:
+                                self.equipment.remove(name)
+                                st.success("Deleted")
+                            except ValueError as e:
+                                st.warning(str(e))
+                    else:
+                        st.markdown(f"**Type:** {eq_type}")
+                        st.markdown("**Muscles:**")
+                        for m in musc_list:
+                            st.markdown(f"- {m}")
+
+        with mus_tab:
+            st.header("Muscle Linking")
+            muscles = self.muscles_repo.fetch_all()
+            if muscles:
+                col1, col2 = st.columns(2)
+                with col1:
+                    m1 = st.selectbox("Muscle 1", muscles, key="link_m1")
+                with col2:
+                    m2 = st.selectbox("Muscle 2", muscles, key="link_m2")
+                if st.button("Link Muscles"):
+                    self.muscles_repo.link(m1, m2)
+                    st.success("Linked")
+
+            new_muscle = st.text_input("New Muscle Name", key="new_muscle")
+            link_to = st.selectbox("Link To", muscles, key="link_to")
+            if st.button("Add Alias"):
+                if new_muscle:
+                    self.muscles_repo.add_alias(new_muscle, link_to)
+                    st.success("Alias added")
+                else:
+                    st.warning("Name required")
 
 
 if __name__ == "__main__":

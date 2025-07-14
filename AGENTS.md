@@ -14,3 +14,9 @@ The agent is to always follow there rules:
 8. For testing the agent must create full test data. The agent must predetermine expected resulting data and values and tests may only be seen successfull if they output exactly said expected data and values.
 9. Tests may only use the original functions provided in the code. NO monkeypatching of any kind is allowed.
 10. ALL functionality that is available via the streamlit interface must also be available via REST endpoints. The REST endpoints need to be used for testing because the streamlit interface can not be tested directly.
+
+## Muscle linking
+
+- The settings tab includes a "Muscles" subtab for managing muscle aliases. Users can link two existing muscle names or add a new alias linked to an existing muscle.
+- All muscle dropdowns must list every muscle name stored in the database.
+- Whenever any database query involves a muscle field, linked names must be treated as the same muscle.
