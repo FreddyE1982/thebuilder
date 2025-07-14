@@ -15,6 +15,7 @@ from db import (
 )
 from planner_service import PlannerService
 from recommendation_service import RecommendationService
+from stats_service import StatisticsService
 
 
 class GymAPI:
@@ -46,6 +47,10 @@ class GymAPI:
             self.sets,
             self.exercise_names,
             self.settings,
+        )
+        self.statistics = StatisticsService(
+            self.sets,
+            self.exercise_names,
         )
         self.app = FastAPI()
         self._setup_routes()
@@ -351,6 +356,30 @@ class GymAPI:
                 return self.recommender.recommend_next_set(exercise_id)
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
+
+        @self.app.get("/stats/exercise_summary")
+        def stats_exercise_summary(
+            exercise: str = None,
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            return self.statistics.exercise_summary(
+                exercise,
+                start_date,
+                end_date,
+            )
+
+        @self.app.get("/stats/progression")
+        def stats_progression(
+            exercise: str,
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            return self.statistics.progression(
+                exercise,
+                start_date,
+                end_date,
+            )
 
         @self.app.get("/settings/general")
         def get_general_settings():

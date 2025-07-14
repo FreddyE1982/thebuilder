@@ -16,6 +16,7 @@ from db import (
 )
 from planner_service import PlannerService
 from recommendation_service import RecommendationService
+from stats_service import StatisticsService
 
 
 class GymApp:
@@ -48,6 +49,10 @@ class GymApp:
             self.exercise_names_repo,
             self.settings_repo,
         )
+        self.stats = StatisticsService(
+            self.sets,
+            self.exercise_names_repo,
+        )
         self._state_init()
 
     def _state_init(self) -> None:
@@ -60,11 +65,18 @@ class GymApp:
 
     def run(self) -> None:
         st.title("Workout Logger")
-        log_tab, plan_tab, settings_tab = st.tabs(["Log", "Plan", "Settings"])
+        log_tab, plan_tab, stats_tab, settings_tab = st.tabs([
+            "Log",
+            "Plan",
+            "Stats",
+            "Settings",
+        ])
         with log_tab:
             self._log_tab()
         with plan_tab:
             self._plan_tab()
+        with stats_tab:
+            self._stats_tab()
         with settings_tab:
             self._settings_tab()
 
@@ -375,11 +387,39 @@ class GymApp:
             options=list(range(11)),
             key=f"plan_new_rpe_{exercise_id}",
         )
-        if st.button("Add Planned Set", key=f"add_plan_set_{exercise_id}"):
-            self.planned_sets.add(exercise_id, int(reps), float(weight), int(rpe))
-            st.session_state.pop(f"plan_new_reps_{exercise_id}", None)
-            st.session_state.pop(f"plan_new_weight_{exercise_id}", None)
-            st.session_state.pop(f"plan_new_rpe_{exercise_id}", None)
+            if st.button("Add Planned Set", key=f"add_plan_set_{exercise_id}"):
+                self.planned_sets.add(exercise_id, int(reps), float(weight), int(rpe))
+                st.session_state.pop(f"plan_new_reps_{exercise_id}", None)
+                st.session_state.pop(f"plan_new_weight_{exercise_id}", None)
+                st.session_state.pop(f"plan_new_rpe_{exercise_id}", None)
+
+    def _stats_tab(self) -> None:
+        st.header("Statistics")
+        exercises = [""] + self.exercise_names_repo.fetch_all()
+        ex_choice = st.selectbox("Exercise", exercises, key="stats_ex")
+        col1, col2 = st.columns(2)
+        with col1:
+            start = st.date_input(
+                "Start",
+                datetime.date.today() - datetime.timedelta(days=30),
+                key="stats_start",
+            )
+        with col2:
+            end = st.date_input("End", datetime.date.today(), key="stats_end")
+        start_str = start.isoformat()
+        end_str = end.isoformat()
+        summary = self.stats.exercise_summary(
+            ex_choice if ex_choice else None,
+            start_str,
+            end_str,
+        )
+        st.subheader("Summary")
+        st.table(summary)
+        if ex_choice:
+            prog = self.stats.progression(ex_choice, start_str, end_str)
+            st.subheader("1RM Progression")
+            if prog:
+                st.line_chart({"1RM": [p["est_1rm"] for p in prog]}, x=[p["date"] for p in prog])
 
     def _settings_tab(self) -> None:
         st.header("Settings")
