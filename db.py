@@ -42,6 +42,7 @@ class Database:
                     exercise_id INTEGER NOT NULL,
                     reps INTEGER NOT NULL,
                     weight REAL NOT NULL,
+                    rpe INTEGER NOT NULL,
                     FOREIGN KEY(exercise_id) REFERENCES exercises(id) ON DELETE CASCADE
                 );"""
             )
@@ -95,24 +96,24 @@ class ExerciseRepository(BaseRepository):
 class SetRepository(BaseRepository):
     """Repository for sets table operations."""
 
-    def add(self, exercise_id: int, reps: int, weight: float) -> int:
+    def add(self, exercise_id: int, reps: int, weight: float, rpe: int) -> int:
         return self.execute(
-            "INSERT INTO sets (exercise_id, reps, weight) VALUES (?, ?, ?);",
-            (exercise_id, reps, weight),
+            "INSERT INTO sets (exercise_id, reps, weight, rpe) VALUES (?, ?, ?, ?);",
+            (exercise_id, reps, weight, rpe),
         )
 
-    def update(self, set_id: int, reps: int, weight: float) -> None:
+    def update(self, set_id: int, reps: int, weight: float, rpe: int) -> None:
         self.execute(
-            "UPDATE sets SET reps = ?, weight = ? WHERE id = ?;",
-            (reps, weight, set_id),
+            "UPDATE sets SET reps = ?, weight = ?, rpe = ? WHERE id = ?;",
+            (reps, weight, rpe, set_id),
         )
 
     def remove(self, set_id: int) -> None:
         self.execute("DELETE FROM sets WHERE id = ?;", (set_id,))
 
-    def fetch_for_exercise(self, exercise_id: int) -> List[Tuple[int, int, float]]:
+    def fetch_for_exercise(self, exercise_id: int) -> List[Tuple[int, int, float, int]]:
         return self.fetch_all(
-            "SELECT id, reps, weight FROM sets WHERE exercise_id = ?;",
+            "SELECT id, reps, weight, rpe FROM sets WHERE exercise_id = ?;",
             (exercise_id,),
         )
 

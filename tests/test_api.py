@@ -1,7 +1,10 @@
 import os
+import sys
 import datetime
 import unittest
 from fastapi.testclient import TestClient
+
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from rest_api import GymAPI
 
 
@@ -39,7 +42,8 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(response.json(), [{"id": 1, "name": "Bench Press"}])
 
         response = self.client.post(
-            "/exercises/1/sets", params={"reps": 10, "weight": 100.0}
+            "/exercises/1/sets",
+            params={"reps": 10, "weight": 100.0, "rpe": 8},
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"id": 1})
@@ -47,11 +51,11 @@ class APITestCase(unittest.TestCase):
         response = self.client.get("/exercises/1/sets")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
-            response.json(), [{"id": 1, "reps": 10, "weight": 100.0}]
+            response.json(), [{"id": 1, "reps": 10, "weight": 100.0, "rpe": 8}]
         )
 
         response = self.client.put(
-            "/sets/1", params={"reps": 12, "weight": 105.0}
+            "/sets/1", params={"reps": 12, "weight": 105.0, "rpe": 9}
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"status": "updated"})
@@ -59,7 +63,7 @@ class APITestCase(unittest.TestCase):
         response = self.client.get("/exercises/1/sets")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
-            response.json(), [{"id": 1, "reps": 12, "weight": 105.0}]
+            response.json(), [{"id": 1, "reps": 12, "weight": 105.0, "rpe": 9}]
         )
 
         response = self.client.delete("/sets/1")

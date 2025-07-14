@@ -5,6 +5,7 @@ This repository contains a Streamlit application for tracking gym workouts. Ever
 - Create new workouts with the current date.
 - Add and remove exercises for a workout.
 - Add, edit, and delete sets for each exercise.
+- Record the RPE (0-10) for each set.
 
 ## Requirements
 
