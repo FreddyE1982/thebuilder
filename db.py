@@ -1,6 +1,8 @@
 import sqlite3
+import csv
+import os
 from contextlib import contextmanager
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Iterable
 
 
 class Database:
@@ -14,14 +16,25 @@ class Database:
                 );""",
             ["id", "date"],
         ),
+        "equipment": (
+            """CREATE TABLE equipment (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    equipment_type TEXT NOT NULL,
+                    name TEXT NOT NULL UNIQUE,
+                    muscles TEXT NOT NULL
+                );""",
+            ["id", "equipment_type", "name", "muscles"],
+        ),
         "exercises": (
             """CREATE TABLE exercises (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     workout_id INTEGER NOT NULL,
                     name TEXT NOT NULL,
-                    FOREIGN KEY(workout_id) REFERENCES workouts(id) ON DELETE CASCADE
+                    equipment_name TEXT,
+                    FOREIGN KEY(workout_id) REFERENCES workouts(id) ON DELETE CASCADE,
+                    FOREIGN KEY(equipment_name) REFERENCES equipment(name)
                 );""",
-            ["id", "workout_id", "name"],
+            ["id", "workout_id", "name", "equipment_name"],
         ),
         "planned_workouts": (
             """CREATE TABLE planned_workouts (
@@ -35,9 +48,11 @@ class Database:
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     planned_workout_id INTEGER NOT NULL,
                     name TEXT NOT NULL,
-                    FOREIGN KEY(planned_workout_id) REFERENCES planned_workouts(id) ON DELETE CASCADE
+                    equipment_name TEXT,
+                    FOREIGN KEY(planned_workout_id) REFERENCES planned_workouts(id) ON DELETE CASCADE,
+                    FOREIGN KEY(equipment_name) REFERENCES equipment(name)
                 );""",
-            ["id", "planned_workout_id", "name"],
+            ["id", "planned_workout_id", "name", "equipment_name"],
         ),
         "planned_sets": (
             """CREATE TABLE planned_sets (
@@ -81,6 +96,7 @@ class Database:
     def __init__(self, db_path: str = "workout.db") -> None:
         self._db_path = db_path
         self._ensure_schema()
+        self._import_equipment_data()
 
     @contextmanager
     def _connection(self) -> sqlite3.Connection:
@@ -124,6 +140,28 @@ class Database:
             )
         conn.execute(f"DROP TABLE {table}_old;")
 
+    def _import_equipment_data(self) -> None:
+        csv_path = os.path.join(os.path.dirname(__file__), "table3_equipment_muscles.csv")
+        if not os.path.exists(csv_path):
+            return
+        with open(csv_path, newline="") as csvfile:
+            reader = csv.DictReader(csvfile)
+            records = [
+                (
+                    row["Equipment Type Group"],
+                    row["Equipment Name"],
+                    row["Muscles Trained"],
+                )
+                for row in reader
+            ]
+        with self._connection() as conn:
+            for equipment_type, name, muscles in records:
+                conn.execute(
+                    "INSERT INTO equipment (equipment_type, name, muscles) VALUES (?, ?, ?) "
+                    "ON CONFLICT(name) DO UPDATE SET equipment_type=excluded.equipment_type, muscles=excluded.muscles;",
+                    (equipment_type, name, muscles),
+                )
+
 
 class BaseRepository(Database):
     """Base repository providing helper methods."""
@@ -160,18 +198,20 @@ class WorkoutRepository(BaseRepository):
 class ExerciseRepository(BaseRepository):
     """Repository for exercise table operations."""
 
-    def add(self, workout_id: int, name: str) -> int:
+    def add(
+        self, workout_id: int, name: str, equipment_name: Optional[str] = None
+    ) -> int:
         return self.execute(
-            "INSERT INTO exercises (workout_id, name) VALUES (?, ?);",
-            (workout_id, name),
+            "INSERT INTO exercises (workout_id, name, equipment_name) VALUES (?, ?, ?);",
+            (workout_id, name, equipment_name),
         )
 
     def remove(self, exercise_id: int) -> None:
         self.execute("DELETE FROM exercises WHERE id = ?;", (exercise_id,))
 
-    def fetch_for_workout(self, workout_id: int) -> List[Tuple[int, str]]:
+    def fetch_for_workout(self, workout_id: int) -> List[Tuple[int, str, Optional[str]]]:
         return self.fetch_all(
-            "SELECT id, name FROM exercises WHERE workout_id = ?;",
+            "SELECT id, name, equipment_name FROM exercises WHERE workout_id = ?;",
             (workout_id,),
         )
 
@@ -265,10 +305,12 @@ class PlannedWorkoutRepository(BaseRepository):
 class PlannedExerciseRepository(BaseRepository):
     """Repository for planned exercises."""
 
-    def add(self, workout_id: int, name: str) -> int:
+    def add(
+        self, workout_id: int, name: str, equipment_name: Optional[str] = None
+    ) -> int:
         return self.execute(
-            "INSERT INTO planned_exercises (planned_workout_id, name) VALUES (?, ?);",
-            (workout_id, name),
+            "INSERT INTO planned_exercises (planned_workout_id, name, equipment_name) VALUES (?, ?, ?);",
+            (workout_id, name, equipment_name),
         )
 
     def remove(self, exercise_id: int) -> None:
@@ -277,9 +319,9 @@ class PlannedExerciseRepository(BaseRepository):
             (exercise_id,),
         )
 
-    def fetch_for_workout(self, workout_id: int) -> List[Tuple[int, str]]:
+    def fetch_for_workout(self, workout_id: int) -> List[Tuple[int, str, Optional[str]]]:
         return super().fetch_all(
-            "SELECT id, name FROM planned_exercises WHERE planned_workout_id = ?;",
+            "SELECT id, name, equipment_name FROM planned_exercises WHERE planned_workout_id = ?;",
             (workout_id,),
         )
 
@@ -301,4 +343,43 @@ class PlannedSetRepository(BaseRepository):
             "SELECT id, reps, weight, rpe FROM planned_sets WHERE planned_exercise_id = ?;",
             (exercise_id,),
         )
+
+
+class EquipmentRepository(BaseRepository):
+    """Repository for equipment data."""
+
+    def upsert_many(self, records: Iterable[Tuple[str, str, str]]) -> None:
+        for equipment_type, name, muscles in records:
+            self.execute(
+                "INSERT INTO equipment (equipment_type, name, muscles) VALUES (?, ?, ?) "
+                "ON CONFLICT(name) DO UPDATE SET equipment_type=excluded.equipment_type, muscles=excluded.muscles;",
+                (equipment_type, name, muscles),
+            )
+
+    def fetch_types(self) -> List[str]:
+        rows = self.fetch_all(
+            "SELECT DISTINCT equipment_type FROM equipment ORDER BY equipment_type;"
+        )
+        return [r[0] for r in rows]
+
+    def fetch_names(
+        self, equipment_type: Optional[str] = None, prefix: Optional[str] = None
+    ) -> List[str]:
+        query = "SELECT name FROM equipment WHERE 1=1"
+        params: List[str] = []
+        if equipment_type:
+            query += " AND equipment_type = ?"
+            params.append(equipment_type)
+        if prefix:
+            query += " AND name LIKE ?"
+            params.append(f"{prefix}%")
+        query += " ORDER BY name;"
+        rows = self.fetch_all(query, tuple(params))
+        return [r[0] for r in rows]
+
+    def fetch_muscles(self, name: str) -> List[str]:
+        rows = self.fetch_all("SELECT muscles FROM equipment WHERE name = ?;", (name,))
+        if rows:
+            return rows[0][0].split("|")
+        return []
 

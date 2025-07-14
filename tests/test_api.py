@@ -40,7 +40,9 @@ class APITestCase(unittest.TestCase):
 
         response = self.client.get("/workouts/1/exercises")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), [{"id": 1, "name": "Bench Press"}])
+        self.assertEqual(
+            response.json(), [{"id": 1, "name": "Bench Press", "equipment": None}]
+        )
 
         response = self.client.post(
             "/exercises/1/sets",
@@ -149,7 +151,7 @@ class APITestCase(unittest.TestCase):
 
         response = self.client.get("/workouts/1/exercises")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), [{"id": 1, "name": "Squat"}])
+        self.assertEqual(response.json(), [{"id": 1, "name": "Squat", "equipment": None}])
 
         response = self.client.get("/exercises/1/sets")
         self.assertEqual(response.status_code, 200)
@@ -173,6 +175,34 @@ class APITestCase(unittest.TestCase):
                 "diff_weight": 10.0,
                 "diff_rpe": 1,
             },
+        )
+
+    def test_equipment_endpoints(self) -> None:
+        response = self.client.get("/equipment/types")
+        self.assertEqual(response.status_code, 200)
+        types = response.json()
+        self.assertIn("Free Weights", types)
+
+        response = self.client.get(
+            "/equipment", params={"equipment_type": "Free Weights", "prefix": "Olympic"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Olympic Barbell", response.json())
+
+        response = self.client.get("/equipment/Olympic Barbell")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["name"], "Olympic Barbell")
+        self.assertIn("Pectoralis Major", data["muscles"])
+
+        self.client.post("/workouts")
+        self.client.post(
+            "/workouts/1/exercises", params={"name": "Clean", "equipment": "Olympic Barbell"}
+        )
+        resp = self.client.get("/workouts/1/exercises")
+        self.assertEqual(
+            resp.json(),
+            [{"id": 1, "name": "Clean", "equipment": "Olympic Barbell"}],
         )
 
     def test_schema_migration(self) -> None:
