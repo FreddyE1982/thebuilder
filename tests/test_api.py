@@ -2,6 +2,7 @@ import os
 import sys
 import datetime
 import unittest
+import sqlite3
 from fastapi.testclient import TestClient
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
@@ -173,3 +174,55 @@ class APITestCase(unittest.TestCase):
                 "diff_rpe": 1,
             },
         )
+
+    def test_schema_migration(self) -> None:
+        if os.path.exists(self.db_path):
+            os.remove(self.db_path)
+        conn = sqlite3.connect(self.db_path)
+        cur = conn.cursor()
+        cur.execute(
+            """CREATE TABLE workouts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    date TEXT NOT NULL
+                );"""
+        )
+        cur.execute(
+            """CREATE TABLE exercises (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    workout_id INTEGER NOT NULL,
+                    name TEXT NOT NULL,
+                    FOREIGN KEY(workout_id) REFERENCES workouts(id) ON DELETE CASCADE
+                );"""
+        )
+        cur.execute(
+            """CREATE TABLE sets (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    exercise_id INTEGER NOT NULL,
+                    reps INTEGER NOT NULL,
+                    weight REAL NOT NULL,
+                    rpe INTEGER NOT NULL,
+                    FOREIGN KEY(exercise_id) REFERENCES exercises(id) ON DELETE CASCADE
+                );"""
+        )
+        today = datetime.date.today().isoformat()
+        cur.execute("INSERT INTO workouts (date) VALUES (?);", (today,))
+        cur.execute("INSERT INTO exercises (workout_id, name) VALUES (1, 'Legacy Ex');")
+        cur.execute(
+            "INSERT INTO sets (exercise_id, reps, weight, rpe) VALUES (1, 8, 80.0, 7);"
+        )
+        conn.commit()
+        conn.close()
+
+        api = GymAPI(db_path=self.db_path)
+        client = TestClient(api.app)
+
+        resp = client.get("/exercises/1/sets")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), [{"id": 1, "reps": 8, "weight": 80.0, "rpe": 7}])
+
+        resp = client.get("/sets/1")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn("planned_set_id", data)
+        self.assertIn("diff_reps", data)
+
