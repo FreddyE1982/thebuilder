@@ -1,0 +1,62 @@
+Muscle Group,Exercise Name,Variants,Equipment Name(s),Primary Muscle Trained,Secondary Muscle Trained,Tertiary Muscle Trained,Other Muscles Trained
+Chest,Barbell Bench Press,Flat Barbell Bench Press|Incline Barbell Bench Press|Decline Barbell Bench Press|Close-Grip Bench Press|Wide-Grip Bench Press,Olympic Barbell|Bench|Power Rack,Pectoralis Major,Anterior Deltoid|Triceps Brachii,,Serratus Anterior
+Chest,Dumbbell Bench Press,Flat Dumbbell Bench Press|Incline Dumbbell Bench Press|Decline Dumbbell Bench Press|Single-Arm Dumbbell Press,Adjustable Dumbbells|Fixed Weight Dumbbells|Bench,Pectoralis Major,Anterior Deltoid|Triceps Brachii,,Serratus Anterior
+Chest,Machine Chest Press,Chest Press Machine|Incline Chest Press|Decline Chest Press|Hammer Strength Chest Press,Chest Press Machine,Pectoralis Major,Anterior Deltoid|Triceps Brachii,,
+Chest,Dumbbell Fly,Flat Dumbbell Fly|Incline Dumbbell Fly|Decline Dumbbell Fly,Adjustable Dumbbells|Fixed Weight Dumbbells|Bench,Pectoralis Major,Anterior Deltoid,,
+Chest,Cable Fly,Cable Crossover|Low Cable Fly|High Cable Fly|Single-Arm Cable Fly,Cable Crossover Machine|Functional Trainer,Pectoralis Major,Anterior Deltoid,,
+Chest,Pec Deck,Pec Deck Machine|Reverse Pec Deck,Pec Deck Machine,Pectoralis Major,Anterior Deltoid,,
+Chest,Push-up,Standard Push-up|Wide-Grip Push-up|Diamond Push-up|Incline Push-up|Decline Push-up|Single-Arm Push-up,Bodyweight|Push-up Handles,Pectoralis Major,Anterior Deltoid|Triceps Brachii,,Rectus Abdominis|Serratus Anterior
+Chest,Dips,Parallel Bar Dips|Ring Dips|Bench Dips|Weighted Dips,Dip Station|Gymnastics Rings|Bench,Pectoralis Major,Triceps Brachii|Anterior Deltoid,,
+Back,Deadlift,Conventional Deadlift|Sumo Deadlift|Romanian Deadlift|Stiff-Leg Deadlift|Deficit Deadlift|Rack Pull|Trap Bar Deadlift,Olympic Barbell|Trap Bar|Weight Plates|Power Rack,Erector Spinae,Latissimus Dorsi|Trapezius|Rhomboids,Gluteus Maximus|Hamstrings,Forearm Flexors|Quadriceps
+Back,Pull-up,Wide-Grip Pull-up|Close-Grip Pull-up|Neutral-Grip Pull-up|Weighted Pull-up|Assisted Pull-up|L-Sit Pull-up,Pull-up Bar|Power Rack|Assisted Pull-up Machine,Latissimus Dorsi,Rhomboids|Biceps Brachii,Brachialis,Forearm Flexors|Trapezius
+Back,Chin-up,Underhand Chin-up|Commando Chin-up|Weighted Chin-up,Pull-up Bar|Power Rack,Latissimus Dorsi,Biceps Brachii|Rhomboids,Brachialis,Forearm Flexors
+Back,Barbell Row,Bent-Over Barbell Row|Pendlay Row|T-Bar Row|Underhand Barbell Row|Single-Arm Barbell Row,Olympic Barbell|T-Bar Row Machine,Latissimus Dorsi,Rhomboids|Trapezius,Biceps Brachii,Erector Spinae|Posterior Deltoid
+Back,Dumbbell Row,Single-Arm Dumbbell Row|Two-Arm Dumbbell Row|Chest-Supported Dumbbell Row|Renegade Row,Adjustable Dumbbells|Fixed Weight Dumbbells|Bench,Latissimus Dorsi,Rhomboids|Trapezius,Biceps Brachii,Posterior Deltoid
+Back,Cable Row,Seated Cable Row|Standing Cable Row|Single-Arm Cable Row|High Cable Row|Low Cable Row,Cable Machine|Seated Cable Row Machine,Latissimus Dorsi,Rhomboids|Trapezius,Biceps Brachii,Posterior Deltoid
+Back,Machine Row,Seated Machine Row|Chest-Supported Row|Hammer Strength Row|T-Bar Row Machine,Seated Row Machine|Hammer Strength Machine,Latissimus Dorsi,Rhomboids|Trapezius,Biceps Brachii,
+Back,Lat Pulldown,Wide-Grip Lat Pulldown|Close-Grip Lat Pulldown|Reverse-Grip Lat Pulldown|Single-Arm Lat Pulldown,Lat Pulldown Machine,Latissimus Dorsi,Rhomboids|Biceps Brachii,Brachialis,
+Back,Face Pull,Cable Face Pull|Resistance Band Face Pull,Cable Machine|Resistance Bands,Posterior Deltoid,Rhomboids|Trapezius,,
+Back,Shrug,Barbell Shrug|Dumbbell Shrug|Cable Shrug|Behind-the-Back Shrug,Olympic Barbell|Adjustable Dumbbells|Cable Machine,Trapezius,,,
+Shoulders,Overhead Press,Military Press|Standing Barbell Press|Seated Barbell Press|Behind-the-Neck Press,Olympic Barbell|Power Rack|Bench,Anterior Deltoid,Medial Deltoid|Triceps Brachii,Posterior Deltoid,Trapezius|Serratus Anterior
+Shoulders,Dumbbell Press,Seated Dumbbell Press|Standing Dumbbell Press|Arnold Press|Single-Arm Dumbbell Press,Adjustable Dumbbells|Fixed Weight Dumbbells|Bench,Anterior Deltoid,Medial Deltoid|Triceps Brachii,,
+Shoulders,Machine Press,Shoulder Press Machine|Hammer Strength Press,Shoulder Press Machine,Anterior Deltoid,Medial Deltoid|Triceps Brachii,,
+Shoulders,Lateral Raise,Dumbbell Lateral Raise|Cable Lateral Raise|Machine Lateral Raise|Leaning Lateral Raise,Adjustable Dumbbells|Cable Machine|Lateral Raise Machine,Medial Deltoid,Anterior Deltoid|Posterior Deltoid,,
+Shoulders,Front Raise,Dumbbell Front Raise|Barbell Front Raise|Cable Front Raise|Plate Front Raise,Adjustable Dumbbells|Olympic Barbell|Cable Machine|Weight Plates,Anterior Deltoid,Medial Deltoid,,
+Shoulders,Rear Delt Fly,Dumbbell Rear Delt Fly|Cable Rear Delt Fly|Machine Rear Delt Fly|Bent-Over Lateral Raise,Adjustable Dumbbells|Cable Machine|Rear Delt Machine,Posterior Deltoid,Rhomboids|Trapezius,,
+Shoulders,Upright Row,Barbell Upright Row|Dumbbell Upright Row|Cable Upright Row|Wide-Grip Upright Row,Olympic Barbell|Adjustable Dumbbells|Cable Machine,Medial Deltoid,Trapezius|Anterior Deltoid,Biceps Brachii,
+Arms,Barbell Curl,Standing Barbell Curl|EZ-Bar Curl|Preacher Curl|21s Curl|Drag Curl,Olympic Barbell|EZ Curl Bar|Preacher Curl Bench,Biceps Brachii,Brachialis,Forearm Flexors,
+Arms,Dumbbell Curl,Standing Dumbbell Curl|Seated Dumbbell Curl|Hammer Curl|Concentration Curl|Incline Dumbbell Curl|Alternating Dumbbell Curl,Adjustable Dumbbells|Fixed Weight Dumbbells|Bench,Biceps Brachii,Brachialis,Forearm Flexors,
+Arms,Cable Curl,Cable Bicep Curl|High Cable Curl|Low Cable Curl|Cable Hammer Curl,Cable Machine|Functional Trainer,Biceps Brachii,Brachialis,,
+Arms,Machine Curl,Bicep Curl Machine|Preacher Curl Machine,Bicep Curl Machine,Biceps Brachii,Brachialis,,
+Arms,Close-Grip Bench Press,Close-Grip Barbell Bench|Close-Grip Dumbbell Press|Close-Grip Smith Machine Press,Olympic Barbell|Adjustable Dumbbells|Smith Machine|Bench,Triceps Brachii,Pectoralis Major|Anterior Deltoid,,
+Arms,Tricep Extension,Overhead Tricep Extension|Lying Tricep Extension|Seated Tricep Extension|Single-Arm Tricep Extension,Olympic Barbell|EZ Curl Bar|Adjustable Dumbbells|Bench,Triceps Brachii,,,
+Arms,Tricep Pushdown,Cable Tricep Pushdown|Rope Pushdown|V-Bar Pushdown|Single-Arm Pushdown,Cable Machine|Functional Trainer,Triceps Brachii,,,
+Arms,Tricep Kickback,Dumbbell Tricep Kickback|Cable Tricep Kickback,Adjustable Dumbbells|Cable Machine,Triceps Brachii,,,
+Arms,Diamond Push-up,Diamond Push-up|Close-Grip Push-up,Bodyweight,Triceps Brachii,Pectoralis Major|Anterior Deltoid,,
+Legs,Squat,Back Squat|Front Squat|Goblet Squat|Box Squat|Overhead Squat|Safety Bar Squat|Hack Squat,Olympic Barbell|Safety Squat Bar|Adjustable Dumbbells|Kettlebells|Hack Squat Machine|Power Rack,Quadriceps,Gluteus Maximus,Hamstrings,Erector Spinae|Rectus Abdominis
+Legs,Leg Press,45-Degree Leg Press|Horizontal Leg Press|Single-Leg Press|High-Foot Leg Press|Low-Foot Leg Press,Leg Press Machine,Quadriceps,Gluteus Maximus,Hamstrings,
+Legs,Leg Extension,Seated Leg Extension|Single-Leg Extension,Leg Extension Machine,Quadriceps,,,
+Legs,Lunge,Forward Lunge|Reverse Lunge|Walking Lunge|Lateral Lunge|Curtsy Lunge|Bulgarian Split Squat,Adjustable Dumbbells|Olympic Barbell|Bodyweight,Quadriceps,Gluteus Maximus,Hamstrings,
+Legs,Step-up,Dumbbell Step-up|Barbell Step-up|Lateral Step-up|High Step-up,Adjustable Dumbbells|Olympic Barbell|Bench|Box,Quadriceps,Gluteus Maximus,,
+Legs,Romanian Deadlift,Barbell Romanian Deadlift|Dumbbell Romanian Deadlift|Single-Leg Romanian Deadlift|Deficit Romanian Deadlift,Olympic Barbell|Adjustable Dumbbells,Hamstrings,Gluteus Maximus,Erector Spinae,
+Legs,Leg Curl,Lying Leg Curl|Seated Leg Curl|Standing Leg Curl|Single-Leg Curl,Leg Curl Machine,Hamstrings,,,
+Legs,Good Morning,Barbell Good Morning|Seated Good Morning|Pin Good Morning,Olympic Barbell|Power Rack,Hamstrings,Erector Spinae|Gluteus Maximus,,
+Legs,Stiff-Leg Deadlift,Barbell Stiff-Leg Deadlift|Dumbbell Stiff-Leg Deadlift,Olympic Barbell|Adjustable Dumbbells,Hamstrings,Erector Spinae|Gluteus Maximus,,
+Legs,Hip Thrust,Barbell Hip Thrust|Dumbbell Hip Thrust|Single-Leg Hip Thrust|Banded Hip Thrust,Olympic Barbell|Adjustable Dumbbells|Bench|Resistance Bands,Gluteus Maximus,Hamstrings,,
+Legs,Glute Bridge,Bodyweight Glute Bridge|Weighted Glute Bridge|Single-Leg Glute Bridge|Banded Glute Bridge,Bodyweight|Weight Plates|Resistance Bands,Gluteus Maximus,Hamstrings,,
+Legs,Hip Abduction,Cable Hip Abduction|Machine Hip Abduction|Banded Hip Abduction|Clamshells,Cable Machine|Hip Abduction Machine|Resistance Bands,Gluteus Medius,Gluteus Maximus,,
+Legs,Sumo Deadlift,Sumo Barbell Deadlift|Sumo Dumbbell Deadlift,Olympic Barbell|Adjustable Dumbbells,Gluteus Maximus,Hamstrings|Quadriceps,Hip Adductors,Erector Spinae
+Legs,Calf Raise,Standing Calf Raise|Seated Calf Raise|Single-Leg Calf Raise|Donkey Calf Raise,Calf Raise Machine|Seated Calf Raise|Adjustable Dumbbells,Gastrocnemius,Soleus,,
+Legs,Toe Raise,Seated Toe Raise|Standing Toe Raise,Bodyweight|Weight Plates,Tibialis Anterior,,,
+Core,Plank,Front Plank|Side Plank|Plank Up-Down|Single-Arm Plank|Weighted Plank,Bodyweight|Weight Plates,Rectus Abdominis,Transverse Abdominis|External Obliques,Internal Obliques,
+Core,Crunch,Basic Crunch|Bicycle Crunch|Reverse Crunch|Cable Crunch|Weighted Crunch,Bodyweight|Cable Machine|Weight Plates,Rectus Abdominis,External Obliques,,
+Core,Russian Twist,Bodyweight Russian Twist|Weighted Russian Twist|Medicine Ball Russian Twist,Bodyweight|Weight Plates|Medicine Ball,External Obliques,Internal Obliques|Rectus Abdominis,,
+Core,Leg Raise,Hanging Leg Raise|Lying Leg Raise|Bent-Knee Leg Raise|V-Up,Pull-up Bar|Bodyweight,Rectus Abdominis,Hip Flexors,,
+Core,Dead Bug,Dead Bug|Bird Dog|Single-Arm Dead Bug,Bodyweight,Transverse Abdominis,Rectus Abdominis,,
+Core,Wood Chop,Cable Wood Chop|Medicine Ball Wood Chop|Dumbbell Wood Chop,Cable Machine|Medicine Ball|Adjustable Dumbbells,External Obliques,Internal Obliques,Rectus Abdominis,
+Core,Back Extension,Back Extension|Reverse Hyperextension|Good Morning,Back Extension Machine|Roman Chair|GHD Machine,Erector Spinae,Gluteus Maximus,,
+Functional,Burpee,Standard Burpee|Burpee Box Jump|Burpee Pull-up|Single-Arm Burpee,Bodyweight|Pull-up Bar|Box,Quadriceps,Pectoralis Major|Triceps Brachii|Anterior Deltoid,Rectus Abdominis|Gluteus Maximus,Hamstrings|Gastrocnemius
+Functional,Thruster,Dumbbell Thruster|Barbell Thruster|Kettlebell Thruster,Adjustable Dumbbells|Olympic Barbell|Kettlebells,Quadriceps,Anterior Deltoid|Medial Deltoid|Triceps Brachii,Gluteus Maximus,Rectus Abdominis
+Functional,Turkish Get-up,Kettlebell Turkish Get-up|Dumbbell Turkish Get-up,Kettlebells|Adjustable Dumbbells,Anterior Deltoid,Rectus Abdominis|External Obliques|Quadriceps,Gluteus Maximus,Trapezius|Triceps Brachii
+Functional,Man Maker,Dumbbell Man Maker|Kettlebell Man Maker,Adjustable Dumbbells|Kettlebells,Pectoralis Major,Quadriceps|Latissimus Dorsi|Anterior Deltoid,Triceps Brachii|Rectus Abdominis,Gluteus Maximus|Hamstrings
+Functional,Bear Crawl,Forward Bear Crawl|Backward Bear Crawl|Lateral Bear Crawl,Bodyweight,Anterior Deltoid,Triceps Brachii|Rectus Abdominis,Quadriceps,
