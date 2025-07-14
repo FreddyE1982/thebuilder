@@ -416,3 +416,41 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIn("My Pulls", resp.json())
 
+    def test_statistics_endpoints(self) -> None:
+        self.client.post("/workouts")
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 10, "weight": 100.0, "rpe": 8},
+        )
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 8, "weight": 110.0, "rpe": 9},
+        )
+
+        resp = self.client.get(
+            "/stats/exercise_summary",
+            params={"exercise": "Bench Press"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(len(data), 1)
+        summary = data[0]
+        self.assertEqual(summary["exercise"], "Bench Press")
+        self.assertEqual(summary["sets"], 2)
+        self.assertAlmostEqual(summary["volume"], 1880.0)
+        self.assertAlmostEqual(summary["avg_rpe"], 8.5)
+        self.assertAlmostEqual(summary["max_1rm"], 139.3, places=1)
+
+        resp = self.client.get(
+            "/stats/progression",
+            params={"exercise": "Bench Press"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        prog = resp.json()
+        self.assertEqual(len(prog), 1)
+        self.assertAlmostEqual(prog[0]["est_1rm"], 139.3, places=1)
+

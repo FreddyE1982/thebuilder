@@ -448,16 +448,37 @@ class SetRepository(BaseRepository):
             "diff_rpe": diff_rpe,
         }
 
-    def fetch_history_by_names(self, names: List[str]) -> List[Tuple[int, float, int, str]]:
+    def fetch_history_by_names(
+        self,
+        names: List[str],
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        equipment: Optional[List[str]] = None,
+        with_equipment: bool = False,
+    ) -> List[Tuple]:
         placeholders = ", ".join(["?" for _ in names])
+        select = "SELECT s.reps, s.weight, s.rpe, w.date"
+        if with_equipment:
+            select += ", e.name, e.equipment_name"
         query = (
-            "SELECT s.reps, s.weight, s.rpe, w.date "
-            "FROM sets s "
+            f"{select} FROM sets s "
             "JOIN exercises e ON s.exercise_id = e.id "
             "JOIN workouts w ON e.workout_id = w.id "
-            f"WHERE e.name IN ({placeholders}) ORDER BY w.date, s.id;"
+            f"WHERE e.name IN ({placeholders})"
         )
-        return self.fetch_all(query, tuple(names))
+        params: List[str] = list(names)
+        if equipment:
+            eq_placeholders = ", ".join(["?" for _ in equipment])
+            query += f" AND e.equipment_name IN ({eq_placeholders})"
+            params.extend(equipment)
+        if start_date:
+            query += " AND w.date >= ?"
+            params.append(start_date)
+        if end_date:
+            query += " AND w.date <= ?"
+            params.append(end_date)
+        query += " ORDER BY w.date, s.id;"
+        return self.fetch_all(query, tuple(params))
 
 
 class PlannedWorkoutRepository(BaseRepository):
