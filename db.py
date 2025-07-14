@@ -132,6 +132,13 @@ class Database:
                 "diff_rpe",
             ],
         ),
+        "settings": (
+            """CREATE TABLE settings (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL
+                );""",
+            ["key", "value"],
+        ),
     }
 
     def __init__(self, db_path: str = "workout.db") -> None:
@@ -141,6 +148,7 @@ class Database:
         self._import_exercise_catalog_data()
         self._sync_muscles()
         self._sync_exercise_names()
+        self._init_settings()
 
     @contextmanager
     def _connection(self) -> sqlite3.Connection:
@@ -294,6 +302,15 @@ class Database:
                 conn.execute(
                     "INSERT OR IGNORE INTO exercise_names (name, canonical_name) VALUES (?, ?);",
                     (n, n),
+                )
+
+    def _init_settings(self) -> None:
+        defaults = {"body_weight": "80.0", "months_active": "1"}
+        with self._connection() as conn:
+            for key, value in defaults.items():
+                conn.execute(
+                    "INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?);",
+                    (key, value),
                 )
 
 
@@ -605,6 +622,25 @@ class ExerciseNameRepository(BaseRepository):
                 "INSERT OR REPLACE INTO exercise_names (name, canonical_name) VALUES (?, ?);",
                 (new_name, canonical),
             )
+
+
+class SettingsRepository(BaseRepository):
+    """Repository for general application settings."""
+
+    def get_float(self, key: str, default: float) -> float:
+        rows = self.fetch_all("SELECT value FROM settings WHERE key = ?;", (key,))
+        return float(rows[0][0]) if rows else default
+
+    def set_float(self, key: str, value: float) -> None:
+        self.execute(
+            "INSERT INTO settings (key, value) VALUES (?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET value=excluded.value;",
+            (key, str(value)),
+        )
+
+    def all_settings(self) -> dict:
+        rows = self.fetch_all("SELECT key, value FROM settings ORDER BY key;")
+        return {k: float(v) for k, v in rows}
 
 
 class EquipmentRepository(BaseRepository):

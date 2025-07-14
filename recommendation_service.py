@@ -4,6 +4,7 @@ from db import (
     ExerciseRepository,
     SetRepository,
     ExerciseNameRepository,
+    SettingsRepository,
 )
 from tools import ExercisePrescription
 
@@ -17,11 +18,13 @@ class RecommendationService:
         exercise_repo: ExerciseRepository,
         set_repo: SetRepository,
         exercise_name_repo: ExerciseNameRepository,
+        settings_repo: SettingsRepository,
     ) -> None:
         self.workouts = workout_repo
         self.exercises = exercise_repo
         self.sets = set_repo
         self.exercise_names = exercise_name_repo
+        self.settings = settings_repo
 
     def has_history(self, exercise_name: str) -> bool:
         names = self.exercise_names.aliases(exercise_name)
@@ -39,14 +42,14 @@ class RecommendationService:
         rpe_list = [int(r[2]) for r in history]
         dates = [datetime.date.fromisoformat(r[3]) for r in history]
         timestamps = list(range(len(dates)))
-        months_active = 1.0
+        months_active = self.settings.get_float("months_active", 1.0)
         workouts_per_month = float(len(set(timestamps)))
         prescription = ExercisePrescription.exercise_prescription(
             weight_list,
             reps_list,
             timestamps,
             rpe_list,
-            body_weight=80.0,
+            body_weight=self.settings.get_float("body_weight", 80.0),
             months_active=months_active,
             workouts_per_month=workouts_per_month,
         )
