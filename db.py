@@ -92,6 +92,9 @@ class BaseRepository(Database):
             cursor.execute(query, params)
             return cursor.fetchall()
 
+    def _delete_all(self, table: str) -> None:
+        self.execute(f"DELETE FROM {table};")
+
 
 class WorkoutRepository(BaseRepository):
     """Repository for workout table operations."""
@@ -101,6 +104,9 @@ class WorkoutRepository(BaseRepository):
 
     def fetch_all_workouts(self) -> List[Tuple[int, str]]:
         return self.fetch_all("SELECT id, date FROM workouts ORDER BY id DESC;")
+
+    def delete_all(self) -> None:
+        self._delete_all("workouts")
 
 
 class ExerciseRepository(BaseRepository):
@@ -203,6 +209,9 @@ class PlannedWorkoutRepository(BaseRepository):
         return super().fetch_all(
             "SELECT id, date FROM planned_workouts ORDER BY id DESC;"
         )
+
+    def delete_all(self) -> None:
+        self._delete_all("planned_workouts")
 
 
 class PlannedExerciseRepository(BaseRepository):

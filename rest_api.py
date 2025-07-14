@@ -133,6 +133,28 @@ class GymAPI:
                 for sid, reps, weight, rpe in sets
             ]
 
+        @self.app.post("/settings/delete_all")
+        def delete_all(confirmation: str):
+            if confirmation != "Yes, I confirm":
+                return {"status": "confirmation_failed"}
+            self.workouts.delete_all()
+            self.planned_workouts.delete_all()
+            return {"status": "deleted"}
+
+        @self.app.post("/settings/delete_logged")
+        def delete_logged(confirmation: str):
+            if confirmation != "Yes, I confirm":
+                return {"status": "confirmation_failed"}
+            self.workouts.delete_all()
+            return {"status": "deleted"}
+
+        @self.app.post("/settings/delete_planned")
+        def delete_planned(confirmation: str):
+            if confirmation != "Yes, I confirm":
+                return {"status": "confirmation_failed"}
+            self.planned_workouts.delete_all()
+            return {"status": "deleted"}
+
 
 api = GymAPI()
 app = api.app
