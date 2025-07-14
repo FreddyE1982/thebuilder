@@ -295,3 +295,54 @@ class APITestCase(unittest.TestCase):
         self.assertIn("planned_set_id", data)
         self.assertIn("diff_reps", data)
 
+    def test_exercise_catalog_endpoints(self) -> None:
+        resp = self.client.get("/exercise_catalog/muscle_groups")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("Chest", resp.json())
+
+        resp = self.client.get("/exercise_catalog", params={"muscle_groups": "Chest"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("Barbell Bench Press", resp.json())
+
+        resp = self.client.get("/exercise_catalog/Barbell Bench Press")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn("Pectoralis Major", data["primary_muscle"])
+
+        resp = self.client.post(
+            "/exercise_catalog",
+            params={
+                "muscle_group": "Test",
+                "name": "My Ex",
+                "variants": "Var1|Var2",
+                "equipment_names": "Olympic Barbell",
+                "primary_muscle": "Foo",
+            },
+        )
+        self.assertEqual(resp.status_code, 200)
+        ex_id = resp.json()["id"]
+        self.assertIsInstance(ex_id, int)
+
+        resp = self.client.put(
+            "/exercise_catalog/My Ex",
+            params={
+                "muscle_group": "Test",
+                "variants": "Var1",
+                "equipment_names": "Olympic Barbell",
+                "primary_muscle": "Foo",
+                "secondary_muscle": "",
+                "tertiary_muscle": "",
+                "other_muscles": "",
+                "new_name": "My Ex2",
+            },
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), {"status": "updated"})
+
+        resp = self.client.delete("/exercise_catalog/My Ex2")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), {"status": "deleted"})
+
+        resp = self.client.delete("/exercise_catalog/Barbell Bench Press")
+        self.assertEqual(resp.status_code, 400)
+

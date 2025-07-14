@@ -8,6 +8,7 @@ from db import (
     PlannedExerciseRepository,
     PlannedSetRepository,
     EquipmentRepository,
+    ExerciseCatalogRepository,
 )
 from planner_service import PlannerService
 
@@ -23,6 +24,7 @@ class GymAPI:
         self.planned_exercises = PlannedExerciseRepository(db_path)
         self.planned_sets = PlannedSetRepository(db_path)
         self.equipment = EquipmentRepository(db_path)
+        self.exercise_catalog = ExerciseCatalogRepository(db_path)
         self.planner = PlannerService(
             self.workouts,
             self.exercises,
@@ -40,8 +42,13 @@ class GymAPI:
             return self.equipment.fetch_types()
 
         @self.app.get("/equipment")
-        def list_equipment(equipment_type: str = None, prefix: str = None):
-            return self.equipment.fetch_names(equipment_type, prefix)
+        def list_equipment(
+            equipment_type: str = None,
+            prefix: str = None,
+            muscles: str = None,
+        ):
+            muscs = muscles.split("|") if muscles else None
+            return self.equipment.fetch_names(equipment_type, prefix, muscs)
 
         @self.app.get("/equipment/{name}")
         def get_equipment(name: str):
@@ -59,6 +66,107 @@ class GymAPI:
                     equipment_type, name, muscles.split("|")
                 )
                 return {"id": eid}
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
+        @self.app.get("/exercise_catalog/muscle_groups")
+        def list_muscle_groups():
+            return self.exercise_catalog.fetch_muscle_groups()
+
+        @self.app.get("/exercise_catalog")
+        def list_exercise_catalog(
+            muscle_groups: str = None,
+            muscles: str = None,
+            equipment: str = None,
+        ):
+            groups = muscle_groups.split("|") if muscle_groups else None
+            muscs = muscles.split("|") if muscles else None
+            return self.exercise_catalog.fetch_names(groups, muscs, equipment)
+
+        @self.app.get("/exercise_catalog/{name}")
+        def get_exercise_detail(name: str):
+            data = self.exercise_catalog.fetch_detail(name)
+            if not data:
+                raise HTTPException(status_code=404, detail="not found")
+            (
+                muscle_group,
+                variants,
+                equipment_names,
+                primary_muscle,
+                secondary_muscle,
+                tertiary_muscle,
+                other_muscles,
+                _,
+            ) = data
+            return {
+                "muscle_group": muscle_group,
+                "variants": variants.split("|") if variants else [],
+                "equipment_names": equipment_names.split("|") if equipment_names else [],
+                "primary_muscle": primary_muscle,
+                "secondary_muscle": secondary_muscle.split("|") if secondary_muscle else [],
+                "tertiary_muscle": tertiary_muscle.split("|") if tertiary_muscle else [],
+                "other_muscles": other_muscles.split("|") if other_muscles else [],
+            }
+
+        @self.app.post("/exercise_catalog")
+        def add_exercise_catalog(
+            muscle_group: str,
+            name: str,
+            variants: str,
+            equipment_names: str,
+            primary_muscle: str,
+            secondary_muscle: str = "",
+            tertiary_muscle: str = "",
+            other_muscles: str = "",
+        ):
+            try:
+                eid = self.exercise_catalog.add(
+                    muscle_group,
+                    name,
+                    variants,
+                    equipment_names,
+                    primary_muscle,
+                    secondary_muscle,
+                    tertiary_muscle,
+                    other_muscles,
+                )
+                return {"id": eid}
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
+        @self.app.put("/exercise_catalog/{name}")
+        def update_exercise_catalog(
+            name: str,
+            muscle_group: str,
+            variants: str,
+            equipment_names: str,
+            primary_muscle: str,
+            secondary_muscle: str = "",
+            tertiary_muscle: str = "",
+            other_muscles: str = "",
+            new_name: str = None,
+        ):
+            try:
+                self.exercise_catalog.update(
+                    name,
+                    muscle_group,
+                    variants,
+                    equipment_names,
+                    primary_muscle,
+                    secondary_muscle,
+                    tertiary_muscle,
+                    other_muscles,
+                    new_name,
+                )
+                return {"status": "updated"}
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
+        @self.app.delete("/exercise_catalog/{name}")
+        def delete_exercise_catalog(name: str):
+            try:
+                self.exercise_catalog.remove(name)
+                return {"status": "deleted"}
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
 
