@@ -59,6 +59,7 @@ class MathToolsTestCase(unittest.TestCase):
         rpe = [8, 8, 8, 8, 8]
         calories = [2720, 2720, 2720, 2720, 2176]
         sleep_hours = [8, 8, 8, 8, 8]
+        sleep_quality = [4, 4, 4, 4, 4]
 
         result = ExercisePrescription.exercise_prescription(
             weights,
@@ -70,6 +71,7 @@ class MathToolsTestCase(unittest.TestCase):
             workouts_per_month=8,
             calories=calories,
             sleep_hours=sleep_hours,
+            sleep_quality=sleep_quality,
             target_1rm=140.0,
             days_remaining=30,
         )
@@ -77,7 +79,7 @@ class MathToolsTestCase(unittest.TestCase):
         self.assertEqual(result["total_sets"], 1)
         first_set = result["prescription"][0]
         self.assertEqual(first_set["reps"], 1)
-        self.assertAlmostEqual(first_set["weight"], 109.5)
+        self.assertAlmostEqual(first_set["weight"], 108.4)
 
 
 if __name__ == '__main__':

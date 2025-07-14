@@ -168,16 +168,28 @@ class ExercisePrescription(MathTools):
         return mev * (1 + math.exp(theta * fatigue / 1000) - stress) * ea
 
     @staticmethod
-    def _adj_mrv(mrv: float, perf: list[float], rec: list[float], sf: float) -> float:
+    def _adj_mrv(mrv: float, perf: list[float], rec: list[float]) -> float:
         perf_f = np.mean(np.array(perf)) if len(perf) > 0 else 1.0
         rec_q = np.mean(np.array(rec)) if len(rec) > 0 else 1.0
-        return mrv * perf_f * rec_q * sf
+        return mrv * perf_f * rec_q
 
     @staticmethod
     def _sleep_factor(avg_sleep: float | None) -> float:
         if avg_sleep is not None:
             return ExercisePrescription.clamp(1 + 0.06 * (avg_sleep - 8.0), 0.5, 1.1)
         return 1.0
+
+    @staticmethod
+    def _perceived_sleep_quality_factor(quality: float | None) -> float:
+        if quality is not None:
+            return ExercisePrescription.clamp(0.5 + 0.12 * quality, 0.5, 1.1)
+        return 1.0
+
+    @classmethod
+    def _sleep_recovery_index(cls, sleep_hours: float | None, quality: float | None) -> float:
+        sf = cls._sleep_factor(sleep_hours)
+        psqf = cls._perceived_sleep_quality_factor(quality)
+        return math.sqrt(sf * psqf)
 
     @staticmethod
     def _experience(months_active: float, workouts_per_month: float) -> float:
@@ -214,8 +226,9 @@ class ExercisePrescription(MathTools):
         return delta_1rm, delta_vol
 
     @classmethod
-    def _alpha(cls, delta_1rm: float, delta_vol: float) -> float:
-        return cls.clamp(0.6 * delta_1rm + 0.4 * delta_vol, cls.ALPHA_MIN, cls.ALPHA_MAX)
+    def _alpha(cls, delta_1rm: float, delta_vol: float, rec: float) -> float:
+        base = 0.6 * delta_1rm + 0.4 * delta_vol
+        return cls.clamp(base * rec, cls.ALPHA_MIN, cls.ALPHA_MAX)
 
     @staticmethod
     def _required_rate(target_1rm: float | None, current_1rm: float, days_remaining: int | None) -> float:
@@ -242,10 +255,10 @@ class ExercisePrescription(MathTools):
         return float(np.mean(loads) / std) if std != 0 else 1.0
 
     @staticmethod
-    def _deload_trigger(perf_factor: float, rpe_scores: list[float], tolerance: float) -> float:
+    def _deload_trigger(perf_factor: float, rpe_scores: list[float], rec: float) -> float:
         perf_decline = max(0.0, 1.0 - perf_factor)
         rpe_elev = max(0.0, np.mean(np.array(rpe_scores)) - 7) if len(rpe_scores) > 0 else 0.0
-        return float(perf_decline * rpe_elev * (1 / tolerance if tolerance != 0 else 1.0))
+        return float(perf_decline * rpe_elev * (1 / rec if rec != 0 else 1.0))
 
     @staticmethod
     def _rpe_scale(rpe_scores: list[float]) -> float:
@@ -296,25 +309,25 @@ class ExercisePrescription(MathTools):
         body_weight: float,
         calories: list[float] | None,
         sleep_hours: list[float] | None,
+        sleep_quality: list[float] | None,
     ) -> list[float]:
-        days = max(len(calories or []), len(sleep_hours or []))
+        days = max(len(calories or []), len(sleep_hours or []), len(sleep_quality or []))
         if days == 0:
             return [1.0]
         rec_scores: list[float] = []
         for i in range(days):
             cal = calories[i] if calories and i < len(calories) else None
             slp = sleep_hours[i] if sleep_hours and i < len(sleep_hours) else None
+            qual = (
+                sleep_quality[i] if sleep_quality and i < len(sleep_quality) else None
+            )
             ea = (
                 cls.clamp(cal / ((body_weight * 0.85) * 40.0), 0.5, 1.1)
                 if cal is not None
                 else 1.0
             )
-            sf = (
-                cls.clamp(1 + 0.06 * (slp - 8.0), 0.5, 1.1)
-                if slp is not None
-                else 1.0
-            )
-            rec_scores.append((ea + sf) / 2)
+            sri = cls._sleep_recovery_index(slp, qual)
+            rec_scores.append((ea + sri) / 2)
         return rec_scores
 
     @classmethod
@@ -331,6 +344,7 @@ class ExercisePrescription(MathTools):
         *,
         calories: list[float] | None = None,
         sleep_hours: list[float] | None = None,
+        sleep_quality: list[float] | None = None,
         target_1rm: float | None = None,
         days_remaining: int | None = None,
         decay: float = 0.9,
@@ -353,11 +367,16 @@ class ExercisePrescription(MathTools):
         fatigue = cls._fatigue(weights, reps, timestamps, decay)
         ac_ratio = cls._ac_ratio(weights, reps)
         perf_scores = cls._performance_scores_from_logs(weights, reps, timestamps, MEV)
-        rec_scores = cls._recovery_scores_from_logs(body_weight, calories, sleep_hours)
+        rec_scores = cls._recovery_scores_from_logs(
+            body_weight, calories, sleep_hours, sleep_quality
+        )
         ea = cls._energy_availability(body_weight, np.mean(calories) if calories else None)
         mrv = cls._mrv(MEV, fatigue, stress, ea, theta)
-        sf = cls._sleep_factor(np.mean(sleep_hours) if sleep_hours else None)
-        adj_mrv = cls._adj_mrv(mrv, perf_scores, rec_scores, sf)
+        sri = cls._sleep_recovery_index(
+            np.mean(sleep_hours) if sleep_hours else None,
+            np.mean(sleep_quality) if sleep_quality else None,
+        )
+        adj_mrv = cls._adj_mrv(mrv, perf_scores, rec_scores)
         experience = cls._experience(months_active, workouts_per_month)
         tolerance = cls._tolerance(
             perf_scores,
@@ -369,13 +388,14 @@ class ExercisePrescription(MathTools):
         vol_presc = cls._volume_prescription(MEV, mrv, phase_factor, tolerance)
         urgency = cls._urgency(target_1rm, current_1rm)
         delta_1rm, delta_vol = cls._deltas(current_1rm, y_mean, recent_load, prev_load)
-        alpha = cls._alpha(delta_1rm, delta_vol)
+        rec_factor = np.mean(np.array(rec_scores)) if len(rec_scores) > 0 else 1.0
+        alpha = cls._alpha(delta_1rm, delta_vol, rec_factor)
         required_rate = cls._required_rate(target_1rm, current_1rm, days_remaining)
         achievement_prob = cls._achievement_probability(required_rate)
         weekly_rate = cls._weekly_rate(slope, y_mean)
         weekly_monotony = cls._weekly_monotony(weights, reps)
         perf_factor = np.mean(np.array(perf_scores)) if len(perf_scores) > 0 else 1.0
-        deload_trigger = cls._deload_trigger(perf_factor, rpe_scores, tolerance)
+        deload_trigger = cls._deload_trigger(perf_factor, rpe_scores, rec_factor)
         rpe_scale = cls._rpe_scale(rpe_scores)
         confidence_int = cls._confidence_interval(slope, weights, timestamps)
 
@@ -422,7 +442,7 @@ class ExercisePrescription(MathTools):
                 * load_decay
                 * (1 - 0.1 * plateau)
                 * ea
-                * sf,
+                * sri,
                 0.5 * y_mean,
                 0.95 * current_1rm,
             )
