@@ -415,6 +415,13 @@ class GymApp:
         )
         st.subheader("Summary")
         st.table(summary)
+        daily = self.stats.daily_volume(start_str, end_str)
+        st.subheader("Daily Volume")
+        if daily:
+            st.line_chart({"Volume": [d["volume"] for d in daily]}, x=[d["date"] for d in daily])
+        equip_stats = self.stats.equipment_usage(start_str, end_str)
+        st.subheader("Equipment Usage")
+        st.table(equip_stats)
         if ex_choice:
             prog = self.stats.progression(ex_choice, start_str, end_str)
             st.subheader("1RM Progression")
