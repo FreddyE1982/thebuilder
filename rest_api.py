@@ -9,6 +9,7 @@ from db import (
     PlannedSetRepository,
     EquipmentRepository,
     ExerciseCatalogRepository,
+    MuscleRepository,
 )
 from planner_service import PlannerService
 
@@ -25,6 +26,7 @@ class GymAPI:
         self.planned_sets = PlannedSetRepository(db_path)
         self.equipment = EquipmentRepository(db_path)
         self.exercise_catalog = ExerciseCatalogRepository(db_path)
+        self.muscles = MuscleRepository(db_path)
         self.planner = PlannerService(
             self.workouts,
             self.exercises,
@@ -68,6 +70,20 @@ class GymAPI:
                 return {"id": eid}
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
+
+        @self.app.get("/muscles")
+        def list_muscles():
+            return self.muscles.fetch_all()
+
+        @self.app.post("/muscles/link")
+        def link_muscles(name1: str, name2: str):
+            self.muscles.link(name1, name2)
+            return {"status": "linked"}
+
+        @self.app.post("/muscles/alias")
+        def add_alias(new_name: str, existing: str):
+            self.muscles.add_alias(new_name, existing)
+            return {"status": "added"}
 
         @self.app.get("/exercise_catalog/muscle_groups")
         def list_muscle_groups():

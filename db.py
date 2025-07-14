@@ -26,6 +26,13 @@ class Database:
                 );""",
             ["id", "equipment_type", "name", "muscles", "is_custom"],
         ),
+        "muscles": (
+            """CREATE TABLE muscles (
+                    name TEXT PRIMARY KEY,
+                    canonical_name TEXT NOT NULL
+                );""",
+            ["name", "canonical_name"],
+        ),
         "exercise_catalog": (
             """CREATE TABLE exercise_catalog (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -125,6 +132,7 @@ class Database:
         self._ensure_schema()
         self._import_equipment_data()
         self._import_exercise_catalog_data()
+        self._sync_muscles()
 
     @contextmanager
     def _connection(self) -> sqlite3.Connection:
@@ -234,6 +242,29 @@ class Database:
                         tertiary_muscle,
                         other_muscles,
                     ),
+                )
+
+    def _sync_muscles(self) -> None:
+        with self._connection() as conn:
+            names: Set[str] = set()
+            rows = conn.execute("SELECT muscles FROM equipment;").fetchall()
+            for row in rows:
+                for m in row[0].split("|"):
+                    if m:
+                        names.add(m)
+            rows = conn.execute(
+                "SELECT primary_muscle, secondary_muscle, tertiary_muscle, other_muscles FROM exercise_catalog;"
+            ).fetchall()
+            for pm, sm, tm, om in rows:
+                for field in [pm, sm, tm, om]:
+                    if field:
+                        for m in field.split("|"):
+                            if m:
+                                names.add(m)
+            for n in names:
+                conn.execute(
+                    "INSERT OR IGNORE INTO muscles (name, canonical_name) VALUES (?, ?);",
+                    (n, n),
                 )
 
 
@@ -419,11 +450,67 @@ class PlannedSetRepository(BaseRepository):
         )
 
 
+class MuscleRepository(BaseRepository):
+    """Repository for muscle alias management."""
+
+    def ensure(self, muscles: Iterable[str]) -> None:
+        with self._connection() as conn:
+            for m in muscles:
+                conn.execute(
+                    "INSERT OR IGNORE INTO muscles (name, canonical_name) VALUES (?, ?);",
+                    (m, m),
+                )
+
+    def fetch_all(self) -> List[str]:
+        rows = super().fetch_all("SELECT name FROM muscles ORDER BY name;")
+        return [r[0] for r in rows]
+
+    def canonical(self, name: str) -> str:
+        rows = super().fetch_all(
+            "SELECT canonical_name FROM muscles WHERE name = ?;", (name,)
+        )
+        return rows[0][0] if rows else name
+
+    def aliases(self, name: str) -> List[str]:
+        canonical = self.canonical(name)
+        rows = super().fetch_all(
+            "SELECT name FROM muscles WHERE canonical_name = ? ORDER BY name;",
+            (canonical,),
+        )
+        return [r[0] for r in rows]
+
+    def link(self, name1: str, name2: str) -> None:
+        self.ensure([name1, name2])
+        canon1 = self.canonical(name1)
+        canon2 = self.canonical(name2)
+        if canon1 == canon2:
+            return
+        with self._connection() as conn:
+            conn.execute(
+                "UPDATE muscles SET canonical_name = ? WHERE canonical_name = ?;",
+                (canon1, canon2),
+            )
+
+    def add_alias(self, new_name: str, existing: str) -> None:
+        self.ensure([existing])
+        canonical = self.canonical(existing)
+        with self._connection() as conn:
+            conn.execute(
+                "INSERT OR REPLACE INTO muscles (name, canonical_name) VALUES (?, ?);",
+                (new_name, canonical),
+            )
+
+
 class EquipmentRepository(BaseRepository):
     """Repository for equipment data."""
 
+    def __init__(self, db_path: str = "workout.db") -> None:
+        super().__init__(db_path)
+        self.muscles = MuscleRepository(db_path)
+
     def upsert_many(self, records: Iterable[Tuple[str, str, str]]) -> None:
         for equipment_type, name, muscles in records:
+            self.muscles.ensure(muscles.split("|"))
             self.execute(
                 "INSERT INTO equipment (equipment_type, name, muscles, is_custom) VALUES (?, ?, ?, 0) "
                 "ON CONFLICT(name) DO UPDATE SET equipment_type=excluded.equipment_type, muscles=excluded.muscles;",
@@ -452,8 +539,10 @@ class EquipmentRepository(BaseRepository):
             params.append(f"{prefix}%")
         if muscles:
             for m in muscles:
-                query += " AND muscles LIKE ?"
-                params.append(f"%{m}%")
+                aliases = self.muscles.aliases(m)
+                clause_parts = ["muscles LIKE ?" for _ in aliases]
+                query += " AND (" + " OR ".join(clause_parts) + ")"
+                params.extend([f"%{a}%" for a in aliases])
         query += " ORDER BY name;"
         rows = self.fetch_all(query, tuple(params))
         return [r[0] for r in rows]
@@ -461,7 +550,12 @@ class EquipmentRepository(BaseRepository):
     def fetch_muscles(self, name: str) -> List[str]:
         rows = self.fetch_all("SELECT muscles FROM equipment WHERE name = ?;", (name,))
         if rows:
-            return rows[0][0].split("|")
+            result: List[str] = []
+            for m in rows[0][0].split("|"):
+                canon = self.muscles.canonical(m)
+                if canon not in result:
+                    result.append(canon)
+            return result
         return []
 
     def fetch_all_records(self) -> List[Tuple[str, str, str, int]]:
@@ -474,7 +568,7 @@ class EquipmentRepository(BaseRepository):
         muscles: Set[str] = set()
         for row in rows:
             for m in row[0].split("|"):
-                muscles.add(m)
+                muscles.add(self.muscles.canonical(m))
         return sorted(muscles)
 
     def add(self, equipment_type: str, name: str, muscles: List[str]) -> int:
@@ -484,7 +578,8 @@ class EquipmentRepository(BaseRepository):
         )
         if existing:
             raise ValueError("equipment exists")
-        muscles_str = "|".join(muscles)
+        self.muscles.ensure(muscles)
+        muscles_str = "|".join([self.muscles.canonical(m) for m in muscles])
         return self.execute(
             "INSERT INTO equipment (equipment_type, name, muscles, is_custom) VALUES (?, ?, ?, 1);",
             (equipment_type, name, muscles_str),
@@ -506,7 +601,8 @@ class EquipmentRepository(BaseRepository):
         if rows[0][0] == 0:
             raise ValueError("cannot modify imported equipment")
         target = new_name or name
-        muscles_str = "|".join(muscles)
+        self.muscles.ensure(muscles)
+        muscles_str = "|".join([self.muscles.canonical(m) for m in muscles])
         self.execute(
             "UPDATE equipment SET equipment_type = ?, name = ?, muscles = ? WHERE name = ?;",
             (equipment_type, target, muscles_str, name),
@@ -526,6 +622,10 @@ class EquipmentRepository(BaseRepository):
 
 class ExerciseCatalogRepository(BaseRepository):
     """Repository for exercise catalog data."""
+
+    def __init__(self, db_path: str = "workout.db") -> None:
+        super().__init__(db_path)
+        self.muscles = MuscleRepository(db_path)
 
     def fetch_muscle_groups(self) -> List[str]:
         rows = self.fetch_all(
@@ -551,16 +651,19 @@ class ExerciseCatalogRepository(BaseRepository):
         if muscles:
             muscle_clauses = []
             for muscle in muscles:
-                pattern = f"%{muscle}%"
+                aliases = self.muscles.aliases(muscle)
                 cols = [
                     "primary_muscle",
                     "secondary_muscle",
                     "tertiary_muscle",
                     "other_muscles",
                 ]
-                or_clauses = [f"{c} LIKE ?" for c in cols]
-                muscle_clauses.append("(" + " OR ".join(or_clauses) + ")")
-                params.extend([pattern] * len(cols))
+                alias_clauses = []
+                for alias in aliases:
+                    pattern = f"%{alias}%"
+                    alias_clauses.extend([f"{c} LIKE ?" for c in cols])
+                    params.extend([pattern] * len(cols))
+                muscle_clauses.append("(" + " OR ".join(alias_clauses) + ")")
             query += " AND (" + " OR ".join(muscle_clauses) + ")"
         query += " ORDER BY name;"
         rows = self.fetch_all(query, tuple(params))
@@ -572,13 +675,64 @@ class ExerciseCatalogRepository(BaseRepository):
             (name,),
         )
         if rows:
-            return rows[0]
+            (
+                group,
+                variants,
+                equipment_names,
+                primary,
+                secondary,
+                tertiary,
+                other,
+                is_custom,
+            ) = rows[0]
+            def canon_list(text: str) -> str:
+                items = [self.muscles.canonical(m) for m in text.split("|") if m]
+                return "|".join(dict.fromkeys(items))
+            return (
+                group,
+                variants,
+                equipment_names,
+                canon_list(primary),
+                canon_list(secondary),
+                canon_list(tertiary),
+                canon_list(other),
+                is_custom,
+            )
         return None
 
     def fetch_all_records(self) -> List[Tuple[str, str, str, str, str, str, str, int]]:
-        return self.fetch_all(
+        rows = self.fetch_all(
             "SELECT name, muscle_group, variants, equipment_names, primary_muscle, secondary_muscle, tertiary_muscle, other_muscles, is_custom FROM exercise_catalog ORDER BY name;"
         )
+        result = []
+        for (
+            name,
+            group,
+            variants,
+            equipment_names,
+            primary,
+            secondary,
+            tertiary,
+            other,
+            is_custom,
+        ) in rows:
+            def canon(text: str) -> str:
+                items = [self.muscles.canonical(m) for m in text.split("|") if m]
+                return "|".join(dict.fromkeys(items))
+            result.append(
+                (
+                    name,
+                    group,
+                    variants,
+                    equipment_names,
+                    canon(primary),
+                    canon(secondary),
+                    canon(tertiary),
+                    canon(other),
+                    is_custom,
+                )
+            )
+        return result
 
     def fetch_all_muscles(self) -> List[str]:
         rows = self.fetch_all(
@@ -590,7 +744,7 @@ class ExerciseCatalogRepository(BaseRepository):
                 if field:
                     for m in field.split("|"):
                         if m:
-                            muscles.add(m)
+                            muscles.add(self.muscles.canonical(m))
         return sorted(muscles)
 
     def add(
@@ -610,6 +764,18 @@ class ExerciseCatalogRepository(BaseRepository):
         )
         if existing:
             raise ValueError("exercise exists")
+        muscs = [primary_muscle] + secondary_muscle.split("|") + tertiary_muscle.split("|") + other_muscles.split("|")
+        self.muscles.ensure([m for m in muscs if m])
+        primary_muscle = self.muscles.canonical(primary_muscle)
+        secondary_muscle = "|".join([
+            self.muscles.canonical(m) for m in secondary_muscle.split("|") if m
+        ])
+        tertiary_muscle = "|".join([
+            self.muscles.canonical(m) for m in tertiary_muscle.split("|") if m
+        ])
+        other_muscles = "|".join([
+            self.muscles.canonical(m) for m in other_muscles.split("|") if m
+        ])
         return self.execute(
             "INSERT INTO exercise_catalog (muscle_group, name, variants, equipment_names, primary_muscle, secondary_muscle, tertiary_muscle, other_muscles, is_custom) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1);",
             (
@@ -645,6 +811,18 @@ class ExerciseCatalogRepository(BaseRepository):
         if rows[0][0] == 0:
             raise ValueError("cannot modify imported exercise")
         target = new_name or name
+        muscs = [primary_muscle] + secondary_muscle.split("|") + tertiary_muscle.split("|") + other_muscles.split("|")
+        self.muscles.ensure([m for m in muscs if m])
+        primary_muscle = self.muscles.canonical(primary_muscle)
+        secondary_muscle = "|".join([
+            self.muscles.canonical(m) for m in secondary_muscle.split("|") if m
+        ])
+        tertiary_muscle = "|".join([
+            self.muscles.canonical(m) for m in tertiary_muscle.split("|") if m
+        ])
+        other_muscles = "|".join([
+            self.muscles.canonical(m) for m in other_muscles.split("|") if m
+        ])
         self.execute(
             "UPDATE exercise_catalog SET muscle_group = ?, name = ?, variants = ?, equipment_names = ?, primary_muscle = ?, secondary_muscle = ?, tertiary_muscle = ?, other_muscles = ? WHERE name = ?;",
             (

@@ -346,3 +346,28 @@ class APITestCase(unittest.TestCase):
         resp = self.client.delete("/exercise_catalog/Barbell Bench Press")
         self.assertEqual(resp.status_code, 400)
 
+    def test_muscle_alias(self) -> None:
+        resp = self.client.get("/muscles")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("Biceps Brachii", resp.json())
+
+        resp = self.client.post(
+            "/muscles/alias", params={"new_name": "My Biceps", "existing": "Biceps Brachii"}
+        )
+        self.assertEqual(resp.status_code, 200)
+
+        resp = self.client.post(
+            "/muscles/link", params={"name1": "My Biceps", "name2": "Brachialis"}
+        )
+        self.assertEqual(resp.status_code, 200)
+
+        resp = self.client.get("/equipment", params={"muscles": "My Biceps"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("EZ Curl Bar", resp.json())
+
+        resp = self.client.get(
+            "/exercise_catalog", params={"muscles": "My Biceps"}
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("Pull-up", resp.json())
+
