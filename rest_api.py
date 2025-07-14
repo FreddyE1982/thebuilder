@@ -1,6 +1,14 @@
 import datetime
 from fastapi import FastAPI
-from db import WorkoutRepository, ExerciseRepository, SetRepository
+from db import (
+    WorkoutRepository,
+    ExerciseRepository,
+    SetRepository,
+    PlannedWorkoutRepository,
+    PlannedExerciseRepository,
+    PlannedSetRepository,
+)
+from planner_service import PlannerService
 
 
 class GymAPI:
@@ -10,6 +18,17 @@ class GymAPI:
         self.workouts = WorkoutRepository(db_path)
         self.exercises = ExerciseRepository(db_path)
         self.sets = SetRepository(db_path)
+        self.planned_workouts = PlannedWorkoutRepository(db_path)
+        self.planned_exercises = PlannedExerciseRepository(db_path)
+        self.planned_sets = PlannedSetRepository(db_path)
+        self.planner = PlannerService(
+            self.workouts,
+            self.exercises,
+            self.sets,
+            self.planned_workouts,
+            self.planned_exercises,
+            self.planned_sets,
+        )
         self.app = FastAPI()
         self._setup_routes()
 
@@ -39,6 +58,54 @@ class GymAPI:
             exercises = self.exercises.fetch_for_workout(workout_id)
             return [{"id": ex_id, "name": name} for ex_id, name in exercises]
 
+        @self.app.post("/planned_workouts")
+        def create_planned_workout(date: str):
+            plan_id = self.planned_workouts.create(date)
+            return {"id": plan_id}
+
+        @self.app.get("/planned_workouts")
+        def list_planned_workouts():
+            plans = self.planned_workouts.fetch_all()
+            return [{"id": pid, "date": date} for pid, date in plans]
+
+        @self.app.post("/planned_workouts/{plan_id}/exercises")
+        def add_planned_exercise(plan_id: int, name: str):
+            ex_id = self.planned_exercises.add(plan_id, name)
+            return {"id": ex_id}
+
+        @self.app.get("/planned_workouts/{plan_id}/exercises")
+        def list_planned_exercises(plan_id: int):
+            exercises = self.planned_exercises.fetch_for_workout(plan_id)
+            return [{"id": ex_id, "name": name} for ex_id, name in exercises]
+
+        @self.app.delete("/planned_exercises/{exercise_id}")
+        def delete_planned_exercise(exercise_id: int):
+            self.planned_exercises.remove(exercise_id)
+            return {"status": "deleted"}
+
+        @self.app.post("/planned_exercises/{exercise_id}/sets")
+        def add_planned_set(exercise_id: int, reps: int, weight: float, rpe: int):
+            set_id = self.planned_sets.add(exercise_id, reps, weight, rpe)
+            return {"id": set_id}
+
+        @self.app.get("/planned_exercises/{exercise_id}/sets")
+        def list_planned_sets(exercise_id: int):
+            sets = self.planned_sets.fetch_for_exercise(exercise_id)
+            return [
+                {"id": sid, "reps": reps, "weight": weight, "rpe": rpe}
+                for sid, reps, weight, rpe in sets
+            ]
+
+        @self.app.delete("/planned_sets/{set_id}")
+        def delete_planned_set(set_id: int):
+            self.planned_sets.remove(set_id)
+            return {"status": "deleted"}
+
+        @self.app.post("/planned_workouts/{plan_id}/use")
+        def use_planned_workout(plan_id: int):
+            workout_id = self.planner.create_workout_from_plan(plan_id)
+            return {"id": workout_id}
+
         @self.app.post("/exercises/{exercise_id}/sets")
         def add_set(exercise_id: int, reps: int, weight: float, rpe: int):
             set_id = self.sets.add(exercise_id, reps, weight, rpe)
@@ -53,6 +120,10 @@ class GymAPI:
         def delete_set(set_id: int):
             self.sets.remove(set_id)
             return {"status": "deleted"}
+
+        @self.app.get("/sets/{set_id}")
+        def get_set(set_id: int):
+            return self.sets.fetch_detail(set_id)
 
         @self.app.get("/exercises/{exercise_id}/sets")
         def list_sets(exercise_id: int):
