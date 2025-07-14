@@ -3,7 +3,7 @@ import sys
 import unittest
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-from tools import MathTools
+from tools import MathTools, ExercisePrescription
 
 
 class MathToolsTestCase(unittest.TestCase):
@@ -51,6 +51,35 @@ class MathToolsTestCase(unittest.TestCase):
         self.assertAlmostEqual(MathTools.required_progression(150.0, 120.0, 30), 1.0)
         with self.assertRaises(ValueError):
             MathTools.required_progression(150.0, 120.0, 0)
+
+    def test_exercise_prescription(self) -> None:
+        weights = [100.0, 105.0, 110.0, 112.5, 115.0]
+        reps = [5, 5, 5, 5, 5]
+        timestamps = [0, 7, 14, 21, 28]
+        rpe = [8, 8, 8, 8, 8]
+        perf = [1.0, 1.1, 1.1, 1.05, 1.0]
+        rec = [1.0, 1.0, 1.0, 1.0, 0.9]
+
+        result = ExercisePrescription.exercise_prescription(
+            weights,
+            reps,
+            timestamps,
+            rpe,
+            perf,
+            rec,
+            body_weight=80.0,
+            months_active=12,
+            workouts_per_month=8,
+            avg_calories=3000,
+            avg_sleep=7,
+            target_1rm=140.0,
+            days_remaining=30,
+        )
+
+        self.assertEqual(result["total_sets"], 1)
+        first_set = result["prescription"][0]
+        self.assertEqual(first_set["reps"], 1)
+        self.assertAlmostEqual(first_set["weight"], 117.9)
 
 
 if __name__ == '__main__':
