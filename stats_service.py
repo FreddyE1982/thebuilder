@@ -1,12 +1,17 @@
+import datetime
 from typing import List, Optional, Dict
 from db import SetRepository, ExerciseNameRepository
-from tools import MathTools
+from tools import MathTools, ExerciseProgressEstimator
 
 
 class StatisticsService:
     """Compute workout statistics for analysis."""
 
-    def __init__(self, set_repo: SetRepository, name_repo: ExerciseNameRepository) -> None:
+    def __init__(
+        self,
+        set_repo: SetRepository,
+        name_repo: ExerciseNameRepository,
+    ) -> None:
         self.sets = set_repo
         self.exercise_names = name_repo
 
@@ -130,6 +135,39 @@ class StatisticsService:
                 }
             )
         return result
+
+    def progress_forecast(
+        self,
+        exercise: str,
+        weeks: int,
+        workouts_per_week: int,
+    ) -> List[Dict[str, float]]:
+        """Predict 1RM progression for ``exercise`` over future weeks."""
+        names = self._alias_names(exercise)
+        rows = self.sets.fetch_history_by_names(names)
+        if not rows:
+            return []
+
+        weights = [float(r[1]) for r in rows]
+        reps = [int(r[0]) for r in rows]
+        rpe_scores = [int(r[2]) for r in rows]
+        times = list(range(len(rows)))
+
+        months_active = 1.0
+        workouts_per_month = float(len(set(times)))
+        body_weight = 80.0
+
+        return ExerciseProgressEstimator.predict_progress(
+            weights,
+            reps,
+            times,
+            rpe_scores,
+            weeks,
+            workouts_per_week,
+            body_weight=body_weight,
+            months_active=months_active,
+            workouts_per_month=workouts_per_month,
+        )
 
     def equipment_usage(
         self,

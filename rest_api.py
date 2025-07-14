@@ -395,6 +395,18 @@ class GymAPI:
         ):
             return self.statistics.equipment_usage(start_date, end_date)
 
+        @self.app.get("/prediction/progress")
+        def prediction_progress(
+            exercise: str,
+            weeks: int,
+            workouts: int,
+        ):
+            return self.statistics.progress_forecast(
+                exercise,
+                weeks,
+                workouts,
+            )
+
         @self.app.get("/settings/general")
         def get_general_settings():
             return self.settings.all_settings()
