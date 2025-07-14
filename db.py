@@ -2,7 +2,7 @@ import sqlite3
 import csv
 import os
 from contextlib import contextmanager
-from typing import List, Tuple, Optional, Iterable
+from typing import List, Tuple, Optional, Iterable, Set
 
 
 class Database:
@@ -21,9 +21,10 @@ class Database:
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     equipment_type TEXT NOT NULL,
                     name TEXT NOT NULL UNIQUE,
-                    muscles TEXT NOT NULL
+                    muscles TEXT NOT NULL,
+                    is_custom INTEGER NOT NULL DEFAULT 0
                 );""",
-            ["id", "equipment_type", "name", "muscles"],
+            ["id", "equipment_type", "name", "muscles", "is_custom"],
         ),
         "exercises": (
             """CREATE TABLE exercises (
@@ -157,7 +158,7 @@ class Database:
         with self._connection() as conn:
             for equipment_type, name, muscles in records:
                 conn.execute(
-                    "INSERT INTO equipment (equipment_type, name, muscles) VALUES (?, ?, ?) "
+                    "INSERT INTO equipment (equipment_type, name, muscles, is_custom) VALUES (?, ?, ?, 0) "
                     "ON CONFLICT(name) DO UPDATE SET equipment_type=excluded.equipment_type, muscles=excluded.muscles;",
                     (equipment_type, name, muscles),
                 )
@@ -351,7 +352,7 @@ class EquipmentRepository(BaseRepository):
     def upsert_many(self, records: Iterable[Tuple[str, str, str]]) -> None:
         for equipment_type, name, muscles in records:
             self.execute(
-                "INSERT INTO equipment (equipment_type, name, muscles) VALUES (?, ?, ?) "
+                "INSERT INTO equipment (equipment_type, name, muscles, is_custom) VALUES (?, ?, ?, 0) "
                 "ON CONFLICT(name) DO UPDATE SET equipment_type=excluded.equipment_type, muscles=excluded.muscles;",
                 (equipment_type, name, muscles),
             )
@@ -382,4 +383,63 @@ class EquipmentRepository(BaseRepository):
         if rows:
             return rows[0][0].split("|")
         return []
+
+    def fetch_all_records(self) -> List[Tuple[str, str, str, int]]:
+        return self.fetch_all(
+            "SELECT name, equipment_type, muscles, is_custom FROM equipment ORDER BY name;"
+        )
+
+    def fetch_all_muscles(self) -> List[str]:
+        rows = self.fetch_all("SELECT muscles FROM equipment;")
+        muscles: Set[str] = set()
+        for row in rows:
+            for m in row[0].split("|"):
+                muscles.add(m)
+        return sorted(muscles)
+
+    def add(self, equipment_type: str, name: str, muscles: List[str]) -> int:
+        existing = self.fetch_all(
+            "SELECT is_custom FROM equipment WHERE name = ?;",
+            (name,),
+        )
+        if existing:
+            raise ValueError("equipment exists")
+        muscles_str = "|".join(muscles)
+        return self.execute(
+            "INSERT INTO equipment (equipment_type, name, muscles, is_custom) VALUES (?, ?, ?, 1);",
+            (equipment_type, name, muscles_str),
+        )
+
+    def update(
+        self,
+        name: str,
+        equipment_type: str,
+        muscles: List[str],
+        new_name: Optional[str] = None,
+    ) -> None:
+        rows = self.fetch_all(
+            "SELECT is_custom FROM equipment WHERE name = ?;",
+            (name,),
+        )
+        if not rows:
+            raise ValueError("equipment not found")
+        if rows[0][0] == 0:
+            raise ValueError("cannot modify imported equipment")
+        target = new_name or name
+        muscles_str = "|".join(muscles)
+        self.execute(
+            "UPDATE equipment SET equipment_type = ?, name = ?, muscles = ? WHERE name = ?;",
+            (equipment_type, target, muscles_str, name),
+        )
+
+    def remove(self, name: str) -> None:
+        rows = self.fetch_all(
+            "SELECT is_custom FROM equipment WHERE name = ?;",
+            (name,),
+        )
+        if not rows:
+            raise ValueError("equipment not found")
+        if rows[0][0] == 0:
+            raise ValueError("cannot delete imported equipment")
+        self.execute("DELETE FROM equipment WHERE name = ?;", (name,))
 

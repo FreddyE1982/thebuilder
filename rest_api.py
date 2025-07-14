@@ -1,5 +1,5 @@
 import datetime
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from db import (
     WorkoutRepository,
     ExerciseRepository,
@@ -52,6 +52,39 @@ class GymAPI:
             eq_type = rows[0][0] if rows else None
             return {"name": name, "type": eq_type, "muscles": muscles}
 
+        @self.app.post("/equipment")
+        def add_equipment(equipment_type: str, name: str, muscles: str):
+            try:
+                eid = self.equipment.add(
+                    equipment_type, name, muscles.split("|")
+                )
+                return {"id": eid}
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
+        @self.app.put("/equipment/{name}")
+        def update_equipment(
+            name: str,
+            equipment_type: str,
+            muscles: str,
+            new_name: str = None,
+        ):
+            try:
+                self.equipment.update(
+                    name, equipment_type, muscles.split("|"), new_name
+                )
+                return {"status": "updated"}
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
+        @self.app.delete("/equipment/{name}")
+        def delete_equipment(name: str):
+            try:
+                self.equipment.remove(name)
+                return {"status": "deleted"}
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
         @self.app.post("/workouts")
         def create_workout():
             workout_id = self.workouts.create(datetime.date.today().isoformat())
@@ -63,7 +96,9 @@ class GymAPI:
             return [{"id": wid, "date": date} for wid, date in workouts]
 
         @self.app.post("/workouts/{workout_id}/exercises")
-        def add_exercise(workout_id: int, name: str, equipment: str = None):
+        def add_exercise(workout_id: int, name: str, equipment: str):
+            if not equipment:
+                raise HTTPException(status_code=400, detail="equipment required")
             ex_id = self.exercises.add(workout_id, name, equipment)
             return {"id": ex_id}
 
@@ -91,7 +126,9 @@ class GymAPI:
             return [{"id": pid, "date": date} for pid, date in plans]
 
         @self.app.post("/planned_workouts/{plan_id}/exercises")
-        def add_planned_exercise(plan_id: int, name: str, equipment: str = None):
+        def add_planned_exercise(plan_id: int, name: str, equipment: str):
+            if not equipment:
+                raise HTTPException(status_code=400, detail="equipment required")
             ex_id = self.planned_exercises.add(plan_id, name, equipment)
             return {"id": ex_id}
 

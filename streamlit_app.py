@@ -92,9 +92,12 @@ class GymApp:
         workout_id = st.session_state.selected_workout
         new_name = st.text_input("New Exercise Name", key="new_exercise")
         eq = self._equipment_selector("log_new")
-        if st.button("Add Exercise") and new_name:
-            self.exercises.add(workout_id, new_name, eq)
-            st.session_state.exercise_inputs.pop("new_exercise", None)
+        if st.button("Add Exercise"):
+            if new_name and eq:
+                self.exercises.add(workout_id, new_name, eq)
+                st.session_state.exercise_inputs.pop("new_exercise", None)
+            else:
+                st.warning("Exercise name and equipment required")
         exercises = self.exercises.fetch_for_workout(workout_id)
         for ex_id, name, eq_name in exercises:
             self._exercise_card(ex_id, name, eq_name)
@@ -204,9 +207,12 @@ class GymApp:
         workout_id = st.session_state.selected_planned_workout
         new_name = st.text_input("New Planned Exercise", key="new_plan_ex")
         plan_eq = self._equipment_selector("plan_new")
-        if st.button("Add Planned Exercise") and new_name:
-            self.planned_exercises.add(workout_id, new_name, plan_eq)
-            st.session_state.pop("new_plan_ex", None)
+        if st.button("Add Planned Exercise"):
+            if new_name and plan_eq:
+                self.planned_exercises.add(workout_id, new_name, plan_eq)
+                st.session_state.pop("new_plan_ex", None)
+            else:
+                st.warning("Exercise name and equipment required")
         exercises = self.planned_exercises.fetch_for_workout(workout_id)
         for ex_id, name, eq_name in exercises:
             self._planned_exercise_card(ex_id, name, eq_name)
@@ -307,6 +313,50 @@ class GymApp:
                         st.warning("Confirmation failed")
                 if st.button("Cancel"):
                     st.session_state.delete_target = None
+
+        st.header("Equipment Management")
+        muscles_list = self.equipment.fetch_all_muscles()
+        new_name = st.text_input("Equipment Name", key="equip_new_name")
+        types = self.equipment.fetch_types()
+        type_choice = st.selectbox("Equipment Type", types, key="equip_new_type")
+        new_muscles = st.multiselect("Muscles", muscles_list, key="equip_new_muscles")
+        if st.button("Add Equipment"):
+            if new_name and type_choice and new_muscles:
+                try:
+                    self.equipment.add(type_choice, new_name, new_muscles)
+                    st.success("Equipment added")
+                except ValueError as e:
+                    st.warning(str(e))
+            else:
+                st.warning("All fields required")
+
+        for name, eq_type, muscles, is_custom in self.equipment.fetch_all_records():
+            exp = st.expander(name)
+            with exp:
+                musc_list = muscles.split("|")
+                if is_custom:
+                    edit_name = st.text_input("Name", name, key=f"edit_name_{name}")
+                    edit_type = st.text_input("Type", eq_type, key=f"edit_type_{name}")
+                    edit_muscles = st.multiselect(
+                        "Muscles", muscles_list, musc_list, key=f"edit_mus_{name}"
+                    )
+                    if st.button("Update", key=f"upd_eq_{name}"):
+                        try:
+                            self.equipment.update(name, edit_type, edit_muscles, edit_name)
+                            st.success("Updated")
+                        except ValueError as e:
+                            st.warning(str(e))
+                    if st.button("Delete", key=f"del_eq_{name}"):
+                        try:
+                            self.equipment.remove(name)
+                            st.success("Deleted")
+                        except ValueError as e:
+                            st.warning(str(e))
+                else:
+                    st.markdown(f"**Type:** {eq_type}")
+                    st.markdown("**Muscles:**")
+                    for m in musc_list:
+                        st.markdown(f"- {m}")
 
 
 if __name__ == "__main__":
