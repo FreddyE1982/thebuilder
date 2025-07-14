@@ -381,6 +381,20 @@ class GymAPI:
                 end_date,
             )
 
+        @self.app.get("/stats/daily_volume")
+        def stats_daily_volume(
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            return self.statistics.daily_volume(start_date, end_date)
+
+        @self.app.get("/stats/equipment_usage")
+        def stats_equipment_usage(
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            return self.statistics.equipment_usage(start_date, end_date)
+
         @self.app.get("/settings/general")
         def get_general_settings():
             return self.settings.all_settings()

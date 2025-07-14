@@ -101,3 +101,64 @@ class StatisticsService:
         return [
             {"date": d, "est_1rm": round(by_date[d], 2)} for d in sorted(by_date)
         ]
+
+    def daily_volume(
+        self,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> List[Dict[str, float]]:
+        """Return total volume and set count per day."""
+        names = self.exercise_names.fetch_all()
+        rows = self.sets.fetch_history_by_names(
+            names,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        by_date: Dict[str, Dict[str, float]] = {}
+        for reps, weight, _rpe, date in rows:
+            entry = by_date.setdefault(date, {"volume": 0.0, "sets": 0})
+            entry["volume"] += int(reps) * float(weight)
+            entry["sets"] += 1
+        result = []
+        for d in sorted(by_date):
+            data = by_date[d]
+            result.append(
+                {
+                    "date": d,
+                    "volume": round(data["volume"], 2),
+                    "sets": data["sets"],
+                }
+            )
+        return result
+
+    def equipment_usage(
+        self,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> List[Dict[str, float]]:
+        """Return volume and set count per equipment."""
+        names = self.exercise_names.fetch_all()
+        rows = self.sets.fetch_history_by_names(
+            names,
+            start_date=start_date,
+            end_date=end_date,
+            with_equipment=True,
+        )
+        stats: Dict[str, Dict[str, float]] = {}
+        for reps, weight, _rpe, _date, _ex_name, eq_name in rows:
+            if not eq_name:
+                continue
+            item = stats.setdefault(eq_name, {"volume": 0.0, "sets": 0})
+            item["volume"] += int(reps) * float(weight)
+            item["sets"] += 1
+        result = []
+        for eq in sorted(stats):
+            data = stats[eq]
+            result.append(
+                {
+                    "equipment": eq,
+                    "volume": round(data["volume"], 2),
+                    "sets": data["sets"],
+                }
+            )
+        return result

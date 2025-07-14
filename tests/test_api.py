@@ -454,3 +454,16 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(len(prog), 1)
         self.assertAlmostEqual(prog[0]["est_1rm"], 139.3, places=1)
 
+        resp = self.client.get("/stats/daily_volume")
+        self.assertEqual(resp.status_code, 200)
+        daily = resp.json()
+        self.assertEqual(len(daily), 1)
+        self.assertAlmostEqual(daily[0]["volume"], 1880.0)
+
+        resp = self.client.get("/stats/equipment_usage")
+        self.assertEqual(resp.status_code, 200)
+        eq_stats = resp.json()
+        self.assertEqual(len(eq_stats), 1)
+        self.assertEqual(eq_stats[0]["equipment"], "Olympic Barbell")
+        self.assertEqual(eq_stats[0]["sets"], 2)
+
