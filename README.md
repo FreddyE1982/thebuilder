@@ -10,6 +10,8 @@ This repository contains a Streamlit application for tracking gym workouts. Ever
 
 - Python 3.9+
 - Streamlit
+- FastAPI
+- Uvicorn
 
 Install dependencies with:
 
@@ -23,3 +25,8 @@ pip install -r requirements.txt
 streamlit run streamlit_app.py
 ```
 
+## Running the REST API
+
+```bash
+uvicorn rest_api:app --reload
+```
