@@ -6,62 +6,52 @@ from typing import List, Tuple, Optional
 class Database:
     """Provides SQLite connection management and schema initialization."""
 
-    def __init__(self, db_path: str = "workout.db") -> None:
-        self._db_path = db_path
-        self._create_tables()
-
-    @contextmanager
-    def _connection(self) -> sqlite3.Connection:
-        connection = sqlite3.connect(self._db_path)
-        try:
-            yield connection
-            connection.commit()
-        finally:
-            connection.close()
-
-    def _create_tables(self) -> None:
-        with self._connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                """CREATE TABLE IF NOT EXISTS workouts (
+    _TABLE_DEFINITIONS = {
+        "workouts": (
+            """CREATE TABLE workouts (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     date TEXT NOT NULL
-                );"""
-            )
-            cursor.execute(
-                """CREATE TABLE IF NOT EXISTS exercises (
+                );""",
+            ["id", "date"],
+        ),
+        "exercises": (
+            """CREATE TABLE exercises (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     workout_id INTEGER NOT NULL,
                     name TEXT NOT NULL,
                     FOREIGN KEY(workout_id) REFERENCES workouts(id) ON DELETE CASCADE
-                );"""
-            )
-            cursor.execute(
-                """CREATE TABLE IF NOT EXISTS planned_workouts (
+                );""",
+            ["id", "workout_id", "name"],
+        ),
+        "planned_workouts": (
+            """CREATE TABLE planned_workouts (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     date TEXT NOT NULL
-                );"""
-            )
-            cursor.execute(
-                """CREATE TABLE IF NOT EXISTS planned_exercises (
+                );""",
+            ["id", "date"],
+        ),
+        "planned_exercises": (
+            """CREATE TABLE planned_exercises (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     planned_workout_id INTEGER NOT NULL,
                     name TEXT NOT NULL,
                     FOREIGN KEY(planned_workout_id) REFERENCES planned_workouts(id) ON DELETE CASCADE
-                );"""
-            )
-            cursor.execute(
-                """CREATE TABLE IF NOT EXISTS planned_sets (
+                );""",
+            ["id", "planned_workout_id", "name"],
+        ),
+        "planned_sets": (
+            """CREATE TABLE planned_sets (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     planned_exercise_id INTEGER NOT NULL,
                     reps INTEGER NOT NULL,
                     weight REAL NOT NULL,
                     rpe INTEGER NOT NULL,
                     FOREIGN KEY(planned_exercise_id) REFERENCES planned_exercises(id) ON DELETE CASCADE
-                );"""
-            )
-            cursor.execute(
-                """CREATE TABLE IF NOT EXISTS sets (
+                );""",
+            ["id", "planned_exercise_id", "reps", "weight", "rpe"],
+        ),
+        "sets": (
+            """CREATE TABLE sets (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     exercise_id INTEGER NOT NULL,
                     reps INTEGER NOT NULL,
@@ -73,8 +63,66 @@ class Database:
                     diff_rpe INTEGER NOT NULL DEFAULT 0,
                     FOREIGN KEY(exercise_id) REFERENCES exercises(id) ON DELETE CASCADE,
                     FOREIGN KEY(planned_set_id) REFERENCES planned_sets(id) ON DELETE SET NULL
-                );"""
+                );""",
+            [
+                "id",
+                "exercise_id",
+                "reps",
+                "weight",
+                "rpe",
+                "planned_set_id",
+                "diff_reps",
+                "diff_weight",
+                "diff_rpe",
+            ],
+        ),
+    }
+
+    def __init__(self, db_path: str = "workout.db") -> None:
+        self._db_path = db_path
+        self._ensure_schema()
+
+    @contextmanager
+    def _connection(self) -> sqlite3.Connection:
+        connection = sqlite3.connect(self._db_path)
+        try:
+            yield connection
+            connection.commit()
+        finally:
+            connection.close()
+
+    def _ensure_schema(self) -> None:
+        with self._connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("PRAGMA foreign_keys=off;")
+            for table, (sql, columns) in self._TABLE_DEFINITIONS.items():
+                self._ensure_table(conn, table, sql, columns)
+            cursor.execute("PRAGMA foreign_keys=on;")
+
+    def _ensure_table(
+        self, conn: sqlite3.Connection, table: str, sql: str, columns: List[str]
+    ) -> None:
+        cur = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name=?;", (table,)
+        )
+        if cur.fetchone() is None:
+            conn.execute(sql)
+            return
+
+        cur = conn.execute(f"PRAGMA table_info({table});")
+        existing_cols = [row[1] for row in cur.fetchall()]
+        if existing_cols == columns:
+            return
+
+        conn.execute(f"ALTER TABLE {table} RENAME TO {table}_old;")
+        conn.execute(sql)
+        common = [c for c in existing_cols if c in columns]
+        if common:
+            cols = ", ".join(common)
+            conn.execute(
+                f"INSERT INTO {table} ({cols}) SELECT {cols} FROM {table}_old;"
             )
+        conn.execute(f"DROP TABLE {table}_old;")
 
 
 class BaseRepository(Database):
