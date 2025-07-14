@@ -13,6 +13,10 @@ class MathToolsTestCase(unittest.TestCase):
         self.assertAlmostEqual(MathTools.ALPHA_MAX, 1.0)
         self.assertAlmostEqual(MathTools.FFM_FRACTION, 0.407)
         self.assertAlmostEqual(MathTools.EA_BASELINE, 1.097)
+        self.assertEqual(MathTools.L, 3)
+        self.assertAlmostEqual(MathTools.W1, 0.4)
+        self.assertAlmostEqual(MathTools.W2, 0.3)
+        self.assertAlmostEqual(MathTools.W3, 0.3)
 
     def test_clamp(self) -> None:
         self.assertEqual(MathTools.clamp(5, 0, 10), 5)
@@ -32,6 +36,21 @@ class MathToolsTestCase(unittest.TestCase):
         sets = [(10, 100.0), (5, 150.0)]
         self.assertEqual(MathTools.volume(sets), 10 * 100.0 + 5 * 150.0)
         self.assertEqual(MathTools.volume([]), 0.0)
+
+    def test_experience_score(self) -> None:
+        self.assertEqual(MathTools.experience_score(12, 5), 60)
+        with self.assertRaises(ValueError):
+            MathTools.experience_score(-1, 5)
+
+    def test_basic_threshold(self) -> None:
+        self.assertAlmostEqual(MathTools.basic_threshold(105.0, 100.0), 0.05)
+        with self.assertRaises(ValueError):
+            MathTools.basic_threshold(100.0, 0.0)
+
+    def test_required_progression(self) -> None:
+        self.assertAlmostEqual(MathTools.required_progression(150.0, 120.0, 30), 1.0)
+        with self.assertRaises(ValueError):
+            MathTools.required_progression(150.0, 120.0, 0)
 
 
 if __name__ == '__main__':
