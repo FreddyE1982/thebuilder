@@ -14,6 +14,7 @@ from db import (
     ExerciseNameRepository,
 )
 from planner_service import PlannerService
+from recommendation_service import RecommendationService
 
 
 class GymApp:
@@ -37,6 +38,12 @@ class GymApp:
             self.planned_workouts,
             self.planned_exercises,
             self.planned_sets,
+        )
+        self.recommender = RecommendationService(
+            self.workouts,
+            self.exercises,
+            self.sets,
+            self.exercise_names_repo,
         )
         self._state_init()
 
@@ -159,6 +166,12 @@ class GymApp:
                     self.sets.update(
                         set_id, int(reps_val), float(weight_val), int(rpe_val)
                     )
+            if self.recommender.has_history(name):
+                if st.button("Recommend Next Set", key=f"rec_next_{exercise_id}"):
+                    try:
+                        self.recommender.recommend_next_set(exercise_id)
+                    except ValueError as e:
+                        st.warning(str(e))
             self._add_set_form(exercise_id)
 
     def _add_set_form(self, exercise_id: int) -> None:
