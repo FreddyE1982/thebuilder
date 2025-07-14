@@ -11,6 +11,7 @@ from db import (
     EquipmentRepository,
     ExerciseCatalogRepository,
     MuscleRepository,
+    ExerciseNameRepository,
 )
 from planner_service import PlannerService
 
@@ -28,6 +29,7 @@ class GymApp:
         self.equipment = EquipmentRepository()
         self.exercise_catalog = ExerciseCatalogRepository()
         self.muscles_repo = MuscleRepository()
+        self.exercise_names_repo = ExerciseNameRepository()
         self.planner = PlannerService(
             self.workouts,
             self.exercises,
@@ -395,7 +397,7 @@ class GymApp:
                 if st.button("Cancel"):
                     st.session_state.delete_target = None
 
-        eq_tab, mus_tab = st.tabs(["Equipment", "Muscles"])
+        eq_tab, mus_tab, ex_tab = st.tabs(["Equipment", "Muscles", "Exercise Aliases"])
 
         with eq_tab:
             st.header("Equipment Management")
@@ -460,6 +462,28 @@ class GymApp:
             if st.button("Add Alias"):
                 if new_muscle:
                     self.muscles_repo.add_alias(new_muscle, link_to)
+                    st.success("Alias added")
+                else:
+                    st.warning("Name required")
+
+        with ex_tab:
+            st.header("Exercise Aliases")
+            names = self.exercise_names_repo.fetch_all()
+            if names:
+                col1, col2 = st.columns(2)
+                with col1:
+                    e1 = st.selectbox("Exercise 1", names, key="link_ex1")
+                with col2:
+                    e2 = st.selectbox("Exercise 2", names, key="link_ex2")
+                if st.button("Link Exercises"):
+                    self.exercise_names_repo.link(e1, e2)
+                    st.success("Linked")
+
+            new_ex = st.text_input("New Exercise Name", key="new_ex_alias")
+            link_ex = st.selectbox("Link To", names, key="link_ex_to")
+            if st.button("Add Exercise Alias"):
+                if new_ex:
+                    self.exercise_names_repo.add_alias(new_ex, link_ex)
                     st.success("Alias added")
                 else:
                     st.warning("Name required")

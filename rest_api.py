@@ -10,6 +10,7 @@ from db import (
     EquipmentRepository,
     ExerciseCatalogRepository,
     MuscleRepository,
+    ExerciseNameRepository,
 )
 from planner_service import PlannerService
 
@@ -27,6 +28,7 @@ class GymAPI:
         self.equipment = EquipmentRepository(db_path)
         self.exercise_catalog = ExerciseCatalogRepository(db_path)
         self.muscles = MuscleRepository(db_path)
+        self.exercise_names = ExerciseNameRepository(db_path)
         self.planner = PlannerService(
             self.workouts,
             self.exercises,
@@ -83,6 +85,20 @@ class GymAPI:
         @self.app.post("/muscles/alias")
         def add_alias(new_name: str, existing: str):
             self.muscles.add_alias(new_name, existing)
+            return {"status": "added"}
+
+        @self.app.get("/exercise_names")
+        def list_exercise_names():
+            return self.exercise_names.fetch_all()
+
+        @self.app.post("/exercise_names/link")
+        def link_exercise_names(name1: str, name2: str):
+            self.exercise_names.link(name1, name2)
+            return {"status": "linked"}
+
+        @self.app.post("/exercise_names/alias")
+        def add_exercise_alias(new_name: str, existing: str):
+            self.exercise_names.add_alias(new_name, existing)
             return {"status": "added"}
 
         @self.app.get("/exercise_catalog/muscle_groups")

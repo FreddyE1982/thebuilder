@@ -20,3 +20,9 @@ The agent is to always follow there rules:
 - The settings tab includes a "Muscles" subtab for managing muscle aliases. Users can link two existing muscle names or add a new alias linked to an existing muscle.
 - All muscle dropdowns must list every muscle name stored in the database.
 - Whenever any database query involves a muscle field, linked names must be treated as the same muscle.
+
+## Exercise aliases
+
+- The settings tab includes an "Exercise Aliases" subtab for managing exercise name aliases. Users can link two existing exercise names or add a new alias linked to an existing exercise.
+- All exercise dropdowns must list every exercise name stored in the database.
+- Whenever any database query involves an exercise name, linked names must be treated as the same exercise.
