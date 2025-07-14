@@ -467,3 +467,13 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(eq_stats[0]["equipment"], "Olympic Barbell")
         self.assertEqual(eq_stats[0]["sets"], 2)
 
+        resp = self.client.get(
+            "/prediction/progress",
+            params={"exercise": "Bench Press", "weeks": 2, "workouts": 1},
+        )
+        self.assertEqual(resp.status_code, 200)
+        forecast = resp.json()
+        self.assertEqual(len(forecast), 2)
+        self.assertAlmostEqual(forecast[0]["est_1rm"], 139.3, places=1)
+        self.assertAlmostEqual(forecast[1]["est_1rm"], 139.3, places=1)
+
