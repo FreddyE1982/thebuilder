@@ -41,11 +41,13 @@ class GymApp:
 
     def run(self) -> None:
         st.title("Workout Logger")
-        log_tab, plan_tab = st.tabs(["Log", "Plan"])
+        log_tab, plan_tab, settings_tab = st.tabs(["Log", "Plan", "Settings"])
         with log_tab:
             self._log_tab()
         with plan_tab:
             self._plan_tab()
+        with settings_tab:
+            self._settings_tab()
 
     def _log_tab(self) -> None:
         plans = self.planned_workouts.fetch_all()
@@ -243,6 +245,38 @@ class GymApp:
             st.session_state.pop(f"plan_new_reps_{exercise_id}", None)
             st.session_state.pop(f"plan_new_weight_{exercise_id}", None)
             st.session_state.pop(f"plan_new_rpe_{exercise_id}", None)
+
+    def _settings_tab(self) -> None:
+        st.header("Settings")
+        if "delete_target" not in st.session_state:
+            st.session_state.delete_target = None
+
+        if st.button("Delete All Logged and Planned Workouts"):
+            st.session_state.delete_target = "all"
+        if st.button("Delete All Logged Workouts"):
+            st.session_state.delete_target = "logged"
+        if st.button("Delete All Planned Workouts"):
+            st.session_state.delete_target = "planned"
+
+        target = st.session_state.get("delete_target")
+        if target:
+            with st.modal("Confirm Deletion"):
+                text = st.text_input("Type 'Yes, I confirm' to delete")
+                if st.button("Confirm"):
+                    if text == "Yes, I confirm":
+                        if target == "all":
+                            self.workouts.delete_all()
+                            self.planned_workouts.delete_all()
+                        elif target == "logged":
+                            self.workouts.delete_all()
+                        elif target == "planned":
+                            self.planned_workouts.delete_all()
+                        st.success("Data deleted")
+                        st.session_state.delete_target = None
+                    else:
+                        st.warning("Confirmation failed")
+                if st.button("Cancel"):
+                    st.session_state.delete_target = None
 
 
 if __name__ == "__main__":

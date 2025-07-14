@@ -82,6 +82,47 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), [])
 
+    def test_delete_endpoints(self) -> None:
+        plan_date = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
+
+        self.client.post("/workouts")
+        self.client.post("/planned_workouts", params={"date": plan_date})
+
+        response = self.client.post("/settings/delete_all", params={"confirmation": "Yes, I confirm"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"status": "deleted"})
+
+        response = self.client.get("/workouts")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), [])
+
+        response = self.client.get("/planned_workouts")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), [])
+
+        self.client.post("/workouts")
+        self.client.post("/planned_workouts", params={"date": plan_date})
+
+        response = self.client.post("/settings/delete_logged", params={"confirmation": "Yes, I confirm"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"status": "deleted"})
+
+        response = self.client.get("/workouts")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), [])
+
+        response = self.client.get("/planned_workouts")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()), 1)
+
+        response = self.client.post("/settings/delete_planned", params={"confirmation": "Yes, I confirm"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"status": "deleted"})
+
+        response = self.client.get("/planned_workouts")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), [])
+
     def test_plan_workflow(self) -> None:
         plan_date = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
 
