@@ -10,3 +10,6 @@ The agent is to always follow there rules:
 5. When modifying any code the agent is forbidden to simplify, "cut down" or "make less complex" any existing algorythms or mathematical formulas in any way,
    this includes that the agent is forbidden to remove any mathematical terms (full or in part) or any of the variables of mathematical terms.
 6. ALL data has to be stored persistantly in a database, data imported from any files must be stored in the database
+7. After adding new functionality or modifying any code the agent is to create / update tests, run those tests, analyse test results, fix errors, run tests again, fix again etc. repeat until no more errors.
+8. For testing the agent must create full test data. The agent must predetermine expected resulting data and values and tests may only be seen successfull if they output exactly said expected data and values.
+9. Tests may only use the original functions provided in the code. NO monkeypatching of any kind is allowed.
