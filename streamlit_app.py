@@ -9,6 +9,7 @@ from db import (
     PlannedExerciseRepository,
     PlannedSetRepository,
     EquipmentRepository,
+    ExerciseCatalogRepository,
 )
 from planner_service import PlannerService
 
@@ -24,6 +25,7 @@ class GymApp:
         self.planned_exercises = PlannedExerciseRepository()
         self.planned_sets = PlannedSetRepository()
         self.equipment = EquipmentRepository()
+        self.exercise_catalog = ExerciseCatalogRepository()
         self.planner = PlannerService(
             self.workouts,
             self.exercises,
@@ -90,14 +92,21 @@ class GymApp:
     def _exercise_section(self) -> None:
         st.header("Exercises")
         workout_id = st.session_state.selected_workout
-        new_name = st.text_input("New Exercise Name", key="new_exercise")
-        eq = self._equipment_selector("log_new")
+        ex_name = self._exercise_selector(
+            "log_new",
+            None,
+            st.session_state.get("log_new_groups", []),
+            st.session_state.get("log_new_muscles", []),
+        )
+        eq = self._equipment_selector(
+            "log_new",
+            st.session_state.get("log_new_muscles", []),
+        )
         if st.button("Add Exercise"):
-            if new_name and eq:
-                self.exercises.add(workout_id, new_name, eq)
-                st.session_state.exercise_inputs.pop("new_exercise", None)
+            if ex_name and eq:
+                self.exercises.add(workout_id, ex_name, eq)
             else:
-                st.warning("Exercise name and equipment required")
+                st.warning("Exercise and equipment required")
         exercises = self.exercises.fetch_for_workout(workout_id)
         for ex_id, name, eq_name in exercises:
             self._exercise_card(ex_id, name, eq_name)
@@ -172,18 +181,81 @@ class GymApp:
             st.session_state.pop(f"new_weight_{exercise_id}", None)
             st.session_state.pop(f"new_rpe_{exercise_id}", None)
 
-    def _equipment_selector(self, prefix: str) -> Optional[str]:
+    def _equipment_selector(self, prefix: str, muscles: Optional[list] = None) -> Optional[str]:
         types = [""] + self.equipment.fetch_types()
         eq_type = st.selectbox("Equipment Type", types, key=f"{prefix}_type")
         filter_text = st.text_input("Filter Equipment", key=f"{prefix}_filter")
-        names = self.equipment.fetch_names(eq_type if eq_type else None, filter_text or None)
-        eq_name = st.selectbox("Equipment Name", [""] + names, key=f"{prefix}_name")
+        names = self.equipment.fetch_names(
+            eq_type if eq_type else None,
+            filter_text or None,
+            muscles,
+        )
+        eq_name = st.selectbox("Equipment Name", ["" ] + names, key=f"{prefix}_name")
         if eq_name:
             muscles = self.equipment.fetch_muscles(eq_name)
             st.markdown("Muscles Trained:")
             for m in muscles:
                 st.markdown(f"- {m}")
         return eq_name or None
+
+    def _exercise_selector(
+        self,
+        prefix: str,
+        equipment: Optional[str],
+        selected_groups: list,
+        selected_muscles: list,
+    ) -> Optional[str]:
+        groups = self.exercise_catalog.fetch_muscle_groups()
+        all_muscles = self.exercise_catalog.fetch_all_muscles()
+        group_sel = st.multiselect(
+            "Muscle Groups",
+            groups,
+            default=selected_groups,
+            key=f"{prefix}_groups",
+        )
+        muscle_sel = st.multiselect(
+            "Filter Muscles",
+            all_muscles,
+            default=selected_muscles,
+            key=f"{prefix}_muscles",
+        )
+        names = self.exercise_catalog.fetch_names(
+            group_sel or None,
+            muscle_sel or None,
+            equipment,
+        )
+        ex_name = st.selectbox("Exercise", ["" ] + names, key=f"{prefix}_exercise")
+        if ex_name:
+            detail = self.exercise_catalog.fetch_detail(ex_name)
+            if detail:
+                (
+                    group,
+                    variants,
+                    eq_names,
+                    primary,
+                    secondary,
+                    tertiary,
+                    other,
+                    _,
+                ) = detail
+                st.markdown(f"**Primary:** {primary}")
+                if secondary:
+                    st.markdown("**Secondary:**")
+                    for m in secondary.split("|"):
+                        st.markdown(f"- {m}")
+                if tertiary:
+                    st.markdown("**Tertiary:**")
+                    for m in tertiary.split("|"):
+                        st.markdown(f"- {m}")
+                if other:
+                    st.markdown("**Other:**")
+                    for m in other.split("|"):
+                        st.markdown(f"- {m}")
+                if variants:
+                    st.markdown("**Variants:**")
+                    for v in variants.split("|"):
+                        st.markdown(f"- {v}")
+        return ex_name or None
 
     def _planned_workout_section(self) -> None:
         st.header("Planned Workouts")
@@ -205,14 +277,21 @@ class GymApp:
     def _planned_exercise_section(self) -> None:
         st.header("Planned Exercises")
         workout_id = st.session_state.selected_planned_workout
-        new_name = st.text_input("New Planned Exercise", key="new_plan_ex")
-        plan_eq = self._equipment_selector("plan_new")
+        ex_name = self._exercise_selector(
+            "plan_new",
+            None,
+            st.session_state.get("plan_new_groups", []),
+            st.session_state.get("plan_new_muscles", []),
+        )
+        plan_eq = self._equipment_selector(
+            "plan_new",
+            st.session_state.get("plan_new_muscles", []),
+        )
         if st.button("Add Planned Exercise"):
-            if new_name and plan_eq:
-                self.planned_exercises.add(workout_id, new_name, plan_eq)
-                st.session_state.pop("new_plan_ex", None)
+            if ex_name and plan_eq:
+                self.planned_exercises.add(workout_id, ex_name, plan_eq)
             else:
-                st.warning("Exercise name and equipment required")
+                st.warning("Exercise and equipment required")
         exercises = self.planned_exercises.fetch_for_workout(workout_id)
         for ex_id, name, eq_name in exercises:
             self._planned_exercise_card(ex_id, name, eq_name)

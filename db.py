@@ -26,6 +26,32 @@ class Database:
                 );""",
             ["id", "equipment_type", "name", "muscles", "is_custom"],
         ),
+        "exercise_catalog": (
+            """CREATE TABLE exercise_catalog (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    muscle_group TEXT NOT NULL,
+                    name TEXT NOT NULL UNIQUE,
+                    variants TEXT,
+                    equipment_names TEXT,
+                    primary_muscle TEXT,
+                    secondary_muscle TEXT,
+                    tertiary_muscle TEXT,
+                    other_muscles TEXT,
+                    is_custom INTEGER NOT NULL DEFAULT 0
+                );""",
+            [
+                "id",
+                "muscle_group",
+                "name",
+                "variants",
+                "equipment_names",
+                "primary_muscle",
+                "secondary_muscle",
+                "tertiary_muscle",
+                "other_muscles",
+                "is_custom",
+            ],
+        ),
         "exercises": (
             """CREATE TABLE exercises (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -98,6 +124,7 @@ class Database:
         self._db_path = db_path
         self._ensure_schema()
         self._import_equipment_data()
+        self._import_exercise_catalog_data()
 
     @contextmanager
     def _connection(self) -> sqlite3.Connection:
@@ -161,6 +188,52 @@ class Database:
                     "INSERT INTO equipment (equipment_type, name, muscles, is_custom) VALUES (?, ?, ?, 0) "
                     "ON CONFLICT(name) DO UPDATE SET equipment_type=excluded.equipment_type, muscles=excluded.muscles;",
                     (equipment_type, name, muscles),
+                )
+
+    def _import_exercise_catalog_data(self) -> None:
+        csv_path = os.path.join(os.path.dirname(__file__), "table1_exercise_database.csv")
+        if not os.path.exists(csv_path):
+            return
+        with open(csv_path, newline="") as csvfile:
+            reader = csv.DictReader(csvfile)
+            records = [
+                (
+                    row["Muscle Group"],
+                    row["Exercise Name"],
+                    row["Variants"],
+                    row["Equipment Name(s)"],
+                    row["Primary Muscle Trained"],
+                    row.get("Secondary Muscle Trained", ""),
+                    row.get("Tertiary Muscle Trained", ""),
+                    row.get("Other Muscles Trained", ""),
+                )
+                for row in reader
+            ]
+        with self._connection() as conn:
+            for (
+                muscle_group,
+                name,
+                variants,
+                equipment_names,
+                primary_muscle,
+                secondary_muscle,
+                tertiary_muscle,
+                other_muscles,
+            ) in records:
+                conn.execute(
+                    "INSERT INTO exercise_catalog (muscle_group, name, variants, equipment_names, primary_muscle, secondary_muscle, tertiary_muscle, other_muscles, is_custom) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0) "
+                    "ON CONFLICT(name) DO UPDATE SET muscle_group=excluded.muscle_group, variants=excluded.variants, equipment_names=excluded.equipment_names, primary_muscle=excluded.primary_muscle, secondary_muscle=excluded.secondary_muscle, tertiary_muscle=excluded.tertiary_muscle, other_muscles=excluded.other_muscles;",
+                    (
+                        muscle_group,
+                        name,
+                        variants,
+                        equipment_names,
+                        primary_muscle,
+                        secondary_muscle,
+                        tertiary_muscle,
+                        other_muscles,
+                    ),
                 )
 
 
@@ -364,7 +437,10 @@ class EquipmentRepository(BaseRepository):
         return [r[0] for r in rows]
 
     def fetch_names(
-        self, equipment_type: Optional[str] = None, prefix: Optional[str] = None
+        self,
+        equipment_type: Optional[str] = None,
+        prefix: Optional[str] = None,
+        muscles: Optional[List[str]] = None,
     ) -> List[str]:
         query = "SELECT name FROM equipment WHERE 1=1"
         params: List[str] = []
@@ -374,6 +450,10 @@ class EquipmentRepository(BaseRepository):
         if prefix:
             query += " AND name LIKE ?"
             params.append(f"{prefix}%")
+        if muscles:
+            for m in muscles:
+                query += " AND muscles LIKE ?"
+                params.append(f"%{m}%")
         query += " ORDER BY name;"
         rows = self.fetch_all(query, tuple(params))
         return [r[0] for r in rows]
@@ -442,4 +522,152 @@ class EquipmentRepository(BaseRepository):
         if rows[0][0] == 0:
             raise ValueError("cannot delete imported equipment")
         self.execute("DELETE FROM equipment WHERE name = ?;", (name,))
+
+
+class ExerciseCatalogRepository(BaseRepository):
+    """Repository for exercise catalog data."""
+
+    def fetch_muscle_groups(self) -> List[str]:
+        rows = self.fetch_all(
+            "SELECT DISTINCT muscle_group FROM exercise_catalog ORDER BY muscle_group;"
+        )
+        return [r[0] for r in rows]
+
+    def fetch_names(
+        self,
+        muscle_groups: Optional[List[str]] = None,
+        muscles: Optional[List[str]] = None,
+        equipment: Optional[str] = None,
+    ) -> List[str]:
+        query = "SELECT name FROM exercise_catalog WHERE 1=1"
+        params: List[str] = []
+        if muscle_groups:
+            placeholders = ",".join(["?" for _ in muscle_groups])
+            query += f" AND muscle_group IN ({placeholders})"
+            params.extend(muscle_groups)
+        if equipment:
+            query += " AND equipment_names LIKE ?"
+            params.append(f"%{equipment}%")
+        if muscles:
+            muscle_clauses = []
+            for muscle in muscles:
+                pattern = f"%{muscle}%"
+                cols = [
+                    "primary_muscle",
+                    "secondary_muscle",
+                    "tertiary_muscle",
+                    "other_muscles",
+                ]
+                or_clauses = [f"{c} LIKE ?" for c in cols]
+                muscle_clauses.append("(" + " OR ".join(or_clauses) + ")")
+                params.extend([pattern] * len(cols))
+            query += " AND (" + " OR ".join(muscle_clauses) + ")"
+        query += " ORDER BY name;"
+        rows = self.fetch_all(query, tuple(params))
+        return [r[0] for r in rows]
+
+    def fetch_detail(self, name: str) -> Optional[Tuple[str, str, str, str, str, str, str]]:
+        rows = self.fetch_all(
+            "SELECT muscle_group, variants, equipment_names, primary_muscle, secondary_muscle, tertiary_muscle, other_muscles, is_custom FROM exercise_catalog WHERE name = ?;",
+            (name,),
+        )
+        if rows:
+            return rows[0]
+        return None
+
+    def fetch_all_records(self) -> List[Tuple[str, str, str, str, str, str, str, int]]:
+        return self.fetch_all(
+            "SELECT name, muscle_group, variants, equipment_names, primary_muscle, secondary_muscle, tertiary_muscle, other_muscles, is_custom FROM exercise_catalog ORDER BY name;"
+        )
+
+    def fetch_all_muscles(self) -> List[str]:
+        rows = self.fetch_all(
+            "SELECT primary_muscle, secondary_muscle, tertiary_muscle, other_muscles FROM exercise_catalog;"
+        )
+        muscles: Set[str] = set()
+        for pm, sm, tm, om in rows:
+            for field in [pm, sm, tm, om]:
+                if field:
+                    for m in field.split("|"):
+                        if m:
+                            muscles.add(m)
+        return sorted(muscles)
+
+    def add(
+        self,
+        muscle_group: str,
+        name: str,
+        variants: str,
+        equipment_names: str,
+        primary_muscle: str,
+        secondary_muscle: str,
+        tertiary_muscle: str,
+        other_muscles: str,
+    ) -> int:
+        existing = self.fetch_all(
+            "SELECT is_custom FROM exercise_catalog WHERE name = ?;",
+            (name,),
+        )
+        if existing:
+            raise ValueError("exercise exists")
+        return self.execute(
+            "INSERT INTO exercise_catalog (muscle_group, name, variants, equipment_names, primary_muscle, secondary_muscle, tertiary_muscle, other_muscles, is_custom) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1);",
+            (
+                muscle_group,
+                name,
+                variants,
+                equipment_names,
+                primary_muscle,
+                secondary_muscle,
+                tertiary_muscle,
+                other_muscles,
+            ),
+        )
+
+    def update(
+        self,
+        name: str,
+        muscle_group: str,
+        variants: str,
+        equipment_names: str,
+        primary_muscle: str,
+        secondary_muscle: str,
+        tertiary_muscle: str,
+        other_muscles: str,
+        new_name: Optional[str] = None,
+    ) -> None:
+        rows = self.fetch_all(
+            "SELECT is_custom FROM exercise_catalog WHERE name = ?;",
+            (name,),
+        )
+        if not rows:
+            raise ValueError("exercise not found")
+        if rows[0][0] == 0:
+            raise ValueError("cannot modify imported exercise")
+        target = new_name or name
+        self.execute(
+            "UPDATE exercise_catalog SET muscle_group = ?, name = ?, variants = ?, equipment_names = ?, primary_muscle = ?, secondary_muscle = ?, tertiary_muscle = ?, other_muscles = ? WHERE name = ?;",
+            (
+                muscle_group,
+                target,
+                variants,
+                equipment_names,
+                primary_muscle,
+                secondary_muscle,
+                tertiary_muscle,
+                other_muscles,
+                name,
+            ),
+        )
+
+    def remove(self, name: str) -> None:
+        rows = self.fetch_all(
+            "SELECT is_custom FROM exercise_catalog WHERE name = ?;",
+            (name,),
+        )
+        if not rows:
+            raise ValueError("exercise not found")
+        if rows[0][0] == 0:
+            raise ValueError("cannot delete imported exercise")
+        self.execute("DELETE FROM exercise_catalog WHERE name = ?;", (name,))
 
