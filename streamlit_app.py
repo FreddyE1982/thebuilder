@@ -56,8 +56,8 @@ class GymApp:
             if st.button("Remove Exercise", key=f"remove_ex_{exercise_id}"):
                 self.exercises.remove(exercise_id)
                 return
-            for set_id, reps, weight in sets:
-                cols = st.columns(4)
+            for set_id, reps, weight, rpe in sets:
+                cols = st.columns(5)
                 with cols[0]:
                     st.write(f"Set {set_id}")
                 reps_val = cols[1].number_input(
@@ -74,11 +74,19 @@ class GymApp:
                     value=float(weight),
                     key=f"weight_{set_id}",
                 )
-                if cols[3].button("Delete", key=f"del_{set_id}"):
+                rpe_val = cols[3].selectbox(
+                    "RPE",
+                    options=list(range(11)),
+                    index=int(rpe),
+                    key=f"rpe_{set_id}",
+                )
+                if cols[4].button("Delete", key=f"del_{set_id}"):
                     self.sets.remove(set_id)
                     continue
-                if cols[3].button("Update", key=f"upd_{set_id}"):
-                    self.sets.update(set_id, int(reps_val), float(weight_val))
+                if cols[4].button("Update", key=f"upd_{set_id}"):
+                    self.sets.update(
+                        set_id, int(reps_val), float(weight_val), int(rpe_val)
+                    )
             self._add_set_form(exercise_id)
 
     def _add_set_form(self, exercise_id: int) -> None:
@@ -94,10 +102,16 @@ class GymApp:
             step=0.5,
             key=f"new_weight_{exercise_id}",
         )
+        rpe = st.selectbox(
+            "RPE",
+            options=list(range(11)),
+            key=f"new_rpe_{exercise_id}",
+        )
         if st.button("Add Set", key=f"add_set_{exercise_id}"):
-            self.sets.add(exercise_id, int(reps), float(weight))
+            self.sets.add(exercise_id, int(reps), float(weight), int(rpe))
             st.session_state.pop(f"new_reps_{exercise_id}", None)
             st.session_state.pop(f"new_weight_{exercise_id}", None)
+            st.session_state.pop(f"new_rpe_{exercise_id}", None)
 
 
 if __name__ == "__main__":

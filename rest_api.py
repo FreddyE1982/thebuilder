@@ -40,13 +40,13 @@ class GymAPI:
             return [{"id": ex_id, "name": name} for ex_id, name in exercises]
 
         @self.app.post("/exercises/{exercise_id}/sets")
-        def add_set(exercise_id: int, reps: int, weight: float):
-            set_id = self.sets.add(exercise_id, reps, weight)
+        def add_set(exercise_id: int, reps: int, weight: float, rpe: int):
+            set_id = self.sets.add(exercise_id, reps, weight, rpe)
             return {"id": set_id}
 
         @self.app.put("/sets/{set_id}")
-        def update_set(set_id: int, reps: int, weight: float):
-            self.sets.update(set_id, reps, weight)
+        def update_set(set_id: int, reps: int, weight: float, rpe: int):
+            self.sets.update(set_id, reps, weight, rpe)
             return {"status": "updated"}
 
         @self.app.delete("/sets/{set_id}")
@@ -58,8 +58,8 @@ class GymAPI:
         def list_sets(exercise_id: int):
             sets = self.sets.fetch_for_exercise(exercise_id)
             return [
-                {"id": sid, "reps": reps, "weight": weight}
-                for sid, reps, weight in sets
+                {"id": sid, "reps": reps, "weight": weight, "rpe": rpe}
+                for sid, reps, weight, rpe in sets
             ]
 
 
