@@ -1,0 +1,50 @@
+Equipment Type Group,Equipment Name,Muscles Trained
+Free Weights,Olympic Barbell,Pectoralis Major|Latissimus Dorsi|Trapezius|Rhomboids|Anterior Deltoid|Medial Deltoid|Posterior Deltoid|Biceps Brachii|Triceps Brachii|Rectus Abdominis|Erector Spinae|Quadriceps|Hamstrings|Gluteus Maximus|Gastrocnemius
+Free Weights,EZ Curl Bar,Biceps Brachii|Triceps Brachii|Forearm Flexors|Brachialis
+Free Weights,Trap Bar,Quadriceps|Hamstrings|Gluteus Maximus|Erector Spinae|Trapezius|Forearm Flexors
+Free Weights,Safety Squat Bar,Quadriceps|Gluteus Maximus|Erector Spinae|Rectus Abdominis
+Free Weights,Cambered Bar,Pectoralis Major|Anterior Deltoid|Triceps Brachii
+Free Weights,Adjustable Dumbbells,Pectoralis Major|Latissimus Dorsi|Trapezius|Rhomboids|Anterior Deltoid|Medial Deltoid|Posterior Deltoid|Biceps Brachii|Triceps Brachii|Brachialis|Rectus Abdominis|Quadriceps|Hamstrings|Gluteus Maximus
+Free Weights,Fixed Weight Dumbbells,Pectoralis Major|Latissimus Dorsi|Trapezius|Rhomboids|Anterior Deltoid|Medial Deltoid|Posterior Deltoid|Biceps Brachii|Triceps Brachii|Brachialis|Rectus Abdominis|Quadriceps|Hamstrings|Gluteus Maximus
+Free Weights,Kettlebells,Pectoralis Major|Latissimus Dorsi|Trapezius|Anterior Deltoid|Medial Deltoid|Posterior Deltoid|Biceps Brachii|Triceps Brachii|Rectus Abdominis|External Obliques|Erector Spinae|Quadriceps|Hamstrings|Gluteus Maximus|Gastrocnemius
+Free Weights,Weight Plates,Pectoralis Major|Rectus Abdominis|External Obliques|Erector Spinae|Quadriceps|Gluteus Maximus
+Machines,Chest Press Machine,Pectoralis Major|Anterior Deltoid|Triceps Brachii
+Machines,Incline Chest Press,Pectoralis Major|Anterior Deltoid|Triceps Brachii
+Machines,Decline Chest Press,Pectoralis Major|Triceps Brachii
+Machines,Pec Deck Machine,Pectoralis Major|Anterior Deltoid
+Machines,Lat Pulldown Machine,Latissimus Dorsi|Rhomboids|Biceps Brachii|Brachialis
+Machines,Seated Cable Row,Latissimus Dorsi|Rhomboids|Trapezius|Biceps Brachii
+Machines,Shoulder Press Machine,Anterior Deltoid|Medial Deltoid|Triceps Brachii
+Machines,Lateral Raise Machine,Medial Deltoid|Posterior Deltoid
+Machines,Rear Delt Machine,Posterior Deltoid|Rhomboids
+Machines,Bicep Curl Machine,Biceps Brachii|Brachialis
+Machines,Tricep Extension Machine,Triceps Brachii
+Machines,Tricep Dip Machine,Triceps Brachii|Pectoralis Major|Anterior Deltoid
+Machines,Leg Press Machine,Quadriceps|Gluteus Maximus|Hamstrings
+Machines,Hack Squat Machine,Quadriceps|Gluteus Maximus
+Machines,Leg Extension Machine,Quadriceps
+Machines,Leg Curl Machine,Hamstrings
+Machines,Hip Thrust Machine,Gluteus Maximus|Hamstrings
+Machines,Hip Abduction Machine,Gluteus Medius|Hip Adductors
+Machines,Hip Adduction Machine,Hip Adductors
+Machines,Calf Raise Machine,Gastrocnemius|Soleus
+Machines,Seated Calf Raise,Soleus|Gastrocnemius
+Machines,Ab Crunch Machine,Rectus Abdominis
+Machines,Back Extension Machine,Erector Spinae|Gluteus Maximus
+Machines,Rotary Torso Machine,External Obliques|Internal Obliques
+Cable Systems,Cable Crossover Machine,Pectoralis Major|Latissimus Dorsi|Trapezius|Rhomboids|Anterior Deltoid|Medial Deltoid|Posterior Deltoid|Biceps Brachii|Triceps Brachii|Rectus Abdominis|External Obliques
+Cable Systems,Functional Trainer,Pectoralis Major|Latissimus Dorsi|Trapezius|Rhomboids|Anterior Deltoid|Medial Deltoid|Posterior Deltoid|Biceps Brachii|Triceps Brachii|Rectus Abdominis|External Obliques|Quadriceps|Gluteus Maximus
+Cable Systems,Single Cable Station,Pectoralis Major|Latissimus Dorsi|Biceps Brachii|Triceps Brachii|Rectus Abdominis|External Obliques
+Bodyweight Equipment,Pull-up Bar,Latissimus Dorsi|Rhomboids|Biceps Brachii|Brachialis|Forearm Flexors
+Bodyweight Equipment,Dip Station,Triceps Brachii|Pectoralis Major|Anterior Deltoid
+Bodyweight Equipment,Suspension Trainer,Pectoralis Major|Latissimus Dorsi|Trapezius|Biceps Brachii|Triceps Brachii|Rectus Abdominis|External Obliques|Quadriceps|Hamstrings|Gluteus Maximus
+Resistance Tools,Resistance Bands,Pectoralis Major|Latissimus Dorsi|Anterior Deltoid|Medial Deltoid|Posterior Deltoid|Biceps Brachii|Triceps Brachii|Quadriceps|Hamstrings|Gluteus Maximus
+Resistance Tools,Resistance Loops,Gluteus Medius|Hip Adductors|Quadriceps|Hamstrings
+Resistance Tools,Resistance Tubes,Pectoralis Major|Latissimus Dorsi|Biceps Brachii|Triceps Brachii|Anterior Deltoid
+Specialty Equipment,Smith Machine,Pectoralis Major|Latissimus Dorsi|Trapezius|Anterior Deltoid|Triceps Brachii|Quadriceps|Hamstrings|Gluteus Maximus
+Specialty Equipment,Power Rack,Pectoralis Major|Latissimus Dorsi|Trapezius|Rhomboids|Anterior Deltoid|Triceps Brachii|Quadriceps|Hamstrings|Gluteus Maximus|Erector Spinae
+Specialty Equipment,Squat Stand,Quadriceps|Hamstrings|Gluteus Maximus|Erector Spinae
+Specialty Equipment,Bench Press,Pectoralis Major|Anterior Deltoid|Triceps Brachii
+Specialty Equipment,Preacher Curl Bench,Biceps Brachii|Brachialis
+Specialty Equipment,Roman Chair,Erector Spinae|Gluteus Maximus|Rectus Abdominis
+Specialty Equipment,GHD Machine,Hamstrings|Gluteus Maximus|Erector Spinae|Rectus Abdominis
