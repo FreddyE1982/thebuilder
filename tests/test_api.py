@@ -33,7 +33,8 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(response.json(), [{"id": 1, "date": today}])
 
         response = self.client.post(
-            "/workouts/1/exercises", params={"name": "Bench Press"}
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"id": 1})
@@ -41,7 +42,7 @@ class APITestCase(unittest.TestCase):
         response = self.client.get("/workouts/1/exercises")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
-            response.json(), [{"id": 1, "name": "Bench Press", "equipment": None}]
+            response.json(), [{"id": 1, "name": "Bench Press", "equipment": "Olympic Barbell"}]
         )
 
         response = self.client.post(
@@ -137,7 +138,10 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), [{"id": 1, "date": plan_date}])
 
-        response = self.client.post("/planned_workouts/1/exercises", params={"name": "Squat"})
+        response = self.client.post(
+            "/planned_workouts/1/exercises",
+            params={"name": "Squat", "equipment": "Olympic Barbell"},
+        )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"id": 1})
 
@@ -151,7 +155,10 @@ class APITestCase(unittest.TestCase):
 
         response = self.client.get("/workouts/1/exercises")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), [{"id": 1, "name": "Squat", "equipment": None}])
+        self.assertEqual(
+            response.json(),
+            [{"id": 1, "name": "Squat", "equipment": "Olympic Barbell"}],
+        )
 
         response = self.client.get("/exercises/1/sets")
         self.assertEqual(response.status_code, 200)
@@ -204,6 +211,38 @@ class APITestCase(unittest.TestCase):
             resp.json(),
             [{"id": 1, "name": "Clean", "equipment": "Olympic Barbell"}],
         )
+
+        # custom equipment lifecycle
+        resp = self.client.post(
+            "/equipment",
+            params={
+                "equipment_type": "Custom",
+                "name": "My Eq",
+                "muscles": "Foo|Bar",
+            },
+        )
+        self.assertEqual(resp.status_code, 200)
+        eq_id = resp.json()["id"]
+        self.assertIsInstance(eq_id, int)
+
+        resp = self.client.put(
+            "/equipment/My Eq",
+            params={
+                "equipment_type": "Custom",
+                "muscles": "Foo|Baz",
+                "new_name": "My Eq2",
+            },
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), {"status": "updated"})
+
+        resp = self.client.delete("/equipment/My Eq2")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), {"status": "deleted"})
+
+        # ensure imported equipment cannot be removed
+        resp = self.client.delete("/equipment/Olympic Barbell")
+        self.assertEqual(resp.status_code, 400)
 
     def test_schema_migration(self) -> None:
         if os.path.exists(self.db_path):
