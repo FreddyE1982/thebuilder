@@ -260,7 +260,7 @@ class GymApp:
 
         target = st.session_state.get("delete_target")
         if target:
-            with st.modal("Confirm Deletion"):
+            with st.dialog("Confirm Deletion"):
                 text = st.text_input("Type 'Yes, I confirm' to delete")
                 if st.button("Confirm"):
                     if text == "Yes, I confirm":
