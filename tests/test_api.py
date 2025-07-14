@@ -396,3 +396,31 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIn("My Pulls", resp.json())
 
+    def test_recommend_next_set(self) -> None:
+        self.client.post("/workouts")
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post("/exercises/1/sets", params={"reps": 5, "weight": 100.0, "rpe": 8})
+
+        self.client.post("/workouts")
+        self.client.post(
+            "/workouts/2/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post("/exercises/2/sets", params={"reps": 5, "weight": 105.0, "rpe": 8})
+
+        self.client.post("/workouts")
+        self.client.post(
+            "/workouts/3/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        resp = self.client.post("/exercises/3/recommend_next")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data["id"], 3)
+        self.assertEqual(data["reps"], 1)
+        self.assertAlmostEqual(data["weight"], 80.8)
+        self.assertEqual(data["rpe"], 7)
+

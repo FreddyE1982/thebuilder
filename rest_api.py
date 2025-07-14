@@ -13,6 +13,7 @@ from db import (
     ExerciseNameRepository,
 )
 from planner_service import PlannerService
+from recommendation_service import RecommendationService
 
 
 class GymAPI:
@@ -36,6 +37,12 @@ class GymAPI:
             self.planned_workouts,
             self.planned_exercises,
             self.planned_sets,
+        )
+        self.recommender = RecommendationService(
+            self.workouts,
+            self.exercises,
+            self.sets,
+            self.exercise_names,
         )
         self.app = FastAPI()
         self._setup_routes()
@@ -334,6 +341,13 @@ class GymAPI:
                 {"id": sid, "reps": reps, "weight": weight, "rpe": rpe}
                 for sid, reps, weight, rpe in sets
             ]
+
+        @self.app.post("/exercises/{exercise_id}/recommend_next")
+        def recommend_next(exercise_id: int):
+            try:
+                return self.recommender.recommend_next_set(exercise_id)
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
 
         @self.app.post("/settings/delete_all")
         def delete_all(confirmation: str):

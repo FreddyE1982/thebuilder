@@ -332,9 +332,14 @@ class WorkoutRepository(BaseRepository):
 class ExerciseRepository(BaseRepository):
     """Repository for exercise table operations."""
 
+    def __init__(self, db_path: str = "workout.db") -> None:
+        super().__init__(db_path)
+        self.exercise_names = ExerciseNameRepository(db_path)
+
     def add(
         self, workout_id: int, name: str, equipment_name: Optional[str] = None
     ) -> int:
+        self.exercise_names.ensure([name])
         return self.execute(
             "INSERT INTO exercises (workout_id, name, equipment_name) VALUES (?, ?, ?);",
             (workout_id, name, equipment_name),
@@ -348,6 +353,15 @@ class ExerciseRepository(BaseRepository):
             "SELECT id, name, equipment_name FROM exercises WHERE workout_id = ?;",
             (workout_id,),
         )
+
+    def fetch_detail(self, exercise_id: int) -> Tuple[int, str, Optional[str]]:
+        rows = self.fetch_all(
+            "SELECT workout_id, name, equipment_name FROM exercises WHERE id = ?;",
+            (exercise_id,),
+        )
+        if not rows:
+            raise ValueError("exercise not found")
+        return rows[0]
 
 
 class SetRepository(BaseRepository):
@@ -416,6 +430,17 @@ class SetRepository(BaseRepository):
             "diff_weight": diff_weight,
             "diff_rpe": diff_rpe,
         }
+
+    def fetch_history_by_names(self, names: List[str]) -> List[Tuple[int, float, int, str]]:
+        placeholders = ", ".join(["?" for _ in names])
+        query = (
+            "SELECT s.reps, s.weight, s.rpe, w.date "
+            "FROM sets s "
+            "JOIN exercises e ON s.exercise_id = e.id "
+            "JOIN workouts w ON e.workout_id = w.id "
+            f"WHERE e.name IN ({placeholders}) ORDER BY w.date, s.id;"
+        )
+        return self.fetch_all(query, tuple(names))
 
 
 class PlannedWorkoutRepository(BaseRepository):
