@@ -262,6 +262,61 @@ class ExercisePrescription(MathTools):
         se = math.sqrt(mse / denom) if denom != 0 else 0.0
         return float(slope - 1.96 * se), float(slope + 1.96 * se)
 
+    @staticmethod
+    def _daily_volumes(weights: list[float], reps: list[int], times: list[float]) -> dict[int, float]:
+        volumes: dict[int, float] = {}
+        for w, r, t in zip(weights, reps, times):
+            day = int(t)
+            volumes[day] = volumes.get(day, 0.0) + w * r
+        return volumes
+
+    @classmethod
+    def _performance_scores_from_logs(
+        cls,
+        weights: list[float],
+        reps: list[int],
+        times: list[float],
+        mev: float,
+    ) -> list[float]:
+        vols = cls._daily_volumes(weights, reps, times)
+        if not vols:
+            return [0.5]
+        avg_actual = np.mean(list(vols.values()))
+        presc = mev if mev > 0 else avg_actual
+        result = []
+        for day in sorted(vols.keys()):
+            v_i = vols.get(day, avg_actual)
+            perf_i = cls.clamp(v_i / presc, 0.5, 1.5)
+            result.append(perf_i)
+        return result
+
+    @classmethod
+    def _recovery_scores_from_logs(
+        cls,
+        body_weight: float,
+        calories: list[float] | None,
+        sleep_hours: list[float] | None,
+    ) -> list[float]:
+        days = max(len(calories or []), len(sleep_hours or []))
+        if days == 0:
+            return [1.0]
+        rec_scores: list[float] = []
+        for i in range(days):
+            cal = calories[i] if calories and i < len(calories) else None
+            slp = sleep_hours[i] if sleep_hours and i < len(sleep_hours) else None
+            ea = (
+                cls.clamp(cal / ((body_weight * 0.85) * 40.0), 0.5, 1.1)
+                if cal is not None
+                else 1.0
+            )
+            sf = (
+                cls.clamp(1 + 0.06 * (slp - 8.0), 0.5, 1.1)
+                if slp is not None
+                else 1.0
+            )
+            rec_scores.append((ea + sf) / 2)
+        return rec_scores
+
     @classmethod
     def exercise_prescription(
         cls,
@@ -269,15 +324,13 @@ class ExercisePrescription(MathTools):
         reps: list[int],
         timestamps: list[float],
         rpe_scores: list[float],
-        performance_scores: list[float],
-        recovery_scores: list[float],
         body_weight: float,
         months_active: float,
         workouts_per_month: float,
         MEV: float = 10,
         *,
-        avg_calories: float | None = None,
-        avg_sleep: float | None = None,
+        calories: list[float] | None = None,
+        sleep_hours: list[float] | None = None,
         target_1rm: float | None = None,
         days_remaining: int | None = None,
         decay: float = 0.9,
@@ -299,14 +352,16 @@ class ExercisePrescription(MathTools):
         plateau = cls._plateau(slope, cv, thresh)
         fatigue = cls._fatigue(weights, reps, timestamps, decay)
         ac_ratio = cls._ac_ratio(weights, reps)
-        ea = cls._energy_availability(body_weight, avg_calories)
+        perf_scores = cls._performance_scores_from_logs(weights, reps, timestamps, MEV)
+        rec_scores = cls._recovery_scores_from_logs(body_weight, calories, sleep_hours)
+        ea = cls._energy_availability(body_weight, np.mean(calories) if calories else None)
         mrv = cls._mrv(MEV, fatigue, stress, ea, theta)
-        sf = cls._sleep_factor(avg_sleep)
-        adj_mrv = cls._adj_mrv(mrv, performance_scores, recovery_scores, sf)
+        sf = cls._sleep_factor(np.mean(sleep_hours) if sleep_hours else None)
+        adj_mrv = cls._adj_mrv(mrv, perf_scores, rec_scores, sf)
         experience = cls._experience(months_active, workouts_per_month)
         tolerance = cls._tolerance(
-            performance_scores,
-            recovery_scores,
+            perf_scores,
+            rec_scores,
             target_1rm,
             current_1rm,
             days_remaining,
@@ -319,7 +374,7 @@ class ExercisePrescription(MathTools):
         achievement_prob = cls._achievement_probability(required_rate)
         weekly_rate = cls._weekly_rate(slope, y_mean)
         weekly_monotony = cls._weekly_monotony(weights, reps)
-        perf_factor = np.mean(np.array(performance_scores)) if len(performance_scores) > 0 else 1.0
+        perf_factor = np.mean(np.array(perf_scores)) if len(perf_scores) > 0 else 1.0
         deload_trigger = cls._deload_trigger(perf_factor, rpe_scores, tolerance)
         rpe_scale = cls._rpe_scale(rpe_scores)
         confidence_int = cls._confidence_interval(slope, weights, timestamps)

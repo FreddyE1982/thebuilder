@@ -57,21 +57,19 @@ class MathToolsTestCase(unittest.TestCase):
         reps = [5, 5, 5, 5, 5]
         timestamps = [0, 7, 14, 21, 28]
         rpe = [8, 8, 8, 8, 8]
-        perf = [1.0, 1.1, 1.1, 1.05, 1.0]
-        rec = [1.0, 1.0, 1.0, 1.0, 0.9]
+        calories = [2720, 2720, 2720, 2720, 2176]
+        sleep_hours = [8, 8, 8, 8, 8]
 
         result = ExercisePrescription.exercise_prescription(
             weights,
             reps,
             timestamps,
             rpe,
-            perf,
-            rec,
             body_weight=80.0,
             months_active=12,
             workouts_per_month=8,
-            avg_calories=3000,
-            avg_sleep=7,
+            calories=calories,
+            sleep_hours=sleep_hours,
             target_1rm=140.0,
             days_remaining=30,
         )
@@ -79,7 +77,7 @@ class MathToolsTestCase(unittest.TestCase):
         self.assertEqual(result["total_sets"], 1)
         first_set = result["prescription"][0]
         self.assertEqual(first_set["reps"], 1)
-        self.assertAlmostEqual(first_set["weight"], 117.9)
+        self.assertAlmostEqual(first_set["weight"], 109.5)
 
 
 if __name__ == '__main__':
