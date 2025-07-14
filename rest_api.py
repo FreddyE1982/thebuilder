@@ -11,6 +11,7 @@ from db import (
     ExerciseCatalogRepository,
     MuscleRepository,
     ExerciseNameRepository,
+    SettingsRepository,
 )
 from planner_service import PlannerService
 from recommendation_service import RecommendationService
@@ -30,6 +31,7 @@ class GymAPI:
         self.exercise_catalog = ExerciseCatalogRepository(db_path)
         self.muscles = MuscleRepository(db_path)
         self.exercise_names = ExerciseNameRepository(db_path)
+        self.settings = SettingsRepository(db_path)
         self.planner = PlannerService(
             self.workouts,
             self.exercises,
@@ -43,6 +45,7 @@ class GymAPI:
             self.exercises,
             self.sets,
             self.exercise_names,
+            self.settings,
         )
         self.app = FastAPI()
         self._setup_routes()
@@ -348,6 +351,18 @@ class GymAPI:
                 return self.recommender.recommend_next_set(exercise_id)
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
+
+        @self.app.get("/settings/general")
+        def get_general_settings():
+            return self.settings.all_settings()
+
+        @self.app.post("/settings/general")
+        def update_general_settings(body_weight: float = None, months_active: float = None):
+            if body_weight is not None:
+                self.settings.set_float("body_weight", body_weight)
+            if months_active is not None:
+                self.settings.set_float("months_active", months_active)
+            return {"status": "updated"}
 
         @self.app.post("/settings/delete_all")
         def delete_all(confirmation: str):

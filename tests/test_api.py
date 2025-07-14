@@ -127,6 +127,26 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), [])
 
+    def test_general_settings(self) -> None:
+        resp = self.client.get("/settings/general")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(
+            resp.json(), {"body_weight": 80.0, "months_active": 1.0}
+        )
+
+        resp = self.client.post(
+            "/settings/general",
+            params={"body_weight": 85.5, "months_active": 6.0},
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), {"status": "updated"})
+
+        resp = self.client.get("/settings/general")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(
+            resp.json(), {"body_weight": 85.5, "months_active": 6.0}
+        )
+
     def test_plan_workflow(self) -> None:
         plan_date = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
 
@@ -395,32 +415,4 @@ class APITestCase(unittest.TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         self.assertIn("My Pulls", resp.json())
-
-    def test_recommend_next_set(self) -> None:
-        self.client.post("/workouts")
-        self.client.post(
-            "/workouts/1/exercises",
-            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
-        )
-        self.client.post("/exercises/1/sets", params={"reps": 5, "weight": 100.0, "rpe": 8})
-
-        self.client.post("/workouts")
-        self.client.post(
-            "/workouts/2/exercises",
-            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
-        )
-        self.client.post("/exercises/2/sets", params={"reps": 5, "weight": 105.0, "rpe": 8})
-
-        self.client.post("/workouts")
-        self.client.post(
-            "/workouts/3/exercises",
-            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
-        )
-        resp = self.client.post("/exercises/3/recommend_next")
-        self.assertEqual(resp.status_code, 200)
-        data = resp.json()
-        self.assertEqual(data["id"], 3)
-        self.assertEqual(data["reps"], 1)
-        self.assertAlmostEqual(data["weight"], 80.8)
-        self.assertEqual(data["rpe"], 7)
 

@@ -12,6 +12,7 @@ from db import (
     ExerciseCatalogRepository,
     MuscleRepository,
     ExerciseNameRepository,
+    SettingsRepository,
 )
 from planner_service import PlannerService
 from recommendation_service import RecommendationService
@@ -31,6 +32,7 @@ class GymApp:
         self.exercise_catalog = ExerciseCatalogRepository()
         self.muscles_repo = MuscleRepository()
         self.exercise_names_repo = ExerciseNameRepository()
+        self.settings_repo = SettingsRepository()
         self.planner = PlannerService(
             self.workouts,
             self.exercises,
@@ -44,6 +46,7 @@ class GymApp:
             self.exercises,
             self.sets,
             self.exercise_names_repo,
+            self.settings_repo,
         )
         self._state_init()
 
@@ -410,7 +413,31 @@ class GymApp:
                 if st.button("Cancel"):
                     st.session_state.delete_target = None
 
-        eq_tab, mus_tab, ex_tab = st.tabs(["Equipment", "Muscles", "Exercise Aliases"])
+        gen_tab, eq_tab, mus_tab, ex_tab = st.tabs([
+            "General",
+            "Equipment",
+            "Muscles",
+            "Exercise Aliases",
+        ])
+
+        with gen_tab:
+            st.header("General Settings")
+            bw = st.number_input(
+                "Body Weight (kg)",
+                min_value=1.0,
+                value=self.settings_repo.get_float("body_weight", 80.0),
+                step=0.5,
+            )
+            ma = st.number_input(
+                "Months Active",
+                min_value=0.0,
+                value=self.settings_repo.get_float("months_active", 1.0),
+                step=1.0,
+            )
+            if st.button("Save General Settings"):
+                self.settings_repo.set_float("body_weight", bw)
+                self.settings_repo.set_float("months_active", ma)
+                st.success("Settings saved")
 
         with eq_tab:
             st.header("Equipment Management")
