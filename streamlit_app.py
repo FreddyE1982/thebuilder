@@ -85,6 +85,13 @@ class GymApp:
         st.subheader("Daily Volume")
         if daily:
             st.line_chart({"Volume": [d["volume"] for d in daily]}, x=[d["date"] for d in daily])
+        exercises = [""] + self.exercise_names_repo.fetch_all()
+        ex_choice = st.selectbox("Exercise Progression", exercises, key="dash_ex")
+        if ex_choice:
+            prog = self.stats.progression(ex_choice, start.isoformat(), end.isoformat())
+            st.subheader("1RM Progression")
+            if prog:
+                st.line_chart({"1RM": [p["est_1rm"] for p in prog]}, x=[p["date"] for p in prog])
 
     def run(self) -> None:
         st.title("Workout Logger")
@@ -171,6 +178,14 @@ class GymApp:
                 st.write(f"Start: {start_time}")
             if end_time:
                 st.write(f"End: {end_time}")
+            csv_data = self.sets.export_workout_csv(int(selected))
+            st.download_button(
+                label="Export CSV",
+                data=csv_data,
+                file_name=f"workout_{selected}.csv",
+                mime="text/csv",
+                key=f"export_{selected}",
+            )
 
     def _exercise_section(self) -> None:
         st.header("Exercises")
