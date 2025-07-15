@@ -1,5 +1,6 @@
 import os
 import sys
+import math
 import unittest
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
@@ -51,6 +52,14 @@ class MathToolsTestCase(unittest.TestCase):
         self.assertAlmostEqual(MathTools.required_progression(150.0, 120.0, 30), 1.0)
         with self.assertRaises(ValueError):
             MathTools.required_progression(150.0, 120.0, 0)
+
+    def test_sleep_recovery_index(self) -> None:
+        sf = ExercisePrescription._sleep_factor(7)
+        psqf = ExercisePrescription._perceived_sleep_quality_factor(4)
+        self.assertAlmostEqual(sf, 0.94)
+        self.assertAlmostEqual(psqf, 0.98)
+        sri = ExercisePrescription._sleep_recovery_index(7, 4)
+        self.assertAlmostEqual(sri, math.sqrt(sf * psqf))
 
     def test_exercise_prescription(self) -> None:
         weights = [100.0, 105.0, 110.0, 112.5, 115.0]

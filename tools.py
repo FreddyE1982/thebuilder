@@ -182,7 +182,8 @@ class ExercisePrescription(MathTools):
     @staticmethod
     def _perceived_sleep_quality_factor(quality: float | None) -> float:
         if quality is not None:
-            return ExercisePrescription.clamp(0.5 + 0.12 * quality, 0.5, 1.1)
+            q = ExercisePrescription.clamp(quality, 0.0, 5.0)
+            return ExercisePrescription.clamp(0.5 + 0.12 * q, 0.5, 1.1)
         return 1.0
 
     @classmethod
