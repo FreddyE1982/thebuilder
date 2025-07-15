@@ -263,21 +263,23 @@ class ExercisePrescription(MathTools):
     def _recent_load(cls, weights: list[float], reps: list[int]) -> float:
         w = np.array(weights)
         r = np.array(reps)
-        S = len(weights)
-        start = max(0, S - cls.L)
-        return float(np.mean((w * r)[start:S])) if S > 0 else 0.0
+        if len(w) == 0:
+            return 0.0
+        vol = w * r
+        ewma = cls._ewma(vol, span=cls.L)
+        return float(ewma[-1])
 
     @classmethod
     def _prev_load(cls, weights: list[float], reps: list[int]) -> float:
         w = np.array(weights)
         r = np.array(reps)
-        S = len(weights)
-        start = max(0, S - 2 * cls.L)
-        end = max(0, S - cls.L)
-        if end > start:
-            return float(np.mean((w * r)[start:end]))
-        recent = cls._recent_load(weights, reps)
-        return recent
+        vol = w * r
+        if len(vol) == 0:
+            return 0.0
+        ewma = cls._ewma(vol, span=cls.L)
+        if len(ewma) > cls.L:
+            return float(ewma[-cls.L - 1])
+        return float(ewma[0])
 
     @staticmethod
     def _threshold(recent: float, previous: float) -> float:
