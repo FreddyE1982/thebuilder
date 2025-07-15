@@ -517,6 +517,14 @@ class APITestCase(unittest.TestCase):
         self.assertAlmostEqual(forecast[0]["est_1rm"], 139.3, places=1)
         self.assertAlmostEqual(forecast[1]["est_1rm"], 139.3, places=1)
 
+        resp = self.client.get("/stats/overview")
+        self.assertEqual(resp.status_code, 200)
+        overview = resp.json()
+        self.assertEqual(overview["workouts"], 1)
+        self.assertAlmostEqual(overview["volume"], 1880.0)
+        self.assertAlmostEqual(overview["avg_rpe"], 8.5)
+        self.assertEqual(overview["exercises"], 1)
+
     def test_timestamps(self) -> None:
         resp = self.client.post("/workouts", params={"training_type": "strength"})
         self.assertEqual(resp.status_code, 200)

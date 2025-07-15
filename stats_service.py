@@ -254,3 +254,36 @@ class StatisticsService:
         for r in sorted(dist):
             result.append({"reps": r, "count": dist[r]})
         return result
+
+    def overview(
+        self,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> Dict[str, float]:
+        """Return aggregated workout statistics."""
+        names = self.exercise_names.fetch_all()
+        rows = self.sets.fetch_history_by_names(
+            names,
+            start_date=start_date,
+            end_date=end_date,
+            with_equipment=True,
+            with_workout_id=True,
+        )
+        if not rows:
+            return {"workouts": 0, "volume": 0.0, "avg_rpe": 0.0, "exercises": 0}
+        workout_ids = set()
+        exercises = set()
+        volume = 0.0
+        rpe_total = 0.0
+        for reps, weight, rpe, _date, ex_name, _eq, wid in rows:
+            workout_ids.add(wid)
+            exercises.add(ex_name)
+            volume += int(reps) * float(weight)
+            rpe_total += int(rpe)
+        avg_rpe = rpe_total / len(rows)
+        return {
+            "workouts": len(workout_ids),
+            "volume": round(volume, 2),
+            "avg_rpe": round(avg_rpe, 2),
+            "exercises": len(exercises),
+        }
