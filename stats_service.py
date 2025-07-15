@@ -200,3 +200,47 @@ class StatisticsService:
                 }
             )
         return result
+
+    def rpe_distribution(
+        self,
+        exercise: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> List[Dict[str, int]]:
+        """Return a distribution of RPE values for the given exercise."""
+        names = self._alias_names(exercise)
+        rows = self.sets.fetch_history_by_names(
+            names,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        dist: Dict[int, int] = {}
+        for _reps, _weight, rpe, _date in rows:
+            key = int(rpe)
+            dist[key] = dist.get(key, 0) + 1
+        result = []
+        for r in sorted(dist):
+            result.append({"rpe": r, "count": dist[r]})
+        return result
+
+    def reps_distribution(
+        self,
+        exercise: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> List[Dict[str, int]]:
+        """Return a distribution of repetition counts."""
+        names = self._alias_names(exercise)
+        rows = self.sets.fetch_history_by_names(
+            names,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        dist: Dict[int, int] = {}
+        for reps, _weight, _rpe, _date in rows:
+            key = int(reps)
+            dist[key] = dist.get(key, 0) + 1
+        result = []
+        for r in sorted(dist):
+            result.append({"reps": r, "count": dist[r]})
+        return result

@@ -395,6 +395,30 @@ class GymAPI:
         ):
             return self.statistics.equipment_usage(start_date, end_date)
 
+        @self.app.get("/stats/rpe_distribution")
+        def stats_rpe_distribution(
+            exercise: str = None,
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            return self.statistics.rpe_distribution(
+                exercise,
+                start_date,
+                end_date,
+            )
+
+        @self.app.get("/stats/reps_distribution")
+        def stats_reps_distribution(
+            exercise: str = None,
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            return self.statistics.reps_distribution(
+                exercise,
+                start_date,
+                end_date,
+            )
+
         @self.app.get("/prediction/progress")
         def prediction_progress(
             exercise: str,
