@@ -617,3 +617,29 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json()[0]["date"], past_date)
 
+    def test_pyramid_tests(self) -> None:
+        today = datetime.date.today().isoformat()
+        resp = self.client.post("/pyramid_tests", params={"weights": "100|110"})
+        self.assertEqual(resp.status_code, 200)
+        tid1 = resp.json()["id"]
+
+        resp = self.client.get("/pyramid_tests")
+        self.assertEqual(resp.status_code, 200)
+        history = resp.json()
+        self.assertEqual(len(history), 1)
+        self.assertEqual(history[0]["id"], tid1)
+        self.assertEqual(history[0]["date"], today)
+        self.assertEqual(history[0]["weights"], [100.0, 110.0])
+
+        resp = self.client.post("/pyramid_tests", params={"weights": "120"})
+        self.assertEqual(resp.status_code, 200)
+        tid2 = resp.json()["id"]
+        self.assertEqual(tid2, tid1 + 1)
+
+        resp = self.client.get("/pyramid_tests")
+        self.assertEqual(resp.status_code, 200)
+        history = resp.json()
+        self.assertEqual(len(history), 2)
+        self.assertEqual(history[0]["weights"], [120.0])
+        self.assertEqual(history[1]["weights"], [100.0, 110.0])
+

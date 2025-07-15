@@ -12,6 +12,8 @@ from db import (
     MuscleRepository,
     ExerciseNameRepository,
     SettingsRepository,
+    PyramidTestRepository,
+    PyramidEntryRepository,
 )
 from planner_service import PlannerService
 from recommendation_service import RecommendationService
@@ -33,6 +35,8 @@ class GymAPI:
         self.muscles = MuscleRepository(db_path)
         self.exercise_names = ExerciseNameRepository(db_path)
         self.settings = SettingsRepository(db_path)
+        self.pyramid_tests = PyramidTestRepository(db_path)
+        self.pyramid_entries = PyramidEntryRepository(db_path)
         self.planner = PlannerService(
             self.workouts,
             self.exercises,
@@ -523,6 +527,31 @@ class GymAPI:
                 weeks,
                 workouts,
             )
+
+        @self.app.post("/pyramid_tests")
+        def create_pyramid_test(weights: str, date: str = None):
+            try:
+                test_date = (
+                    datetime.date.today()
+                    if date is None
+                    else datetime.date.fromisoformat(date)
+                )
+            except ValueError:
+                raise HTTPException(status_code=400, detail="invalid date format")
+            values = [float(w) for w in weights.split("|") if w]
+            if not values:
+                raise HTTPException(status_code=400, detail="weights required")
+            tid = self.pyramid_tests.create(test_date.isoformat())
+            for w in values:
+                self.pyramid_entries.add(tid, w)
+            return {"id": tid}
+
+        @self.app.get("/pyramid_tests")
+        def list_pyramid_tests():
+            tests = self.pyramid_tests.fetch_all_with_weights(self.pyramid_entries)
+            return [
+                {"id": tid, "date": date, "weights": weights} for tid, date, weights in tests
+            ]
 
         @self.app.get("/settings/general")
         def get_general_settings():
