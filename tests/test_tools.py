@@ -5,6 +5,7 @@ import unittest
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from tools import MathTools, ExercisePrescription
+from db import PyramidTestRepository, PyramidEntryRepository
 
 
 class MathToolsTestCase(unittest.TestCase):
@@ -136,6 +137,46 @@ class MathToolsTestCase(unittest.TestCase):
         first_set = result["prescription"][0]
         self.assertIsInstance(first_set["reps"], int)
         self.assertIsInstance(first_set["weight"], float)
+
+    def test_pyramid_weighting(self) -> None:
+        weights = [100.0, 105.0, 110.0, 112.5, 115.0]
+        reps = [5, 5, 5, 5, 5]
+        timestamps = [0, 7, 14, 21, 28]
+        rpe = [8, 8, 8, 8, 8]
+
+        base = ExercisePrescription.exercise_prescription(
+            weights,
+            reps,
+            timestamps,
+            rpe,
+            body_weight=80.0,
+            months_active=12,
+            workouts_per_month=8,
+        )
+        base_rm = base["analysis"]["current_1RM"]
+
+        repo_t = PyramidTestRepository()
+        repo_e = PyramidEntryRepository()
+        tid = repo_t.create("2023-01-01")
+        repo_e.add(tid, 130.0)
+        result = ExercisePrescription.exercise_prescription(
+            weights,
+            reps,
+            timestamps,
+            rpe,
+            body_weight=80.0,
+            months_active=12,
+            workouts_per_month=8,
+        )
+        repo_t._delete_all("pyramid_tests")
+        repo_e._delete_all("pyramid_entries")
+        enhanced_rm = result["analysis"]["current_1RM"]
+        self.assertNotEqual(enhanced_rm, base_rm)
+
+    def test_pyramid_progression_metrics(self) -> None:
+        metrics = ExercisePrescription._pyramid_progression_metrics([100.0, 110.0, 120.0])
+        self.assertAlmostEqual(metrics["increment_coeff"], 0.0, places=1)
+        self.assertGreater(metrics["efficiency_score"], 1.0)
 
 
 if __name__ == '__main__':

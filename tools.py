@@ -1,5 +1,7 @@
 import math
-from typing import Iterable
+import datetime
+from typing import Iterable, List, Tuple
+from db import PyramidTestRepository, PyramidEntryRepository
 
 import numpy as np
 import pandas as pd
@@ -114,6 +116,159 @@ class ExercisePrescription(MathTools):
             return 1.0
         phi = float(model.params[1])
         return MathTools.clamp(phi, 0.5, 1.5)
+
+    @staticmethod
+    def _process_pyramid_tests() -> Tuple[List[float], List[float], List[List[float]]]:
+        """Load pyramid tests from the database and convert to timestamps."""
+        repo_t = PyramidTestRepository()
+        repo_e = PyramidEntryRepository()
+        history = repo_t.fetch_all_with_weights(repo_e)
+        if not history:
+            return [], [], []
+        dates = [datetime.date.fromisoformat(d) for _tid, d, _ in history]
+        first = dates[0]
+        ts = [(d - first).days for d in dates]
+        rms = [max(w) if w else 0.0 for _tid, _d, w in history]
+        weights = [w for _tid, _d, w in history]
+        return ts, rms, weights
+
+    @staticmethod
+    def _pyramid_progression_metrics(weights: List[float]) -> dict[str, float]:
+        if len(weights) < 2:
+            return {
+                "increment_coeff": 0.0,
+                "fatigue_decay": 0.0,
+                "strength_reserve": 0.0,
+                "efficiency_score": 1.0,
+            }
+        increments = [weights[i + 1] - weights[i] for i in range(len(weights) - 1)]
+        mean_inc = np.mean(increments)
+        inc_coeff = float(np.std(increments) / (mean_inc + ExercisePrescription.EPSILON))
+        slope = ExercisePrescription._slope(list(range(len(increments))), increments)
+        efficiency = float(weights[-1] / (sum(weights) / len(weights)))
+        return {
+            "increment_coeff": inc_coeff,
+            "fatigue_decay": -slope,
+            "strength_reserve": 0.0,
+            "efficiency_score": efficiency,
+        }
+
+    @classmethod
+    def _enhanced_1rm_calculation(
+        cls,
+        weights: List[float],
+        reps: List[int],
+        pyramid_timestamps: List[float],
+        pyramid_1rms: List[float],
+        current_timestamp: float,
+    ) -> float:
+        epley = (
+            max([w * (1 + cls.EPL_COEFF * min(r, 8)) for w, r in zip(weights, reps)])
+            if weights
+            else 0.0
+        )
+        if not pyramid_1rms:
+            return epley
+        if len(pyramid_1rms) >= 2:
+            interp = np.interp(current_timestamp, pyramid_timestamps, pyramid_1rms)
+            pyr_w = 0.7
+            epl_w = 0.3
+            days_since = current_timestamp - pyramid_timestamps[-1]
+            if days_since > 14:
+                pyr_w = max(0.4, pyr_w - days_since * 0.01)
+                epl_w = 1.0 - pyr_w
+            return pyr_w * interp + epl_w * epley
+        last = pyramid_1rms[-1]
+        days_since = current_timestamp - pyramid_timestamps[-1]
+        influence = math.exp(-days_since / 21)
+        return influence * last + (1 - influence) * epley
+
+    @staticmethod
+    def _pyramid_enhanced_progression(
+        pyramid_timestamps: List[float],
+        pyramid_1rms: List[float],
+        target_1rm: float | None = None,
+        days_remaining: int | None = None,
+    ) -> float:
+        if len(pyramid_1rms) < 3:
+            return 0.0
+        weights = [math.exp(-(pyramid_timestamps[-1] - t) / 30) for t in pyramid_timestamps]
+        x = np.array(pyramid_timestamps)
+        y = np.array(pyramid_1rms)
+        w = np.array(weights)
+        x_mean = np.average(x, weights=w)
+        y_mean = np.average(y, weights=w)
+        num = np.sum(w * (x - x_mean) * (y - y_mean))
+        den = np.sum(w * (x - x_mean) ** 2) + ExercisePrescription.EPSILON
+        actual_rate = float(num / den)
+        if target_1rm and days_remaining:
+            current = pyramid_1rms[-1]
+            required = (target_1rm - current) / days_remaining
+            if required != 0:
+                adj = min(actual_rate / required, 2.0)
+                return adj
+        return actual_rate
+
+    @staticmethod
+    def _pyramid_enhanced_fatigue(
+        pyramid_timestamps: List[float],
+        pyramid_1rms: List[float],
+        pyramid_weights: List[List[float]],
+        base_fatigue: float,
+        current_timestamp: float,
+    ) -> float:
+        if len(pyramid_1rms) < 2:
+            return base_fatigue
+        slope, intercept = np.polyfit(pyramid_timestamps, pyramid_1rms, 1)
+        indicators: List[float] = []
+        for t, rm in zip(pyramid_timestamps[-5:], pyramid_1rms[-5:]):
+            expected = slope * t + intercept
+            diff = (rm - expected) / (expected + ExercisePrescription.EPSILON)
+            days_ago = current_timestamp - t
+            weight = math.exp(-days_ago / 14)
+            indicators.append(diff * weight)
+        if indicators:
+            factor = 1.0 + abs(min(sum(indicators), 0.0)) * 0.5
+            base_fatigue *= factor
+        if pyramid_weights:
+            metrics = ExercisePrescription._pyramid_progression_metrics(pyramid_weights[-1])
+            if metrics["fatigue_decay"] > 0.2:
+                base_fatigue *= 1.1
+        return base_fatigue
+
+    @classmethod
+    def _pyramid_enhanced_alpha(
+        cls,
+        base_alpha: float,
+        pyramid_timestamps: List[float],
+        pyramid_1rms: List[float],
+        pyramid_weights: List[List[float]],
+        current_timestamp: float,
+    ) -> float:
+        if len(pyramid_1rms) < 2:
+            return base_alpha
+        recent = [
+            (t, rm)
+            for t, rm in zip(pyramid_timestamps, pyramid_1rms)
+            if current_timestamp - t <= 30
+        ]
+        if len(recent) >= 2:
+            actual_progress = (recent[-1][1] - recent[0][1]) / (
+                recent[0][1] + cls.EPSILON
+            )
+            if actual_progress > 0.05:
+                bonus = min(actual_progress * 0.3, 0.03)
+                return cls.clamp(base_alpha + bonus, -0.20, 0.07)
+            if actual_progress < -0.02:
+                penalty = max(actual_progress * 0.5, -0.05)
+                base_alpha = cls.clamp(base_alpha + penalty, -0.20, 0.07)
+        if pyramid_weights:
+            metrics = cls._pyramid_progression_metrics(pyramid_weights[-1])
+            if metrics["increment_coeff"] < 0.2:
+                base_alpha *= 1.02
+            if metrics["efficiency_score"] > 1.1:
+                base_alpha *= 1.03
+        return cls.clamp(base_alpha, -0.20, 0.07)
 
     @staticmethod
     def _cross_correlation(
@@ -914,11 +1069,19 @@ class ExercisePrescription(MathTools):
         series_r = cls._prepare_series(reps, timestamps)
         series_rpe = cls._prepare_series(rpe_scores, timestamps)
 
-        current_1rm = cls._current_1rm(list(series_w), list(series_r))
+        current_1rm_calc = cls._current_1rm(list(series_w), list(series_r))
+        ts_list = [(t - series_w.index[0]).days for t in series_w.index]
+        pyr_ts, pyr_vals, pyr_weights = cls._process_pyramid_tests()
+        current_1rm = cls._enhanced_1rm_calculation(
+            list(series_w),
+            list(series_r),
+            pyr_ts,
+            pyr_vals,
+            ts_list[-1] if ts_list else 0,
+        )
         total_volume = cls._total_volume(list(series_w), list(series_r))
         t_mean = cls._means(list(series_w.index.map(lambda t: (t - series_w.index[0]).days)))
         y_mean = cls._means(list(series_w))
-        ts_list = [ (t - series_w.index[0]).days for t in series_w.index ]
         slope = cls._weighted_slope(ts_list, list(series_w))
         recent_load = cls._recent_load(list(series_w), list(series_r))
         prev_load = cls._prev_load(list(series_w), list(series_r))
@@ -951,6 +1114,13 @@ class ExercisePrescription(MathTools):
             durations,
             50.0,
             rest_efficiencies,
+        )
+        base_fatigue = cls._pyramid_enhanced_fatigue(
+            pyr_ts,
+            pyr_vals,
+            pyr_weights,
+            base_fatigue,
+            ts_list[-1] if ts_list else 0,
         )
         target_reps_est = int(round(np.mean(reps))) if reps else 8
         enhanced_fatigue = cls._enhanced_fatigue(weights, reps, ts_list, target_reps_est)
@@ -1020,11 +1190,43 @@ class ExercisePrescription(MathTools):
         perf_factor = np.mean(np.array(perf_scores)) if len(perf_scores) > 0 else 1.0
         vol_presc = cls._autoregulated_volume_prescription(vol_presc, perf_factor if perf_scores else 1.0, recovery_quality, ac_ratio, rpe_consistency)
         vol_presc = cls._adjusted_volume_prescription(vol_presc, rpe_scores)
-        urgency = cls._urgency(target_1rm, current_1rm)
+
+        if pyr_vals:
+            prog_adj = cls._pyramid_enhanced_progression(
+                pyr_ts,
+                pyr_vals,
+                target_1rm,
+                days_remaining,
+            )
+            urgency_mod = cls.clamp(1 + prog_adj, 0.5, 2.0)
+        else:
+            urgency_mod = 1.0
+
+        if pyr_vals:
+            pyr_1rm_last = pyr_vals[-1]
+            days_since_pyr = (ts_list[-1] - pyr_ts[-1]) if ts_list else 0
+            cv_slice = pyr_vals[-min(5, len(pyr_vals)) :]
+            cv_pyr = np.std(cv_slice) / (np.mean(cv_slice) + cls.EPSILON)
+            recency = 1 / (1 + math.exp((days_since_pyr - 7) / 3))
+            reliab = cls.clamp(1 - cv_pyr, 0.6, 1.0)
+            sample = cls.clamp(math.log1p(len(pyr_vals)) / math.log1p(10), 0.3, 1.0)
+            fatigue_ratio = cls.clamp(base_fatigue / (adj_mrv + cls.EPSILON), 0.6, 1.4)
+            fatigue_corr = 1 / fatigue_ratio
+            w_pyr = cls.clamp(0.8 * recency * reliab * sample * fatigue_corr, 0.2, 0.8)
+            current_1rm = w_pyr * pyr_1rm_last + (1 - w_pyr) * current_1rm_calc
+
+        urgency = cls._urgency(target_1rm, current_1rm) * urgency_mod
         delta_1rm, delta_vol = cls._deltas(current_1rm, y_mean, recent_load, prev_load)
         rec_factor = np.mean(np.array(rec_scores)) if len(rec_scores) > 0 else 1.0
         rec_factor = (rec_factor + recovery_quality) / 2
         alpha = cls._alpha(delta_1rm, delta_vol, rec_factor, list(series_w), experience)
+        alpha = cls._pyramid_enhanced_alpha(
+            alpha,
+            pyr_ts,
+            pyr_vals,
+            pyr_weights,
+            ts_list[-1] if ts_list else 0,
+        )
         required_rate = cls._required_rate(target_1rm, current_1rm, days_remaining)
         achievement_prob = cls._achievement_probability(required_rate)
         weekly_rate = cls._weekly_rate(slope, y_mean)
