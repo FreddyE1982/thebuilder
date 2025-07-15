@@ -287,6 +287,9 @@ class ExercisePrescription(MathTools):
                 change += 0.5
             anomaly = cls._anomaly_score(weights)
             change += min(anomaly / 3, 0.5)
+            trend, seasonal = cls._seasonal_components(weights, period=7)
+            season_effect = abs(seasonal[-1]) / (abs(trend[-1]) + cls.EPSILON)
+            change += min(season_effect, 0.5)
         return cls.W1 * slope_zero + cls.W2 * cv_low + cls.W3 * thresh_low + 0.2 * change
 
     @staticmethod
@@ -433,6 +436,7 @@ class ExercisePrescription(MathTools):
         delta_vol: float,
         rec: float,
         weights: list[float] | None = None,
+        experience: float | None = None,
     ) -> float:
         base = 0.6 * delta_1rm + 0.4 * delta_vol
         trend = 1.0
@@ -443,7 +447,10 @@ class ExercisePrescription(MathTools):
             smooth = cls._kalman_filter(weights)[-1]
             if smooth != 0:
                 trend *= cls.clamp(forecast / smooth, 0.8, 1.2)
-        return cls.clamp(base * rec * trend, cls.ALPHA_MIN, cls.ALPHA_MAX)
+        exp_factor = 1.0
+        if experience is not None:
+            exp_factor = cls.clamp(1 + math.log1p(experience) / 200, 1.0, 1.1)
+        return cls.clamp(base * rec * trend * exp_factor, cls.ALPHA_MIN, cls.ALPHA_MAX)
 
     @staticmethod
     def _required_rate(target_1rm: float | None, current_1rm: float, days_remaining: int | None) -> float:
@@ -677,7 +684,7 @@ class ExercisePrescription(MathTools):
         urgency = cls._urgency(target_1rm, current_1rm)
         delta_1rm, delta_vol = cls._deltas(current_1rm, y_mean, recent_load, prev_load)
         rec_factor = np.mean(np.array(rec_scores)) if len(rec_scores) > 0 else 1.0
-        alpha = cls._alpha(delta_1rm, delta_vol, rec_factor, weights)
+        alpha = cls._alpha(delta_1rm, delta_vol, rec_factor, weights, experience)
         required_rate = cls._required_rate(target_1rm, current_1rm, days_remaining)
         achievement_prob = cls._achievement_probability(required_rate)
         weekly_rate = cls._weekly_rate(slope, y_mean)
@@ -691,6 +698,13 @@ class ExercisePrescription(MathTools):
         confidence_int = cls._confidence_interval(slope, weights, timestamps)
 
         mean_vol = np.mean(np.array(weights) * np.array(reps)) if len(weights) > 0 else 1.0
+        vol_factor = cls.clamp(math.log1p(total_volume) / 8, 0.95, 1.05)
+        time_factor = cls.clamp(
+            1 + (timestamps[-1] - t_mean) / (10 * (timestamps[-1] + cls.EPSILON)),
+            0.95,
+            1.05,
+        )
+        exp_factor = cls.clamp(1 + math.log1p(experience) / 200, 1.0, 1.1)
         raw_sets = (
             adj_mrv
             / mean_vol
@@ -700,6 +714,9 @@ class ExercisePrescription(MathTools):
             * cls.clamp(1 - fatigue / mrv, 0.6, 1.0)
             * cls.clamp(1 - weekly_monotony / 2, 0.5, 1.0)
             * cls.clamp(achievement_prob, 0.6, 1.0)
+            * vol_factor
+            * time_factor
+            * exp_factor
         )
         N = int(cls.clamp(round(raw_sets), 1, 10))
 
