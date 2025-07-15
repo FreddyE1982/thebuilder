@@ -1,4 +1,3 @@
-import datetime
 from db import (
     WorkoutRepository,
     ExerciseRepository,
@@ -29,8 +28,9 @@ class PlannerService:
         self.planned_sets = plan_set_repo
 
     def create_workout_from_plan(self, plan_id: int) -> int:
+        _pid, date = self.planned_workouts.fetch_detail(plan_id)
         workout_id = self.workouts.create(
-            datetime.date.today().isoformat(), "strength"
+            date, "strength"
         )
         exercises = self.planned_exercises.fetch_for_workout(plan_id)
         for ex_id, name, equipment in exercises:

@@ -241,9 +241,19 @@ class GymAPI:
                 raise HTTPException(status_code=400, detail=str(e))
 
         @self.app.post("/workouts")
-        def create_workout(training_type: str = "strength"):
+        def create_workout(date: str = None, training_type: str = "strength"):
+            try:
+                workout_date = (
+                    datetime.date.today()
+                    if date is None
+                    else datetime.date.fromisoformat(date)
+                )
+            except ValueError:
+                raise HTTPException(status_code=400, detail="invalid date format")
+            if workout_date > datetime.date.today():
+                raise HTTPException(status_code=400, detail="date cannot be in the future")
             workout_id = self.workouts.create(
-                datetime.date.today().isoformat(), training_type
+                workout_date.isoformat(), training_type
             )
             return {"id": workout_id}
 
