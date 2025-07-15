@@ -61,6 +61,34 @@ class MathToolsTestCase(unittest.TestCase):
         sri = ExercisePrescription._sleep_recovery_index(7, 4)
         self.assertAlmostEqual(sri, math.sqrt(sf * psqf))
 
+    def test_time_series_utils(self) -> None:
+        ewma = ExercisePrescription._ewma([1, 2, 3, 4], span=2)
+        self.assertAlmostEqual(ewma[-1], 3.5185, places=3)
+        ar = ExercisePrescription._ar_decay([1, 2, 3, 4, 5])
+        self.assertAlmostEqual(ar, 1.0, places=3)
+        lag, corr = ExercisePrescription._cross_correlation(
+            [1, 2, 3, 4, 5], [0, 0, 1, 2, 3], max_lag=2
+        )
+        self.assertEqual(lag, -2)
+        self.assertAlmostEqual(corr, 1.0)
+        trend, seasonal = ExercisePrescription._seasonal_components(
+            [1, 2, 3, 4, 5, 6, 7, 1, 2, 3, 4, 5, 6, 7], 7
+        )
+        self.assertAlmostEqual(trend[-1], 4.0, places=1)
+        self.assertAlmostEqual(seasonal[-1], 3.0, places=1)
+        cp = ExercisePrescription._change_point(
+            [100, 102, 104, 105, 105, 105, 105], [0, 1, 2, 3, 4, 5, 6]
+        )
+        self.assertEqual(cp, 3)
+        var_pred = ExercisePrescription._var_forecast([100, 101, 102, 103, 104], [5, 5, 5, 5, 5])
+        self.assertAlmostEqual(var_pred, 105.0)
+        kalman = ExercisePrescription._kalman_filter([1, 2, 3, 2, 2])
+        self.assertAlmostEqual(kalman[-1], 2.22, places=2)
+        wave = ExercisePrescription._wavelet_energy([1, 2, 3, 4, 5, 6, 7, 8])
+        self.assertAlmostEqual(wave[0], 194.0, places=1)
+        anomaly = ExercisePrescription._anomaly_score([1, 2, 100, 3])
+        self.assertGreater(anomaly, 0.5)
+
     def test_exercise_prescription(self) -> None:
         weights = [100.0, 105.0, 110.0, 112.5, 115.0]
         reps = [5, 5, 5, 5, 5]
