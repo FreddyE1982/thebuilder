@@ -147,6 +147,22 @@ class Database:
                 );""",
             ["key", "value"],
         ),
+        "pyramid_tests": (
+            """CREATE TABLE pyramid_tests (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    date TEXT NOT NULL
+                );""",
+            ["id", "date"],
+        ),
+        "pyramid_entries": (
+            """CREATE TABLE pyramid_entries (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    pyramid_test_id INTEGER NOT NULL,
+                    weight REAL NOT NULL,
+                    FOREIGN KEY(pyramid_test_id) REFERENCES pyramid_tests(id) ON DELETE CASCADE
+                );""",
+            ["id", "pyramid_test_id", "weight"],
+        ),
     }
 
     def __init__(self, db_path: str = "workout.db") -> None:
@@ -1142,4 +1158,44 @@ class ExerciseCatalogRepository(BaseRepository):
         if rows[0][0] == 0:
             raise ValueError("cannot delete imported exercise")
         self.execute("DELETE FROM exercise_catalog WHERE name = ?;", (name,))
+
+
+class PyramidTestRepository(BaseRepository):
+    """Repository for pyramid tests."""
+
+    def create(self, date: str) -> int:
+        return self.execute(
+            "INSERT INTO pyramid_tests (date) VALUES (?);",
+            (date,),
+        )
+
+    def fetch_all(self) -> List[Tuple[int, str]]:
+        return super().fetch_all(
+            "SELECT id, date FROM pyramid_tests ORDER BY id DESC;"
+        )
+
+    def fetch_all_with_weights(self, entries: 'PyramidEntryRepository') -> List[Tuple[int, str, List[float]]]:
+        tests = self.fetch_all()
+        result = []
+        for tid, date in tests:
+            weights = entries.fetch_for_test(tid)
+            result.append((tid, date, weights))
+        return result
+
+
+class PyramidEntryRepository(BaseRepository):
+    """Repository for pyramid test entries."""
+
+    def add(self, test_id: int, weight: float) -> int:
+        return self.execute(
+            "INSERT INTO pyramid_entries (pyramid_test_id, weight) VALUES (?, ?);",
+            (test_id, weight),
+        )
+
+    def fetch_for_test(self, test_id: int) -> List[float]:
+        rows = self.fetch_all(
+            "SELECT weight FROM pyramid_entries WHERE pyramid_test_id = ? ORDER BY id;",
+            (test_id,),
+        )
+        return [float(r[0]) for r in rows]
 

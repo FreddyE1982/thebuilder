@@ -13,6 +13,8 @@ from db import (
     MuscleRepository,
     ExerciseNameRepository,
     SettingsRepository,
+    PyramidTestRepository,
+    PyramidEntryRepository,
 )
 from planner_service import PlannerService
 from recommendation_service import RecommendationService
@@ -34,6 +36,8 @@ class GymApp:
         self.muscles_repo = MuscleRepository()
         self.exercise_names_repo = ExerciseNameRepository()
         self.settings_repo = SettingsRepository()
+        self.pyramid_tests = PyramidTestRepository()
+        self.pyramid_entries = PyramidEntryRepository()
         self.planner = PlannerService(
             self.workouts,
             self.exercises,
@@ -63,6 +67,8 @@ class GymApp:
             st.session_state.exercise_inputs = {}
         if "selected_planned_workout" not in st.session_state:
             st.session_state.selected_planned_workout = None
+        if "pyramid_inputs" not in st.session_state:
+            st.session_state.pyramid_inputs = [0.0]
 
     def _dashboard_tab(self) -> None:
         st.header("Dashboard")
@@ -95,11 +101,12 @@ class GymApp:
 
     def run(self) -> None:
         st.title("Workout Logger")
-        dash_tab, log_tab, plan_tab, stats_tab, settings_tab = st.tabs([
+        dash_tab, log_tab, plan_tab, stats_tab, tests_tab, settings_tab = st.tabs([
             "Dashboard",
             "Log",
             "Plan",
             "Stats",
+            "Tests",
             "Settings",
         ])
         with dash_tab:
@@ -110,6 +117,8 @@ class GymApp:
             self._plan_tab()
         with stats_tab:
             self._stats_tab()
+        with tests_tab:
+            self._tests_tab()
         with settings_tab:
             self._settings_tab()
 
@@ -547,6 +556,41 @@ class GymApp:
             forecast = self.stats.progress_forecast(exercise, weeks, wpw)
             if forecast:
                 st.line_chart({"Est 1RM": [f["est_1rm"] for f in forecast]}, x=[str(f["week"]) for f in forecast])
+
+    def _tests_tab(self) -> None:
+        st.header("Pyramid Test")
+        for idx, val in enumerate(st.session_state.pyramid_inputs):
+            st.session_state.pyramid_inputs[idx] = st.number_input(
+                f"Weight {idx + 1} (kg)",
+                min_value=0.0,
+                step=0.5,
+                value=float(val),
+                key=f"pyr_weight_{idx}",
+            )
+        if st.button("Add Line"):
+            st.session_state.pyramid_inputs.append(0.0)
+        if st.button("Save Pyramid Test"):
+            weights = [float(st.session_state.get(f"pyr_weight_{i}", 0.0)) for i in range(len(st.session_state.pyramid_inputs))]
+            weights = [w for w in weights if w > 0.0]
+            if weights:
+                tid = self.pyramid_tests.create(datetime.date.today().isoformat())
+                for w in weights:
+                    self.pyramid_entries.add(tid, w)
+                st.success("Saved")
+            else:
+                st.warning("Enter weights")
+            st.session_state.pyramid_inputs = [0.0]
+            for i in range(len(weights)):
+                st.session_state.pop(f"pyr_weight_{i}", None)
+
+        history = self.pyramid_tests.fetch_all_with_weights(self.pyramid_entries)
+        if history:
+            st.subheader("History")
+            display = [
+                {"date": d, "weights": "|".join([str(w) for w in ws])}
+                for _tid, d, ws in history
+            ]
+            st.table(display)
 
     def _settings_tab(self) -> None:
         st.header("Settings")
