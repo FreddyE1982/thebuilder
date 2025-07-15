@@ -118,18 +118,81 @@ class ExercisePrescription(MathTools):
         return MathTools.clamp(phi, 0.5, 1.5)
 
     @staticmethod
-    def _process_pyramid_tests() -> Tuple[List[float], List[float], List[List[float]]]:
-        """Load pyramid tests from the database and convert to timestamps."""
+    def _linear_interpolate(x: List[float], y: List[float], x_new: float) -> float:
+        if not x or not y:
+            return 0.0
+        if len(x) == 1:
+            return float(y[0])
+        return float(np.interp(x_new, x, y))
+
+    @staticmethod
+    def _weighted_linear_regression(
+        x: List[float], y: List[float], weights: List[float]
+    ) -> float:
+        if len(x) < 2 or len(x) != len(y) or len(weights) != len(x):
+            return 0.0
+        x_arr = np.array(x)
+        y_arr = np.array(y)
+        w_arr = np.array(weights)
+        x_mean = np.average(x_arr, weights=w_arr)
+        y_mean = np.average(y_arr, weights=w_arr)
+        num = np.sum(w_arr * (x_arr - x_mean) * (y_arr - y_mean))
+        den = np.sum(w_arr * (x_arr - x_mean) ** 2) + ExercisePrescription.EPSILON
+        return float(num / den)
+
+    @staticmethod
+    def _linear_regression_slope(x: List[float], y: List[float]) -> float:
+        if len(x) < 2 or len(x) != len(y):
+            return 0.0
+        x_arr = np.array(x)
+        y_arr = np.array(y)
+        x_mean = np.mean(x_arr)
+        y_mean = np.mean(y_arr)
+        num = np.sum((x_arr - x_mean) * (y_arr - y_mean))
+        den = np.sum((x_arr - x_mean) ** 2)
+        return float(num / den) if den != 0 else 0.0
+
+    @staticmethod
+    def _calculate_r_squared(x: List[float], y: List[float]) -> float:
+        if len(x) < 2 or len(x) != len(y):
+            return 0.0
+        slope = ExercisePrescription._linear_regression_slope(x, y)
+        intercept = np.mean(y) - slope * np.mean(x)
+        pred = [slope * xi + intercept for xi in x]
+        ss_tot = np.sum((np.array(y) - np.mean(y)) ** 2)
+        ss_res = np.sum((np.array(y) - np.array(pred)) ** 2)
+        return float(1 - ss_res / (ss_tot + ExercisePrescription.EPSILON))
+
+    @staticmethod
+    def _detect_change_points(values: List[float]) -> List[int]:
+        if len(values) < 3:
+            return []
+        diffs = np.diff(np.array(values))
+        change_points: List[int] = []
+        sign = diffs[0] >= 0
+        for idx, d in enumerate(diffs[1:], start=1):
+            cur = d >= 0
+            if cur != sign:
+                change_points.append(idx)
+                sign = cur
+        return change_points
+
+    @staticmethod
+    def _process_pyramid_tests(
+        exercise_name: str | None = None,
+    ) -> Tuple[List[float], List[float], List[List[float]]]:
+        """Load pyramid tests and convert to timestamps filtered by exercise."""
         repo_t = PyramidTestRepository()
         repo_e = PyramidEntryRepository()
-        history = repo_t.fetch_all_with_weights(repo_e)
+        rows = repo_t.fetch_full_with_weights(repo_e)
+        history = [r for r in rows if not exercise_name or r[1] == exercise_name]
         if not history:
             return [], [], []
-        dates = [datetime.date.fromisoformat(d) for _tid, d, _ in history]
+        dates = [datetime.date.fromisoformat(r[2]) for r in history]
         first = dates[0]
         ts = [(d - first).days for d in dates]
-        rms = [max(w) if w else 0.0 for _tid, _d, w in history]
-        weights = [w for _tid, _d, w in history]
+        rms = [float(r[6]) if r[6] is not None else max(r[-1]) for r in history]
+        weights = [r[-1] for r in history]
         return ts, rms, weights
 
     @staticmethod
@@ -180,7 +243,11 @@ class ExercisePrescription(MathTools):
         if not pyramid_1rms:
             return epley
         if len(pyramid_1rms) >= 2:
-            interp = np.interp(current_timestamp, pyramid_timestamps, pyramid_1rms)
+            interp = ExercisePrescription._linear_interpolate(
+                pyramid_timestamps,
+                pyramid_1rms,
+                current_timestamp,
+            )
             pyr_w = 0.7
             epl_w = 0.3
             days_since = current_timestamp - pyramid_timestamps[-1]
@@ -203,14 +270,11 @@ class ExercisePrescription(MathTools):
         if len(pyramid_1rms) < 3:
             return 0.0
         weights = [math.exp(-(pyramid_timestamps[-1] - t) / 30) for t in pyramid_timestamps]
-        x = np.array(pyramid_timestamps)
-        y = np.array(pyramid_1rms)
-        w = np.array(weights)
-        x_mean = np.average(x, weights=w)
-        y_mean = np.average(y, weights=w)
-        num = np.sum(w * (x - x_mean) * (y - y_mean))
-        den = np.sum(w * (x - x_mean) ** 2) + ExercisePrescription.EPSILON
-        actual_rate = float(num / den)
+        actual_rate = ExercisePrescription._weighted_linear_regression(
+            pyramid_timestamps,
+            pyramid_1rms,
+            weights,
+        )
         if target_1rm and days_remaining:
             current = pyramid_1rms[-1]
             required = (target_1rm - current) / days_remaining
@@ -287,6 +351,69 @@ class ExercisePrescription(MathTools):
             elif metrics["strength_reserve"] < 0.05:
                 base_alpha *= 0.97
         return cls.clamp(base_alpha, -0.20, 0.07)
+
+    @staticmethod
+    def _analyze_1rm_trends(
+        pyramid_timestamps: List[float], pyramid_1rms: List[float]
+    ) -> dict:
+        if len(pyramid_1rms) < 4:
+            return {"trend": "insufficient_data"}
+        if len(pyramid_1rms) >= 12:
+            trend, seasonal = ExercisePrescription._seasonal_components(
+                pyramid_1rms,
+                period=4,
+            )
+            strength = np.var(seasonal) / (np.var(pyramid_1rms) + ExercisePrescription.EPSILON)
+            return {
+                "trend": "seasonal_pattern_detected",
+                "trend_component": trend,
+                "seasonal_component": seasonal,
+                "strength_seasonality": strength,
+            }
+        slope = ExercisePrescription._linear_regression_slope(pyramid_timestamps, pyramid_1rms)
+        return {
+            "trend": "linear" if abs(slope) > 0.1 else "plateau",
+            "slope": slope,
+            "r_squared": ExercisePrescription._calculate_r_squared(pyramid_timestamps, pyramid_1rms),
+        }
+
+    @staticmethod
+    def _pyramid_plateau_detection(
+        pyramid_timestamps: List[float], pyramid_1rms: List[float]
+    ) -> float:
+        if len(pyramid_1rms) < 4:
+            return 0.0
+        change_points = ExercisePrescription._detect_change_points(pyramid_1rms)
+        recent_var = np.var(pyramid_1rms[-4:]) / (
+            np.mean(pyramid_1rms[-4:]) + ExercisePrescription.EPSILON
+        )
+        trend_score = (
+            1.0
+            if abs(
+                ExercisePrescription._linear_regression_slope(
+                    pyramid_timestamps[-4:], pyramid_1rms[-4:]
+                )
+            )
+            < 0.5
+            else 0.0
+        )
+        change_score = 1.0 if len(change_points) == 0 else 0.0
+        plateau_score = 0.4 * trend_score + 0.3 * (1.0 if recent_var < 0.02 else 0.0) + 0.3 * change_score
+        return plateau_score
+
+    @staticmethod
+    def _validate_pyramid_test(test: dict) -> bool:
+        if test.get("max_achieved") and test.get("starting_weight"):
+            if test["max_achieved"] > test["starting_weight"] * 1.5:
+                return False
+        sw = test.get("successful_weights") or []
+        max_val = test.get("max_achieved") or (max(sw) if sw else 0.0)
+        if any(w > max_val for w in sw):
+            return False
+        for a, b in zip(sw, sw[1:]):
+            if b < a:
+                return False
+        return True
 
     @staticmethod
     def _cross_correlation(
@@ -1080,6 +1207,7 @@ class ExercisePrescription(MathTools):
         stress: float = 0.1,
         phase_factor: float = 0.7,
         target_velocity_loss: float | None = None,
+        exercise_name: str | None = None,
     ) -> dict:
         """Return a detailed workout prescription."""
 
@@ -1089,7 +1217,7 @@ class ExercisePrescription(MathTools):
 
         current_1rm_calc = cls._current_1rm(list(series_w), list(series_r))
         ts_list = [(t - series_w.index[0]).days for t in series_w.index]
-        pyr_ts, pyr_vals, pyr_weights = cls._process_pyramid_tests()
+        pyr_ts, pyr_vals, pyr_weights = cls._process_pyramid_tests(exercise_name)
         current_1rm = cls._enhanced_1rm_calculation(
             list(series_w),
             list(series_r),
@@ -1367,6 +1495,9 @@ class ExercisePrescription(MathTools):
         if deload_score > 0.5:
             sets_prescription = cls._deload_adjusted_prescription(sets_prescription, deload_score)
 
+        pyramid_trend = cls._analyze_1rm_trends(pyr_ts, pyr_vals)
+        pyramid_plateau = cls._pyramid_plateau_detection(pyr_ts, pyr_vals)
+
         result = {
             "prescription": sets_prescription,
             "total_sets": N,
@@ -1374,6 +1505,7 @@ class ExercisePrescription(MathTools):
             "analysis": {
                 "current_1RM": round(current_1rm, 1),
                 "plateau_score": round(plateau, 2),
+                "pyramid_plateau": round(pyramid_plateau, 2),
                 "fatigue_level": round(fatigue / 1000, 2),
                 "progression_modifier": round(alpha, 3),
                 "urgency_factor": round(urgency, 2),
@@ -1381,6 +1513,7 @@ class ExercisePrescription(MathTools):
                 "ac_ratio": round(ac_ratio, 2),
                 "weekly_monotony": round(weekly_monotony, 2),
                 "deload_trigger": round(deload_trigger, 2),
+                "pyramid_trend": pyramid_trend,
             },
             "recommendations": {
                 "focus": "strength" if intensity_target > 0.8 else "hypertrophy",
