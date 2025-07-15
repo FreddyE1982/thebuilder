@@ -64,14 +64,39 @@ class GymApp:
         if "selected_planned_workout" not in st.session_state:
             st.session_state.selected_planned_workout = None
 
+    def _dashboard_tab(self) -> None:
+        st.header("Dashboard")
+        col1, col2 = st.columns(2)
+        with col1:
+            start = st.date_input(
+                "Start",
+                datetime.date.today() - datetime.timedelta(days=30),
+                key="dash_start",
+            )
+        with col2:
+            end = st.date_input("End", datetime.date.today(), key="dash_end")
+        stats = self.stats.overview(start.isoformat(), end.isoformat())
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Workouts", stats["workouts"])
+        m2.metric("Volume", stats["volume"])
+        m3.metric("Avg RPE", stats["avg_rpe"])
+        m4.metric("Exercises", stats["exercises"])
+        daily = self.stats.daily_volume(start.isoformat(), end.isoformat())
+        st.subheader("Daily Volume")
+        if daily:
+            st.line_chart({"Volume": [d["volume"] for d in daily]}, x=[d["date"] for d in daily])
+
     def run(self) -> None:
         st.title("Workout Logger")
-        log_tab, plan_tab, stats_tab, settings_tab = st.tabs([
+        dash_tab, log_tab, plan_tab, stats_tab, settings_tab = st.tabs([
+            "Dashboard",
             "Log",
             "Plan",
             "Stats",
             "Settings",
         ])
+        with dash_tab:
+            self._dashboard_tab()
         with log_tab:
             self._log_tab()
         with plan_tab:
