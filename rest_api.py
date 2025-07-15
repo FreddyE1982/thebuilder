@@ -241,24 +241,32 @@ class GymAPI:
                 raise HTTPException(status_code=400, detail=str(e))
 
         @self.app.post("/workouts")
-        def create_workout():
-            workout_id = self.workouts.create(datetime.date.today().isoformat())
+        def create_workout(training_type: str = "strength"):
+            workout_id = self.workouts.create(
+                datetime.date.today().isoformat(), training_type
+            )
             return {"id": workout_id}
 
         @self.app.get("/workouts")
         def list_workouts():
             workouts = self.workouts.fetch_all_workouts()
-            return [{"id": wid, "date": date} for wid, date in workouts]
+            return [{"id": wid, "date": date} for wid, date, *_ in workouts]
 
         @self.app.get("/workouts/{workout_id}")
         def get_workout(workout_id: int):
-            wid, date, start_time, end_time = self.workouts.fetch_detail(workout_id)
+            wid, date, start_time, end_time, training_type = self.workouts.fetch_detail(workout_id)
             return {
                 "id": wid,
                 "date": date,
                 "start_time": start_time,
                 "end_time": end_time,
+                "training_type": training_type,
             }
+
+        @self.app.put("/workouts/{workout_id}/type")
+        def update_workout_type(workout_id: int, training_type: str):
+            self.workouts.set_training_type(workout_id, training_type)
+            return {"status": "updated"}
 
         @self.app.post("/workouts/{workout_id}/start")
         def start_workout(workout_id: int):
