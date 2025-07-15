@@ -150,9 +150,36 @@ class Database:
         "pyramid_tests": (
             """CREATE TABLE pyramid_tests (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    date TEXT NOT NULL
+                    exercise_name TEXT NOT NULL DEFAULT 'Unknown',
+                    date TEXT NOT NULL,
+                    equipment_name TEXT,
+                    starting_weight REAL,
+                    failed_weight REAL,
+                    max_achieved REAL,
+                    test_duration_minutes INTEGER,
+                    rest_between_attempts TEXT,
+                    rpe_per_attempt TEXT,
+                    time_of_day TEXT,
+                    sleep_hours REAL,
+                    stress_level INTEGER,
+                    nutrition_quality INTEGER
                 );""",
-            ["id", "date"],
+            [
+                "id",
+                "exercise_name",
+                "date",
+                "equipment_name",
+                "starting_weight",
+                "failed_weight",
+                "max_achieved",
+                "test_duration_minutes",
+                "rest_between_attempts",
+                "rpe_per_attempt",
+                "time_of_day",
+                "sleep_hours",
+                "stress_level",
+                "nutrition_quality",
+            ],
         ),
         "pyramid_entries": (
             """CREATE TABLE pyramid_entries (
@@ -1163,15 +1190,65 @@ class ExerciseCatalogRepository(BaseRepository):
 class PyramidTestRepository(BaseRepository):
     """Repository for pyramid tests."""
 
-    def create(self, date: str) -> int:
+    def create(
+        self,
+        date: str,
+        exercise_name: str = "Unknown",
+        equipment_name: str | None = None,
+        starting_weight: float | None = None,
+        failed_weight: float | None = None,
+        max_achieved: float | None = None,
+        test_duration_minutes: int | None = None,
+        rest_between_attempts: str | None = None,
+        rpe_per_attempt: str | None = None,
+        time_of_day: str | None = None,
+        sleep_hours: float | None = None,
+        stress_level: int | None = None,
+        nutrition_quality: int | None = None,
+    ) -> int:
         return self.execute(
-            "INSERT INTO pyramid_tests (date) VALUES (?);",
-            (date,),
+            """
+            INSERT INTO pyramid_tests (
+                exercise_name,
+                date,
+                equipment_name,
+                starting_weight,
+                failed_weight,
+                max_achieved,
+                test_duration_minutes,
+                rest_between_attempts,
+                rpe_per_attempt,
+                time_of_day,
+                sleep_hours,
+                stress_level,
+                nutrition_quality
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            """,
+            (
+                exercise_name,
+                date,
+                equipment_name,
+                starting_weight,
+                failed_weight,
+                max_achieved,
+                test_duration_minutes,
+                rest_between_attempts,
+                rpe_per_attempt,
+                time_of_day,
+                sleep_hours,
+                stress_level,
+                nutrition_quality,
+            ),
         )
 
     def fetch_all(self) -> List[Tuple[int, str]]:
         return super().fetch_all(
             "SELECT id, date FROM pyramid_tests ORDER BY id DESC;"
+        )
+
+    def fetch_all_full(self) -> List[Tuple]:
+        return super().fetch_all(
+            "SELECT id, exercise_name, date, equipment_name, starting_weight, failed_weight, max_achieved, test_duration_minutes, rest_between_attempts, rpe_per_attempt, time_of_day, sleep_hours, stress_level, nutrition_quality FROM pyramid_tests ORDER BY id DESC;"
         )
 
     def fetch_all_with_weights(self, entries: 'PyramidEntryRepository') -> List[Tuple[int, str, List[float]]]:
@@ -1180,6 +1257,15 @@ class PyramidTestRepository(BaseRepository):
         for tid, date in tests:
             weights = entries.fetch_for_test(tid)
             result.append((tid, date, weights))
+        return result
+
+    def fetch_full_with_weights(self, entries: 'PyramidEntryRepository') -> List[Tuple]:
+        tests = self.fetch_all_full()
+        result = []
+        for row in tests:
+            tid = row[0]
+            weights = entries.fetch_for_test(tid)
+            result.append(tuple(row) + (weights,))
         return result
 
 
