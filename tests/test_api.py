@@ -201,6 +201,8 @@ class APITestCase(unittest.TestCase):
                 "diff_reps": 1,
                 "diff_weight": 10.0,
                 "diff_rpe": 1,
+                "start_time": None,
+                "end_time": None,
             },
         )
 
@@ -500,4 +502,49 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(len(forecast), 2)
         self.assertAlmostEqual(forecast[0]["est_1rm"], 139.3, places=1)
         self.assertAlmostEqual(forecast[1]["est_1rm"], 139.3, places=1)
+
+    def test_timestamps(self) -> None:
+        resp = self.client.post("/workouts")
+        self.assertEqual(resp.status_code, 200)
+        wid = resp.json()["id"]
+
+        resp = self.client.post(f"/workouts/{wid}/start")
+        self.assertEqual(resp.status_code, 200)
+        start_ts = resp.json()["timestamp"]
+
+        resp = self.client.get(f"/workouts/{wid}")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["start_time"], start_ts)
+
+        resp = self.client.post(f"/workouts/{wid}/finish")
+        self.assertEqual(resp.status_code, 200)
+        end_ts = resp.json()["timestamp"]
+
+        resp = self.client.get(f"/workouts/{wid}")
+        self.assertEqual(resp.json()["end_time"], end_ts)
+
+        self.client.post(
+            f"/workouts/{wid}/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        resp = self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8},
+        )
+        sid = resp.json()["id"]
+
+        resp = self.client.post(f"/sets/{sid}/start")
+        self.assertEqual(resp.status_code, 200)
+        set_start = resp.json()["timestamp"]
+
+        resp = self.client.get(f"/sets/{sid}")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["start_time"], set_start)
+
+        resp = self.client.post(f"/sets/{sid}/finish")
+        self.assertEqual(resp.status_code, 200)
+        set_end = resp.json()["timestamp"]
+
+        resp = self.client.get(f"/sets/{sid}")
+        self.assertEqual(resp.json()["end_time"], set_end)
 
