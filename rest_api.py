@@ -18,6 +18,7 @@ from db import (
 from planner_service import PlannerService
 from recommendation_service import RecommendationService
 from stats_service import StatisticsService
+from tools import ExercisePrescription
 
 
 class GymAPI:
@@ -529,7 +530,22 @@ class GymAPI:
             )
 
         @self.app.post("/pyramid_tests")
-        def create_pyramid_test(weights: str, date: str = None):
+        def create_pyramid_test(
+            weights: str,
+            date: str = None,
+            exercise_name: str = "Unknown",
+            equipment_name: str | None = None,
+            starting_weight: float | None = None,
+            failed_weight: float | None = None,
+            max_achieved: float | None = None,
+            test_duration_minutes: int | None = None,
+            rest_between_attempts: str | None = None,
+            rpe_per_attempt: str | None = None,
+            time_of_day: str | None = None,
+            sleep_hours: float | None = None,
+            stress_level: int | None = None,
+            nutrition_quality: int | None = None,
+        ):
             try:
                 test_date = (
                     datetime.date.today()
@@ -541,7 +557,40 @@ class GymAPI:
             values = [float(w) for w in weights.split("|") if w]
             if not values:
                 raise HTTPException(status_code=400, detail="weights required")
-            tid = self.pyramid_tests.create(test_date.isoformat())
+
+            data = {
+                "exercise_name": exercise_name,
+                "date": test_date.isoformat(),
+                "equipment_name": equipment_name,
+                "starting_weight": starting_weight or values[0],
+                "successful_weights": values,
+                "failed_weight": failed_weight,
+                "max_achieved": max_achieved or max(values),
+                "test_duration_minutes": test_duration_minutes,
+                "rest_between_attempts": rest_between_attempts,
+                "rpe_per_attempt": rpe_per_attempt,
+                "time_of_day": time_of_day,
+                "sleep_hours": sleep_hours,
+                "stress_level": stress_level,
+                "nutrition_quality": nutrition_quality,
+            }
+            if not ExercisePrescription._validate_pyramid_test(data):
+                raise HTTPException(status_code=400, detail="invalid pyramid test")
+            tid = self.pyramid_tests.create(
+                test_date.isoformat(),
+                exercise_name=exercise_name,
+                equipment_name=equipment_name,
+                starting_weight=data["starting_weight"],
+                failed_weight=failed_weight,
+                max_achieved=data["max_achieved"],
+                test_duration_minutes=test_duration_minutes,
+                rest_between_attempts=rest_between_attempts,
+                rpe_per_attempt=rpe_per_attempt,
+                time_of_day=time_of_day,
+                sleep_hours=sleep_hours,
+                stress_level=stress_level,
+                nutrition_quality=nutrition_quality,
+            )
             for w in values:
                 self.pyramid_entries.add(tid, w)
             return {"id": tid}

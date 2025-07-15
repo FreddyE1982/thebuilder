@@ -130,6 +130,7 @@ class RecommendationService:
             body_weight=self.settings.get_float("body_weight", 80.0),
             months_active=months_active,
             workouts_per_month=workouts_per_month,
+            exercise_name=name,
         )
         current_sets = self.sets.fetch_for_exercise(exercise_id)
         index = len(current_sets)

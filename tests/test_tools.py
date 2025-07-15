@@ -179,6 +179,30 @@ class MathToolsTestCase(unittest.TestCase):
         self.assertGreater(metrics["efficiency_score"], 1.0)
         self.assertAlmostEqual(metrics["strength_reserve"], (120.0 - 110.0) / 110.0, places=2)
 
+    def test_pyramid_trend_and_plateau(self) -> None:
+        ts = [0, 7, 14, 21, 28]
+        rms = [100.0, 105.0, 110.0, 112.5, 115.0]
+        trend = ExercisePrescription._analyze_1rm_trends(ts, rms)
+        self.assertEqual(trend["trend"], "linear")
+        plateau = ExercisePrescription._pyramid_plateau_detection(ts, rms)
+        self.assertLessEqual(plateau, 1.0)
+
+    def test_validate_pyramid_test(self) -> None:
+        test = {
+            "starting_weight": 100.0,
+            "successful_weights": [100.0, 110.0, 120.0],
+            "failed_weight": 125.0,
+            "max_achieved": 120.0,
+        }
+        self.assertTrue(ExercisePrescription._validate_pyramid_test(test))
+        test_bad = {
+            "starting_weight": 100.0,
+            "successful_weights": [120.0, 110.0],
+            "failed_weight": 140.0,
+            "max_achieved": 120.0,
+        }
+        self.assertFalse(ExercisePrescription._validate_pyramid_test(test_bad))
+
 
 if __name__ == '__main__':
     unittest.main()
