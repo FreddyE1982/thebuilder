@@ -173,6 +173,10 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"id": 1})
 
+        response = self.client.get("/workouts")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), [{"id": 1, "date": plan_date}])
+
         response = self.client.get("/workouts/1/exercises")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
@@ -574,4 +578,28 @@ class APITestCase(unittest.TestCase):
 
         resp = self.client.get(f"/workouts/{wid}")
         self.assertEqual(resp.json()["training_type"], "strength")
+
+    def test_backdated_workout(self) -> None:
+        past_date = (datetime.date.today() - datetime.timedelta(days=3)).isoformat()
+        resp = self.client.post(
+            "/workouts",
+            params={"date": past_date, "training_type": "strength"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        wid = resp.json()["id"]
+
+        self.client.post(
+            f"/workouts/{wid}/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/exercises/1/sets", params={"reps": 5, "weight": 100.0, "rpe": 8}
+        )
+
+        resp = self.client.get("/workouts")
+        self.assertEqual(resp.json(), [{"id": wid, "date": past_date}])
+
+        resp = self.client.get("/stats/daily_volume")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()[0]["date"], past_date)
 

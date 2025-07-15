@@ -567,6 +567,15 @@ class PlannedWorkoutRepository(BaseRepository):
             "SELECT id, date FROM planned_workouts ORDER BY id DESC;"
         )
 
+    def fetch_detail(self, plan_id: int) -> Tuple[int, str]:
+        rows = super().fetch_all(
+            "SELECT id, date FROM planned_workouts WHERE id = ?;",
+            (plan_id,),
+        )
+        if not rows:
+            raise ValueError("planned workout not found")
+        return rows[0]
+
     def delete_all(self) -> None:
         self._delete_all("planned_workouts")
 
