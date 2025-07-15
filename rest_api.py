@@ -401,6 +401,18 @@ class GymAPI:
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
 
+        @self.app.get("/stats/exercise_history")
+        def stats_exercise_history(
+            exercise: str,
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            return self.statistics.exercise_history(
+                exercise,
+                start_date,
+                end_date,
+            )
+
         @self.app.get("/stats/exercise_summary")
         def stats_exercise_summary(
             exercise: str = None,
