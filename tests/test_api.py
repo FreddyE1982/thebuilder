@@ -70,6 +70,12 @@ class APITestCase(unittest.TestCase):
             response.json(), [{"id": 1, "reps": 12, "weight": 105.0, "rpe": 9}]
         )
 
+        response = self.client.get("/workouts/1/export_csv")
+        self.assertEqual(response.status_code, 200)
+        csv_text = response.text.strip().splitlines()
+        self.assertEqual(csv_text[0], "Exercise,Equipment,Reps,Weight,RPE,Start,End")
+        self.assertIn("Bench Press", csv_text[1])
+
         response = self.client.delete("/sets/1")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"status": "deleted"})

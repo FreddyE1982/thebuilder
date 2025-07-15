@@ -1,5 +1,5 @@
 import datetime
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from db import (
     WorkoutRepository,
     ExerciseRepository,
@@ -273,6 +273,17 @@ class GymAPI:
                 "end_time": end_time,
                 "training_type": training_type,
             }
+
+        @self.app.get("/workouts/{workout_id}/export_csv")
+        def export_workout_csv(workout_id: int):
+            data = self.sets.export_workout_csv(workout_id)
+            return Response(
+                content=data,
+                media_type="text/csv",
+                headers={
+                    "Content-Disposition": f"attachment; filename=workout_{workout_id}.csv"
+                },
+            )
 
         @self.app.put("/workouts/{workout_id}/type")
         def update_workout_type(workout_id: int, training_type: str):

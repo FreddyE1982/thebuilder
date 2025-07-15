@@ -1,6 +1,7 @@
 import sqlite3
 import csv
 import os
+import io
 from contextlib import contextmanager
 from typing import List, Tuple, Optional, Iterable, Set
 
@@ -551,6 +552,48 @@ class SetRepository(BaseRepository):
             params.append(end_date)
         query += " ORDER BY w.date, s.id;"
         return self.fetch_all(query, tuple(params))
+
+    def fetch_for_workout(
+        self, workout_id: int
+    ) -> List[
+        Tuple[str, Optional[str], int, float, int, Optional[str], Optional[str]]
+    ]:
+        return self.fetch_all(
+            "SELECT e.name, e.equipment_name, s.reps, s.weight, s.rpe,"
+            " s.start_time, s.end_time "
+            "FROM sets s JOIN exercises e ON s.exercise_id = e.id "
+            "WHERE e.workout_id = ? ORDER BY e.id, s.id;",
+            (workout_id,),
+        )
+
+    def export_workout_csv(self, workout_id: int) -> str:
+        rows = self.fetch_for_workout(workout_id)
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(
+            [
+                "Exercise",
+                "Equipment",
+                "Reps",
+                "Weight",
+                "RPE",
+                "Start",
+                "End",
+            ]
+        )
+        for name, eq, reps, weight, rpe, start, end in rows:
+            writer.writerow(
+                [
+                    name,
+                    eq or "",
+                    reps,
+                    weight,
+                    rpe,
+                    start or "",
+                    end or "",
+                ]
+            )
+        return output.getvalue()
 
 
 class PlannedWorkoutRepository(BaseRepository):
