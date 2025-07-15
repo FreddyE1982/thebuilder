@@ -66,6 +66,7 @@ class MathToolsTestCase(unittest.TestCase):
         reps = [5, 5, 5, 5, 5]
         timestamps = [0, 7, 14, 21, 28]
         rpe = [8, 8, 8, 8, 8]
+        durations = [45, 46, 44, 47, 48]
         calories = [2720, 2720, 2720, 2720, 2176]
         sleep_hours = [8, 8, 8, 8, 8]
         sleep_quality = [4, 4, 4, 4, 4]
@@ -75,6 +76,7 @@ class MathToolsTestCase(unittest.TestCase):
             reps,
             timestamps,
             rpe,
+            durations=durations,
             body_weight=80.0,
             months_active=12,
             workouts_per_month=8,

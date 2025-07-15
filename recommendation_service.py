@@ -34,12 +34,22 @@ class RecommendationService:
     def recommend_next_set(self, exercise_id: int) -> dict:
         workout_id, name, _ = self.exercises.fetch_detail(exercise_id)
         alias_names = self.exercise_names.aliases(name)
-        history = self.sets.fetch_history_by_names(alias_names)
+        history = self.sets.fetch_history_by_names(alias_names, with_duration=True)
         if not history:
             raise ValueError("no history for exercise")
         reps_list = [int(r[0]) for r in history]
         weight_list = [float(r[1]) for r in history]
         rpe_list = [int(r[2]) for r in history]
+        durations = []
+        for r in history:
+            start = r[4]
+            end = r[5]
+            if start and end:
+                t0 = datetime.datetime.fromisoformat(start)
+                t1 = datetime.datetime.fromisoformat(end)
+                durations.append((t1 - t0).total_seconds())
+            else:
+                durations.append(0.0)
         dates = [datetime.date.fromisoformat(r[3]) for r in history]
         timestamps = list(range(len(dates)))
         months_active = self.settings.get_float("months_active", 1.0)
@@ -49,6 +59,7 @@ class RecommendationService:
             reps_list,
             timestamps,
             rpe_list,
+            durations=durations,
             body_weight=self.settings.get_float("body_weight", 80.0),
             months_active=months_active,
             workouts_per_month=workouts_per_month,

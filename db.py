@@ -507,11 +507,14 @@ class SetRepository(BaseRepository):
         end_date: Optional[str] = None,
         equipment: Optional[List[str]] = None,
         with_equipment: bool = False,
+        with_duration: bool = False,
     ) -> List[Tuple]:
         placeholders = ", ".join(["?" for _ in names])
         select = "SELECT s.reps, s.weight, s.rpe, w.date"
         if with_equipment:
             select += ", e.name, e.equipment_name"
+        if with_duration:
+            select += ", s.start_time, s.end_time"
         query = (
             f"{select} FROM sets s "
             "JOIN exercises e ON s.exercise_id = e.id "
