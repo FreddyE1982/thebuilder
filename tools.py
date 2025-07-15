@@ -263,6 +263,30 @@ class ExercisePrescription(MathTools):
         mean = np.mean(vols)
         return float((np.std(vols) / mean) * 100) if mean != 0 else 0.0
 
+    @staticmethod
+    def _prepare_series(values: list[float], timestamps: list[float], freq: str | None = None) -> pd.Series:
+        if not values or not timestamps:
+            return pd.Series(dtype=float)
+        base = pd.Timestamp("1970-01-01")
+        index = base + pd.to_timedelta(timestamps, unit="D")
+        series = pd.Series(values, index=index).sort_index()
+        if freq:
+            series = series.resample(freq).mean()
+        return series.interpolate(method="linear")
+
+    @staticmethod
+    def _weighted_slope(timestamps: list[float], weights: list[float], alpha: float = 0.3) -> float:
+        if len(timestamps) < 2:
+            return 0.0
+        ser = ExercisePrescription._prepare_series(weights, timestamps)
+        ew = ser.ewm(alpha=alpha, adjust=False).mean().values
+        x = np.arange(len(ew))
+        x_mean = np.mean(x)
+        y_mean = np.mean(ew)
+        num = np.sum((x - x_mean) * (ew - y_mean))
+        den = np.sum((x - x_mean) ** 2)
+        return float(num / den) if den != 0 else 0.0
+
     @classmethod
     def _plateau(
         cls,
@@ -604,16 +628,21 @@ class ExercisePrescription(MathTools):
     ) -> dict:
         """Return a detailed workout prescription."""
 
-        current_1rm = cls._current_1rm(weights, reps)
-        total_volume = cls._total_volume(weights, reps)
-        t_mean = cls._means(timestamps)
-        y_mean = cls._means(weights)
-        slope = cls._slope(timestamps, weights)
-        recent_load = cls._recent_load(weights, reps)
-        prev_load = cls._prev_load(weights, reps)
+        series_w = cls._prepare_series(weights, timestamps)
+        series_r = cls._prepare_series(reps, timestamps)
+        series_rpe = cls._prepare_series(rpe_scores, timestamps)
+
+        current_1rm = cls._current_1rm(list(series_w), list(series_r))
+        total_volume = cls._total_volume(list(series_w), list(series_r))
+        t_mean = cls._means(list(series_w.index.map(lambda t: (t - series_w.index[0]).days)))
+        y_mean = cls._means(list(series_w))
+        ts_list = [ (t - series_w.index[0]).days for t in series_w.index ]
+        slope = cls._weighted_slope(ts_list, list(series_w))
+        recent_load = cls._recent_load(list(series_w), list(series_r))
+        prev_load = cls._prev_load(list(series_w), list(series_r))
         thresh = cls._threshold(recent_load, prev_load)
-        cv = cls._cv(weights, reps)
-        plateau = cls._plateau(slope, cv, thresh, weights, timestamps)
+        cv = cls._cv(list(series_w), list(series_r))
+        plateau = cls._plateau(slope, cv, thresh, list(series_w), ts_list)
         rest_efficiencies = None
         if rest_times is not None:
             optimal_rests: list[float] = []
@@ -652,8 +681,8 @@ class ExercisePrescription(MathTools):
                 recovery_fatigue += vol * (decay ** ratio)
 
         fatigue = base_fatigue + recovery_fatigue
-        ac_ratio = cls._ac_ratio(weights, reps)
-        perf_scores = cls._performance_scores_from_logs(weights, reps, timestamps, MEV)
+        ac_ratio = cls._ac_ratio(list(series_w), list(series_r))
+        perf_scores = cls._performance_scores_from_logs(list(series_w), list(series_r), ts_list, MEV)
         rec_scores = cls._recovery_scores_from_logs(
             body_weight, calories, sleep_hours, sleep_quality
         )
@@ -684,23 +713,24 @@ class ExercisePrescription(MathTools):
         urgency = cls._urgency(target_1rm, current_1rm)
         delta_1rm, delta_vol = cls._deltas(current_1rm, y_mean, recent_load, prev_load)
         rec_factor = np.mean(np.array(rec_scores)) if len(rec_scores) > 0 else 1.0
-        alpha = cls._alpha(delta_1rm, delta_vol, rec_factor, weights, experience)
+        alpha = cls._alpha(delta_1rm, delta_vol, rec_factor, list(series_w), experience)
         required_rate = cls._required_rate(target_1rm, current_1rm, days_remaining)
         achievement_prob = cls._achievement_probability(required_rate)
         weekly_rate = cls._weekly_rate(slope, y_mean)
-        weekly_monotony = cls._weekly_monotony(weights, reps)
+        weekly_monotony = cls._weekly_monotony(list(series_w), list(series_r))
         perf_factor = np.mean(np.array(perf_scores)) if len(perf_scores) > 0 else 1.0
         tut_ratio = (
             float(np.sum(durations)) / (50.0 * len(durations)) if durations else 1.0
         )
         deload_trigger = cls._deload_trigger(perf_factor, rpe_scores, rec_factor, tut_ratio)
         rpe_scale = cls._rpe_scale(rpe_scores, durations, 50.0)
-        confidence_int = cls._confidence_interval(slope, weights, timestamps)
+        confidence_int = cls._confidence_interval(slope, list(series_w), ts_list)
 
-        mean_vol = np.mean(np.array(weights) * np.array(reps)) if len(weights) > 0 else 1.0
+        mean_vol = np.mean(np.array(series_w) * np.array(series_r)) if len(series_w) > 0 else 1.0
         vol_factor = cls.clamp(math.log1p(total_volume) / 8, 0.95, 1.05)
+        last_t = ts_list[-1] if ts_list else 0.0
         time_factor = cls.clamp(
-            1 + (timestamps[-1] - t_mean) / (10 * (timestamps[-1] + cls.EPSILON)),
+            1 + (last_t - t_mean) / (10 * (last_t + cls.EPSILON)),
             0.95,
             1.05,
         )
@@ -727,7 +757,10 @@ class ExercisePrescription(MathTools):
         base_reps = (
             round(np.mean(np.array(reps)) * (1 + alpha * (1 - plateau))) if len(reps) > 0 else 8
         )
-        intensity_target = 0.75 if base_reps >= 6 else 0.85
+        wave_low, wave_mid, wave_high = cls._wavelet_energy(list(series_w))
+        intensity_target = (0.75 if base_reps >= 6 else 0.85) * (
+            1 + wave_high / (wave_low + wave_mid + 1e-9) * 0.01
+        )
 
         sets_prescription: list[dict] = []
         for k in range(1, N + 1):
@@ -757,7 +790,12 @@ class ExercisePrescription(MathTools):
             if deload_needed:
                 weight_k *= 0.8
             target_rpe = cls.clamp(7 + 0.3 * plateau, 6, 9)
-            rest_k = 90 + 30 * rpe_scale + 15 * (reps_k < 5) + 10 * k
+            rest_corr = 0.0
+            if durations is not None:
+                _, rest_corr = cls._cross_correlation(durations, rpe_scores, max_lag=1)
+            rest_k = (90 + 30 * rpe_scale + 15 * (reps_k < 5) + 10 * k) * (
+                1 + 0.1 * rest_corr
+            )
             sets_prescription.append(
                 {
                     "set": k,
