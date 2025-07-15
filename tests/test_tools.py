@@ -97,6 +97,13 @@ class MathToolsTestCase(unittest.TestCase):
         stress = ExercisePrescription._stress_level([100, 110], [5, 5], [8, 8], [0, 1], 120.0, 10)
         self.assertAlmostEqual(stress, 2.0)
 
+    def test_periodization_and_velocity_loss(self) -> None:
+        factor = ExercisePrescription._adaptive_periodization_factor([1.0, 1.1, 1.2, 1.3], 2)
+        self.assertAlmostEqual(factor, 0.9)
+
+        loss = ExercisePrescription._compute_target_velocity_loss(8, 9.0, 8, 0.75, 0.8)
+        self.assertAlmostEqual(loss, 0.13, places=2)
+
     def test_exercise_prescription(self) -> None:
         weights = [100.0, 105.0, 110.0, 112.5, 115.0]
         reps = [5, 5, 5, 5, 5]
