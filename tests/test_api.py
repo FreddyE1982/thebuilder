@@ -482,6 +482,16 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(rpe[1]["count"], 1)
 
         resp = self.client.get(
+            "/stats/exercise_history",
+            params={"exercise": "Bench Press"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        history = resp.json()
+        self.assertEqual(len(history), 2)
+        self.assertEqual(history[0]["reps"], 10)
+        self.assertEqual(history[1]["weight"], 110.0)
+
+        resp = self.client.get(
             "/stats/reps_distribution",
             params={"exercise": "Bench Press"},
         )

@@ -213,6 +213,10 @@ class GymApp:
                     cols[4].write(start_time)
                 if end_time:
                     cols[5].write(end_time)
+            hist = self.stats.exercise_history(name)
+            if hist:
+                with st.expander("History (last 5)"):
+                    st.table(hist[-5:][::-1])
             if self.recommender.has_history(name):
                 if st.button("Recommend Next Set", key=f"rec_next_{exercise_id}"):
                     try:
