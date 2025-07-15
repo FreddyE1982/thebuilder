@@ -627,6 +627,253 @@ class ExercisePrescription(MathTools):
             rec_scores.append((ea + sri) / 2)
         return rec_scores
 
+    # --- Enhanced algorithms ---
+    NEUROMUSCULAR_DECAY: float = 0.85
+    METABOLIC_DECAY: float = 0.95
+    STRUCTURAL_DECAY: float = 0.90
+
+    @staticmethod
+    def _enhanced_fatigue(
+        weights: list[float],
+        reps: list[int],
+        timestamps: list[float],
+        target_reps: int,
+    ) -> float:
+        """Three-component fatigue model."""
+        if not weights:
+            return 0.0
+        volumes = np.array(weights) * np.array(reps)
+        t_current = timestamps[-1] if timestamps else 0
+        t_arr = np.array(timestamps)
+        neu = np.sum(volumes * (ExercisePrescription.NEUROMUSCULAR_DECAY ** (t_current - t_arr)))
+        met = np.sum(volumes * (ExercisePrescription.METABOLIC_DECAY ** (t_current - t_arr)))
+        struct = np.sum(volumes * (ExercisePrescription.STRUCTURAL_DECAY ** (t_current - t_arr)))
+        if target_reps <= 5:
+            total = 0.5 * neu + 0.3 * struct + 0.2 * met
+        else:
+            total = 0.3 * neu + 0.4 * struct + 0.3 * met
+        return float(total)
+
+    @staticmethod
+    def _calculate_exercise_tss(
+        weights: list[float],
+        reps: list[int],
+        durations: list[float],
+        current_1rm: float,
+    ) -> float:
+        """Training Stress Score for resistance exercise."""
+        tss_vals: list[float] = []
+        for w, r, d in zip(weights, reps, durations):
+            intensity_factor = w / current_1rm if current_1rm else 0.0
+            if r <= 5:
+                rep_factor = 1.0
+            elif r <= 12:
+                rep_factor = 0.8
+            else:
+                rep_factor = 0.6
+            nl = intensity_factor * rep_factor
+            dur_min = d / 60 if d else 1.0
+            set_tss = (dur_min * nl * intensity_factor) / 60 * 100
+            tss_vals.append(set_tss)
+        return float(np.sum(tss_vals))
+
+    @staticmethod
+    def _tss_adjusted_fatigue(
+        weights: list[float],
+        reps: list[int],
+        timestamps: list[float],
+        durations: list[float],
+        current_1rm: float,
+    ) -> float:
+        tss_values: list[float] = []
+        if not weights:
+            return 0.0
+        t_current = timestamps[-1] if timestamps else 0
+        for w, r, t, d in zip(weights, reps, timestamps, durations):
+            set_tss = ExercisePrescription._calculate_exercise_tss([w], [r], [d], current_1rm)
+            days_ago = t_current - t
+            tss_values.append(set_tss * (0.9 ** days_ago))
+        return float(np.sum(tss_values))
+
+    @staticmethod
+    def _session_rpe_adjustment(rpe_history: list[float], target_rpe_range: tuple = (7, 8)) -> float:
+        """Load adjustment based on session RPE history."""
+        if len(rpe_history) < 3:
+            return 1.0
+        recent = np.mean(rpe_history[-3:])
+        target = np.mean(target_rpe_range)
+        dev = (recent - target) / target
+        if dev > 0.15:
+            adj = 0.95 - (dev - 0.15) * 0.5
+        elif dev < -0.15:
+            adj = 1.05 + abs(dev + 0.15) * 0.3
+        else:
+            adj = 1.0
+        return float(np.clip(adj, 0.85, 1.15))
+
+    @staticmethod
+    def _adjusted_volume_prescription(base_volume: float, rpe_history: list[float]) -> float:
+        return base_volume * ExercisePrescription._session_rpe_adjustment(rpe_history)
+
+    @staticmethod
+    def _comprehensive_recovery_quality(
+        sleep_hours: float | None,
+        sleep_quality: float | None,
+        calories: float | None,
+        body_weight: float,
+        stress_level: float | None = None,
+        hrv_score: float | None = None,
+    ) -> float:
+        sleep_duration_factor = ExercisePrescription.clamp(1 + 0.06 * (sleep_hours - 8.0), 0.5, 1.1) if sleep_hours is not None else 1.0
+        sleep_quality_factor = ExercisePrescription.clamp(0.5 + 0.12 * (sleep_quality / 5), 0.5, 1.1) if sleep_quality is not None else 1.0
+        sleep_component = math.sqrt(sleep_duration_factor * sleep_quality_factor)
+        ea_component = ExercisePrescription.clamp((calories / (body_weight * 0.85)) / 40.0, 0.5, 1.1) if calories is not None else 1.0
+        stress_component = ExercisePrescription.clamp(1.0 - (stress_level / 10) * 0.3, 0.7, 1.0) if stress_level is not None else 1.0
+        hrv_component = ExercisePrescription.clamp(hrv_score / 50, 0.8, 1.2) if hrv_score is not None else 1.0
+        recovery_quality = (
+            0.4 * sleep_component
+            + 0.3 * ea_component
+            + 0.2 * stress_component
+            + 0.1 * hrv_component
+        )
+        return float(recovery_quality)
+
+    @staticmethod
+    def _adaptive_periodization_factor(performance_trend: list[float], weeks_in_phase: int, target_phase_length: int = 4) -> float:
+        if len(performance_trend) < 3:
+            return 0.7
+        x = np.arange(len(performance_trend))
+        slope = np.polyfit(x, performance_trend, 1)[0]
+        mean_perf = np.mean(performance_trend)
+        normalized_slope = slope / mean_perf if mean_perf > 0 else 0
+        phase_progress = weeks_in_phase / target_phase_length
+        if normalized_slope > 0.02:
+            adaptive_factor = 0.8 + 0.2 * (1 - phase_progress)
+        elif normalized_slope < -0.01:
+            adaptive_factor = 0.6 + 0.4 * phase_progress
+        else:
+            adaptive_factor = 0.7 + 0.3 * phase_progress
+        return ExercisePrescription.clamp(adaptive_factor, 0.5, 1.0)
+
+    @staticmethod
+    def _periodized_volume_prescription(base_volume: float, performance_trend: list[float], weeks_in_phase: int) -> float:
+        factor = ExercisePrescription._adaptive_periodization_factor(performance_trend, weeks_in_phase)
+        return base_volume * factor
+
+    @staticmethod
+    def _estimate_velocity_loss(set_number: int, target_reps: int, intensity_factor: float, fatigue_level: float) -> float:
+        base_loss_per_rep = 0.05 if intensity_factor > 0.85 else 0.03
+        fatigue_multiplier = 1.0 + (fatigue_level / 1000) * 0.5
+        set_multiplier = 1.0 + (set_number - 1) * 0.1
+        est = base_loss_per_rep * target_reps * fatigue_multiplier * set_multiplier
+        return float(min(est, 0.4))
+
+    @staticmethod
+    def _velocity_adjusted_reps(base_reps: int, set_number: int, intensity_factor: float, fatigue_level: float, target_velocity_loss: float) -> int:
+        est_loss = ExercisePrescription._estimate_velocity_loss(set_number, base_reps, intensity_factor, fatigue_level)
+        if est_loss > target_velocity_loss:
+            reduction = target_velocity_loss / est_loss
+            adjusted = int(base_reps * reduction)
+            return max(adjusted, 1)
+        return base_reps
+
+    @staticmethod
+    def _comprehensive_deload_assessment(
+        performance_decline: float,
+        rpe_elevation: float,
+        volume_tolerance: float,
+        recovery_quality: float,
+        weeks_since_deload: int,
+    ) -> float:
+        perf_score = min(performance_decline * 2, 1.0)
+        rpe_score = max(0.0, (rpe_elevation - 1.0) / 2.0)
+        volume_score = max(0.0, (1.0 - volume_tolerance) * 1.5)
+        recovery_score = max(0.0, (1.0 - recovery_quality) * 1.2)
+        time_score = min(weeks_since_deload / 4.0, 1.0)
+        return 0.30 * perf_score + 0.25 * rpe_score + 0.20 * volume_score + 0.15 * recovery_score + 0.10 * time_score
+
+    @staticmethod
+    def _deload_adjusted_prescription(base_prescription: list[dict], deload_score: float) -> list[dict]:
+        if deload_score > 0.7:
+            vol_red, int_red = 0.6, 0.8
+        elif deload_score > 0.5:
+            vol_red, int_red = 0.75, 0.9
+        else:
+            vol_red, int_red = 1.0, 1.0
+        adjusted: list[dict] = []
+        for s in base_prescription:
+            new_set = s.copy()
+            new_set["reps"] = int(new_set["reps"] * vol_red)
+            new_set["weight"] = new_set["weight"] * int_red
+            adjusted.append(new_set)
+        return adjusted
+
+    @staticmethod
+    def _autoregulated_volume_prescription(base_volume: float, recent_performance: float, recovery_quality: float, ac_ratio: float, rpe_consistency: float) -> float:
+        performance_factor = ExercisePrescription.clamp(recent_performance, 0.7, 1.3)
+        recovery_factor = ExercisePrescription.clamp(recovery_quality, 0.6, 1.2)
+        ac_factor = ExercisePrescription.clamp(2.0 - ac_ratio, 0.8, 1.2)
+        consistency_factor = ExercisePrescription.clamp(1.0 - rpe_consistency, 0.9, 1.1)
+        mult = 0.35 * performance_factor + 0.30 * recovery_factor + 0.25 * ac_factor + 0.10 * consistency_factor
+        return base_volume * ExercisePrescription.clamp(mult, 0.6, 1.4)
+
+    @staticmethod
+    def _advanced_plateau_detection(performance_values: list[float], timestamps: list[float], rpe_values: list[float], volume_values: list[float]) -> float:
+        if len(performance_values) < 6:
+            return 0.0
+        x = np.arange(len(performance_values))
+        performance_slope = np.polyfit(x, performance_values, 1)[0]
+        performance_score = 1.0 if abs(performance_slope) < 0.001 else 0.0
+        rpe_trend = np.polyfit(x, rpe_values, 1)[0]
+        rpe_score = 1.0 if rpe_trend > 0.1 else 0.0
+        efficiency = []
+        for i in range(1, len(performance_values)):
+            if volume_values[i] > 0:
+                eff = (performance_values[i] - performance_values[i-1]) / volume_values[i]
+                efficiency.append(eff)
+        efficiency_score = 1.0 if efficiency and np.mean(efficiency) < 0.001 else 0.0
+        recent_cv = np.std(performance_values[-4:]) / np.mean(performance_values[-4:]) * 100
+        variability_score = 1.0 if recent_cv < 2.0 else 0.0
+        return 0.4 * performance_score + 0.3 * rpe_score + 0.2 * efficiency_score + 0.1 * variability_score
+
+    @staticmethod
+    def _stress_level(weights: list[float], reps: list[int], rpe_scores: list[float], times: list[float], current_1rm: float, mev: float, sessions: int = 3) -> float:
+        if not weights:
+            return 0.0
+        by_day: dict[int, list[tuple[float, float]]] = {}
+        for w, r, rpe, t in zip(weights, reps, rpe_scores, times):
+            day = int(t)
+            by_day.setdefault(day, []).append((w, rpe, r))
+        sss_values: list[float] = []
+        for day in sorted(by_day.keys()):
+            entries = by_day[day]
+            vol = sum(w * r for w, _rpe, r in entries)
+            weights_day = [w for w, _rpe, _ in entries]
+            rpe_day = [rp for _w, rp, _ in entries]
+            intensity_factor = ExercisePrescription.clamp(np.mean(weights_day) / current_1rm, 0.6, 1.1)
+            rpe_factor = ExercisePrescription.clamp(np.mean(rpe_day) / 7, 0.8, 1.3)
+            sss_values.append(vol * intensity_factor * rpe_factor)
+        recent = sss_values[-sessions:]
+        stress = np.mean(recent) / mev if mev else np.mean(recent)
+        return ExercisePrescription.clamp(stress, 0.0, 2.0)
+
+    @staticmethod
+    def _compute_target_velocity_loss(base_reps: int, last_rpe: float, last_reps: int, intensity_factor: float, fatigue_ratio: float) -> float:
+        if base_reps <= 5:
+            base = 0.10
+        elif base_reps <= 12:
+            base = 0.18
+        else:
+            base = 0.25
+        loss = base
+        if last_rpe >= 9:
+            loss -= 0.02
+        if last_rpe <= 7 and last_reps >= base_reps:
+            loss += 0.03
+        if fatigue_ratio > 0.7:
+            loss -= 0.03
+        return ExercisePrescription.clamp(loss, 0.08, 0.35)
+
     @classmethod
     def exercise_prescription(
         cls,
@@ -649,12 +896,17 @@ class ExercisePrescription(MathTools):
         calories: list[float] | None = None,
         sleep_hours: list[float] | None = None,
         sleep_quality: list[float] | None = None,
+        stress_levels: list[float] | None = None,
+        hrv_scores: list[float] | None = None,
+        weeks_in_phase: int = 1,
+        weeks_since_deload: int = 0,
         target_1rm: float | None = None,
         days_remaining: int | None = None,
         decay: float = 0.9,
         theta: float = 0.1,
         stress: float = 0.1,
         phase_factor: float = 0.7,
+        target_velocity_loss: float | None = None,
     ) -> dict:
         """Return a detailed workout prescription."""
 
@@ -673,6 +925,9 @@ class ExercisePrescription(MathTools):
         thresh = cls._threshold(recent_load, prev_load)
         cv = cls._cv(list(series_w), list(series_r))
         plateau = cls._plateau(slope, cv, thresh, list(series_w), ts_list)
+        volume_per_set = list(np.array(weights) * np.array(reps))
+        adv_plateau = cls._advanced_plateau_detection(list(series_w), ts_list, rpe_scores, volume_per_set)
+        plateau = (plateau + adv_plateau) / 2
         feats = cls._time_features(series_w)
         rest_efficiencies = None
         if rest_times is not None:
@@ -697,6 +952,15 @@ class ExercisePrescription(MathTools):
             50.0,
             rest_efficiencies,
         )
+        target_reps_est = int(round(np.mean(reps))) if reps else 8
+        enhanced_fatigue = cls._enhanced_fatigue(weights, reps, ts_list, target_reps_est)
+        tss_fatigue = cls._tss_adjusted_fatigue(
+            weights,
+            reps,
+            ts_list,
+            durations if durations is not None else [50.0 for _ in reps],
+            current_1rm,
+        )
 
         recovery_fatigue = 0.0
         if (
@@ -711,19 +975,28 @@ class ExercisePrescription(MathTools):
                 ratio = rt / ot if ot != 0 else 1.0
                 recovery_fatigue += vol * (decay ** ratio)
 
-        fatigue = base_fatigue + recovery_fatigue
+        fatigue = base_fatigue + recovery_fatigue + enhanced_fatigue + tss_fatigue
         ac_ratio = cls._ac_ratio(list(series_w), list(series_r))
         perf_scores = cls._performance_scores_from_logs(list(series_w), list(series_r), ts_list, MEV)
         rec_scores = cls._recovery_scores_from_logs(
             body_weight, calories, sleep_hours, sleep_quality
         )
         ea = cls._energy_availability(body_weight, np.mean(calories) if calories else None)
-        mrv = cls._mrv(MEV, fatigue, stress, ea, theta)
+        stress_auto = cls._stress_level(weights, reps, rpe_scores, ts_list, current_1rm, MEV)
+        mrv = cls._mrv(MEV, fatigue, stress_auto, ea, theta)
         sri = cls._sleep_recovery_index(
             np.mean(sleep_hours) if sleep_hours else None,
             np.mean(sleep_quality) if sleep_quality else None,
         )
         adj_mrv = cls._adj_mrv(mrv, perf_scores, rec_scores)
+        avg_sleep = np.mean(sleep_hours) if sleep_hours else None
+        avg_quality = np.mean(sleep_quality) if sleep_quality else None
+        avg_cal = np.mean(calories) if calories else None
+        stress_val = np.mean(stress_levels) if stress_levels else stress_auto
+        hrv_val = np.mean(hrv_scores) if hrv_scores else None
+        recovery_quality = cls._comprehensive_recovery_quality(
+            avg_sleep, avg_quality, avg_cal, body_weight, stress_val, hrv_val
+        )
         if rest_efficiencies is not None and len(rest_efficiencies) > 0:
             rest_volume_modifier = float(np.mean(rest_efficiencies[-cls.L:]))
             adj_mrv *= rest_volume_modifier
@@ -742,21 +1015,33 @@ class ExercisePrescription(MathTools):
             forecast_var = cls._var_forecast(session_volumes, [1] * len(session_volumes))
             forecast_arima = cls._arima_forecast(session_volumes)
             vol_presc = (vol_presc + forecast_var + forecast_arima) / 3
+        vol_presc = cls._periodized_volume_prescription(vol_presc, list(series_w), weeks_in_phase)
+        rpe_consistency = np.std(rpe_scores) / (np.mean(rpe_scores) + cls.EPSILON) if rpe_scores else 0.0
+        perf_factor = np.mean(np.array(perf_scores)) if len(perf_scores) > 0 else 1.0
+        vol_presc = cls._autoregulated_volume_prescription(vol_presc, perf_factor if perf_scores else 1.0, recovery_quality, ac_ratio, rpe_consistency)
+        vol_presc = cls._adjusted_volume_prescription(vol_presc, rpe_scores)
         urgency = cls._urgency(target_1rm, current_1rm)
         delta_1rm, delta_vol = cls._deltas(current_1rm, y_mean, recent_load, prev_load)
         rec_factor = np.mean(np.array(rec_scores)) if len(rec_scores) > 0 else 1.0
+        rec_factor = (rec_factor + recovery_quality) / 2
         alpha = cls._alpha(delta_1rm, delta_vol, rec_factor, list(series_w), experience)
         required_rate = cls._required_rate(target_1rm, current_1rm, days_remaining)
         achievement_prob = cls._achievement_probability(required_rate)
         weekly_rate = cls._weekly_rate(slope, y_mean)
         weekly_monotony = cls._weekly_monotony(list(series_w), list(series_r))
-        perf_factor = np.mean(np.array(perf_scores)) if len(perf_scores) > 0 else 1.0
         tut_ratio = (
             float(np.sum(durations)) / (50.0 * len(durations)) if durations else 1.0
         )
         deload_trigger = cls._deload_trigger(perf_factor, rpe_scores, rec_factor, tut_ratio)
         rpe_scale = cls._rpe_scale(rpe_scores, durations, 50.0)
         confidence_int = cls._confidence_interval(slope, list(series_w), ts_list)
+        deload_score = cls._comprehensive_deload_assessment(
+            1 - perf_factor,
+            np.mean(rpe_scores[-3:]) / 7 if rpe_scores else 1.0,
+            ac_ratio,
+            recovery_quality,
+            weeks_since_deload,
+        )
 
         mean_vol = np.mean(np.array(series_w) * np.array(series_r)) if len(series_w) > 0 else 1.0
         vol_factor = cls.clamp(math.log1p(total_volume) / 8, 0.95, 1.05)
@@ -804,6 +1089,18 @@ class ExercisePrescription(MathTools):
         )
 
         sets_prescription: list[dict] = []
+        fatigue_ratio = fatigue / (adj_mrv + cls.EPSILON)
+        if target_velocity_loss is None:
+            last_rpe = rpe_scores[-1] if rpe_scores else 8.0
+            last_reps = reps[-1] if reps else base_reps
+            intensity_factor_last = (weights[-1] / current_1rm) if weights else 0.8
+            target_velocity_loss = cls._compute_target_velocity_loss(
+                base_reps,
+                last_rpe,
+                last_reps,
+                intensity_factor_last,
+                fatigue_ratio,
+            )
         for k in range(1, N + 1):
             prog_drop = (k - 1) / (N - 1 + 1e-9)
             reps_k = cls.clamp(
@@ -830,6 +1127,7 @@ class ExercisePrescription(MathTools):
             )
             if deload_needed:
                 weight_k *= 0.8
+            reps_k = cls._velocity_adjusted_reps(int(reps_k), k, weight_k / current_1rm, fatigue, target_velocity_loss)
             target_rpe = cls.clamp(7 + 0.3 * plateau, 6, 9)
             rest_corr = 0.0
             if durations is not None:
@@ -846,6 +1144,8 @@ class ExercisePrescription(MathTools):
                     "rest_seconds": int(rest_k),
                 }
             )
+        if deload_score > 0.5:
+            sets_prescription = cls._deload_adjusted_prescription(sets_prescription, deload_score)
 
         result = {
             "prescription": sets_prescription,
