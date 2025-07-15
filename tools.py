@@ -141,15 +141,25 @@ class ExercisePrescription(MathTools):
                 "strength_reserve": 0.0,
                 "efficiency_score": 1.0,
             }
+
         increments = [weights[i + 1] - weights[i] for i in range(len(weights) - 1)]
         mean_inc = np.mean(increments)
-        inc_coeff = float(np.std(increments) / (mean_inc + ExercisePrescription.EPSILON))
+        inc_coeff = float(
+            np.std(increments) / (mean_inc + ExercisePrescription.EPSILON)
+        )
         slope = ExercisePrescription._slope(list(range(len(increments))), increments)
         efficiency = float(weights[-1] / (sum(weights) / len(weights)))
+        reserve = (
+            (weights[-1] - weights[-2])
+            / (weights[-2] + ExercisePrescription.EPSILON)
+            if len(weights) >= 2
+            else 0.0
+        )
+
         return {
             "increment_coeff": inc_coeff,
             "fatigue_decay": -slope,
-            "strength_reserve": 0.0,
+            "strength_reserve": reserve,
             "efficiency_score": efficiency,
         }
 
@@ -234,6 +244,10 @@ class ExercisePrescription(MathTools):
             metrics = ExercisePrescription._pyramid_progression_metrics(pyramid_weights[-1])
             if metrics["fatigue_decay"] > 0.2:
                 base_fatigue *= 1.1
+            if metrics["strength_reserve"] < 0.05:
+                base_fatigue *= 1.05
+            elif metrics["strength_reserve"] > 0.15:
+                base_fatigue *= 0.95
         return base_fatigue
 
     @classmethod
@@ -268,6 +282,10 @@ class ExercisePrescription(MathTools):
                 base_alpha *= 1.02
             if metrics["efficiency_score"] > 1.1:
                 base_alpha *= 1.03
+            if metrics["strength_reserve"] > 0.15:
+                base_alpha *= 1.05
+            elif metrics["strength_reserve"] < 0.05:
+                base_alpha *= 0.97
         return cls.clamp(base_alpha, -0.20, 0.07)
 
     @staticmethod
