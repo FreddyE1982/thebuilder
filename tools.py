@@ -137,12 +137,22 @@ class ExercisePrescription(MathTools):
         return cls.W1 * slope_zero + cls.W2 * cv_low + cls.W3 * thresh_low
 
     @staticmethod
-    def _fatigue(weights: list[float], reps: list[int], timestamps: list[float], decay: float) -> float:
+    def _fatigue(
+        weights: list[float],
+        reps: list[int],
+        timestamps: list[float],
+        decay: float,
+        durations: list[float] | None = None,
+        ideal_tut: float = 50.0,
+    ) -> float:
         w = np.array(weights)
         r = np.array(reps)
         t = np.array(timestamps)
+        dur = (
+            np.array(durations) if durations is not None else np.ones_like(t) * ideal_tut
+        )
         t_current = t[-1] if len(t) > 0 else 0.0
-        vols = w * r
+        vols = w * r * (dur / ideal_tut)
         return float(np.sum(vols * (decay ** (t_current - t))))
 
     @staticmethod
@@ -256,16 +266,36 @@ class ExercisePrescription(MathTools):
         return float(np.mean(loads) / std) if std != 0 else 1.0
 
     @staticmethod
-    def _deload_trigger(perf_factor: float, rpe_scores: list[float], rec: float) -> float:
+    def _deload_trigger(
+        perf_factor: float,
+        rpe_scores: list[float],
+        rec: float,
+        tut_ratio: float = 1.0,
+    ) -> float:
         perf_decline = max(0.0, 1.0 - perf_factor)
         rpe_elev = max(0.0, np.mean(np.array(rpe_scores)) - 7) if len(rpe_scores) > 0 else 0.0
-        return float(perf_decline * rpe_elev * (1 / rec if rec != 0 else 1.0))
+        base = perf_decline * rpe_elev * (1 / rec if rec != 0 else 1.0)
+        return float(base / tut_ratio)
 
     @staticmethod
-    def _rpe_scale(rpe_scores: list[float]) -> float:
+    def _duration_error(durations: list[float], ideal: float) -> float:
+        if not durations:
+            return 0.0
+        arr = np.array(durations)
+        mean_tut = np.mean(arr)
+        return float((mean_tut - ideal) / ideal)
+
+    def _rpe_scale(
+        rpe_scores: list[float],
+        durations: list[float] | None = None,
+        ideal_tut: float = 50.0,
+    ) -> float:
         arr = np.array(rpe_scores)
         mean = np.mean(arr)
-        return float(np.std(arr) / mean) if len(arr) > 0 and mean != 0 else 1.0
+        base = float(np.std(arr) / mean) if len(arr) > 0 and mean != 0 else 1.0
+        if durations:
+            base *= 1 + ExercisePrescription._duration_error(durations, ideal_tut)
+        return base
 
     @staticmethod
     def _confidence_interval(slope: float, weights: list[float], times: list[float]) -> tuple[float, float]:
@@ -342,6 +372,7 @@ class ExercisePrescription(MathTools):
         body_weight: float,
         months_active: float,
         workouts_per_month: float,
+        durations: list[float] | None = None,
         MEV: float = 10,
         *,
         calories: list[float] | None = None,
@@ -366,7 +397,7 @@ class ExercisePrescription(MathTools):
         thresh = cls._threshold(recent_load, prev_load)
         cv = cls._cv(weights, reps)
         plateau = cls._plateau(slope, cv, thresh)
-        fatigue = cls._fatigue(weights, reps, timestamps, decay)
+        fatigue = cls._fatigue(weights, reps, timestamps, decay, durations, 50.0)
         ac_ratio = cls._ac_ratio(weights, reps)
         perf_scores = cls._performance_scores_from_logs(weights, reps, timestamps, MEV)
         rec_scores = cls._recovery_scores_from_logs(
@@ -397,8 +428,11 @@ class ExercisePrescription(MathTools):
         weekly_rate = cls._weekly_rate(slope, y_mean)
         weekly_monotony = cls._weekly_monotony(weights, reps)
         perf_factor = np.mean(np.array(perf_scores)) if len(perf_scores) > 0 else 1.0
-        deload_trigger = cls._deload_trigger(perf_factor, rpe_scores, rec_factor)
-        rpe_scale = cls._rpe_scale(rpe_scores)
+        tut_ratio = (
+            float(np.sum(durations)) / (50.0 * len(durations)) if durations else 1.0
+        )
+        deload_trigger = cls._deload_trigger(perf_factor, rpe_scores, rec_factor, tut_ratio)
+        rpe_scale = cls._rpe_scale(rpe_scores, durations, 50.0)
         confidence_int = cls._confidence_interval(slope, weights, timestamps)
 
         mean_vol = np.mean(np.array(weights) * np.array(reps)) if len(weights) > 0 else 1.0
