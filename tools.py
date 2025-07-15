@@ -1,5 +1,13 @@
 import math
+from typing import Iterable
+
 import numpy as np
+import pandas as pd
+from statsmodels.tsa.ar_model import AutoReg
+from statsmodels.tsa.seasonal import seasonal_decompose
+from statsmodels.tsa.vector_ar.var_model import VAR
+import pywt
+import warnings
 
 
 class MathTools:
@@ -88,6 +96,132 @@ class ExercisePrescription(MathTools):
         return float(np.mean(np.array(values)))
 
     @staticmethod
+    def _ewma(values: Iterable[float], span: int) -> list[float]:
+        series = pd.Series(list(values))
+        return list(series.ewm(span=span, adjust=False).mean())
+
+    @staticmethod
+    def _ar_decay(values: Iterable[float]) -> float:
+        data = list(values)
+        if len(data) < 5 or np.std(data) == 0:
+            return 1.0
+        try:
+            model = AutoReg(data, lags=1, old_names=False).fit()
+        except Exception:
+            return 1.0
+        if len(model.params) < 2:
+            return 1.0
+        phi = float(model.params[1])
+        return MathTools.clamp(phi, 0.5, 1.5)
+
+    @staticmethod
+    def _cross_correlation(
+        x: Iterable[float], y: Iterable[float], max_lag: int = 7
+    ) -> tuple[int, float]:
+        x_arr = np.array(list(x))
+        y_arr = np.array(list(y))
+        best_lag = 0
+        best_corr = 0.0
+        for lag in range(-max_lag, max_lag + 1):
+            if lag < 0:
+                a = x_arr[:lag]
+                b = y_arr[-lag:]
+            elif lag > 0:
+                a = x_arr[lag:]
+                b = y_arr[:-lag]
+            else:
+                a = x_arr
+                b = y_arr
+            if len(a) <= 1 or len(b) <= 1 or np.std(a) == 0 or np.std(b) == 0:
+                corr = 0.0
+            else:
+                corr = float(np.corrcoef(a, b)[0, 1])
+            if np.isnan(corr):
+                corr = 0.0
+            if abs(corr) > abs(best_corr):
+                best_corr = corr
+                best_lag = lag
+        return best_lag, best_corr
+
+    @staticmethod
+    def _seasonal_components(values: Iterable[float], period: int) -> tuple[list[float], list[float]]:
+        series = pd.Series(list(values))
+        try:
+            res = seasonal_decompose(series, period=period, model="additive", two_sided=False, extrapolate_trend="freq")
+            trend = [float(v) if v is not None else 0.0 for v in res.trend]
+            seasonal = [float(v) for v in res.seasonal]
+        except Exception:
+            trend = list(series)
+            seasonal = [0.0 for _ in series]
+        return trend, seasonal
+
+    @staticmethod
+    def _change_point(weights: list[float], times: list[float]) -> int:
+        if len(weights) < 4 or len(weights) != len(times):
+            return -1
+        slopes = np.diff(np.array(weights)) / np.diff(np.array(times))
+        prev_pos = slopes[0] > 0
+        for i, s in enumerate(slopes[1:], start=1):
+            if prev_pos and s <= 0:
+                return i
+            prev_pos = s > 0
+        return len(weights) - 1
+
+    @staticmethod
+    def _var_forecast(weights: list[float], reps: list[int], steps: int = 1) -> float:
+        if len(weights) < 3 or len(weights) != len(reps):
+            return weights[-1] if weights else 0.0
+        data = [[w, r] for w, r in zip(weights, reps)]
+        try:
+            model = VAR(data)
+            res = model.fit(maxlags=1, trend="n")
+            pred = res.forecast(res.endog, steps=steps)
+            return float(pred[-1][0])
+        except Exception:
+            return float(weights[-1])
+
+    @staticmethod
+    def _kalman_filter(values: list[float], process_var: float = 1e-5, measurement_var: float = 0.1) -> list[float]:
+        if not values:
+            return []
+        x_est = values[0]
+        p = 1.0
+        result = [x_est]
+        for z in values[1:]:
+            p += process_var
+            k = p / (p + measurement_var)
+            x_est = x_est + k * (z - x_est)
+            p = (1 - k) * p
+            result.append(x_est)
+        return result
+
+    @staticmethod
+    def _wavelet_energy(values: list[float]) -> tuple[float, float, float]:
+        if len(values) < 2:
+            return 0.0, 0.0, 0.0
+        wave = pywt.Wavelet("db1")
+        max_level = pywt.dwt_max_level(len(values), wave.dec_len)
+        level = min(2, max_level)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            coeffs = pywt.wavedec(values, wave, level=level)
+        energies = [float(np.sum(np.square(c))) for c in coeffs]
+        while len(energies) < 3:
+            energies.append(0.0)
+        return tuple(energies[:3])
+
+    @staticmethod
+    def _anomaly_score(values: list[float]) -> float:
+        arr = np.array(values)
+        if len(arr) < 2:
+            return 0.0
+        mean = np.mean(arr)
+        std = np.std(arr)
+        if std == 0:
+            return 0.0
+        return float(abs((arr[-1] - mean) / std))
+
+    @staticmethod
     def _slope(t: list[float], w: list[float]) -> float:
         t_arr = np.array(t)
         w_arr = np.array(w)
@@ -130,11 +264,30 @@ class ExercisePrescription(MathTools):
         return float((np.std(vols) / mean) * 100) if mean != 0 else 0.0
 
     @classmethod
-    def _plateau(cls, slope: float, cv: float, thresh: float) -> float:
+    def _plateau(
+        cls,
+        slope: float,
+        cv: float,
+        thresh: float,
+        weights: list[float] | None = None,
+        times: list[float] | None = None,
+    ) -> float:
         slope_zero = 1 if abs(slope) < cls.EPSILON else 0
         cv_low = 1 if cv < 1.5 else 0
         thresh_low = 1 if thresh <= 0.02 else 0
-        return cls.W1 * slope_zero + cls.W2 * cv_low + cls.W3 * thresh_low
+        change = 0.0
+        if weights is not None and times is not None and len(weights) >= 6:
+            mid = len(weights) // 2
+            s1 = cls._slope(times[:mid], weights[:mid])
+            s2 = cls._slope(times[mid:], weights[mid:])
+            if s1 > 0 and s2 <= 0:
+                change = 1.0
+            cp = cls._change_point(weights, times)
+            if 0 < cp < len(weights) - 1:
+                change += 0.5
+            anomaly = cls._anomaly_score(weights)
+            change += min(anomaly / 3, 0.5)
+        return cls.W1 * slope_zero + cls.W2 * cv_low + cls.W3 * thresh_low + 0.2 * change
 
     @staticmethod
     def _fatigue(
@@ -157,16 +310,26 @@ class ExercisePrescription(MathTools):
         )
         t_current = t[-1] if len(t) > 0 else 0.0
         vols = w * r * (dur / ideal_tut) * (2.0 - rest_eff)
-        return float(np.sum(vols * (decay ** (t_current - t))))
+        decay_mod = decay * ExercisePrescription._ar_decay(vols)
+        corr = 0.0
+        if rest_efficiencies is not None:
+            _, corr = ExercisePrescription._cross_correlation(vols, rest_eff)
+        trend, seasonal = ExercisePrescription._seasonal_components(vols, period=7)
+        wave_low, wave_mid, wave_high = ExercisePrescription._wavelet_energy(list(vols))
+        seasonal_factor = 1 + abs(seasonal[-1]) / (abs(trend[-1]) + 1e-9)
+        wave_factor = 1 + wave_high / (wave_low + wave_mid + 1e-9)
+        base = np.sum(vols * (decay_mod ** (t_current - t)))
+        return float(base * (1 + abs(corr)) * seasonal_factor * wave_factor)
 
     @staticmethod
     def _ac_ratio(weights: list[float], reps: list[int]) -> float:
         w = np.array(weights)
         r = np.array(reps)
         vol = w * r
-        alpha = 0.3
-        recent = np.mean(vol[-7:]) if len(vol) >= 7 else np.mean(vol)
-        chronic = np.mean(vol) if len(vol) > 0 else 1.0
+        if len(vol) == 0:
+            return 1.0
+        recent = ExercisePrescription._ewma(vol, span=7)[-1]
+        chronic = ExercisePrescription._ewma(vol, span=28)[-1]
         return float(recent / chronic) if chronic != 0 else 1.0
 
     @classmethod
@@ -186,6 +349,20 @@ class ExercisePrescription(MathTools):
         perf_f = np.mean(np.array(perf)) if len(perf) > 0 else 1.0
         rec_q = np.mean(np.array(rec)) if len(rec) > 0 else 1.0
         return mrv * perf_f * rec_q
+
+    @staticmethod
+    def _exp_smooth(values: Iterable[float], alpha: float) -> list[float]:
+        it = iter(values)
+        try:
+            first = float(next(it))
+        except StopIteration:
+            return []
+        result = [first]
+        prev = first
+        for v in it:
+            prev = alpha * float(v) + (1 - alpha) * prev
+            result.append(prev)
+        return result
 
     @staticmethod
     def _sleep_factor(avg_sleep: float | None) -> float:
@@ -214,18 +391,27 @@ class ExercisePrescription(MathTools):
     def _tolerance(perf: list[float], rec: list[float], target_1rm: float | None, current_1rm: float, days_remaining: int | None) -> float:
         perf_arr = np.array(perf)
         rec_arr = np.array(rec)
+        corr = 0.0
+        if len(perf_arr) > 1 and len(rec_arr) > 1:
+            _, corr = ExercisePrescription._cross_correlation(perf_arr, rec_arr, max_lag=3)
+        base: float
         if target_1rm is not None and days_remaining is not None and days_remaining > 0:
             required_rate = (target_1rm - current_1rm) / days_remaining
             if required_rate != 0:
-                return float(np.sum(perf_arr * rec_arr) / abs(required_rate))
-            return 1.0
-        if len(perf_arr) > 0:
-            return float(np.sum(perf_arr * rec_arr) / len(perf_arr))
-        return 1.0
+                base = float(np.sum(perf_arr * rec_arr) / abs(required_rate))
+            else:
+                base = 1.0
+        elif len(perf_arr) > 0:
+            base = float(np.sum(perf_arr * rec_arr) / len(perf_arr))
+        else:
+            base = 1.0
+        return base * (1 + corr / 2)
 
     @staticmethod
     def _volume_prescription(mev: float, mrv: float, phase_factor: float, tolerance: float) -> float:
-        return mev + (mrv - mev) * phase_factor * tolerance
+        base = mev + (mrv - mev) * phase_factor * tolerance
+        smoothed = ExercisePrescription._exp_smooth([mev, mrv, base], 0.3)
+        return smoothed[-1]
 
     @staticmethod
     def _urgency(target_1rm: float | None, current_1rm: float) -> float:
@@ -241,9 +427,23 @@ class ExercisePrescription(MathTools):
         return delta_1rm, delta_vol
 
     @classmethod
-    def _alpha(cls, delta_1rm: float, delta_vol: float, rec: float) -> float:
+    def _alpha(
+        cls,
+        delta_1rm: float,
+        delta_vol: float,
+        rec: float,
+        weights: list[float] | None = None,
+    ) -> float:
         base = 0.6 * delta_1rm + 0.4 * delta_vol
-        return cls.clamp(base * rec, cls.ALPHA_MIN, cls.ALPHA_MAX)
+        trend = 1.0
+        if weights is not None and len(weights) >= 3:
+            diffs = np.diff(np.array(weights))
+            trend = cls._ar_decay(diffs)
+            forecast = cls._var_forecast(weights, [1] * len(weights))
+            smooth = cls._kalman_filter(weights)[-1]
+            if smooth != 0:
+                trend *= cls.clamp(forecast / smooth, 0.8, 1.2)
+        return cls.clamp(base * rec * trend, cls.ALPHA_MIN, cls.ALPHA_MAX)
 
     @staticmethod
     def _required_rate(target_1rm: float | None, current_1rm: float, days_remaining: int | None) -> float:
@@ -406,7 +606,7 @@ class ExercisePrescription(MathTools):
         prev_load = cls._prev_load(weights, reps)
         thresh = cls._threshold(recent_load, prev_load)
         cv = cls._cv(weights, reps)
-        plateau = cls._plateau(slope, cv, thresh)
+        plateau = cls._plateau(slope, cv, thresh, weights, timestamps)
         rest_efficiencies = None
         if rest_times is not None:
             optimal_rests: list[float] = []
@@ -471,10 +671,13 @@ class ExercisePrescription(MathTools):
             days_remaining,
         )
         vol_presc = cls._volume_prescription(MEV, mrv, phase_factor, tolerance)
+        if session_volumes:
+            forecast_vol = cls._var_forecast(session_volumes, [1] * len(session_volumes))
+            vol_presc = (vol_presc + forecast_vol) / 2
         urgency = cls._urgency(target_1rm, current_1rm)
         delta_1rm, delta_vol = cls._deltas(current_1rm, y_mean, recent_load, prev_load)
         rec_factor = np.mean(np.array(rec_scores)) if len(rec_scores) > 0 else 1.0
-        alpha = cls._alpha(delta_1rm, delta_vol, rec_factor)
+        alpha = cls._alpha(delta_1rm, delta_vol, rec_factor, weights)
         required_rate = cls._required_rate(target_1rm, current_1rm, days_remaining)
         achievement_prob = cls._achievement_probability(required_rate)
         weekly_rate = cls._weekly_rate(slope, y_mean)

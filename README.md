@@ -14,6 +14,10 @@ This repository contains a Streamlit application for tracking gym workouts. Ever
 - Streamlit
 - FastAPI
 - Uvicorn
+- pandas
+- statsmodels
+- pywavelets
+- scikit-learn
 
 Install dependencies with:
 
