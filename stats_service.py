@@ -1,6 +1,6 @@
 import datetime
 from typing import List, Optional, Dict
-from db import SetRepository, ExerciseNameRepository
+from db import SetRepository, ExerciseNameRepository, SettingsRepository
 from tools import MathTools, ExerciseProgressEstimator
 
 
@@ -11,9 +11,11 @@ class StatisticsService:
         self,
         set_repo: SetRepository,
         name_repo: ExerciseNameRepository,
+        settings_repo: SettingsRepository | None = None,
     ) -> None:
         self.sets = set_repo
         self.exercise_names = name_repo
+        self.settings = settings_repo
 
     def _alias_names(self, exercise: Optional[str]) -> List[str]:
         if not exercise:
@@ -153,9 +155,17 @@ class StatisticsService:
         rpe_scores = [int(r[2]) for r in rows]
         times = list(range(len(rows)))
 
-        months_active = 1.0
+        months_active = (
+            self.settings.get_float("months_active", 1.0)
+            if self.settings
+            else 1.0
+        )
         workouts_per_month = float(len(set(times)))
-        body_weight = 80.0
+        body_weight = (
+            self.settings.get_float("body_weight", 80.0)
+            if self.settings
+            else 80.0
+        )
 
         return ExerciseProgressEstimator.predict_progress(
             weights,

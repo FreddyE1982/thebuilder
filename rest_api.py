@@ -51,6 +51,7 @@ class GymAPI:
         self.statistics = StatisticsService(
             self.sets,
             self.exercise_names,
+            self.settings,
         )
         self.app = FastAPI()
         self._setup_routes()

@@ -52,6 +52,7 @@ class GymApp:
         self.stats = StatisticsService(
             self.sets,
             self.exercise_names_repo,
+            self.settings_repo,
         )
         self._state_init()
 
@@ -496,6 +497,16 @@ class GymApp:
             st.subheader("1RM Progression")
             if prog:
                 st.line_chart({"1RM": [p["est_1rm"] for p in prog]}, x=[p["date"] for p in prog])
+            self._progress_forecast_section(ex_choice)
+
+    def _progress_forecast_section(self, exercise: str) -> None:
+        st.subheader("Progress Forecast")
+        weeks = st.slider("Weeks", 1, 12, 4, key="forecast_weeks")
+        wpw = st.slider("Workouts per Week", 1, 7, 3, key="forecast_wpw")
+        if st.button("Show Forecast"):
+            forecast = self.stats.progress_forecast(exercise, weeks, wpw)
+            if forecast:
+                st.line_chart({"Est 1RM": [f["est_1rm"] for f in forecast]}, x=[str(f["week"]) for f in forecast])
 
     def _settings_tab(self) -> None:
         st.header("Settings")
