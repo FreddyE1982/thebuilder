@@ -114,6 +114,24 @@ class GymApp:
                 format_func=lambda x: options[x][1]
             )
             st.session_state.selected_workout = int(selected)
+            detail = self.workouts.fetch_detail(int(selected))
+            start_time = detail[2]
+            end_time = detail[3]
+            cols = st.columns(2)
+            if cols[0].button("Start Workout", key=f"start_workout_{selected}"):
+                self.workouts.set_start_time(
+                    int(selected),
+                    datetime.datetime.now().isoformat(timespec="seconds"),
+                )
+            if cols[1].button("Finish Workout", key=f"finish_workout_{selected}"):
+                self.workouts.set_end_time(
+                    int(selected),
+                    datetime.datetime.now().isoformat(timespec="seconds"),
+                )
+            if start_time:
+                st.write(f"Start: {start_time}")
+            if end_time:
+                st.write(f"End: {end_time}")
 
     def _exercise_section(self) -> None:
         st.header("Exercises")
@@ -150,8 +168,8 @@ class GymApp:
                 st.markdown("**Muscles:**")
                 for m in muscles:
                     st.markdown(f"- {m}")
-            for set_id, reps, weight, rpe in sets:
-                cols = st.columns(5)
+            for set_id, reps, weight, rpe, start_time, end_time in sets:
+                cols = st.columns(7)
                 with cols[0]:
                     st.write(f"Set {set_id}")
                 reps_val = cols[1].number_input(
@@ -174,13 +192,27 @@ class GymApp:
                     index=int(rpe),
                     key=f"rpe_{set_id}",
                 )
-                if cols[4].button("Delete", key=f"del_{set_id}"):
+                if cols[4].button("Start", key=f"start_set_{set_id}"):
+                    self.sets.set_start_time(
+                        set_id,
+                        datetime.datetime.now().isoformat(timespec="seconds"),
+                    )
+                if cols[5].button("Finish", key=f"finish_set_{set_id}"):
+                    self.sets.set_end_time(
+                        set_id,
+                        datetime.datetime.now().isoformat(timespec="seconds"),
+                    )
+                if cols[6].button("Delete", key=f"del_{set_id}"):
                     self.sets.remove(set_id)
                     continue
-                if cols[4].button("Update", key=f"upd_{set_id}"):
+                if cols[6].button("Update", key=f"upd_{set_id}"):
                     self.sets.update(
                         set_id, int(reps_val), float(weight_val), int(rpe_val)
                     )
+                if start_time:
+                    cols[4].write(start_time)
+                if end_time:
+                    cols[5].write(end_time)
             if self.recommender.has_history(name):
                 if st.button("Recommend Next Set", key=f"rec_next_{exercise_id}"):
                     try:

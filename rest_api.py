@@ -250,6 +250,28 @@ class GymAPI:
             workouts = self.workouts.fetch_all_workouts()
             return [{"id": wid, "date": date} for wid, date in workouts]
 
+        @self.app.get("/workouts/{workout_id}")
+        def get_workout(workout_id: int):
+            wid, date, start_time, end_time = self.workouts.fetch_detail(workout_id)
+            return {
+                "id": wid,
+                "date": date,
+                "start_time": start_time,
+                "end_time": end_time,
+            }
+
+        @self.app.post("/workouts/{workout_id}/start")
+        def start_workout(workout_id: int):
+            timestamp = datetime.datetime.now().isoformat(timespec="seconds")
+            self.workouts.set_start_time(workout_id, timestamp)
+            return {"status": "started", "timestamp": timestamp}
+
+        @self.app.post("/workouts/{workout_id}/finish")
+        def finish_workout(workout_id: int):
+            timestamp = datetime.datetime.now().isoformat(timespec="seconds")
+            self.workouts.set_end_time(workout_id, timestamp)
+            return {"status": "finished", "timestamp": timestamp}
+
         @self.app.post("/workouts/{workout_id}/exercises")
         def add_exercise(workout_id: int, name: str, equipment: str):
             if not equipment:
@@ -338,6 +360,18 @@ class GymAPI:
             self.sets.remove(set_id)
             return {"status": "deleted"}
 
+        @self.app.post("/sets/{set_id}/start")
+        def start_set(set_id: int):
+            timestamp = datetime.datetime.now().isoformat(timespec="seconds")
+            self.sets.set_start_time(set_id, timestamp)
+            return {"status": "started", "timestamp": timestamp}
+
+        @self.app.post("/sets/{set_id}/finish")
+        def finish_set(set_id: int):
+            timestamp = datetime.datetime.now().isoformat(timespec="seconds")
+            self.sets.set_end_time(set_id, timestamp)
+            return {"status": "finished", "timestamp": timestamp}
+
         @self.app.get("/sets/{set_id}")
         def get_set(set_id: int):
             return self.sets.fetch_detail(set_id)
@@ -345,10 +379,20 @@ class GymAPI:
         @self.app.get("/exercises/{exercise_id}/sets")
         def list_sets(exercise_id: int):
             sets = self.sets.fetch_for_exercise(exercise_id)
-            return [
-                {"id": sid, "reps": reps, "weight": weight, "rpe": rpe}
-                for sid, reps, weight, rpe in sets
-            ]
+            result = []
+            for sid, reps, weight, rpe, start_time, end_time in sets:
+                entry = {
+                    "id": sid,
+                    "reps": reps,
+                    "weight": weight,
+                    "rpe": rpe,
+                }
+                if start_time is not None:
+                    entry["start_time"] = start_time
+                if end_time is not None:
+                    entry["end_time"] = end_time
+                result.append(entry)
+            return result
 
         @self.app.post("/exercises/{exercise_id}/recommend_next")
         def recommend_next(exercise_id: int):

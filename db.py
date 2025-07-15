@@ -12,9 +12,11 @@ class Database:
         "workouts": (
             """CREATE TABLE workouts (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    date TEXT NOT NULL
+                    date TEXT NOT NULL,
+                    start_time TEXT,
+                    end_time TEXT
                 );""",
-            ["id", "date"],
+            ["id", "date", "start_time", "end_time"],
         ),
         "equipment": (
             """CREATE TABLE equipment (
@@ -117,6 +119,8 @@ class Database:
                     diff_reps INTEGER NOT NULL DEFAULT 0,
                     diff_weight REAL NOT NULL DEFAULT 0,
                     diff_rpe INTEGER NOT NULL DEFAULT 0,
+                    start_time TEXT,
+                    end_time TEXT,
                     FOREIGN KEY(exercise_id) REFERENCES exercises(id) ON DELETE CASCADE,
                     FOREIGN KEY(planned_set_id) REFERENCES planned_sets(id) ON DELETE SET NULL
                 );""",
@@ -130,6 +134,8 @@ class Database:
                 "diff_reps",
                 "diff_weight",
                 "diff_rpe",
+                "start_time",
+                "end_time",
             ],
         ),
         "settings": (
@@ -342,6 +348,27 @@ class WorkoutRepository(BaseRepository):
     def fetch_all_workouts(self) -> List[Tuple[int, str]]:
         return self.fetch_all("SELECT id, date FROM workouts ORDER BY id DESC;")
 
+    def set_start_time(self, workout_id: int, timestamp: str) -> None:
+        self.execute(
+            "UPDATE workouts SET start_time = ? WHERE id = ?;",
+            (timestamp, workout_id),
+        )
+
+    def set_end_time(self, workout_id: int, timestamp: str) -> None:
+        self.execute(
+            "UPDATE workouts SET end_time = ? WHERE id = ?;",
+            (timestamp, workout_id),
+        )
+
+    def fetch_detail(self, workout_id: int) -> Tuple[int, str, Optional[str], Optional[str]]:
+        rows = self.fetch_all(
+            "SELECT id, date, start_time, end_time FROM workouts WHERE id = ?;",
+            (workout_id,),
+        )
+        if not rows:
+            raise ValueError("workout not found")
+        return rows[0]
+
     def delete_all(self) -> None:
         self._delete_all("workouts")
 
@@ -425,18 +452,41 @@ class SetRepository(BaseRepository):
     def remove(self, set_id: int) -> None:
         self.execute("DELETE FROM sets WHERE id = ?;", (set_id,))
 
-    def fetch_for_exercise(self, exercise_id: int) -> List[Tuple[int, int, float, int]]:
+    def set_start_time(self, set_id: int, timestamp: str) -> None:
+        self.execute(
+            "UPDATE sets SET start_time = ? WHERE id = ?;",
+            (timestamp, set_id),
+        )
+
+    def set_end_time(self, set_id: int, timestamp: str) -> None:
+        self.execute(
+            "UPDATE sets SET end_time = ? WHERE id = ?;",
+            (timestamp, set_id),
+        )
+
+    def fetch_for_exercise(self, exercise_id: int) -> List[Tuple[int, int, float, int, Optional[str], Optional[str]]]:
         return self.fetch_all(
-            "SELECT id, reps, weight, rpe FROM sets WHERE exercise_id = ?;",
+            "SELECT id, reps, weight, rpe, start_time, end_time FROM sets WHERE exercise_id = ?;",
             (exercise_id,),
         )
 
     def fetch_detail(self, set_id: int) -> dict:
         rows = self.fetch_all(
-            "SELECT id, reps, weight, rpe, planned_set_id, diff_reps, diff_weight, diff_rpe FROM sets WHERE id = ?;",
+            "SELECT id, reps, weight, rpe, planned_set_id, diff_reps, diff_weight, diff_rpe, start_time, end_time FROM sets WHERE id = ?;",
             (set_id,),
         )
-        sid, reps, weight, rpe, planned_set_id, diff_reps, diff_weight, diff_rpe = rows[0]
+        (
+            sid,
+            reps,
+            weight,
+            rpe,
+            planned_set_id,
+            diff_reps,
+            diff_weight,
+            diff_rpe,
+            start_time,
+            end_time,
+        ) = rows[0]
         return {
             "id": sid,
             "reps": reps,
@@ -446,6 +496,8 @@ class SetRepository(BaseRepository):
             "diff_reps": diff_reps,
             "diff_weight": diff_weight,
             "diff_rpe": diff_rpe,
+            "start_time": start_time,
+            "end_time": end_time,
         }
 
     def fetch_history_by_names(
