@@ -177,6 +177,7 @@ class MathToolsTestCase(unittest.TestCase):
         metrics = ExercisePrescription._pyramid_progression_metrics([100.0, 110.0, 120.0])
         self.assertAlmostEqual(metrics["increment_coeff"], 0.0, places=1)
         self.assertGreater(metrics["efficiency_score"], 1.0)
+        self.assertAlmostEqual(metrics["strength_reserve"], (120.0 - 110.0) / 110.0, places=2)
 
 
 if __name__ == '__main__':
