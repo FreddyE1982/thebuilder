@@ -41,6 +41,8 @@ class RecommendationService:
         weight_list = [float(r[1]) for r in history]
         rpe_list = [int(r[2]) for r in history]
         durations = []
+        rest_times: list[float] = []
+        prev_end: datetime.datetime | None = None
         for r in history:
             start = r[4]
             end = r[5]
@@ -48,8 +50,14 @@ class RecommendationService:
                 t0 = datetime.datetime.fromisoformat(start)
                 t1 = datetime.datetime.fromisoformat(end)
                 durations.append((t1 - t0).total_seconds())
+                if prev_end is not None:
+                    rest_times.append((t0 - prev_end).total_seconds())
+                else:
+                    rest_times.append(90.0)
+                prev_end = t1
             else:
                 durations.append(0.0)
+                rest_times.append(90.0 if prev_end is None else 0.0)
         dates = [datetime.date.fromisoformat(r[3]) for r in history]
         timestamps = list(range(len(dates)))
         months_active = self.settings.get_float("months_active", 1.0)
@@ -60,6 +68,7 @@ class RecommendationService:
             timestamps,
             rpe_list,
             durations=durations,
+            rest_times=rest_times,
             body_weight=self.settings.get_float("body_weight", 80.0),
             months_active=months_active,
             workouts_per_month=workouts_per_month,

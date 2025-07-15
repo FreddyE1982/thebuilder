@@ -70,6 +70,7 @@ class MathToolsTestCase(unittest.TestCase):
         calories = [2720, 2720, 2720, 2720, 2176]
         sleep_hours = [8, 8, 8, 8, 8]
         sleep_quality = [4, 4, 4, 4, 4]
+        rest_times = [240, 240, 240, 240, 240]
 
         result = ExercisePrescription.exercise_prescription(
             weights,
@@ -77,6 +78,7 @@ class MathToolsTestCase(unittest.TestCase):
             timestamps,
             rpe,
             durations=durations,
+            rest_times=rest_times,
             body_weight=80.0,
             months_active=12,
             workouts_per_month=8,

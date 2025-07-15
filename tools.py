@@ -144,15 +144,19 @@ class ExercisePrescription(MathTools):
         decay: float,
         durations: list[float] | None = None,
         ideal_tut: float = 50.0,
+        rest_efficiencies: list[float] | None = None,
     ) -> float:
         w = np.array(weights)
         r = np.array(reps)
         t = np.array(timestamps)
-        dur = (
-            np.array(durations) if durations is not None else np.ones_like(t) * ideal_tut
+        dur = np.array(durations) if durations is not None else np.ones_like(t) * ideal_tut
+        rest_eff = (
+            np.array(rest_efficiencies)
+            if rest_efficiencies is not None
+            else np.ones_like(t)
         )
         t_current = t[-1] if len(t) > 0 else 0.0
-        vols = w * r * (dur / ideal_tut)
+        vols = w * r * (dur / ideal_tut) * (2.0 - rest_eff)
         return float(np.sum(vols * (decay ** (t_current - t))))
 
     @staticmethod
@@ -373,6 +377,7 @@ class ExercisePrescription(MathTools):
         months_active: float,
         workouts_per_month: float,
         durations: list[float] | None = None,
+        rest_times: list[float] | None = None,
         MEV: float = 10,
         *,
         calories: list[float] | None = None,
@@ -397,7 +402,29 @@ class ExercisePrescription(MathTools):
         thresh = cls._threshold(recent_load, prev_load)
         cv = cls._cv(weights, reps)
         plateau = cls._plateau(slope, cv, thresh)
-        fatigue = cls._fatigue(weights, reps, timestamps, decay, durations, 50.0)
+        rest_efficiencies = None
+        if rest_times is not None:
+            optimal_rests: list[float] = []
+            for rep_count in reps:
+                if rep_count <= 5:
+                    optimal_rests.append(240)
+                elif rep_count <= 12:
+                    optimal_rests.append(90)
+                else:
+                    optimal_rests.append(45)
+            rest_efficiencies = [
+                cls.clamp(opt / actual if actual > 0 else 2.0, 0.5, 2.0)
+                for opt, actual in zip(optimal_rests, rest_times)
+            ]
+        fatigue = cls._fatigue(
+            weights,
+            reps,
+            timestamps,
+            decay,
+            durations,
+            50.0,
+            rest_efficiencies,
+        )
         ac_ratio = cls._ac_ratio(weights, reps)
         perf_scores = cls._performance_scores_from_logs(weights, reps, timestamps, MEV)
         rec_scores = cls._recovery_scores_from_logs(
@@ -410,6 +437,9 @@ class ExercisePrescription(MathTools):
             np.mean(sleep_quality) if sleep_quality else None,
         )
         adj_mrv = cls._adj_mrv(mrv, perf_scores, rec_scores)
+        if rest_efficiencies is not None and len(rest_efficiencies) > 0:
+            rest_volume_modifier = float(np.mean(rest_efficiencies[-cls.L:]))
+            adj_mrv *= rest_volume_modifier
         experience = cls._experience(months_active, workouts_per_month)
         tolerance = cls._tolerance(
             perf_scores,
