@@ -103,8 +103,12 @@ class GymApp:
 
     def _workout_section(self) -> None:
         st.header("Workouts")
+        training_options = ["strength", "hypertrophy", "highintensity"]
+        new_type = st.selectbox("Training Type", training_options, key="new_workout_type")
         if st.button("New Workout"):
-            new_id = self.workouts.create(datetime.date.today().isoformat())
+            new_id = self.workouts.create(
+                datetime.date.today().isoformat(), new_type
+            )
             st.session_state.selected_workout = new_id
         workouts = self.workouts.fetch_all_workouts()
         options = {str(w[0]): w for w in workouts}
@@ -117,7 +121,8 @@ class GymApp:
             detail = self.workouts.fetch_detail(int(selected))
             start_time = detail[2]
             end_time = detail[3]
-            cols = st.columns(2)
+            current_type = detail[4]
+            cols = st.columns(3)
             if cols[0].button("Start Workout", key=f"start_workout_{selected}"):
                 self.workouts.set_start_time(
                     int(selected),
@@ -128,6 +133,14 @@ class GymApp:
                     int(selected),
                     datetime.datetime.now().isoformat(timespec="seconds"),
                 )
+            type_choice = cols[2].selectbox(
+                "Type",
+                training_options,
+                index=training_options.index(current_type),
+                key=f"type_select_{selected}"
+            )
+            if cols[2].button("Save", key=f"save_type_{selected}"):
+                self.workouts.set_training_type(int(selected), type_choice)
             if start_time:
                 st.write(f"Start: {start_time}")
             if end_time:

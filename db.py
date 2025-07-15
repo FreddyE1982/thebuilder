@@ -14,9 +14,10 @@ class Database:
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     date TEXT NOT NULL,
                     start_time TEXT,
-                    end_time TEXT
+                    end_time TEXT,
+                    training_type TEXT NOT NULL DEFAULT 'strength'
                 );""",
-            ["id", "date", "start_time", "end_time"],
+            ["id", "date", "start_time", "end_time", "training_type"],
         ),
         "equipment": (
             """CREATE TABLE equipment (
@@ -342,11 +343,16 @@ class BaseRepository(Database):
 class WorkoutRepository(BaseRepository):
     """Repository for workout table operations."""
 
-    def create(self, date: str) -> int:
-        return self.execute("INSERT INTO workouts (date) VALUES (?);", (date,))
+    def create(self, date: str, training_type: str = "strength") -> int:
+        return self.execute(
+            "INSERT INTO workouts (date, training_type) VALUES (?, ?);",
+            (date, training_type),
+        )
 
-    def fetch_all_workouts(self) -> List[Tuple[int, str]]:
-        return self.fetch_all("SELECT id, date FROM workouts ORDER BY id DESC;")
+    def fetch_all_workouts(self) -> List[Tuple[int, str, Optional[str], Optional[str], str]]:
+        return self.fetch_all(
+            "SELECT id, date, start_time, end_time, training_type FROM workouts ORDER BY id DESC;"
+        )
 
     def set_start_time(self, workout_id: int, timestamp: str) -> None:
         self.execute(
@@ -360,9 +366,17 @@ class WorkoutRepository(BaseRepository):
             (timestamp, workout_id),
         )
 
-    def fetch_detail(self, workout_id: int) -> Tuple[int, str, Optional[str], Optional[str]]:
+    def set_training_type(self, workout_id: int, training_type: str) -> None:
+        self.execute(
+            "UPDATE workouts SET training_type = ? WHERE id = ?;",
+            (training_type, workout_id),
+        )
+
+    def fetch_detail(
+        self, workout_id: int
+    ) -> Tuple[int, str, Optional[str], Optional[str], str]:
         rows = self.fetch_all(
-            "SELECT id, date, start_time, end_time FROM workouts WHERE id = ?;",
+            "SELECT id, date, start_time, end_time, training_type FROM workouts WHERE id = ?;",
             (workout_id,),
         )
         if not rows:
@@ -508,6 +522,7 @@ class SetRepository(BaseRepository):
         equipment: Optional[List[str]] = None,
         with_equipment: bool = False,
         with_duration: bool = False,
+        with_workout_id: bool = False,
     ) -> List[Tuple]:
         placeholders = ", ".join(["?" for _ in names])
         select = "SELECT s.reps, s.weight, s.rpe, w.date"
@@ -515,6 +530,8 @@ class SetRepository(BaseRepository):
             select += ", e.name, e.equipment_name"
         if with_duration:
             select += ", s.start_time, s.end_time"
+        if with_workout_id:
+            select += ", w.id"
         query = (
             f"{select} FROM sets s "
             "JOIN exercises e ON s.exercise_id = e.id "

@@ -29,7 +29,9 @@ class PlannerService:
         self.planned_sets = plan_set_repo
 
     def create_workout_from_plan(self, plan_id: int) -> int:
-        workout_id = self.workouts.create(datetime.date.today().isoformat())
+        workout_id = self.workouts.create(
+            datetime.date.today().isoformat(), "strength"
+        )
         exercises = self.planned_exercises.fetch_for_workout(plan_id)
         for ex_id, name, equipment in exercises:
             new_ex_id = self.exercises.add(workout_id, name, equipment)

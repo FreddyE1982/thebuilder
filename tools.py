@@ -378,6 +378,11 @@ class ExercisePrescription(MathTools):
         workouts_per_month: float,
         durations: list[float] | None = None,
         rest_times: list[float] | None = None,
+        recovery_times: list[float] | None = None,
+        optimal_recovery_times: list[float] | None = None,
+        session_volumes: list[float] | None = None,
+        recovery_quality_mean: float | None = None,
+        frequency_factor: float | None = None,
         MEV: float = 10,
         *,
         calories: list[float] | None = None,
@@ -416,7 +421,7 @@ class ExercisePrescription(MathTools):
                 cls.clamp(opt / actual if actual > 0 else 2.0, 0.5, 2.0)
                 for opt, actual in zip(optimal_rests, rest_times)
             ]
-        fatigue = cls._fatigue(
+        base_fatigue = cls._fatigue(
             weights,
             reps,
             timestamps,
@@ -425,6 +430,21 @@ class ExercisePrescription(MathTools):
             50.0,
             rest_efficiencies,
         )
+
+        recovery_fatigue = 0.0
+        if (
+            recovery_times
+            and optimal_recovery_times
+            and session_volumes
+            and len(recovery_times)
+            == len(optimal_recovery_times)
+            == len(session_volumes)
+        ):
+            for vol, rt, ot in zip(session_volumes, recovery_times, optimal_recovery_times):
+                ratio = rt / ot if ot != 0 else 1.0
+                recovery_fatigue += vol * (decay ** ratio)
+
+        fatigue = base_fatigue + recovery_fatigue
         ac_ratio = cls._ac_ratio(weights, reps)
         perf_scores = cls._performance_scores_from_logs(weights, reps, timestamps, MEV)
         rec_scores = cls._recovery_scores_from_logs(
@@ -440,6 +460,8 @@ class ExercisePrescription(MathTools):
         if rest_efficiencies is not None and len(rest_efficiencies) > 0:
             rest_volume_modifier = float(np.mean(rest_efficiencies[-cls.L:]))
             adj_mrv *= rest_volume_modifier
+        if frequency_factor is not None and recovery_quality_mean is not None:
+            adj_mrv *= frequency_factor * recovery_quality_mean
         experience = cls._experience(months_active, workouts_per_month)
         tolerance = cls._tolerance(
             perf_scores,

@@ -514,7 +514,7 @@ class APITestCase(unittest.TestCase):
         self.assertAlmostEqual(forecast[1]["est_1rm"], 139.3, places=1)
 
     def test_timestamps(self) -> None:
-        resp = self.client.post("/workouts")
+        resp = self.client.post("/workouts", params={"training_type": "strength"})
         self.assertEqual(resp.status_code, 200)
         wid = resp.json()["id"]
 
@@ -525,6 +525,7 @@ class APITestCase(unittest.TestCase):
         resp = self.client.get(f"/workouts/{wid}")
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json()["start_time"], start_ts)
+        self.assertEqual(resp.json()["training_type"], "strength")
 
         resp = self.client.post(f"/workouts/{wid}/finish")
         self.assertEqual(resp.status_code, 200)
@@ -557,4 +558,20 @@ class APITestCase(unittest.TestCase):
 
         resp = self.client.get(f"/sets/{sid}")
         self.assertEqual(resp.json()["end_time"], set_end)
+
+    def test_training_type(self) -> None:
+        resp = self.client.post("/workouts", params={"training_type": "hypertrophy"})
+        self.assertEqual(resp.status_code, 200)
+        wid = resp.json()["id"]
+
+        resp = self.client.get(f"/workouts/{wid}")
+        self.assertEqual(resp.json()["training_type"], "hypertrophy")
+
+        resp = self.client.put(
+            f"/workouts/{wid}/type", params={"training_type": "strength"}
+        )
+        self.assertEqual(resp.status_code, 200)
+
+        resp = self.client.get(f"/workouts/{wid}")
+        self.assertEqual(resp.json()["training_type"], "strength")
 
