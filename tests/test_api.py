@@ -468,6 +468,30 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(eq_stats[0]["sets"], 2)
 
         resp = self.client.get(
+            "/stats/rpe_distribution",
+            params={"exercise": "Bench Press"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        rpe = resp.json()
+        self.assertEqual(len(rpe), 2)
+        self.assertEqual(rpe[0]["rpe"], 8)
+        self.assertEqual(rpe[0]["count"], 1)
+        self.assertEqual(rpe[1]["rpe"], 9)
+        self.assertEqual(rpe[1]["count"], 1)
+
+        resp = self.client.get(
+            "/stats/reps_distribution",
+            params={"exercise": "Bench Press"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        rep_dist = resp.json()
+        self.assertEqual(len(rep_dist), 2)
+        self.assertEqual(rep_dist[0]["reps"], 8)
+        self.assertEqual(rep_dist[0]["count"], 1)
+        self.assertEqual(rep_dist[1]["reps"], 10)
+        self.assertEqual(rep_dist[1]["count"], 1)
+
+        resp = self.client.get(
             "/prediction/progress",
             params={"exercise": "Bench Press", "weeks": 2, "workouts": 1},
         )

@@ -422,6 +422,22 @@ class GymApp:
         equip_stats = self.stats.equipment_usage(start_str, end_str)
         st.subheader("Equipment Usage")
         st.table(equip_stats)
+        rpe_dist = self.stats.rpe_distribution(
+            ex_choice if ex_choice else None,
+            start_str,
+            end_str,
+        )
+        st.subheader("RPE Distribution")
+        if rpe_dist:
+            st.bar_chart({"Count": [d["count"] for d in rpe_dist]}, x=[str(d["rpe"]) for d in rpe_dist])
+        reps_dist = self.stats.reps_distribution(
+            ex_choice if ex_choice else None,
+            start_str,
+            end_str,
+        )
+        st.subheader("Reps Distribution")
+        if reps_dist:
+            st.bar_chart({"Count": [d["count"] for d in reps_dist]}, x=[str(d["reps"]) for d in reps_dist])
         if ex_choice:
             prog = self.stats.progression(ex_choice, start_str, end_str)
             st.subheader("1RM Progression")
