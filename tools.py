@@ -6,6 +6,7 @@ import pandas as pd
 from statsmodels.tsa.ar_model import AutoReg
 from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.tsa.vector_ar.var_model import VAR
+from statsmodels.tsa.arima.model import ARIMA
 import pywt
 import warnings
 
@@ -209,6 +210,33 @@ class ExercisePrescription(MathTools):
         while len(energies) < 3:
             energies.append(0.0)
         return tuple(energies[:3])
+
+    @staticmethod
+    def _arima_forecast(values: list[float], steps: int = 1) -> float:
+        if len(values) < 3:
+            return values[-1] if values else 0.0
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                model = ARIMA(values, order=(1, 1, 1))
+                res = model.fit()
+                pred = res.forecast(steps=steps)
+                return float(pred[-1])
+        except Exception:
+            return float(values[-1])
+
+    @staticmethod
+    def _time_features(series: pd.Series) -> dict:
+        lag1 = float(series.diff().iloc[-1]) if len(series) > 1 else 0.0
+        ma7 = float(series.rolling(7, min_periods=1).mean().iloc[-1])
+        ma30 = float(series.rolling(30, min_periods=1).mean().iloc[-1])
+        roc = (
+            float((series.iloc[-1] - series.iloc[-2]) / series.iloc[-2])
+            if len(series) > 1 and series.iloc[-2] != 0
+            else 0.0
+        )
+        dow = series.index[-1].dayofweek if len(series) > 0 else 0
+        return {"lag1": lag1, "ma7": ma7, "ma30": ma30, "roc1": roc, "dow": dow}
 
     @staticmethod
     def _anomaly_score(values: list[float]) -> float:
@@ -643,6 +671,7 @@ class ExercisePrescription(MathTools):
         thresh = cls._threshold(recent_load, prev_load)
         cv = cls._cv(list(series_w), list(series_r))
         plateau = cls._plateau(slope, cv, thresh, list(series_w), ts_list)
+        feats = cls._time_features(series_w)
         rest_efficiencies = None
         if rest_times is not None:
             optimal_rests: list[float] = []
@@ -708,8 +737,9 @@ class ExercisePrescription(MathTools):
         )
         vol_presc = cls._volume_prescription(MEV, mrv, phase_factor, tolerance)
         if session_volumes:
-            forecast_vol = cls._var_forecast(session_volumes, [1] * len(session_volumes))
-            vol_presc = (vol_presc + forecast_vol) / 2
+            forecast_var = cls._var_forecast(session_volumes, [1] * len(session_volumes))
+            forecast_arima = cls._arima_forecast(session_volumes)
+            vol_presc = (vol_presc + forecast_var + forecast_arima) / 3
         urgency = cls._urgency(target_1rm, current_1rm)
         delta_1rm, delta_vol = cls._deltas(current_1rm, y_mean, recent_load, prev_load)
         rec_factor = np.mean(np.array(rec_scores)) if len(rec_scores) > 0 else 1.0
@@ -728,6 +758,15 @@ class ExercisePrescription(MathTools):
 
         mean_vol = np.mean(np.array(series_w) * np.array(series_r)) if len(series_w) > 0 else 1.0
         vol_factor = cls.clamp(math.log1p(total_volume) / 8, 0.95, 1.05)
+        forecast_weight = cls._arima_forecast(list(series_w))
+        trend_mod = cls.clamp(
+            series_w.iloc[-1] / (forecast_weight + cls.EPSILON),
+            0.9,
+            1.1,
+        )
+        roc_mod = 1 + feats["roc1"]
+        season_mod = 1 + 0.01 * math.sin(2 * math.pi * feats["dow"] / 7)
+        vol_factor *= trend_mod * roc_mod * season_mod
         last_t = ts_list[-1] if ts_list else 0.0
         time_factor = cls.clamp(
             1 + (last_t - t_mean) / (10 * (last_t + cls.EPSILON)),
@@ -785,7 +824,7 @@ class ExercisePrescription(MathTools):
                 * ea
                 * sri,
                 0.5 * y_mean,
-                0.95 * current_1rm,
+                0.95 * max(current_1rm, forecast_weight),
             )
             if deload_needed:
                 weight_k *= 0.8
