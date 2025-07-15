@@ -179,6 +179,31 @@ class MathToolsTestCase(unittest.TestCase):
         self.assertGreater(metrics["efficiency_score"], 1.0)
         self.assertAlmostEqual(metrics["strength_reserve"], (120.0 - 110.0) / 110.0, places=2)
 
+    def test_pyramid_trend_and_plateau(self) -> None:
+        ts = [0, 7, 14, 21, 28]
+        rms = [100.0, 102.0, 104.0, 106.0, 108.0]
+        trend = ExercisePrescription._analyze_1rm_trends(ts, rms)
+        self.assertEqual(trend["trend"], "linear")
+        self.assertGreater(trend["r_squared"], 0.9)
+
+        plateau = ExercisePrescription._pyramid_plateau_detection(ts, rms)
+        self.assertTrue(0.0 <= plateau <= 1.0)
+
+    def test_process_pyramid_tests_filter(self) -> None:
+        repo_t = PyramidTestRepository()
+        repo_e = PyramidEntryRepository()
+        repo_t._delete_all("pyramid_tests")
+        repo_e._delete_all("pyramid_entries")
+        tid1 = repo_t.create("2023-01-01", exercise_name="Bench Press")
+        repo_e.add(tid1, 120.0)
+        tid2 = repo_t.create("2023-01-02", exercise_name="Squat")
+        repo_e.add(tid2, 150.0)
+        ts, rms, _ = ExercisePrescription._process_pyramid_tests("Bench Press")
+        repo_t._delete_all("pyramid_tests")
+        repo_e._delete_all("pyramid_entries")
+        self.assertEqual(len(ts), 1)
+        self.assertEqual(rms, [120.0])
+
 
 if __name__ == '__main__':
     unittest.main()

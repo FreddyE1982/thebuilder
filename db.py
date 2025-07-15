@@ -1268,6 +1268,22 @@ class PyramidTestRepository(BaseRepository):
             result.append(tuple(row) + (weights,))
         return result
 
+    def fetch_by_exercise_with_weights(
+        self,
+        exercise_name: str,
+        entries: 'PyramidEntryRepository',
+        name_repo: 'ExerciseNameRepository',
+    ) -> List[Tuple[int, str, List[float]]]:
+        canonical = name_repo.canonical(exercise_name)
+        tests = self.fetch_full_with_weights(entries)
+        result = []
+        for row in tests:
+            tid, ex_name, date = row[0], row[1], row[2]
+            weights = row[-1]
+            if name_repo.canonical(ex_name) == canonical:
+                result.append((tid, date, weights))
+        return result
+
 
 class PyramidEntryRepository(BaseRepository):
     """Repository for pyramid test entries."""

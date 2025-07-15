@@ -1,7 +1,11 @@
 import math
 import datetime
 from typing import Iterable, List, Tuple
-from db import PyramidTestRepository, PyramidEntryRepository
+from db import (
+    PyramidTestRepository,
+    PyramidEntryRepository,
+    ExerciseNameRepository,
+)
 
 import numpy as np
 import pandas as pd
@@ -118,11 +122,19 @@ class ExercisePrescription(MathTools):
         return MathTools.clamp(phi, 0.5, 1.5)
 
     @staticmethod
-    def _process_pyramid_tests() -> Tuple[List[float], List[float], List[List[float]]]:
+    def _process_pyramid_tests(
+        exercise_name: str | None = None,
+    ) -> Tuple[List[float], List[float], List[List[float]]]:
         """Load pyramid tests from the database and convert to timestamps."""
         repo_t = PyramidTestRepository()
         repo_e = PyramidEntryRepository()
-        history = repo_t.fetch_all_with_weights(repo_e)
+        if exercise_name:
+            name_repo = ExerciseNameRepository()
+            history = repo_t.fetch_by_exercise_with_weights(
+                exercise_name, repo_e, name_repo
+            )
+        else:
+            history = repo_t.fetch_all_with_weights(repo_e)
         if not history:
             return [], [], []
         dates = [datetime.date.fromisoformat(d) for _tid, d, _ in history]
@@ -162,6 +174,61 @@ class ExercisePrescription(MathTools):
             "strength_reserve": reserve,
             "efficiency_score": efficiency,
         }
+
+    @staticmethod
+    def _analyze_1rm_trends(
+        pyramid_timestamps: List[float], pyramid_1rms: List[float]
+    ) -> dict:
+        if len(pyramid_1rms) < 4:
+            return {"trend": "insufficient_data"}
+        if len(pyramid_1rms) >= 12:
+            trend, seasonal = ExercisePrescription._seasonal_components(
+                pyramid_1rms, period=4
+            )
+            return {
+                "trend": "seasonal_pattern_detected",
+                "trend_component": trend,
+                "seasonal_component": seasonal,
+                "strength_seasonality": float(
+                    np.var(seasonal) / (np.var(pyramid_1rms) + ExercisePrescription.EPSILON)
+                ),
+            }
+        slope = ExercisePrescription._linear_regression_slope(
+            pyramid_timestamps, pyramid_1rms
+        )
+        return {
+            "trend": "linear" if abs(slope) > 0.1 else "plateau",
+            "slope": slope,
+            "r_squared": ExercisePrescription._calculate_r_squared(
+                pyramid_timestamps, pyramid_1rms
+            ),
+        }
+
+    @staticmethod
+    def _pyramid_plateau_detection(
+        pyramid_timestamps: List[float], pyramid_1rms: List[float]
+    ) -> float:
+        if len(pyramid_1rms) < 4:
+            return 0.0
+        change_points = ExercisePrescription._detect_change_points(pyramid_1rms)
+        recent_variance = np.var(pyramid_1rms[-4:]) / (
+            np.mean(pyramid_1rms[-4:]) + ExercisePrescription.EPSILON
+        )
+        trend_score = (
+            1.0
+            if abs(
+                ExercisePrescription._linear_regression_slope(
+                    pyramid_timestamps[-4:], pyramid_1rms[-4:]
+                )
+            )
+            < 0.5
+            else 0.0
+        )
+        change_point_score = 1.0 if len(change_points) == 0 else 0.0
+        plateau_score = 0.4 * trend_score
+        plateau_score += 0.3 * (1.0 if recent_variance < 0.02 else 0.0)
+        plateau_score += 0.3 * change_point_score
+        return float(plateau_score)
 
     @classmethod
     def _enhanced_1rm_calculation(
@@ -421,6 +488,38 @@ class ExercisePrescription(MathTools):
         if std == 0:
             return 0.0
         return float(abs((arr[-1] - mean) / std))
+
+    @staticmethod
+    def _linear_regression_slope(x: List[float], y: List[float]) -> float:
+        if len(x) < 2:
+            return 0.0
+        coeffs = np.polyfit(np.array(x), np.array(y), 1)
+        return float(coeffs[0])
+
+    @staticmethod
+    def _calculate_r_squared(x: List[float], y: List[float]) -> float:
+        if len(x) < 2:
+            return 0.0
+        x_arr = np.array(x)
+        y_arr = np.array(y)
+        slope, intercept = np.polyfit(x_arr, y_arr, 1)
+        y_pred = slope * x_arr + intercept
+        ss_res = np.sum((y_arr - y_pred) ** 2)
+        ss_tot = np.sum((y_arr - np.mean(y_arr)) ** 2)
+        if ss_tot == 0:
+            return 0.0
+        return float(1 - ss_res / ss_tot)
+
+    @staticmethod
+    def _detect_change_points(values: List[float]) -> List[int]:
+        if len(values) < 3:
+            return []
+        diffs = np.diff(np.array(values))
+        points: List[int] = []
+        for i in range(1, len(diffs)):
+            if diffs[i - 1] > 0 and diffs[i] <= 0:
+                points.append(i)
+        return points
 
     @staticmethod
     def _slope(t: list[float], w: list[float]) -> float:
@@ -1107,8 +1206,16 @@ class ExercisePrescription(MathTools):
         cv = cls._cv(list(series_w), list(series_r))
         plateau = cls._plateau(slope, cv, thresh, list(series_w), ts_list)
         volume_per_set = list(np.array(weights) * np.array(reps))
-        adv_plateau = cls._advanced_plateau_detection(list(series_w), ts_list, rpe_scores, volume_per_set)
+        adv_plateau = cls._advanced_plateau_detection(
+            list(series_w), ts_list, rpe_scores, volume_per_set
+        )
         plateau = (plateau + adv_plateau) / 2
+        if pyr_vals:
+            plateau_pyr = cls._pyramid_plateau_detection(pyr_ts, pyr_vals)
+            plateau = (plateau + plateau_pyr) / 2
+            trend_info = cls._analyze_1rm_trends(pyr_ts, pyr_vals)
+        else:
+            trend_info = {"trend": "insufficient_data"}
         feats = cls._time_features(series_w)
         rest_efficiencies = None
         if rest_times is not None:
@@ -1381,6 +1488,7 @@ class ExercisePrescription(MathTools):
                 "ac_ratio": round(ac_ratio, 2),
                 "weekly_monotony": round(weekly_monotony, 2),
                 "deload_trigger": round(deload_trigger, 2),
+                "trend_info": trend_info,
             },
             "recommendations": {
                 "focus": "strength" if intensity_target > 0.8 else "hypertrophy",
