@@ -287,3 +287,33 @@ class StatisticsService:
             "avg_rpe": round(avg_rpe, 2),
             "exercises": len(exercises),
         }
+
+    def personal_records(
+        self,
+        exercise: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> List[Dict[str, float]]:
+        """Return the best set for each exercise based on estimated 1RM."""
+        names = self._alias_names(exercise)
+        rows = self.sets.fetch_history_by_names(
+            names,
+            start_date=start_date,
+            end_date=end_date,
+            with_equipment=True,
+        )
+        records: Dict[str, Dict[str, float]] = {}
+        for reps, weight, rpe, date, ex_name, eq_name in rows:
+            est = MathTools.epley_1rm(float(weight), int(reps))
+            current = records.get(ex_name)
+            if current is None or est > current["est_1rm"]:
+                records[ex_name] = {
+                    "exercise": ex_name,
+                    "date": date,
+                    "equipment": eq_name,
+                    "reps": int(reps),
+                    "weight": float(weight),
+                    "rpe": int(rpe),
+                    "est_1rm": round(est, 2),
+                }
+        return sorted(records.values(), key=lambda x: x["exercise"])
