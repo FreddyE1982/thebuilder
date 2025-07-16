@@ -1129,3 +1129,47 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json(), {"trigger": 0.33, "score": 0.14})
 
+    def test_overtraining_risk_endpoint(self) -> None:
+        d1 = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
+        d2 = datetime.date.today().isoformat()
+
+        self.client.post("/workouts", params={"date": d1})
+        self.client.post("/workouts", params={"date": d2})
+
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/workouts/2/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8},
+        )
+        self.client.post(
+            "/exercises/2/sets",
+            params={"reps": 5, "weight": 110.0, "rpe": 8},
+        )
+
+        overview = self.client.get(
+            "/stats/stress_overview",
+            params={"start_date": d1, "end_date": d2},
+        ).json()
+        variability = self.client.get(
+            "/stats/load_variability",
+            params={"start_date": d1, "end_date": d2},
+        ).json()
+        expected = MathTools.overtraining_index(
+            overview["stress"], overview["fatigue"], variability["variability"]
+        )
+
+        resp = self.client.get(
+            "/stats/overtraining_risk",
+            params={"start_date": d1, "end_date": d2},
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertAlmostEqual(resp.json()["risk"], round(expected, 2), places=2)
+

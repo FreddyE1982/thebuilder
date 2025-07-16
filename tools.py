@@ -83,6 +83,12 @@ class MathTools:
         rpe_adj = math.log1p(avg_rpe) if avg_rpe is not None else 1.0
         return base * rpe_adj
 
+    @staticmethod
+    def overtraining_index(stress: float, fatigue: float, variability: float) -> float:
+        """Return a simple overtraining risk index."""
+        base = (stress + fatigue) / 2.0
+        return MathTools.clamp(base * (1 + variability), 0.0, 10.0)
+
 
 class ExercisePrescription(MathTools):
     """Advanced utilities for generating detailed workout prescriptions."""
