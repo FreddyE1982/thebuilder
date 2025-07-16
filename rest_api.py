@@ -677,6 +677,13 @@ class GymAPI:
             self.gamification.enable(enabled)
             return {"status": "updated"}
 
+        @self.app.get("/gamification/workout_points")
+        def gamification_workout_points():
+            return [
+                {"workout_id": wid, "points": pts}
+                for wid, pts in self.gamification.points_by_workout()
+            ]
+
         @self.app.get("/stats/progress_insights")
         def stats_progress_insights(
             exercise: str,

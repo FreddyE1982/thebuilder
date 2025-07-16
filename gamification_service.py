@@ -25,6 +25,9 @@ class GamificationService:
     def total_points(self) -> float:
         return self.repo.total_points()
 
+    def points_by_workout(self) -> list[tuple[int, float]]:
+        return self.repo.workout_totals()
+
     def record_set(self, exercise_id: int, reps: int, weight: float, rpe: int) -> None:
         if not self.is_enabled():
             return

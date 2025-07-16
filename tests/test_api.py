@@ -461,6 +461,13 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertAlmostEqual(resp.json()["points"], 101.31, places=2)
 
+        resp = self.client.get("/gamification/workout_points")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["workout_id"], 1)
+        self.assertAlmostEqual(data[0]["points"], 101.31, places=2)
+
         resp = self.client.get("/exercise_catalog/Barbell Bench Press")
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
