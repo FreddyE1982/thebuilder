@@ -25,8 +25,11 @@ class GymApp:
     """Streamlit application for workout logging."""
 
     def __init__(self) -> None:
+        self.settings_repo = SettingsRepository()
+        self.theme = self.settings_repo.get_text("theme", "light")
         self._configure_page()
         self._inject_responsive_css()
+        self._apply_theme()
         self.workouts = WorkoutRepository()
         self.exercises = ExerciseRepository()
         self.sets = SetRepository()
@@ -37,7 +40,6 @@ class GymApp:
         self.exercise_catalog = ExerciseCatalogRepository()
         self.muscles_repo = MuscleRepository()
         self.exercise_names_repo = ExerciseNameRepository()
-        self.settings_repo = SettingsRepository()
         self.pyramid_tests = PyramidTestRepository()
         self.pyramid_entries = PyramidEntryRepository()
         self.planner = PlannerService(
@@ -106,6 +108,20 @@ class GymApp:
             """,
             unsafe_allow_html=True,
         )
+
+    def _apply_theme(self) -> None:
+        if self.theme == "dark":
+            st.markdown(
+                """
+                <style>
+                body {
+                    background-color: #111;
+                    color: #eee;
+                }
+                </style>
+                """,
+                unsafe_allow_html=True,
+            )
 
     def _state_init(self) -> None:
         if "selected_workout" not in st.session_state:
@@ -192,6 +208,7 @@ class GymApp:
             library_tab,
             history_tab,
             stats_tab,
+            reports_tab,
             tests_tab,
             settings_tab,
         ) = st.tabs(
@@ -202,6 +219,7 @@ class GymApp:
                 "Library",
                 "History",
                 "Stats",
+                "Reports",
                 "Tests",
                 "Settings",
             ]
@@ -218,6 +236,8 @@ class GymApp:
             self._history_tab()
         with stats_tab:
             self._stats_tab()
+        with reports_tab:
+            self._reports_tab()
         with tests_tab:
             self._tests_tab()
         with settings_tab:
@@ -938,6 +958,46 @@ class GymApp:
                     x=[str(f["week"]) for f in forecast],
                 )
 
+    def _reports_tab(self) -> None:
+        st.header("Reports")
+        with st.expander("Date Range", expanded=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                start = st.date_input(
+                    "Start", datetime.date.today() - datetime.timedelta(days=30), key="rep_start"
+                )
+            with col2:
+                end = st.date_input("End", datetime.date.today(), key="rep_end")
+            start_str = start.isoformat()
+            end_str = end.isoformat()
+        with st.expander("Overall Summary", expanded=True):
+            summary = self.stats.overview(start_str, end_str)
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Workouts", summary["workouts"])
+            c2.metric("Volume", summary["volume"])
+            c3.metric("Avg RPE", summary["avg_rpe"])
+            c4.metric("Exercises", summary["exercises"])
+        with st.expander("Top Exercises", expanded=True):
+            data = self.stats.exercise_summary(None, start_str, end_str)
+            data.sort(key=lambda x: x["volume"], reverse=True)
+            if data:
+                st.table(data[:5])
+        with st.expander("Equipment Usage", expanded=True):
+            eq_stats = self.stats.equipment_usage(start_str, end_str)
+            if eq_stats:
+                st.table(eq_stats)
+                st.bar_chart(
+                    {"Volume": [e["volume"] for e in eq_stats]},
+                    x=[e["equipment"] for e in eq_stats],
+                )
+        with st.expander("Daily Volume", expanded=True):
+            daily = self.stats.daily_volume(start_str, end_str)
+            if daily:
+                st.line_chart(
+                    {"Volume": [d["volume"] for d in daily]},
+                    x=[d["date"] for d in daily],
+                )
+
     def _tests_tab(self) -> None:
         st.header("Pyramid Test")
         with st.expander("New Test", expanded=True):
@@ -1115,9 +1175,17 @@ class GymApp:
                 value=self.settings_repo.get_float("months_active", 1.0),
                 step=1.0,
             )
+            theme_opt = st.selectbox(
+                "Theme",
+                ["light", "dark"],
+                index=["light", "dark"].index(self.theme),
+            )
             if st.button("Save General Settings"):
                 self.settings_repo.set_float("body_weight", bw)
                 self.settings_repo.set_float("months_active", ma)
+                self.settings_repo.set_text("theme", theme_opt)
+                self.theme = theme_opt
+                self._apply_theme()
                 st.success("Settings saved")
 
         with eq_tab:

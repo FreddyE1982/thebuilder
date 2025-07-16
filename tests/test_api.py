@@ -137,12 +137,13 @@ class APITestCase(unittest.TestCase):
         resp = self.client.get("/settings/general")
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(
-            resp.json(), {"body_weight": 80.0, "months_active": 1.0}
+            resp.json(),
+            {"body_weight": 80.0, "months_active": 1.0, "theme": "light"},
         )
 
         resp = self.client.post(
             "/settings/general",
-            params={"body_weight": 85.5, "months_active": 6.0},
+            params={"body_weight": 85.5, "months_active": 6.0, "theme": "dark"},
         )
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json(), {"status": "updated"})
@@ -150,7 +151,8 @@ class APITestCase(unittest.TestCase):
         resp = self.client.get("/settings/general")
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(
-            resp.json(), {"body_weight": 85.5, "months_active": 6.0}
+            resp.json(),
+            {"body_weight": 85.5, "months_active": 6.0, "theme": "dark"},
         )
 
     def test_plan_workflow(self) -> None:
