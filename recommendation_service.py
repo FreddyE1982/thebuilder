@@ -8,6 +8,7 @@ from db import (
 )
 from tools import ExercisePrescription
 from gamification_service import GamificationService
+from ml_service import PerformanceModelService
 
 
 class RecommendationService:
@@ -21,6 +22,7 @@ class RecommendationService:
         exercise_name_repo: ExerciseNameRepository,
         settings_repo: SettingsRepository,
         gamification: GamificationService | None = None,
+        ml_service: PerformanceModelService | None = None,
     ) -> None:
         self.workouts = workout_repo
         self.exercises = exercise_repo
@@ -28,6 +30,7 @@ class RecommendationService:
         self.exercise_names = exercise_name_repo
         self.settings = settings_repo
         self.gamification = gamification
+        self.ml = ml_service
 
     def has_history(self, exercise_name: str) -> bool:
         names = self.exercise_names.aliases(exercise_name)
@@ -140,6 +143,11 @@ class RecommendationService:
         if index >= len(prescription["prescription"]):
             raise ValueError("no more sets recommended")
         data = prescription["prescription"][index]
+        if self.ml:
+            ml_rpe = self.ml.predict(name)
+            data["target_rpe"] = float(
+                (data["target_rpe"] + ml_rpe) / 2
+            )
         set_id = self.sets.add(
             exercise_id,
             int(data["reps"]),

@@ -1347,3 +1347,33 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json(), {"weights": [30.0, 60.0, 90.0]})
 
+    def test_ml_training(self) -> None:
+        self.client.post("/workouts")
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8},
+        )
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 5, "weight": 105.0, "rpe": 8},
+        )
+
+        conn = sqlite3.connect(self.db_path)
+        cur = conn.cursor()
+        cur.execute("SELECT state FROM ml_models WHERE name = ?;", ("Bench Press",))
+        row = cur.fetchone()
+        conn.close()
+        self.assertIsNotNone(row)
+        import torch, io
+
+        state = torch.load(io.BytesIO(row[0]))
+        self.assertIn("value", state)
+        self.assertAlmostEqual(float(state["value"]), 7.36, places=2)
+
+        resp = self.client.post("/exercises/1/recommend_next")
+        self.assertEqual(resp.status_code, 400)
+

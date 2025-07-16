@@ -200,6 +200,13 @@ class Database:
                 );""",
             ["id", "workout_id", "points"],
         ),
+        "ml_models": (
+            """CREATE TABLE ml_models (
+                    name TEXT PRIMARY KEY,
+                    state BLOB NOT NULL
+                );""",
+            ["name", "state"],
+        ),
     }
 
     def __init__(self, db_path: str = "workout.db") -> None:
@@ -549,6 +556,15 @@ class SetRepository(BaseRepository):
             "UPDATE sets SET end_time = ? WHERE id = ?;",
             (timestamp, set_id),
         )
+
+    def fetch_exercise_id(self, set_id: int) -> int:
+        rows = self.fetch_all(
+            "SELECT exercise_id FROM sets WHERE id = ?;",
+            (set_id,),
+        )
+        if not rows:
+            raise ValueError("set not found")
+        return int(rows[0][0])
 
     def fetch_for_exercise(self, exercise_id: int) -> List[Tuple[int, int, float, int, Optional[str], Optional[str]]]:
         return self.fetch_all(
@@ -1451,4 +1467,22 @@ class GamificationRepository(BaseRepository):
             "GROUP BY workout_id ORDER BY workout_id;"
         )
         return [(int(wid), float(pts or 0.0)) for wid, pts in rows]
+
+
+class MLModelRepository(BaseRepository):
+    """Repository for storing Torch model states."""
+
+    def save(self, name: str, state: bytes) -> None:
+        self.execute(
+            "INSERT INTO ml_models (name, state) VALUES (?, ?) "
+            "ON CONFLICT(name) DO UPDATE SET state=excluded.state;",
+            (name, state),
+        )
+
+    def load(self, name: str) -> bytes | None:
+        rows = self.fetch_all(
+            "SELECT state FROM ml_models WHERE name = ?;",
+            (name,),
+        )
+        return rows[0][0] if rows else None
 

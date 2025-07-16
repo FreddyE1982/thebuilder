@@ -16,11 +16,13 @@ from db import (
     PyramidTestRepository,
     PyramidEntryRepository,
     GamificationRepository,
+    MLModelRepository,
 )
 from planner_service import PlannerService
 from recommendation_service import RecommendationService
 from stats_service import StatisticsService
 from gamification_service import GamificationService
+from ml_service import PerformanceModelService
 from tools import MathTools
 
 
@@ -46,10 +48,15 @@ class GymApp:
         self.pyramid_tests = PyramidTestRepository()
         self.pyramid_entries = PyramidEntryRepository()
         self.game_repo = GamificationRepository()
+        self.ml_models = MLModelRepository()
         self.gamification = GamificationService(
             self.game_repo,
             self.exercises,
             self.settings_repo,
+        )
+        self.ml_service = PerformanceModelService(
+            self.ml_models,
+            self.exercise_names_repo,
         )
         self.planner = PlannerService(
             self.workouts,
@@ -67,6 +74,7 @@ class GymApp:
             self.exercise_names_repo,
             self.settings_repo,
             self.gamification,
+            self.ml_service,
         )
         self.stats = StatisticsService(
             self.sets,
