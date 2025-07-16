@@ -724,6 +724,18 @@ class GymAPI:
                 end_date,
             )
 
+        @self.app.get("/stats/advanced_plateau")
+        def stats_advanced_plateau(
+            exercise: str,
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            return self.statistics.plateau_score(
+                exercise,
+                start_date,
+                end_date,
+            )
+
         @self.app.get("/stats/deload_recommendation")
         def stats_deload_recommendation(
             exercise: str,
