@@ -356,7 +356,11 @@ class Database:
                 )
 
     def _init_settings(self) -> None:
-        defaults = {"body_weight": "80.0", "months_active": "1"}
+        defaults = {
+            "body_weight": "80.0",
+            "months_active": "1",
+            "theme": "light",
+        }
         with self._connection() as conn:
             for key, value in defaults.items():
                 conn.execute(
@@ -855,9 +859,26 @@ class SettingsRepository(BaseRepository):
             (key, str(value)),
         )
 
+    def get_text(self, key: str, default: str) -> str:
+        rows = self.fetch_all("SELECT value FROM settings WHERE key = ?;", (key,))
+        return rows[0][0] if rows else default
+
+    def set_text(self, key: str, value: str) -> None:
+        self.execute(
+            "INSERT INTO settings (key, value) VALUES (?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET value=excluded.value;",
+            (key, value),
+        )
+
     def all_settings(self) -> dict:
         rows = self.fetch_all("SELECT key, value FROM settings ORDER BY key;")
-        return {k: float(v) for k, v in rows}
+        result: dict[str, float | str] = {}
+        for k, v in rows:
+            try:
+                result[k] = float(v)
+            except ValueError:
+                result[k] = v
+        return result
 
 
 class EquipmentRepository(BaseRepository):

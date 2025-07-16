@@ -674,11 +674,17 @@ class GymAPI:
             return self.settings.all_settings()
 
         @self.app.post("/settings/general")
-        def update_general_settings(body_weight: float = None, months_active: float = None):
+        def update_general_settings(
+            body_weight: float = None,
+            months_active: float = None,
+            theme: str = None,
+        ):
             if body_weight is not None:
                 self.settings.set_float("body_weight", body_weight)
             if months_active is not None:
                 self.settings.set_float("months_active", months_active)
+            if theme is not None:
+                self.settings.set_text("theme", theme)
             return {"status": "updated"}
 
         @self.app.post("/settings/delete_all")
