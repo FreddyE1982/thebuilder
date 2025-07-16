@@ -1268,3 +1268,38 @@ class APITestCase(unittest.TestCase):
         expected = slope * (1 + change / len(ests)) * (1 + energy / 10)
         self.assertAlmostEqual(data["momentum"], round(expected, 4), places=4)
 
+    def test_training_strain_endpoint(self) -> None:
+        start = (datetime.date.today() - datetime.timedelta(days=6)).isoformat()
+        for i in range(7):
+            date = (datetime.date.fromisoformat(start) + datetime.timedelta(days=i)).isoformat()
+            self.client.post("/workouts", params={"date": date})
+            self.client.post(
+                f"/workouts/{i + 1}/exercises",
+                params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+            )
+            self.client.post(
+                f"/exercises/{i + 1}/sets",
+                params={"reps": 5, "weight": 100.0, "rpe": 8},
+            )
+
+        end = datetime.date.fromisoformat(start) + datetime.timedelta(days=6)
+        end_str = end.isoformat()
+        resp = self.client.get(
+            "/stats/training_strain",
+            params={"start_date": start, "end_date": end_str},
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(len(data), 1)
+
+        variability = self.client.get(
+            "/stats/load_variability",
+            params={"start_date": start, "end_date": end_str},
+        ).json()["variability"]
+        monotony = self.client.get(
+            "/stats/training_monotony",
+            params={"start_date": start, "end_date": end_str},
+        ).json()["monotony"]
+        expected = round(7 * 5 * 100.0 * monotony * (1 + variability / 10.0), 2)
+        self.assertAlmostEqual(data[0]["strain"], expected, places=2)
+
