@@ -617,6 +617,33 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json()[0]["date"], past_date)
 
+    def test_workout_history_endpoint(self) -> None:
+        d1 = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
+        d2 = datetime.date.today().isoformat()
+
+        self.client.post("/workouts", params={"date": d1, "training_type": "strength"})
+        self.client.post("/workouts", params={"date": d2, "training_type": "hypertrophy"})
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8},
+        )
+
+        resp = self.client.get(
+            "/workouts/history",
+            params={"start_date": d1, "end_date": d2},
+        )
+        self.assertEqual(resp.status_code, 200)
+        history = sorted(resp.json(), key=lambda x: x["id"])
+        self.assertEqual(len(history), 2)
+        self.assertEqual(history[0]["training_type"], "strength")
+        self.assertEqual(history[0]["volume"], 500.0)
+        self.assertEqual(history[0]["sets"], 1)
+        self.assertEqual(history[0]["avg_rpe"], 8.0)
+
     def test_pyramid_tests(self) -> None:
         today = datetime.date.today().isoformat()
         resp = self.client.post(
