@@ -1231,3 +1231,40 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(len(data), 1)
         self.assertAlmostEqual(data[0]["readiness"], round(expected, 2), places=2)
 
+    def test_performance_momentum_endpoint(self) -> None:
+        d1 = (datetime.date.today() - datetime.timedelta(days=2)).isoformat()
+        d2 = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
+        d3 = datetime.date.today().isoformat()
+
+        self.client.post("/workouts", params={"date": d1})
+        self.client.post("/workouts", params={"date": d2})
+        self.client.post("/workouts", params={"date": d3})
+
+        weights = [100.0, 105.0, 110.0]
+        for wid, w in enumerate(weights, start=1):
+            self.client.post(
+                f"/workouts/{wid}/exercises",
+                params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+            )
+            self.client.post(
+                f"/exercises/{wid}/sets",
+                params={"reps": 5, "weight": w, "rpe": 8},
+            )
+
+        resp = self.client.get(
+            "/stats/performance_momentum",
+            params={"exercise": "Bench Press", "start_date": d1, "end_date": d3},
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+
+        base = datetime.date.fromisoformat(d1)
+        times = [(datetime.date.fromisoformat(d) - base).days for d in [d1, d2, d3]]
+        ests = [MathTools.epley_1rm(w, 5) for w in weights]
+        slope = ExercisePrescription._weighted_slope(times, ests, alpha=0.4)
+        change = ExercisePrescription._change_point(ests, times)
+        low, mid, high = ExercisePrescription._wavelet_energy(ests)
+        energy = high / (low + mid + ExercisePrescription.EPSILON)
+        expected = slope * (1 + change / len(ests)) * (1 + energy / 10)
+        self.assertAlmostEqual(data["momentum"], round(expected, 4), places=4)
+
