@@ -56,7 +56,7 @@ The user does.
 2. logs a variety of many different workouts with different combinations of exercises and different combinations of sets there in with different reps and weights
 3. uses different statistics
 4. uses the workout planning
-5. uses the autoplan function multiple times
+5. uses the exercise prescription function multiple times
 6. the user adds equipment 
 7. the user edits logged workouts
 8. the user adds exercises
