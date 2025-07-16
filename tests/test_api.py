@@ -1339,3 +1339,11 @@ class APITestCase(unittest.TestCase):
         )
         self.assertAlmostEqual(data["score"], round(expected, 2), places=2)
 
+    def test_warmup_weights_endpoint(self) -> None:
+        resp = self.client.get(
+            "/utils/warmup_weights",
+            params={"target_weight": 100.0, "sets": 3},
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), {"weights": [30.0, 60.0, 90.0]})
+

@@ -20,7 +20,7 @@ from planner_service import PlannerService
 from recommendation_service import RecommendationService
 from stats_service import StatisticsService
 from gamification_service import GamificationService
-from tools import ExercisePrescription
+from tools import ExercisePrescription, MathTools
 
 
 class GymAPI:
@@ -711,6 +711,14 @@ class GymAPI:
                 {"workout_id": wid, "points": pts}
                 for wid, pts in self.gamification.points_by_workout()
             ]
+
+        @self.app.get("/utils/warmup_weights")
+        def utils_warmup_weights(target_weight: float, sets: int = 3):
+            try:
+                weights = MathTools.warmup_weights(target_weight, sets)
+                return {"weights": weights}
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
 
         @self.app.get("/stats/progress_insights")
         def stats_progress_insights(

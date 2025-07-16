@@ -54,6 +54,12 @@ class MathToolsTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             MathTools.required_progression(150.0, 120.0, 0)
 
+    def test_warmup_weights(self) -> None:
+        weights = MathTools.warmup_weights(100.0, 3)
+        self.assertEqual(weights, [30.0, 60.0, 90.0])
+        with self.assertRaises(ValueError):
+            MathTools.warmup_weights(-1.0, 3)
+
     def test_sleep_recovery_index(self) -> None:
         sf = ExercisePrescription._sleep_factor(7)
         psqf = ExercisePrescription._perceived_sleep_quality_factor(4)
