@@ -361,6 +361,30 @@ class GymAPI:
             plans = self.planned_workouts.fetch_all()
             return [{"id": pid, "date": date} for pid, date in plans]
 
+        @self.app.put("/planned_workouts/{plan_id}")
+        def update_planned_workout(plan_id: int, date: str):
+            try:
+                self.planned_workouts.update_date(plan_id, date)
+                return {"status": "updated"}
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
+        @self.app.delete("/planned_workouts/{plan_id}")
+        def delete_planned_workout(plan_id: int):
+            try:
+                self.planned_workouts.delete(plan_id)
+                return {"status": "deleted"}
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
+        @self.app.post("/planned_workouts/{plan_id}/duplicate")
+        def duplicate_planned_workout(plan_id: int, date: str):
+            try:
+                new_id = self.planner.duplicate_plan(plan_id, date)
+                return {"id": new_id}
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
         @self.app.post("/planned_workouts/{plan_id}/exercises")
         def add_planned_exercise(plan_id: int, name: str, equipment: str):
             if not equipment:

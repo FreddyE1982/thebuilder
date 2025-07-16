@@ -578,6 +578,32 @@ class GymApp:
                         key="select_planned_workout",
                     )
                     st.session_state.selected_planned_workout = int(selected)
+                    for pid, pdate in plans:
+                        with st.expander(f"{pdate} (ID {pid})", expanded=False):
+                            edit_date = st.date_input(
+                                "New Date",
+                                datetime.date.fromisoformat(pdate),
+                                key=f"plan_edit_{pid}",
+                            )
+                            dup_date = st.date_input(
+                                "Duplicate To",
+                                datetime.date.fromisoformat(pdate),
+                                key=f"plan_dup_{pid}",
+                            )
+                            cols = st.columns(3)
+                            if cols[0].button("Save", key=f"save_plan_{pid}"):
+                                self.planned_workouts.update_date(
+                                    pid, edit_date.isoformat()
+                                )
+                                st.success("Updated")
+                            if cols[1].button("Duplicate", key=f"dup_plan_{pid}"):
+                                self.planner.duplicate_plan(
+                                    pid, dup_date.isoformat()
+                                )
+                                st.success("Duplicated")
+                            if cols[2].button("Delete", key=f"del_plan_{pid}"):
+                                self.planned_workouts.delete(pid)
+                                st.success("Deleted")
 
     def _planned_exercise_section(self) -> None:
         st.header("Planned Exercises")
