@@ -73,6 +73,14 @@ class MathTools:
         return (target_1rm - current_1rm) / days_remaining
 
     @staticmethod
+    def warmup_weights(target_weight: float, sets: int) -> list[float]:
+        """Return a list of warm-up weights leading up to ``target_weight``."""
+        if target_weight <= 0 or sets <= 0:
+            raise ValueError("invalid input values")
+        inc = np.linspace(0.3, 0.9, sets)
+        return [round(target_weight * float(i), 2) for i in inc]
+
+    @staticmethod
     def session_efficiency(
         volume: float, duration_seconds: float, avg_rpe: float | None = None
     ) -> float:

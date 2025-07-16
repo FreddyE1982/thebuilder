@@ -21,6 +21,7 @@ from planner_service import PlannerService
 from recommendation_service import RecommendationService
 from stats_service import StatisticsService
 from gamification_service import GamificationService
+from tools import MathTools
 
 
 class GymApp:
@@ -1363,6 +1364,25 @@ class GymApp:
                     for _tid, d, ws in history
                 ]
                 st.table(display)
+
+        with st.expander("Warmup Calculator", expanded=False):
+            tgt = st.number_input(
+                "Target Weight (kg)", min_value=0.0, step=0.5, key="warmup_target"
+            )
+            count = st.number_input(
+                "Warmup Sets", min_value=1, step=1, value=3, key="warmup_sets"
+            )
+            if st.button("Calculate Warmup", key="warmup_calc"):
+                try:
+                    weights = MathTools.warmup_weights(float(tgt), int(count))
+                    st.table(
+                        [
+                            {"set": i + 1, "weight": w}
+                            for i, w in enumerate(weights)
+                        ]
+                    )
+                except ValueError as e:
+                    st.warning(str(e))
 
     def _settings_tab(self) -> None:
         st.header("Settings")
