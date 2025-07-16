@@ -718,3 +718,49 @@ class StatisticsService:
             variability["variability"],
         )
         return {"risk": round(risk, 2)}
+
+    def readiness(
+        self,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> List[Dict[str, float]]:
+        """Return daily readiness scores."""
+        names = self.exercise_names.fetch_all()
+        rows = self.sets.fetch_history_by_names(
+            names,
+            start_date=start_date,
+            end_date=end_date,
+            with_duration=True,
+        )
+        if not rows:
+            return []
+        by_date: Dict[str, Dict[str, list]] = {}
+        for r, w, rpe, date, start, end in rows:
+            entry = by_date.setdefault(date, {"w": [], "r": [], "rpe": [], "d": []})
+            entry["w"].append(float(w))
+            entry["r"].append(int(r))
+            entry["rpe"].append(int(rpe))
+            if start and end:
+                t0 = datetime.datetime.fromisoformat(start)
+                t1 = datetime.datetime.fromisoformat(end)
+                entry["d"].append((t1 - t0).total_seconds())
+            else:
+                entry["d"].append(50.0)
+        result: List[Dict[str, float]] = []
+        for d in sorted(by_date):
+            data = by_date[d]
+            current_rm = ExercisePrescription._current_1rm(data["w"], data["r"])
+            stress = ExercisePrescription._stress_level(
+                data["w"],
+                data["r"],
+                data["rpe"],
+                list(range(len(data["w"]))),
+                current_rm,
+                10,
+            )
+            fatigue = ExercisePrescription._tss_adjusted_fatigue(
+                data["w"], data["r"], list(range(len(data["w"]))), data["d"], current_rm
+            )
+            ready = MathTools.readiness_score(stress, fatigue / 1000)
+            result.append({"date": d, "readiness": round(ready, 2)})
+        return result

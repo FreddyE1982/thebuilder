@@ -672,6 +672,13 @@ class GymAPI:
         ):
             return self.statistics.overtraining_risk(start_date, end_date)
 
+        @self.app.get("/stats/readiness")
+        def stats_readiness(
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            return self.statistics.readiness(start_date, end_date)
+
         @self.app.get("/gamification")
         def gamification_status():
             return {
