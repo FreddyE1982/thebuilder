@@ -660,6 +660,86 @@ class GymApp:
                         for v in variants.split("|"):
                             st.markdown(f"- {v}")
 
+    def _custom_exercise_management(self) -> None:
+        muscles = self.muscles_repo.fetch_all()
+        groups = self.exercise_catalog.fetch_muscle_groups()
+        equipment_names = self.equipment.fetch_names()
+
+        with st.expander("Add Custom Exercise"):
+            group = st.selectbox("Muscle Group", groups, key="cust_ex_group")
+            name = st.text_input("Exercise Name", key="cust_ex_name")
+            variants = st.text_input("Variants", key="cust_ex_variants")
+            eq_sel = st.multiselect("Equipment", equipment_names, key="cust_ex_eq")
+            primary = st.selectbox("Primary Muscle", muscles, key="cust_ex_primary")
+            secondary = st.multiselect("Secondary", muscles, key="cust_ex_sec")
+            tertiary = st.multiselect("Tertiary", muscles, key="cust_ex_ter")
+            other = st.multiselect("Other", muscles, key="cust_ex_other")
+            if st.button("Add Exercise", key="cust_ex_add"):
+                if name:
+                    try:
+                        self.exercise_catalog.add(
+                            group,
+                            name,
+                            variants,
+                            "|".join(eq_sel),
+                            primary,
+                            "|".join(secondary),
+                            "|".join(tertiary),
+                            "|".join(other),
+                        )
+                        st.success("Exercise added")
+                    except ValueError as e:
+                        st.warning(str(e))
+                else:
+                    st.warning("Name required")
+
+        with st.expander("Custom Exercise List", expanded=True):
+            records = self.exercise_catalog.fetch_all_records(custom_only=True)
+            for (
+                name,
+                group,
+                variants,
+                eq_names,
+                primary,
+                secondary,
+                tertiary,
+                other,
+                _,
+            ) in records:
+                exp = st.expander(name)
+                with exp:
+                    edit_name = st.text_input("Name", name, key=f"cust_name_{name}")
+                    edit_group = st.text_input("Group", group, key=f"cust_group_{name}")
+                    edit_var = st.text_input("Variants", variants, key=f"cust_var_{name}")
+                    edit_eq = st.text_input("Equipment", eq_names, key=f"cust_eq_{name}")
+                    edit_primary = st.text_input("Primary", primary, key=f"cust_pri_{name}")
+                    edit_secondary = st.text_input("Secondary", secondary, key=f"cust_sec_{name}")
+                    edit_tertiary = st.text_input("Tertiary", tertiary, key=f"cust_ter_{name}")
+                    edit_other = st.text_input("Other", other, key=f"cust_oth_{name}")
+                    cols = st.columns(2)
+                    if cols[0].button("Update", key=f"upd_cust_{name}"):
+                        try:
+                            self.exercise_catalog.update(
+                                name,
+                                edit_group,
+                                edit_var,
+                                edit_eq,
+                                edit_primary,
+                                edit_secondary,
+                                edit_tertiary,
+                                edit_other,
+                                new_name=edit_name,
+                            )
+                            st.success("Updated")
+                        except ValueError as e:
+                            st.warning(str(e))
+                    if cols[1].button("Delete", key=f"del_cust_{name}"):
+                        try:
+                            self.exercise_catalog.remove(name)
+                            st.success("Deleted")
+                        except ValueError as e:
+                            st.warning(str(e))
+
     def _history_tab(self) -> None:
         st.header("Workout History")
         with st.expander("Filters", expanded=True):
@@ -782,11 +862,77 @@ class GymApp:
                 )
             if st.button("Add Line"):
                 st.session_state.pyramid_inputs.append(0.0)
+            with st.expander("Additional Details"):
+                ex_name = st.text_input("Exercise Name", key="pyr_ex_name")
+                eq_name = st.selectbox(
+                    "Equipment",
+                    [""] + self.equipment.fetch_names(),
+                    key="pyr_eq_name",
+                )
+                start_w = st.number_input(
+                    "Starting Weight (kg)",
+                    min_value=0.0,
+                    step=0.5,
+                    key="pyr_start_w",
+                )
+                failed_w = st.number_input(
+                    "Failed Weight (kg)",
+                    min_value=0.0,
+                    step=0.5,
+                    key="pyr_failed_w",
+                )
+                max_a = st.number_input(
+                    "Max Achieved (kg)",
+                    min_value=0.0,
+                    step=0.5,
+                    key="pyr_max_a",
+                )
+                dur = st.number_input(
+                    "Test Duration (min)",
+                    min_value=0,
+                    step=1,
+                    key="pyr_dur",
+                )
+                rest = st.text_input("Rest Between Attempts", key="pyr_rest")
+                rpe_attempt = st.text_input("RPE per Attempt", key="pyr_rpe_a")
+                tod = st.text_input("Time of Day", key="pyr_tod")
+                sleep_h = st.number_input(
+                    "Sleep Hours",
+                    min_value=0.0,
+                    step=0.5,
+                    key="pyr_sleep",
+                )
+                stress = st.number_input(
+                    "Stress Level",
+                    min_value=0,
+                    step=1,
+                    key="pyr_stress",
+                )
+                nutrition = st.number_input(
+                    "Nutrition Quality",
+                    min_value=0,
+                    step=1,
+                    key="pyr_nutrition",
+                )
             if st.button("Save Pyramid Test"):
                 weights = [float(st.session_state.get(f"pyr_weight_{i}", 0.0)) for i in range(len(st.session_state.pyramid_inputs))]
                 weights = [w for w in weights if w > 0.0]
                 if weights:
-                    tid = self.pyramid_tests.create(datetime.date.today().isoformat())
+                    tid = self.pyramid_tests.create(
+                        datetime.date.today().isoformat(),
+                        exercise_name=ex_name or "Unknown",
+                        equipment_name=eq_name or None,
+                        starting_weight=start_w if start_w > 0 else None,
+                        failed_weight=failed_w if failed_w > 0 else None,
+                        max_achieved=max_a if max_a > 0 else None,
+                        test_duration_minutes=dur if dur > 0 else None,
+                        rest_between_attempts=rest or None,
+                        rpe_per_attempt=rpe_attempt or None,
+                        time_of_day=tod or None,
+                        sleep_hours=sleep_h if sleep_h > 0 else None,
+                        stress_level=stress if stress > 0 else None,
+                        nutrition_quality=nutrition if nutrition > 0 else None,
+                    )
                     for w in weights:
                         self.pyramid_entries.add(tid, w)
                     st.success("Saved")
@@ -795,6 +941,21 @@ class GymApp:
                 st.session_state.pyramid_inputs = [0.0]
                 for i in range(len(weights)):
                     st.session_state.pop(f"pyr_weight_{i}", None)
+                for key in [
+                    "pyr_ex_name",
+                    "pyr_eq_name",
+                    "pyr_start_w",
+                    "pyr_failed_w",
+                    "pyr_max_a",
+                    "pyr_dur",
+                    "pyr_rest",
+                    "pyr_rpe_a",
+                    "pyr_tod",
+                    "pyr_sleep",
+                    "pyr_stress",
+                    "pyr_nutrition",
+                ]:
+                    st.session_state.pop(key, None)
 
         history = self.pyramid_tests.fetch_all_with_weights(self.pyramid_entries)
         if history:
@@ -838,11 +999,12 @@ class GymApp:
                 if st.button("Cancel"):
                     st.session_state.delete_target = None
 
-        gen_tab, eq_tab, mus_tab, ex_tab = st.tabs([
+        gen_tab, eq_tab, mus_tab, ex_tab, cust_tab = st.tabs([
             "General",
             "Equipment",
             "Muscles",
             "Exercise Aliases",
+            "Custom Exercises",
         ])
 
         with gen_tab:
@@ -958,6 +1120,10 @@ class GymApp:
                         st.success("Alias added")
                     else:
                         st.warning("Name required")
+
+        with cust_tab:
+            st.header("Custom Exercises")
+            self._custom_exercise_management()
 
 
 if __name__ == "__main__":
