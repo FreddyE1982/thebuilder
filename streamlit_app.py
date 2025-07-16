@@ -117,48 +117,95 @@ class GymApp:
         if "pyramid_inputs" not in st.session_state:
             st.session_state.pyramid_inputs = [0.0]
 
+    def _create_sidebar(self) -> None:
+        st.sidebar.header("Quick Actions")
+        if st.sidebar.button("New Workout"):
+            wid = self.workouts.create(
+                datetime.date.today().isoformat(),
+                "strength",
+            )
+            st.session_state.selected_workout = wid
+            st.sidebar.success(f"Created workout {wid}")
+        with st.sidebar.expander("Help & About"):
+            if st.button("Show Help", key="help_btn"):
+                self._help_dialog()
+
+    def _help_dialog(self) -> None:
+        with st.dialog("Help"):
+            st.markdown("## Workout Logger Help")
+            st.markdown(
+                "Use the tabs to log workouts, plan sessions, and analyze your training data."
+            )
+            st.markdown(
+                "All data is saved to an internal database and can be managed via the settings tab."
+            )
+            st.button("Close")
+
     def _dashboard_tab(self) -> None:
         st.header("Dashboard")
-        col1, col2 = st.columns(2)
-        with col1:
-            start = st.date_input(
-                "Start",
-                datetime.date.today() - datetime.timedelta(days=30),
-                key="dash_start",
-            )
-        with col2:
-            end = st.date_input("End", datetime.date.today(), key="dash_end")
+        with st.expander("Filters", expanded=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                start = st.date_input(
+                    "Start",
+                    datetime.date.today() - datetime.timedelta(days=30),
+                    key="dash_start",
+                )
+            with col2:
+                end = st.date_input("End", datetime.date.today(), key="dash_end")
         stats = self.stats.overview(start.isoformat(), end.isoformat())
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Workouts", stats["workouts"])
-        m2.metric("Volume", stats["volume"])
-        m3.metric("Avg RPE", stats["avg_rpe"])
-        m4.metric("Exercises", stats["exercises"])
+        with st.expander("Overview Metrics", expanded=True):
+            m1, m2, m3, m4 = st.columns(4)
+            m1.metric("Workouts", stats["workouts"])
+            m2.metric("Volume", stats["volume"])
+            m3.metric("Avg RPE", stats["avg_rpe"])
+            m4.metric("Exercises", stats["exercises"])
         daily = self.stats.daily_volume(start.isoformat(), end.isoformat())
-        st.subheader("Daily Volume")
-        if daily:
-            st.line_chart({"Volume": [d["volume"] for d in daily]}, x=[d["date"] for d in daily])
-        exercises = [""] + self.exercise_names_repo.fetch_all()
-        ex_choice = st.selectbox("Exercise Progression", exercises, key="dash_ex")
-        if ex_choice:
-            prog = self.stats.progression(ex_choice, start.isoformat(), end.isoformat())
-            st.subheader("1RM Progression")
-            if prog:
-                st.line_chart({"1RM": [p["est_1rm"] for p in prog]}, x=[p["date"] for p in prog])
+        with st.expander("Charts", expanded=True):
+            st.subheader("Daily Volume")
+            if daily:
+                st.line_chart(
+                    {"Volume": [d["volume"] for d in daily]},
+                    x=[d["date"] for d in daily],
+                )
+            exercises = [""] + self.exercise_names_repo.fetch_all()
+            ex_choice = st.selectbox("Exercise Progression", exercises, key="dash_ex")
+            if ex_choice:
+                prog = self.stats.progression(
+                    ex_choice, start.isoformat(), end.isoformat()
+                )
+                st.subheader("1RM Progression")
+                if prog:
+                    st.line_chart(
+                        {"1RM": [p["est_1rm"] for p in prog]},
+                        x=[p["date"] for p in prog],
+                    )
 
     def run(self) -> None:
         st.title("Workout Logger")
+        self._create_sidebar()
         self._refresh()
-        dash_tab, log_tab, plan_tab, library_tab, history_tab, stats_tab, tests_tab, settings_tab = st.tabs([
-            "Dashboard",
-            "Log",
-            "Plan",
-            "Library",
-            "History",
-            "Stats",
-            "Tests",
-            "Settings",
-        ])
+        (
+            dash_tab,
+            log_tab,
+            plan_tab,
+            library_tab,
+            history_tab,
+            stats_tab,
+            tests_tab,
+            settings_tab,
+        ) = st.tabs(
+            [
+                "Dashboard",
+                "Log",
+                "Plan",
+                "Library",
+                "History",
+                "Stats",
+                "Tests",
+                "Settings",
+            ]
+        )
         with dash_tab:
             self._dashboard_tab()
         with log_tab:
@@ -181,7 +228,8 @@ class GymApp:
         options = {str(p[0]): p for p in plans}
         if options:
             selected = st.selectbox(
-                "Planned Workout", [""] + list(options.keys()),
+                "Planned Workout",
+                [""] + list(options.keys()),
                 format_func=lambda x: "None" if x == "" else options[x][1],
                 key="log_plan_select",
             )
@@ -202,7 +250,9 @@ class GymApp:
         training_options = ["strength", "hypertrophy", "highintensity"]
         with st.expander("Workout Management", expanded=True):
             with st.expander("Create New Workout"):
-                new_type = st.selectbox("Training Type", training_options, key="new_workout_type")
+                new_type = st.selectbox(
+                    "Training Type", training_options, key="new_workout_type"
+                )
                 if st.button("New Workout"):
                     new_id = self.workouts.create(
                         datetime.date.today().isoformat(), new_type
@@ -213,8 +263,9 @@ class GymApp:
                 options = {str(w[0]): w for w in workouts}
                 if options:
                     selected = st.selectbox(
-                        "Select Workout", list(options.keys()),
-                        format_func=lambda x: options[x][1]
+                        "Select Workout",
+                        list(options.keys()),
+                        format_func=lambda x: options[x][1],
                     )
                     st.session_state.selected_workout = int(selected)
                     detail = self.workouts.fetch_detail(int(selected))
@@ -227,7 +278,9 @@ class GymApp:
                             int(selected),
                             datetime.datetime.now().isoformat(timespec="seconds"),
                         )
-                    if cols[1].button("Finish Workout", key=f"finish_workout_{selected}"):
+                    if cols[1].button(
+                        "Finish Workout", key=f"finish_workout_{selected}"
+                    ):
                         self.workouts.set_end_time(
                             int(selected),
                             datetime.datetime.now().isoformat(timespec="seconds"),
@@ -236,7 +289,7 @@ class GymApp:
                         "Type",
                         training_options,
                         index=training_options.index(current_type),
-                        key=f"type_select_{selected}"
+                        key=f"type_select_{selected}",
                     )
                     if cols[2].button("Save", key=f"save_type_{selected}"):
                         self.workouts.set_training_type(int(selected), type_choice)
@@ -284,7 +337,9 @@ class GymApp:
                 col2.metric("Sets", summary["sets"])
                 col3.metric("Avg RPE", summary["avg_rpe"])
 
-    def _exercise_card(self, exercise_id: int, name: str, equipment: Optional[str]) -> None:
+    def _exercise_card(
+        self, exercise_id: int, name: str, equipment: Optional[str]
+    ) -> None:
         sets = self.sets.fetch_for_exercise(exercise_id)
         header = name if not equipment else f"{name} ({equipment})"
         expander = st.expander(header)
@@ -396,7 +451,9 @@ class GymApp:
             st.session_state.pop(f"new_weight_{exercise_id}", None)
             st.session_state.pop(f"new_rpe_{exercise_id}", None)
 
-    def _equipment_selector(self, prefix: str, muscles: Optional[list] = None) -> Optional[str]:
+    def _equipment_selector(
+        self, prefix: str, muscles: Optional[list] = None
+    ) -> Optional[str]:
         types = [""] + self.equipment.fetch_types()
         eq_type = st.selectbox("Equipment Type", types, key=f"{prefix}_type")
         filter_text = st.text_input("Filter Equipment", key=f"{prefix}_filter")
@@ -405,7 +462,7 @@ class GymApp:
             filter_text or None,
             muscles,
         )
-        eq_name = st.selectbox("Equipment Name", ["" ] + names, key=f"{prefix}_name")
+        eq_name = st.selectbox("Equipment Name", [""] + names, key=f"{prefix}_name")
         if eq_name:
             muscles = self.equipment.fetch_muscles(eq_name)
             st.markdown("Muscles Trained:")
@@ -439,7 +496,7 @@ class GymApp:
             muscle_sel or None,
             equipment,
         )
-        ex_name = st.selectbox("Exercise", ["" ] + names, key=f"{prefix}_exercise")
+        ex_name = st.selectbox("Exercise", [""] + names, key=f"{prefix}_exercise")
         if ex_name:
             detail = self.exercise_catalog.fetch_detail(ex_name)
             if detail:
@@ -476,7 +533,9 @@ class GymApp:
         st.header("Planned Workouts")
         with st.expander("Plan Management", expanded=True):
             with st.expander("Create New Plan"):
-                plan_date = st.date_input("Plan Date", datetime.date.today(), key="plan_date")
+                plan_date = st.date_input(
+                    "Plan Date", datetime.date.today(), key="plan_date"
+                )
                 if st.button("New Planned Workout"):
                     pid = self.planned_workouts.create(plan_date.isoformat())
                     st.session_state.selected_planned_workout = pid
@@ -517,7 +576,9 @@ class GymApp:
                 for ex_id, name, eq_name in exercises:
                     self._planned_exercise_card(ex_id, name, eq_name)
 
-    def _planned_exercise_card(self, exercise_id: int, name: str, equipment: Optional[str]) -> None:
+    def _planned_exercise_card(
+        self, exercise_id: int, name: str, equipment: Optional[str]
+    ) -> None:
         sets = self.planned_sets.fetch_for_exercise(exercise_id)
         header = name if not equipment else f"{name} ({equipment})"
         expander = st.expander(header)
@@ -710,11 +771,21 @@ class GymApp:
                 with exp:
                     edit_name = st.text_input("Name", name, key=f"cust_name_{name}")
                     edit_group = st.text_input("Group", group, key=f"cust_group_{name}")
-                    edit_var = st.text_input("Variants", variants, key=f"cust_var_{name}")
-                    edit_eq = st.text_input("Equipment", eq_names, key=f"cust_eq_{name}")
-                    edit_primary = st.text_input("Primary", primary, key=f"cust_pri_{name}")
-                    edit_secondary = st.text_input("Secondary", secondary, key=f"cust_sec_{name}")
-                    edit_tertiary = st.text_input("Tertiary", tertiary, key=f"cust_ter_{name}")
+                    edit_var = st.text_input(
+                        "Variants", variants, key=f"cust_var_{name}"
+                    )
+                    edit_eq = st.text_input(
+                        "Equipment", eq_names, key=f"cust_eq_{name}"
+                    )
+                    edit_primary = st.text_input(
+                        "Primary", primary, key=f"cust_pri_{name}"
+                    )
+                    edit_secondary = st.text_input(
+                        "Secondary", secondary, key=f"cust_sec_{name}"
+                    )
+                    edit_tertiary = st.text_input(
+                        "Tertiary", tertiary, key=f"cust_ter_{name}"
+                    )
                     edit_other = st.text_input("Other", other, key=f"cust_oth_{name}")
                     cols = st.columns(2)
                     if cols[0].button("Update", key=f"upd_cust_{name}"):
@@ -807,37 +878,52 @@ class GymApp:
             start_str,
             end_str,
         )
-        with st.expander("Summary", expanded=True):
+        over_tab, dist_tab, prog_tab = st.tabs(
+            [
+                "Overview",
+                "Distributions",
+                "Progress",
+            ]
+        )
+        with over_tab:
             st.table(summary)
-        daily = self.stats.daily_volume(start_str, end_str)
-        with st.expander("Daily Volume", expanded=True):
+            daily = self.stats.daily_volume(start_str, end_str)
             if daily:
-                st.line_chart({"Volume": [d["volume"] for d in daily]}, x=[d["date"] for d in daily])
-        equip_stats = self.stats.equipment_usage(start_str, end_str)
-        with st.expander("Equipment Usage", expanded=True):
+                st.line_chart(
+                    {"Volume": [d["volume"] for d in daily]},
+                    x=[d["date"] for d in daily],
+                )
+            equip_stats = self.stats.equipment_usage(start_str, end_str)
             st.table(equip_stats)
-        rpe_dist = self.stats.rpe_distribution(
-            ex_choice if ex_choice else None,
-            start_str,
-            end_str,
-        )
-        with st.expander("RPE Distribution", expanded=True):
+        with dist_tab:
+            rpe_dist = self.stats.rpe_distribution(
+                ex_choice if ex_choice else None,
+                start_str,
+                end_str,
+            )
             if rpe_dist:
-                st.bar_chart({"Count": [d["count"] for d in rpe_dist]}, x=[str(d["rpe"]) for d in rpe_dist])
-        reps_dist = self.stats.reps_distribution(
-            ex_choice if ex_choice else None,
-            start_str,
-            end_str,
-        )
-        with st.expander("Reps Distribution", expanded=True):
+                st.bar_chart(
+                    {"Count": [d["count"] for d in rpe_dist]},
+                    x=[str(d["rpe"]) for d in rpe_dist],
+                )
+            reps_dist = self.stats.reps_distribution(
+                ex_choice if ex_choice else None,
+                start_str,
+                end_str,
+            )
             if reps_dist:
-                st.bar_chart({"Count": [d["count"] for d in reps_dist]}, x=[str(d["reps"]) for d in reps_dist])
-        if ex_choice:
-            prog = self.stats.progression(ex_choice, start_str, end_str)
-            with st.expander("1RM Progression", expanded=True):
+                st.bar_chart(
+                    {"Count": [d["count"] for d in reps_dist]},
+                    x=[str(d["reps"]) for d in reps_dist],
+                )
+        with prog_tab:
+            if ex_choice:
+                prog = self.stats.progression(ex_choice, start_str, end_str)
                 if prog:
-                    st.line_chart({"1RM": [p["est_1rm"] for p in prog]}, x=[p["date"] for p in prog])
-            with st.expander("Progress Forecast", expanded=True):
+                    st.line_chart(
+                        {"1RM": [p["est_1rm"] for p in prog]},
+                        x=[p["date"] for p in prog],
+                    )
                 self._progress_forecast_section(ex_choice)
 
     def _progress_forecast_section(self, exercise: str) -> None:
@@ -847,7 +933,10 @@ class GymApp:
         if st.button("Show Forecast"):
             forecast = self.stats.progress_forecast(exercise, weeks, wpw)
             if forecast:
-                st.line_chart({"Est 1RM": [f["est_1rm"] for f in forecast]}, x=[str(f["week"]) for f in forecast])
+                st.line_chart(
+                    {"Est 1RM": [f["est_1rm"] for f in forecast]},
+                    x=[str(f["week"]) for f in forecast],
+                )
 
     def _tests_tab(self) -> None:
         st.header("Pyramid Test")
@@ -915,7 +1004,10 @@ class GymApp:
                     key="pyr_nutrition",
                 )
             if st.button("Save Pyramid Test"):
-                weights = [float(st.session_state.get(f"pyr_weight_{i}", 0.0)) for i in range(len(st.session_state.pyramid_inputs))]
+                weights = [
+                    float(st.session_state.get(f"pyr_weight_{i}", 0.0))
+                    for i in range(len(st.session_state.pyramid_inputs))
+                ]
                 weights = [w for w in weights if w > 0.0]
                 if weights:
                     tid = self.pyramid_tests.create(
@@ -999,13 +1091,15 @@ class GymApp:
                 if st.button("Cancel"):
                     st.session_state.delete_target = None
 
-        gen_tab, eq_tab, mus_tab, ex_tab, cust_tab = st.tabs([
-            "General",
-            "Equipment",
-            "Muscles",
-            "Exercise Aliases",
-            "Custom Exercises",
-        ])
+        gen_tab, eq_tab, mus_tab, ex_tab, cust_tab = st.tabs(
+            [
+                "General",
+                "Equipment",
+                "Muscles",
+                "Exercise Aliases",
+                "Custom Exercises",
+            ]
+        )
 
         with gen_tab:
             st.header("General Settings")
@@ -1032,8 +1126,12 @@ class GymApp:
                 muscles_list = self.muscles_repo.fetch_all()
                 new_name = st.text_input("Equipment Name", key="equip_new_name")
                 types = self.equipment.fetch_types()
-                type_choice = st.selectbox("Equipment Type", types, key="equip_new_type")
-                new_muscles = st.multiselect("Muscles", muscles_list, key="equip_new_muscles")
+                type_choice = st.selectbox(
+                    "Equipment Type", types, key="equip_new_type"
+                )
+                new_muscles = st.multiselect(
+                    "Muscles", muscles_list, key="equip_new_muscles"
+                )
                 if st.button("Add Equipment"):
                     if new_name and type_choice and new_muscles:
                         try:
@@ -1045,19 +1143,33 @@ class GymApp:
                         st.warning("All fields required")
 
             with st.expander("Equipment List", expanded=True):
-                for name, eq_type, muscles, is_custom in self.equipment.fetch_all_records():
+                for (
+                    name,
+                    eq_type,
+                    muscles,
+                    is_custom,
+                ) in self.equipment.fetch_all_records():
                     exp = st.expander(name)
                     with exp:
                         musc_list = muscles.split("|")
                         if is_custom:
-                            edit_name = st.text_input("Name", name, key=f"edit_name_{name}")
-                            edit_type = st.text_input("Type", eq_type, key=f"edit_type_{name}")
+                            edit_name = st.text_input(
+                                "Name", name, key=f"edit_name_{name}"
+                            )
+                            edit_type = st.text_input(
+                                "Type", eq_type, key=f"edit_type_{name}"
+                            )
                             edit_muscles = st.multiselect(
-                                "Muscles", muscles_list, musc_list, key=f"edit_mus_{name}"
+                                "Muscles",
+                                muscles_list,
+                                musc_list,
+                                key=f"edit_mus_{name}",
                             )
                             if st.button("Update", key=f"upd_eq_{name}"):
                                 try:
-                                    self.equipment.update(name, edit_type, edit_muscles, edit_name)
+                                    self.equipment.update(
+                                        name, edit_type, edit_muscles, edit_name
+                                    )
                                     st.success("Updated")
                                 except ValueError as e:
                                     st.warning(str(e))
@@ -1128,4 +1240,3 @@ class GymApp:
 
 if __name__ == "__main__":
     GymApp().run()
-
