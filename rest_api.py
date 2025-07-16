@@ -15,11 +15,13 @@ from db import (
     PyramidTestRepository,
     PyramidEntryRepository,
     GamificationRepository,
+    MLModelRepository,
 )
 from planner_service import PlannerService
 from recommendation_service import RecommendationService
 from stats_service import StatisticsService
 from gamification_service import GamificationService
+from ml_service import PerformanceModelService
 from tools import ExercisePrescription, MathTools
 
 
@@ -41,10 +43,15 @@ class GymAPI:
         self.pyramid_tests = PyramidTestRepository(db_path)
         self.pyramid_entries = PyramidEntryRepository(db_path)
         self.game_repo = GamificationRepository(db_path)
+        self.ml_models = MLModelRepository(db_path)
         self.gamification = GamificationService(
             self.game_repo,
             self.exercises,
             self.settings,
+        )
+        self.ml_service = PerformanceModelService(
+            self.ml_models,
+            self.exercise_names,
         )
         self.planner = PlannerService(
             self.workouts,
@@ -62,6 +69,7 @@ class GymAPI:
             self.exercise_names,
             self.settings,
             self.gamification,
+            self.ml_service,
         )
         self.statistics = StatisticsService(
             self.sets,
@@ -469,6 +477,8 @@ class GymAPI:
         @self.app.post("/exercises/{exercise_id}/sets")
         def add_set(exercise_id: int, reps: int, weight: float, rpe: int):
             set_id = self.sets.add(exercise_id, reps, weight, rpe)
+            _, name, _ = self.exercises.fetch_detail(exercise_id)
+            self.ml_service.train(name, rpe)
             try:
                 self.gamification.record_set(exercise_id, reps, weight, rpe)
             except Exception:
@@ -478,6 +488,9 @@ class GymAPI:
         @self.app.put("/sets/{set_id}")
         def update_set(set_id: int, reps: int, weight: float, rpe: int):
             self.sets.update(set_id, reps, weight, rpe)
+            ex_id = self.sets.fetch_exercise_id(set_id)
+            _, name, _ = self.exercises.fetch_detail(ex_id)
+            self.ml_service.train(name, rpe)
             return {"status": "updated"}
 
         @self.app.delete("/sets/{set_id}")

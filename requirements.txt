@@ -8,3 +8,4 @@ pandas
 statsmodels
 pywavelets
 scikit-learn
+torch
