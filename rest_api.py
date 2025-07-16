@@ -264,9 +264,33 @@ class GymAPI:
             return {"id": workout_id}
 
         @self.app.get("/workouts")
-        def list_workouts():
-            workouts = self.workouts.fetch_all_workouts()
+        def list_workouts(start_date: str = None, end_date: str = None):
+            workouts = self.workouts.fetch_all_workouts(start_date, end_date)
             return [{"id": wid, "date": date} for wid, date, *_ in workouts]
+
+        @self.app.get("/workouts/history")
+        def workout_history(
+            start_date: str,
+            end_date: str,
+            training_type: str = None,
+        ):
+            workouts = self.workouts.fetch_all_workouts(start_date, end_date)
+            result = []
+            for wid, date, _s, _e, t_type in workouts:
+                if training_type and t_type != training_type:
+                    continue
+                summary = self.sets.workout_summary(wid)
+                result.append(
+                    {
+                        "id": wid,
+                        "date": date,
+                        "training_type": t_type,
+                        "volume": summary["volume"],
+                        "sets": summary["sets"],
+                        "avg_rpe": summary["avg_rpe"],
+                    }
+                )
+            return result
 
         @self.app.get("/workouts/{workout_id}")
         def get_workout(workout_id: int):

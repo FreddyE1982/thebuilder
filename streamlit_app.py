@@ -149,11 +149,12 @@ class GymApp:
     def run(self) -> None:
         st.title("Workout Logger")
         self._refresh()
-        dash_tab, log_tab, plan_tab, library_tab, stats_tab, tests_tab, settings_tab = st.tabs([
+        dash_tab, log_tab, plan_tab, library_tab, history_tab, stats_tab, tests_tab, settings_tab = st.tabs([
             "Dashboard",
             "Log",
             "Plan",
             "Library",
+            "History",
             "Stats",
             "Tests",
             "Settings",
@@ -166,6 +167,8 @@ class GymApp:
             self._plan_tab()
         with library_tab:
             self._library_tab()
+        with history_tab:
+            self._history_tab()
         with stats_tab:
             self._stats_tab()
         with tests_tab:
@@ -656,6 +659,52 @@ class GymApp:
                         st.markdown("**Variants:**")
                         for v in variants.split("|"):
                             st.markdown(f"- {v}")
+
+    def _history_tab(self) -> None:
+        st.header("Workout History")
+        with st.expander("Filters", expanded=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                start = st.date_input(
+                    "Start",
+                    datetime.date.today() - datetime.timedelta(days=30),
+                    key="hist_start",
+                )
+            with col2:
+                end = st.date_input("End", datetime.date.today(), key="hist_end")
+            ttype = st.selectbox(
+                "Training Type",
+                ["", "strength", "hypertrophy", "highintensity"],
+                key="hist_type",
+            )
+            start_str = start.isoformat()
+            end_str = end.isoformat()
+        workouts = self.workouts.fetch_all_workouts(start_str, end_str)
+        if ttype:
+            workouts = [w for w in workouts if w[4] == ttype]
+        for wid, date, _s, _e, training_type in workouts:
+            with st.expander(f"{date} ({training_type})", expanded=False):
+                summary = self.sets.workout_summary(wid)
+                st.markdown(
+                    f"**Volume:** {summary['volume']} | **Sets:** {summary['sets']} | **Avg RPE:** {summary['avg_rpe']}"
+                )
+                if st.button("Details", key=f"hist_det_{wid}"):
+                    self._workout_details_dialog(wid)
+
+    def _workout_details_dialog(self, workout_id: int) -> None:
+        exercises = self.exercises.fetch_for_workout(workout_id)
+        with st.dialog("Workout Details"):
+            for ex_id, name, eq in exercises:
+                sets = self.sets.fetch_for_exercise(ex_id)
+                header = name if not eq else f"{name} ({eq})"
+                with st.expander(header, expanded=True):
+                    for sid, reps, weight, rpe, stime, etime in sets:
+                        line = f"{reps} reps x {weight} kg (RPE {rpe})"
+                        if stime:
+                            line += f" start: {stime}"
+                        if etime:
+                            line += f" end: {etime}"
+                        st.write(line)
 
     def _stats_tab(self) -> None:
         st.header("Statistics")

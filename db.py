@@ -393,10 +393,23 @@ class WorkoutRepository(BaseRepository):
             (date, training_type),
         )
 
-    def fetch_all_workouts(self) -> List[Tuple[int, str, Optional[str], Optional[str], str]]:
-        return self.fetch_all(
-            "SELECT id, date, start_time, end_time, training_type FROM workouts ORDER BY id DESC;"
+    def fetch_all_workouts(
+        self,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> List[Tuple[int, str, Optional[str], Optional[str], str]]:
+        query = (
+            "SELECT id, date, start_time, end_time, training_type FROM workouts"
         )
+        params: list[str] = []
+        if start_date:
+            query += " WHERE date >= ?"
+            params.append(start_date)
+        if end_date:
+            query += " AND date <= ?" if start_date else " WHERE date <= ?"
+            params.append(end_date)
+        query += " ORDER BY id DESC;"
+        return self.fetch_all(query, tuple(params))
 
     def set_start_time(self, workout_id: int, timestamp: str) -> None:
         self.execute(
