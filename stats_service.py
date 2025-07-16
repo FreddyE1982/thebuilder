@@ -784,3 +784,33 @@ class StatisticsService:
             ready = MathTools.readiness_score(stress, fatigue / 1000)
             result.append({"date": d, "readiness": round(ready, 2)})
         return result
+
+    def performance_momentum(
+        self,
+        exercise: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> Dict[str, float]:
+        """Return a momentum score based on 1RM progression for ``exercise``."""
+        names = self._alias_names(exercise)
+        rows = self.sets.fetch_history_by_names(
+            names,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        if not rows:
+            return {"momentum": 0.0}
+
+        base = datetime.date.fromisoformat(rows[0][3])
+        times: list[int] = []
+        ests: list[float] = []
+        for reps, weight, _rpe, date in rows:
+            times.append((datetime.date.fromisoformat(date) - base).days)
+            ests.append(MathTools.epley_1rm(float(weight), int(reps)))
+
+        slope = ExercisePrescription._weighted_slope(times, ests, alpha=0.4)
+        change = ExercisePrescription._change_point(ests, times)
+        low, mid, high = ExercisePrescription._wavelet_energy(ests)
+        energy = high / (low + mid + ExercisePrescription.EPSILON)
+        momentum = slope * (1 + change / len(ests)) * (1 + energy / 10)
+        return {"momentum": round(momentum, 4)}
