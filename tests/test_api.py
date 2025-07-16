@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from rest_api import GymAPI
-from tools import MathTools
+from tools import MathTools, ExercisePrescription
 
 
 class APITestCase(unittest.TestCase):
@@ -1029,4 +1029,40 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0]["workout_id"], 1)
         self.assertAlmostEqual(data[0]["efficiency"], round(expected, 2), places=2)
+
+    def test_volume_forecast_endpoint(self) -> None:
+        d1 = (datetime.date.today() - datetime.timedelta(days=2)).isoformat()
+        d2 = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
+        d3 = datetime.date.today().isoformat()
+
+        self.client.post("/workouts", params={"date": d1})
+        self.client.post("/workouts", params={"date": d2})
+        self.client.post("/workouts", params={"date": d3})
+
+        weights = [100.0, 110.0, 120.0]
+        for wid, w in enumerate(weights, start=1):
+            self.client.post(
+                f"/workouts/{wid}/exercises",
+                params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+            )
+            self.client.post(
+                "/exercises/{}/sets".format(wid),
+                params={"reps": 5, "weight": w, "rpe": 8},
+            )
+
+        resp = self.client.get(
+            "/stats/volume_forecast",
+            params={"days": 2, "start_date": d1, "end_date": d3},
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(len(data), 2)
+        expected = []
+        vals = [500.0, 550.0, 600.0]
+        for _ in range(2):
+            nxt = ExercisePrescription._arima_forecast(vals, steps=1)
+            expected.append(round(nxt, 2))
+            vals.append(nxt)
+        self.assertAlmostEqual(data[0]["volume"], expected[0], places=2)
+        self.assertAlmostEqual(data[1]["volume"], expected[1], places=2)
 

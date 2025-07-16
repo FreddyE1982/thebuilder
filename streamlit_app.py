@@ -1074,6 +1074,7 @@ class GymApp:
                         x=[p["date"] for p in prog],
                     )
                 self._progress_forecast_section(ex_choice)
+            self._volume_forecast_section(start_str, end_str)
         with rec_tab:
             records = self.stats.personal_records(
                 ex_choice if ex_choice else None,
@@ -1097,6 +1098,17 @@ class GymApp:
                 st.line_chart(
                     {"Est 1RM": [f["est_1rm"] for f in forecast]},
                     x=[str(f["week"]) for f in forecast],
+                )
+
+    def _volume_forecast_section(self, start: str, end: str) -> None:
+        st.subheader("Volume Forecast")
+        days = st.slider("Days", 1, 14, 7, key="vol_forecast_days")
+        if st.button("Show Volume Forecast"):
+            data = self.stats.volume_forecast(days, start, end)
+            if data:
+                st.line_chart(
+                    {"Volume": [d["volume"] for d in data]},
+                    x=[d["date"] for d in data],
                 )
 
     def _insights_tab(self) -> None:
