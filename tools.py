@@ -934,7 +934,7 @@ class ExercisePrescription(MathTools):
         perf_decline = max(0.0, 1.0 - perf_factor)
         rpe_elev = max(0.0, np.mean(np.array(rpe_scores)) - 7) if len(rpe_scores) > 0 else 0.0
         base = perf_decline * rpe_elev * (1 / rec if rec != 0 else 1.0)
-        return float(base / tut_ratio)
+        return float(base / (tut_ratio + ExercisePrescription.EPSILON))
 
     @staticmethod
     def _duration_error(durations: list[float], ideal: float) -> float:
