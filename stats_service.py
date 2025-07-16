@@ -1,6 +1,8 @@
+from __future__ import annotations
 import datetime
 from typing import List, Optional, Dict
 from db import SetRepository, ExerciseNameRepository, SettingsRepository
+from ml_service import VolumeModelService
 from tools import MathTools, ExerciseProgressEstimator, ExercisePrescription
 
 
@@ -12,10 +14,12 @@ class StatisticsService:
         set_repo: SetRepository,
         name_repo: ExerciseNameRepository,
         settings_repo: SettingsRepository | None = None,
+        volume_model: "VolumeModelService" | None = None,
     ) -> None:
         self.sets = set_repo
         self.exercise_names = name_repo
         self.settings = settings_repo
+        self.volume_model = volume_model
 
     def _alias_names(self, exercise: Optional[str]) -> List[str]:
         if not exercise:
@@ -767,7 +771,14 @@ class StatisticsService:
         vals = hist[:]
         result: List[Dict[str, float]] = []
         for i in range(days):
-            next_val = ExercisePrescription._arima_forecast(vals, steps=1)
+            next_arima = ExercisePrescription._arima_forecast(vals, steps=1)
+            features = vals[-3:] if len(vals) >= 3 else ([vals[-1]] * 3)
+            ml_pred = (
+                self.volume_model.predict(features, next_arima)
+                if self.volume_model is not None
+                else next_arima
+            )
+            next_val = (next_arima + ml_pred) / 2
             vals.append(next_val)
             day = base + datetime.timedelta(days=ts_last + i + 1)
             result.append({"date": day.isoformat(), "volume": round(next_val, 2)})
