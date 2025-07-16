@@ -518,6 +518,26 @@ class StatisticsService:
             "volumes": volumes,
         }
 
+    def training_monotony(
+        self,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> Dict[str, float]:
+        """Return training monotony value across the specified dates."""
+        names = self.exercise_names.fetch_all()
+        rows = self.sets.fetch_history_by_names(
+            names,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        if not rows:
+            return {"monotony": 1.0}
+
+        weights = [float(r[1]) for r in rows]
+        reps = [int(r[0]) for r in rows]
+        val = ExercisePrescription._weekly_monotony(weights, reps)
+        return {"monotony": round(val, 2)}
+
     def stress_balance(
         self,
         start_date: Optional[str] = None,
