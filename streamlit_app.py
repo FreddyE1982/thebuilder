@@ -232,32 +232,24 @@ class GymApp:
         self._create_sidebar()
         self._refresh()
         (
-            dash_tab,
             log_tab,
             plan_tab,
             library_tab,
             history_tab,
             stats_tab,
-            insights_tab,
-            reports_tab,
             tests_tab,
             settings_tab,
         ) = st.tabs(
             [
-                "Dashboard",
                 "Log",
                 "Plan",
                 "Library",
                 "History",
-                "Stats",
-                "Insights",
-                "Reports",
+                "Statistics",
                 "Tests",
                 "Settings",
             ]
         )
-        with dash_tab:
-            self._dashboard_tab()
         with log_tab:
             self._log_tab()
         with plan_tab:
@@ -267,10 +259,9 @@ class GymApp:
         with history_tab:
             self._history_tab()
         with stats_tab:
+            self._dashboard_tab()
             self._stats_tab()
-        with insights_tab:
             self._insights_tab()
-        with reports_tab:
             self._reports_tab()
         with tests_tab:
             self._tests_tab()
