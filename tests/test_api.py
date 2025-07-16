@@ -765,3 +765,11 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(data["stress_level"], 2)
         self.assertEqual(data["nutrition_quality"], 4)
 
+    def test_exercise_catalog_prefix_filter(self) -> None:
+        resp = self.client.get(
+            "/exercise_catalog",
+            params={"prefix": "Barbell"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("Barbell Bench Press", resp.json())
+

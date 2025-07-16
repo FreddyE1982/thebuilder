@@ -1051,6 +1051,7 @@ class ExerciseCatalogRepository(BaseRepository):
         muscle_groups: Optional[List[str]] = None,
         muscles: Optional[List[str]] = None,
         equipment: Optional[str] = None,
+        prefix: Optional[str] = None,
     ) -> List[str]:
         query = "SELECT name FROM exercise_catalog WHERE 1=1"
         params: List[str] = []
@@ -1061,6 +1062,9 @@ class ExerciseCatalogRepository(BaseRepository):
         if equipment:
             query += " AND equipment_names LIKE ?"
             params.append(f"%{equipment}%")
+        if prefix:
+            query += " AND name LIKE ?"
+            params.append(f"{prefix}%")
         if muscles:
             muscle_clauses = []
             for muscle in muscles:

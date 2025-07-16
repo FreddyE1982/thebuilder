@@ -131,10 +131,16 @@ class GymAPI:
             muscle_groups: str = None,
             muscles: str = None,
             equipment: str = None,
+            prefix: str = None,
         ):
             groups = muscle_groups.split("|") if muscle_groups else None
             muscs = muscles.split("|") if muscles else None
-            return self.exercise_catalog.fetch_names(groups, muscs, equipment)
+            return self.exercise_catalog.fetch_names(
+                groups,
+                muscs,
+                equipment,
+                prefix,
+            )
 
         @self.app.get("/exercise_catalog/{name}")
         def get_exercise_detail(name: str):
