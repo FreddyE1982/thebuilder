@@ -503,3 +503,51 @@ class StatisticsService:
                 }
             )
         return result
+
+    def session_efficiency(
+        self,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> List[Dict[str, float]]:
+        """Return efficiency score per workout."""
+        names = self.exercise_names.fetch_all()
+        rows = self.sets.fetch_history_by_names(
+            names,
+            start_date=start_date,
+            end_date=end_date,
+            with_duration=True,
+            with_workout_id=True,
+        )
+        if not rows:
+            return []
+        by_workout: Dict[int, Dict[str, object]] = {}
+        for r, w, rpe, date, start, end, wid in rows:
+            entry = by_workout.setdefault(
+                wid,
+                {"date": date, "volume": 0.0, "dur": 0.0, "rpe": []},
+            )
+            entry["volume"] += int(r) * float(w)
+            if start and end:
+                t0 = datetime.datetime.fromisoformat(start)
+                t1 = datetime.datetime.fromisoformat(end)
+                entry["dur"] += (t1 - t0).total_seconds()
+            entry["rpe"].append(int(rpe))
+        result: List[Dict[str, float]] = []
+        for wid, data in sorted(by_workout.items()):
+            duration = float(data["dur"])
+            avg_rpe = (
+                sum(data["rpe"]) / len(data["rpe"])
+                if data["rpe"]
+                else None
+            )
+            eff = MathTools.session_efficiency(
+                data["volume"], duration, avg_rpe
+            )
+            result.append(
+                {
+                    "workout_id": wid,
+                    "date": data["date"],
+                    "efficiency": round(eff, 2),
+                }
+            )
+        return result

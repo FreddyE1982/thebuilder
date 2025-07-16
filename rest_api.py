@@ -640,6 +640,16 @@ class GymAPI:
         ):
             return self.statistics.stress_balance(start_date, end_date)
 
+        @self.app.get("/stats/session_efficiency")
+        def stats_session_efficiency(
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            return self.statistics.session_efficiency(
+                start_date,
+                end_date,
+            )
+
         @self.app.get("/gamification")
         def gamification_status():
             return {

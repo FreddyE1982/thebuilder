@@ -72,6 +72,17 @@ class MathTools:
             raise ValueError("days_remaining must be positive")
         return (target_1rm - current_1rm) / days_remaining
 
+    @staticmethod
+    def session_efficiency(
+        volume: float, duration_seconds: float, avg_rpe: float | None = None
+    ) -> float:
+        """Return an efficiency score for a workout session."""
+        if duration_seconds <= 0:
+            return 0.0
+        base = volume / (duration_seconds / 60)
+        rpe_adj = math.log1p(avg_rpe) if avg_rpe is not None else 1.0
+        return base * rpe_adj
+
 
 class ExercisePrescription(MathTools):
     """Advanced utilities for generating detailed workout prescriptions."""

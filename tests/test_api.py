@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from rest_api import GymAPI
+from tools import MathTools
 
 
 class APITestCase(unittest.TestCase):
@@ -1001,4 +1002,31 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(len(data), 2)
         self.assertEqual(data[0]["tsb"], 0.0)
         self.assertEqual(data[1]["tsb"], 0.0)
+
+    def test_session_efficiency_endpoint(self) -> None:
+        self.client.post("/workouts")
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        resp = self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8},
+        )
+        set_id = resp.json()["id"]
+        start_resp = self.client.post(f"/sets/{set_id}/start")
+        end_resp = self.client.post(f"/sets/{set_id}/finish")
+        self.assertEqual(start_resp.status_code, 200)
+        self.assertEqual(end_resp.status_code, 200)
+        set_data = self.client.get(f"/sets/{set_id}").json()
+        t0 = datetime.datetime.fromisoformat(set_data["start_time"])
+        t1 = datetime.datetime.fromisoformat(set_data["end_time"])
+        duration = (t1 - t0).total_seconds()
+        expected = MathTools.session_efficiency(500.0, duration, 8)
+        resp = self.client.get("/stats/session_efficiency")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["workout_id"], 1)
+        self.assertAlmostEqual(data[0]["efficiency"], round(expected, 2), places=2)
 
