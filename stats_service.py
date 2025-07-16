@@ -400,6 +400,39 @@ class StatisticsService:
         trend["plateau_score"] = round(plateau, 2)
         return trend
 
+    def plateau_score(
+        self,
+        exercise: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> Dict[str, float]:
+        """Return advanced plateau score for ``exercise``."""
+        names = self._alias_names(exercise)
+        rows = self.sets.fetch_history_by_names(
+            names,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        if len(rows) < 6:
+            return {"score": 0.0}
+        weights = [float(r[1]) for r in rows]
+        reps = [int(r[0]) for r in rows]
+        rpes = [int(r[2]) for r in rows]
+        dates = [r[3] for r in rows]
+        base = datetime.date.fromisoformat(dates[0])
+        times = [
+            (datetime.date.fromisoformat(d) - base).days for d in dates
+        ]
+        perf = [
+            MathTools.epley_1rm(w, r)
+            for w, r in zip(weights, reps)
+        ]
+        vols = [w * r for w, r in zip(weights, reps)]
+        score = ExercisePrescription._advanced_plateau_detection(
+            perf, times, rpes, vols
+        )
+        return {"score": round(score, 2)}
+
     def training_stress(
         self,
         start_date: Optional[str] = None,

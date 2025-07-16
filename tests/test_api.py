@@ -1303,3 +1303,39 @@ class APITestCase(unittest.TestCase):
         expected = round(7 * 5 * 100.0 * monotony * (1 + variability / 10.0), 2)
         self.assertAlmostEqual(data[0]["strain"], expected, places=2)
 
+    def test_plateau_score_endpoint(self) -> None:
+        start = (datetime.date.today() - datetime.timedelta(days=5)).isoformat()
+        for i in range(6):
+            date = (
+                datetime.date.fromisoformat(start)
+                + datetime.timedelta(days=i)
+            ).isoformat()
+            self.client.post("/workouts", params={"date": date})
+            self.client.post(
+                f"/workouts/{i + 1}/exercises",
+                params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+            )
+            self.client.post(
+                f"/exercises/{i + 1}/sets",
+                params={"reps": 5, "weight": 100.0, "rpe": 8},
+            )
+
+        end = (
+            datetime.date.fromisoformat(start) + datetime.timedelta(days=5)
+        ).isoformat()
+        resp = self.client.get(
+            "/stats/advanced_plateau",
+            params={"exercise": "Bench Press", "start_date": start, "end_date": end},
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+
+        perf = [MathTools.epley_1rm(100.0, 5) for _ in range(6)]
+        times = list(range(6))
+        rpes = [8] * 6
+        vols = [500.0] * 6
+        expected = ExercisePrescription._advanced_plateau_detection(
+            perf, times, rpes, vols
+        )
+        self.assertAlmostEqual(data["score"], round(expected, 2), places=2)
+
