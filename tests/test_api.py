@@ -967,3 +967,38 @@ class APITestCase(unittest.TestCase):
         self.assertAlmostEqual(data["variability"], 0.2, places=2)
         self.assertEqual(len(data["weeks"]), 2)
 
+    def test_stress_balance_endpoint(self) -> None:
+        d1 = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
+        d2 = datetime.date.today().isoformat()
+
+        self.client.post("/workouts", params={"date": d1})
+        self.client.post("/workouts", params={"date": d2})
+
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/workouts/2/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8},
+        )
+        self.client.post(
+            "/exercises/2/sets",
+            params={"reps": 5, "weight": 110.0, "rpe": 8},
+        )
+
+        resp = self.client.get(
+            "/stats/stress_balance",
+            params={"start_date": d1, "end_date": d2},
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(len(data), 2)
+        self.assertEqual(data[0]["tsb"], 0.0)
+        self.assertEqual(data[1]["tsb"], 0.0)
+

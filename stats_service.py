@@ -454,3 +454,52 @@ class StatisticsService:
             "weeks": week_labels,
             "volumes": volumes,
         }
+
+    def stress_balance(
+        self,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> List[Dict[str, float]]:
+        """Return Training Stress Balance across dates."""
+        names = self.exercise_names.fetch_all()
+        rows = self.sets.fetch_history_by_names(
+            names,
+            start_date=start_date,
+            end_date=end_date,
+            with_duration=True,
+        )
+        if not rows:
+            return []
+        weights: List[float] = []
+        reps: List[int] = []
+        durations: List[float] = []
+        dates: List[str] = []
+        for r, w, _rpe, date, start, end in rows:
+            weights.append(float(w))
+            reps.append(int(r))
+            if start and end:
+                t0 = datetime.datetime.fromisoformat(start)
+                t1 = datetime.datetime.fromisoformat(end)
+                durations.append((t1 - t0).total_seconds())
+            else:
+                durations.append(50.0)
+            dates.append(date)
+        base = datetime.date.fromisoformat(dates[0])
+        times = [(datetime.date.fromisoformat(d) - base).days for d in dates]
+        current_rm = ExercisePrescription._current_1rm(weights, reps)
+        days, tsb = ExercisePrescription._training_stress_balance(
+            weights,
+            reps,
+            durations,
+            times,
+            current_rm,
+        )
+        result: List[Dict[str, float]] = []
+        for d, v in zip(days, tsb):
+            result.append(
+                {
+                    "date": (base + datetime.timedelta(days=d)).isoformat(),
+                    "tsb": round(v, 2),
+                }
+            )
+        return result
