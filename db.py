@@ -638,6 +638,22 @@ class SetRepository(BaseRepository):
             )
         return output.getvalue()
 
+    def workout_summary(self, workout_id: int) -> dict:
+        rows = self.fetch_for_workout(workout_id)
+        volume = 0.0
+        rpe_total = 0
+        count = 0
+        for _name, _eq, reps, weight, rpe, _s, _e in rows:
+            volume += int(reps) * float(weight)
+            rpe_total += int(rpe)
+            count += 1
+        avg_rpe = rpe_total / count if count else 0.0
+        return {
+            "volume": round(volume, 2),
+            "sets": count,
+            "avg_rpe": round(avg_rpe, 2),
+        }
+
 
 class PlannedWorkoutRepository(BaseRepository):
     """Repository for planned workouts."""
@@ -887,6 +903,17 @@ class EquipmentRepository(BaseRepository):
                     result.append(canon)
             return result
         return []
+
+    def fetch_detail(self, name: str) -> Optional[Tuple[str, List[str], int]]:
+        rows = self.fetch_all(
+            "SELECT equipment_type, muscles, is_custom FROM equipment WHERE name = ?;",
+            (name,),
+        )
+        if rows:
+            eq_type, muscles, is_custom = rows[0]
+            musc_list = [self.muscles.canonical(m) for m in muscles.split("|") if m]
+            return eq_type, musc_list, int(is_custom)
+        return None
 
     def fetch_all_records(self) -> List[Tuple[str, str, str, int]]:
         return self.fetch_all(

@@ -149,10 +149,11 @@ class GymApp:
     def run(self) -> None:
         st.title("Workout Logger")
         self._refresh()
-        dash_tab, log_tab, plan_tab, stats_tab, tests_tab, settings_tab = st.tabs([
+        dash_tab, log_tab, plan_tab, library_tab, stats_tab, tests_tab, settings_tab = st.tabs([
             "Dashboard",
             "Log",
             "Plan",
+            "Library",
             "Stats",
             "Tests",
             "Settings",
@@ -163,6 +164,8 @@ class GymApp:
             self._log_tab()
         with plan_tab:
             self._plan_tab()
+        with library_tab:
+            self._library_tab()
         with stats_tab:
             self._stats_tab()
         with tests_tab:
@@ -271,6 +274,12 @@ class GymApp:
                 exercises = self.exercises.fetch_for_workout(workout_id)
                 for ex_id, name, eq_name in exercises:
                     self._exercise_card(ex_id, name, eq_name)
+            summary = self.sets.workout_summary(workout_id)
+            with st.expander("Workout Summary", expanded=True):
+                col1, col2, col3 = st.columns(3)
+                col1.metric("Volume", summary["volume"])
+                col2.metric("Sets", summary["sets"])
+                col3.metric("Avg RPE", summary["avg_rpe"])
 
     def _exercise_card(self, exercise_id: int, name: str, equipment: Optional[str]) -> None:
         sets = self.sets.fetch_for_exercise(exercise_id)
@@ -339,6 +348,18 @@ class GymApp:
             if hist:
                 with st.expander("History (last 5)"):
                     st.table(hist[-5:][::-1])
+                with st.expander("Weight Progress"):
+                    st.line_chart(
+                        {"Weight": [h["weight"] for h in hist]},
+                        x=[h["date"] for h in hist],
+                    )
+                prog = self.stats.progression(name)
+                if prog:
+                    with st.expander("1RM Progress"):
+                        st.line_chart(
+                            {"Est 1RM": [p["est_1rm"] for p in prog]},
+                            x=[p["date"] for p in prog],
+                        )
             if self.recommender.has_history(name):
                 if st.button("Recommend Next Set", key=f"rec_next_{exercise_id}"):
                     try:
@@ -559,6 +580,82 @@ class GymApp:
             st.session_state.pop(f"plan_new_reps_{exercise_id}", None)
             st.session_state.pop(f"plan_new_weight_{exercise_id}", None)
             st.session_state.pop(f"plan_new_rpe_{exercise_id}", None)
+
+    def _library_tab(self) -> None:
+        st.header("Library")
+        eq_tab, ex_tab = st.tabs(["Equipment", "Exercises"])
+        with eq_tab:
+            self._equipment_library()
+        with ex_tab:
+            self._exercise_catalog_library()
+
+    def _equipment_library(self) -> None:
+        muscles = self.muscles_repo.fetch_all()
+        types = [""] + self.equipment.fetch_types()
+        sel_type = st.selectbox("Type", types, key="lib_eq_type")
+        prefix = st.text_input("Name Contains", key="lib_eq_prefix")
+        mus_filter = st.multiselect("Muscles", muscles, key="lib_eq_mus")
+        names = self.equipment.fetch_names(
+            sel_type or None,
+            prefix or None,
+            mus_filter or None,
+        )
+        choice = st.selectbox("Equipment", [""] + names, key="lib_eq_name")
+        if choice and st.button("Details", key="lib_eq_btn"):
+            detail = self.equipment.fetch_detail(choice)
+            if detail:
+                with st.dialog("Equipment Details"):
+                    eq_type, muscs, _ = detail
+                    st.markdown(f"**Type:** {eq_type}")
+                    st.markdown("**Muscles:**")
+                    for m in muscs:
+                        st.markdown(f"- {m}")
+
+    def _exercise_catalog_library(self) -> None:
+        groups = self.exercise_catalog.fetch_muscle_groups()
+        muscles = self.muscles_repo.fetch_all()
+        sel_groups = st.multiselect("Muscle Groups", groups, key="lib_ex_groups")
+        sel_mus = st.multiselect("Muscles", muscles, key="lib_ex_mus")
+        eq_names = self.equipment.fetch_names()
+        sel_eq = st.selectbox("Equipment", [""] + eq_names, key="lib_ex_eq")
+        names = self.exercise_catalog.fetch_names(
+            sel_groups or None,
+            sel_mus or None,
+            sel_eq or None,
+        )
+        choice = st.selectbox("Exercise", [""] + names, key="lib_ex_name")
+        if choice and st.button("Show Details", key="lib_ex_btn"):
+            detail = self.exercise_catalog.fetch_detail(choice)
+            if detail:
+                (
+                    group,
+                    variants,
+                    equipment_names,
+                    primary,
+                    secondary,
+                    tertiary,
+                    other,
+                    _,
+                ) = detail
+                with st.dialog("Exercise Details"):
+                    st.markdown(f"**Group:** {group}")
+                    st.markdown(f"**Primary:** {primary}")
+                    if secondary:
+                        st.markdown("**Secondary:**")
+                        for m in secondary.split("|"):
+                            st.markdown(f"- {m}")
+                    if tertiary:
+                        st.markdown("**Tertiary:**")
+                        for m in tertiary.split("|"):
+                            st.markdown(f"- {m}")
+                    if other:
+                        st.markdown("**Other:**")
+                        for m in other.split("|"):
+                            st.markdown(f"- {m}")
+                    if variants:
+                        st.markdown("**Variants:**")
+                        for v in variants.split("|"):
+                            st.markdown(f"- {v}")
 
     def _stats_tab(self) -> None:
         st.header("Statistics")
