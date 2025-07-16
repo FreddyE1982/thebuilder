@@ -289,15 +289,16 @@ class GymApp:
         plans = self.planned_workouts.fetch_all()
         options = {str(p[0]): p for p in plans}
         if options:
-            selected = st.selectbox(
-                "Planned Workout",
-                [""] + list(options.keys()),
-                format_func=lambda x: "None" if x == "" else options[x][1],
-                key="log_plan_select",
-            )
-            if selected and st.button("Use Plan"):
-                new_id = self.planner.create_workout_from_plan(int(selected))
-                st.session_state.selected_workout = new_id
+            with st.expander("Use Planned Workout", expanded=False):
+                selected = st.selectbox(
+                    "Planned Workout",
+                    [""] + list(options.keys()),
+                    format_func=lambda x: "None" if x == "" else options[x][1],
+                    key="log_plan_select",
+                )
+                if selected and st.button("Use Plan"):
+                    new_id = self.planner.create_workout_from_plan(int(selected))
+                    st.session_state.selected_workout = new_id
         self._workout_section()
         if st.session_state.selected_workout:
             self._exercise_section()
@@ -814,72 +815,76 @@ class GymApp:
     def _equipment_library(self) -> None:
         muscles = self.muscles_repo.fetch_all()
         types = [""] + self.equipment.fetch_types()
-        sel_type = st.selectbox("Type", types, key="lib_eq_type")
-        prefix = st.text_input("Name Contains", key="lib_eq_prefix")
-        mus_filter = st.multiselect("Muscles", muscles, key="lib_eq_mus")
+        with st.expander("Filters", expanded=True):
+            sel_type = st.selectbox("Type", types, key="lib_eq_type")
+            prefix = st.text_input("Name Contains", key="lib_eq_prefix")
+            mus_filter = st.multiselect("Muscles", muscles, key="lib_eq_mus")
         names = self.equipment.fetch_names(
             sel_type or None,
             prefix or None,
             mus_filter or None,
         )
-        choice = st.selectbox("Equipment", [""] + names, key="lib_eq_name")
-        if choice and st.button("Details", key="lib_eq_btn"):
-            detail = self.equipment.fetch_detail(choice)
-            if detail:
-                with st.dialog("Equipment Details"):
-                    eq_type, muscs, _ = detail
-                    st.markdown(f"**Type:** {eq_type}")
-                    st.markdown("**Muscles:**")
-                    for m in muscs:
-                        st.markdown(f"- {m}")
+        with st.expander("Equipment List", expanded=True):
+            choice = st.selectbox("Equipment", [""] + names, key="lib_eq_name")
+            if choice and st.button("Details", key="lib_eq_btn"):
+                detail = self.equipment.fetch_detail(choice)
+                if detail:
+                    with st.dialog("Equipment Details"):
+                        eq_type, muscs, _ = detail
+                        st.markdown(f"**Type:** {eq_type}")
+                        st.markdown("**Muscles:**")
+                        for m in muscs:
+                            st.markdown(f"- {m}")
 
     def _exercise_catalog_library(self) -> None:
         groups = self.exercise_catalog.fetch_muscle_groups()
         muscles = self.muscles_repo.fetch_all()
-        sel_groups = st.multiselect("Muscle Groups", groups, key="lib_ex_groups")
-        sel_mus = st.multiselect("Muscles", muscles, key="lib_ex_mus")
-        eq_names = self.equipment.fetch_names()
-        sel_eq = st.selectbox("Equipment", [""] + eq_names, key="lib_ex_eq")
-        name_filter = st.text_input("Name Contains", key="lib_ex_prefix")
+        with st.expander("Filters", expanded=True):
+            sel_groups = st.multiselect("Muscle Groups", groups, key="lib_ex_groups")
+            sel_mus = st.multiselect("Muscles", muscles, key="lib_ex_mus")
+            eq_names = self.equipment.fetch_names()
+            sel_eq = st.selectbox("Equipment", [""] + eq_names, key="lib_ex_eq")
+            name_filter = st.text_input("Name Contains", key="lib_ex_prefix")
         names = self.exercise_catalog.fetch_names(
             sel_groups or None,
             sel_mus or None,
             sel_eq or None,
             name_filter or None,
         )
-        choice = st.selectbox("Exercise", [""] + names, key="lib_ex_name")
-        if choice and st.button("Show Details", key="lib_ex_btn"):
-            detail = self.exercise_catalog.fetch_detail(choice)
-            if detail:
-                (
-                    group,
-                    variants,
-                    equipment_names,
-                    primary,
-                    secondary,
-                    tertiary,
-                    other,
-                    _,
-                ) = detail
-                with st.dialog("Exercise Details"):
-                    st.markdown(f"**Group:** {group}")
-                    st.markdown(f"**Primary:** {primary}")
-                    if secondary:
-                        st.markdown("**Secondary:**")
-                        for m in secondary.split("|"):
-                            st.markdown(f"- {m}")
-                    if tertiary:
-                        st.markdown("**Tertiary:**")
-                        for m in tertiary.split("|"):
-                            st.markdown(f"- {m}")
-                    if other:
-                        st.markdown("**Other:**")
-                        for m in other.split("|"):
-                            st.markdown(f"- {m}")
-                    if variants:
-                        st.markdown("**Variants:**")
-                        for v in variants.split("|"):
-                            st.markdown(f"- {v}")
+        with st.expander("Exercise List", expanded=True):
+            choice = st.selectbox("Exercise", [""] + names, key="lib_ex_name")
+            if choice and st.button("Show Details", key="lib_ex_btn"):
+                detail = self.exercise_catalog.fetch_detail(choice)
+                if detail:
+                    (
+                        group,
+                        variants,
+                        equipment_names,
+                        primary,
+                        secondary,
+                        tertiary,
+                        other,
+                        _,
+                    ) = detail
+                    with st.dialog("Exercise Details"):
+                        st.markdown(f"**Group:** {group}")
+                        st.markdown(f"**Primary:** {primary}")
+                        if secondary:
+                            st.markdown("**Secondary:**")
+                            for m in secondary.split("|"):
+                                st.markdown(f"- {m}")
+                        if tertiary:
+                            st.markdown("**Tertiary:**")
+                            for m in tertiary.split("|"):
+                                st.markdown(f"- {m}")
+                        if other:
+                            st.markdown("**Other:**")
+                            for m in other.split("|"):
+                                st.markdown(f"- {m}")
+                        if variants:
+                            st.markdown("**Variants:**")
+                            for v in variants.split("|"):
+                                st.markdown(f"- {v}")
 
     def _custom_exercise_management(self) -> None:
         muscles = self.muscles_repo.fetch_all()
