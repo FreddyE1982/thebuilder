@@ -181,11 +181,16 @@ class GymApp:
                 end = st.date_input("End", datetime.date.today(), key="dash_end")
         stats = self.stats.overview(start.isoformat(), end.isoformat())
         with st.expander("Overview Metrics", expanded=True):
-            m1, m2, m3, m4 = st.columns(4)
-            m1.metric("Workouts", stats["workouts"])
-            m2.metric("Volume", stats["volume"])
-            m3.metric("Avg RPE", stats["avg_rpe"])
-            m4.metric("Exercises", stats["exercises"])
+            col_num = 2 if st.session_state.is_mobile else 4
+            cols = st.columns(col_num)
+            metrics = [
+                ("Workouts", stats["workouts"]),
+                ("Volume", stats["volume"]),
+                ("Avg RPE", stats["avg_rpe"]),
+                ("Exercises", stats["exercises"]),
+            ]
+            for idx, (label, val) in enumerate(metrics):
+                cols[idx % col_num].metric(label, val)
         daily = self.stats.daily_volume(start.isoformat(), end.isoformat())
         with st.expander("Charts", expanded=True):
             st.subheader("Daily Volume")
@@ -259,10 +264,22 @@ class GymApp:
         with history_tab:
             self._history_tab()
         with stats_tab:
-            self._dashboard_tab()
-            self._stats_tab()
-            self._insights_tab()
-            self._reports_tab()
+            dash_sub, stats_sub, insights_sub, rep_sub = st.tabs(
+                [
+                    "Dashboard",
+                    "Exercise Stats",
+                    "Insights",
+                    "Reports",
+                ]
+            )
+            with dash_sub:
+                self._dashboard_tab()
+            with stats_sub:
+                self._stats_tab()
+            with insights_sub:
+                self._insights_tab()
+            with rep_sub:
+                self._reports_tab()
         with tests_tab:
             self._tests_tab()
         with settings_tab:
