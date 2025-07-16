@@ -25,6 +25,8 @@ class GymApp:
     """Streamlit application for workout logging."""
 
     def __init__(self) -> None:
+        self._configure_page()
+        self._inject_responsive_css()
         self.workouts = WorkoutRepository()
         self.exercises = ExerciseRepository()
         self.sets = SetRepository()
@@ -59,6 +61,46 @@ class GymApp:
             self.settings_repo,
         )
         self._state_init()
+
+    def _configure_page(self) -> None:
+        if st.session_state.get("layout_set"):
+            return
+        params = st.experimental_get_query_params()
+        mode = params.get("mode", [None])[0]
+        if mode is None:
+            st.components.v1.html(
+                """
+                <script>
+                const mode = window.innerWidth < 768 ? 'mobile' : 'desktop';
+                const params = new URLSearchParams(window.location.search);
+                params.set('mode', mode);
+                window.location.search = params.toString();
+                </script>
+                """,
+                height=0,
+            )
+            st.stop()
+        st.set_page_config(
+            page_title="Workout Logger",
+            layout="centered" if mode == "mobile" else "wide",
+        )
+        st.session_state.layout_set = True
+        st.session_state.is_mobile = mode == "mobile"
+
+    def _inject_responsive_css(self) -> None:
+        st.markdown(
+            """
+            <style>
+            @media screen and (max-width: 768px) {
+                div[data-testid="column"] {
+                    width: 100% !important;
+                    flex: 1 1 100% !important;
+                }
+            }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
 
     def _state_init(self) -> None:
         if "selected_workout" not in st.session_state:
