@@ -204,6 +204,18 @@ class GymApp:
             if records:
                 with st.expander("Personal Records", expanded=False):
                     st.table(records[:5])
+            eq_stats = self.stats.equipment_usage(start.isoformat(), end.isoformat())
+            if eq_stats:
+                st.subheader("Equipment Usage")
+                st.bar_chart(
+                    {"Sets": [e["sets"] for e in eq_stats]},
+                    x=[e["equipment"] for e in eq_stats],
+                )
+            top_ex = self.stats.exercise_summary(None, start.isoformat(), end.isoformat())
+            top_ex.sort(key=lambda x: x["volume"], reverse=True)
+            if top_ex:
+                with st.expander("Top Exercises", expanded=False):
+                    st.table(top_ex[:5])
 
     def run(self) -> None:
         st.title("Workout Logger")
@@ -216,6 +228,7 @@ class GymApp:
             library_tab,
             history_tab,
             stats_tab,
+            insights_tab,
             reports_tab,
             tests_tab,
             settings_tab,
@@ -227,6 +240,7 @@ class GymApp:
                 "Library",
                 "History",
                 "Stats",
+                "Insights",
                 "Reports",
                 "Tests",
                 "Settings",
@@ -244,6 +258,8 @@ class GymApp:
             self._history_tab()
         with stats_tab:
             self._stats_tab()
+        with insights_tab:
+            self._insights_tab()
         with reports_tab:
             self._reports_tab()
         with tests_tab:
@@ -1049,6 +1065,51 @@ class GymApp:
                     {"Est 1RM": [f["est_1rm"] for f in forecast]},
                     x=[str(f["week"]) for f in forecast],
                 )
+
+    def _insights_tab(self) -> None:
+        st.header("Insights")
+        exercises = [""] + self.exercise_names_repo.fetch_all()
+        with st.expander("Filters", expanded=True):
+            ex_choice = st.selectbox("Exercise", exercises, key="insights_ex")
+            col1, col2 = st.columns(2)
+            with col1:
+                start = st.date_input(
+                    "Start",
+                    datetime.date.today() - datetime.timedelta(days=90),
+                    key="insights_start",
+                )
+            with col2:
+                end = st.date_input(
+                    "End", datetime.date.today(), key="insights_end"
+                )
+        if ex_choice:
+            insights = self.stats.progress_insights(
+                ex_choice, start.isoformat(), end.isoformat()
+            )
+            prog = self.stats.progression(
+                ex_choice, start.isoformat(), end.isoformat()
+            )
+            if insights:
+                with st.expander("Trend Analysis", expanded=True):
+                    st.write(f"Trend: {insights.get('trend', '')}")
+                    if "slope" in insights:
+                        st.metric("Slope", round(insights["slope"], 2))
+                    if "r_squared" in insights:
+                        st.metric("R\xb2", round(insights["r_squared"], 2))
+                    if "strength_seasonality" in insights:
+                        st.metric(
+                            "Seasonality Strength",
+                            round(insights["strength_seasonality"], 2),
+                        )
+                    st.metric("Plateau Score", insights["plateau_score"])
+            if prog:
+                with st.expander("1RM Progression", expanded=True):
+                    st.line_chart(
+                        {"1RM": [p["est_1rm"] for p in prog]},
+                        x=[p["date"] for p in prog],
+                    )
+        else:
+            st.info("Select an exercise to view insights.")
 
     def _reports_tab(self) -> None:
         st.header("Reports")
