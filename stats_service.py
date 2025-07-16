@@ -138,6 +138,69 @@ class StatisticsService:
             )
         return result
 
+    def deload_recommendation(
+        self,
+        exercise: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> Dict[str, float]:
+        """Return deload trigger and score for ``exercise``."""
+        names = self._alias_names(exercise)
+        rows = self.sets.fetch_history_by_names(
+            names,
+            start_date=start_date,
+            end_date=end_date,
+            with_duration=True,
+        )
+        if not rows:
+            return {"trigger": 0.0, "score": 0.0}
+
+        weights = [float(r[1]) for r in rows]
+        reps = [int(r[0]) for r in rows]
+        rpe_scores = [int(r[2]) for r in rows]
+        durations: List[float] = []
+        for _r, _w, _rpe, _date, start, end in rows:
+            if start and end:
+                t0 = datetime.datetime.fromisoformat(start)
+                t1 = datetime.datetime.fromisoformat(end)
+                durations.append((t1 - t0).total_seconds())
+            else:
+                durations.append(50.0)
+
+        times = list(range(len(rows)))
+        perf = ExercisePrescription._performance_scores_from_logs(
+            weights, reps, times, 600
+        )
+        perf_factor = float(sum(perf) / len(perf))
+        rec_factor = 1.0
+        tut_ratio = float(sum(durations)) / (50.0 * len(durations))
+        trigger = ExercisePrescription._deload_trigger(
+            perf_factor, rpe_scores, rec_factor, tut_ratio
+        )
+        ac_ratio = ExercisePrescription._ac_ratio(weights, reps)
+        body_weight = (
+            self.settings.get_float("body_weight", 80.0)
+            if self.settings
+            else 80.0
+        )
+        rec_quality = ExercisePrescription._comprehensive_recovery_quality(
+            None, None, None, body_weight
+        )
+        rpe_factor = (
+            sum(rpe_scores[-3:]) / len(rpe_scores[-3:]) / 7 if rpe_scores else 1.0
+        )
+        score = ExercisePrescription._comprehensive_deload_assessment(
+            1 - perf_factor,
+            rpe_factor,
+            ac_ratio,
+            rec_quality,
+            0,
+        )
+        return {
+            "trigger": round(trigger, 2),
+            "score": round(score, 2),
+        }
+
     def progress_forecast(
         self,
         exercise: str,
