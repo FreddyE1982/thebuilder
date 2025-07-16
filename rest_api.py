@@ -626,6 +626,49 @@ class GymAPI:
                 {"id": tid, "date": date, "weights": weights} for tid, date, weights in tests
             ]
 
+        @self.app.get("/pyramid_tests/full")
+        def list_pyramid_tests_full():
+            tests = self.pyramid_tests.fetch_full_with_weights(self.pyramid_entries)
+            result = []
+            for row in tests:
+                (
+                    tid,
+                    name,
+                    date,
+                    eq_name,
+                    start_w,
+                    failed_w,
+                    max_a,
+                    dur,
+                    rest,
+                    rpe_attempt,
+                    tod,
+                    sleep_h,
+                    stress,
+                    nutrition,
+                    weights,
+                ) = row
+                result.append(
+                    {
+                        "id": tid,
+                        "exercise_name": name,
+                        "date": date,
+                        "equipment_name": eq_name,
+                        "starting_weight": start_w,
+                        "failed_weight": failed_w,
+                        "max_achieved": max_a,
+                        "test_duration_minutes": dur,
+                        "rest_between_attempts": rest,
+                        "rpe_per_attempt": rpe_attempt,
+                        "time_of_day": tod,
+                        "sleep_hours": sleep_h,
+                        "stress_level": stress,
+                        "nutrition_quality": nutrition,
+                        "weights": weights,
+                    }
+                )
+            return result
+
         @self.app.get("/settings/general")
         def get_general_settings():
             return self.settings.all_settings()

@@ -1075,10 +1075,18 @@ class ExerciseCatalogRepository(BaseRepository):
             )
         return None
 
-    def fetch_all_records(self) -> List[Tuple[str, str, str, str, str, str, str, int]]:
-        rows = self.fetch_all(
-            "SELECT name, muscle_group, variants, equipment_names, primary_muscle, secondary_muscle, tertiary_muscle, other_muscles, is_custom FROM exercise_catalog ORDER BY name;"
+    def fetch_all_records(
+        self, custom_only: bool = False
+    ) -> List[Tuple[str, str, str, str, str, str, str, int]]:
+        query = (
+            "SELECT name, muscle_group, variants, equipment_names, primary_muscle, "
+            "secondary_muscle, tertiary_muscle, other_muscles, is_custom FROM "
+            "exercise_catalog"
         )
+        if custom_only:
+            query += " WHERE is_custom = 1"
+        query += " ORDER BY name;"
+        rows = self.fetch_all(query)
         result = []
         for (
             name,

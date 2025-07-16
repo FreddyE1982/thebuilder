@@ -685,3 +685,43 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(history[0]["weights"], [120.0])
         self.assertEqual(history[1]["weights"], [100.0, 110.0])
 
+    def test_pyramid_tests_full(self) -> None:
+        resp = self.client.post(
+            "/pyramid_tests",
+            params={
+                "weights": "100|110",
+                "exercise_name": "Bench",
+                "equipment_name": "Olympic Barbell",
+                "starting_weight": 100.0,
+                "failed_weight": 115.0,
+                "max_achieved": 110.0,
+                "test_duration_minutes": 10,
+                "rest_between_attempts": "120s",
+                "rpe_per_attempt": "8|9",
+                "time_of_day": "morning",
+                "sleep_hours": 7.5,
+                "stress_level": 2,
+                "nutrition_quality": 4,
+            },
+        )
+        self.assertEqual(resp.status_code, 200)
+        tid = resp.json()["id"]
+
+        resp = self.client.get("/pyramid_tests/full")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()[0]
+        self.assertEqual(data["id"], tid)
+        self.assertEqual(data["exercise_name"], "Bench")
+        self.assertEqual(data["equipment_name"], "Olympic Barbell")
+        self.assertEqual(data["weights"], [100.0, 110.0])
+        self.assertEqual(data["starting_weight"], 100.0)
+        self.assertEqual(data["failed_weight"], 115.0)
+        self.assertEqual(data["max_achieved"], 110.0)
+        self.assertEqual(data["test_duration_minutes"], 10)
+        self.assertEqual(data["rest_between_attempts"], "120s")
+        self.assertEqual(data["rpe_per_attempt"], "8|9")
+        self.assertEqual(data["time_of_day"], "morning")
+        self.assertAlmostEqual(data["sleep_hours"], 7.5)
+        self.assertEqual(data["stress_level"], 2)
+        self.assertEqual(data["nutrition_quality"], 4)
+
