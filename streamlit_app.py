@@ -1087,6 +1087,10 @@ class GymApp:
             tsb = self.stats.stress_balance(start_str, end_str)
             if tsb:
                 st.line_chart({"TSB": [d["tsb"] for d in tsb]}, x=[d["date"] for d in tsb])
+            overview = self.stats.stress_overview(start_str, end_str)
+            if overview:
+                st.metric("Stress", overview["stress"])
+                st.metric("Fatigue", overview["fatigue"])
 
     def _progress_forecast_section(self, exercise: str) -> None:
         st.subheader("Progress Forecast")

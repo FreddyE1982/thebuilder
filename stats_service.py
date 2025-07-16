@@ -615,6 +615,58 @@ class StatisticsService:
             )
         return result
 
+    def stress_overview(
+        self,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> Dict[str, float]:
+        """Return overall stress and fatigue for the period."""
+        names = self.exercise_names.fetch_all()
+        rows = self.sets.fetch_history_by_names(
+            names,
+            start_date=start_date,
+            end_date=end_date,
+            with_duration=True,
+        )
+        if not rows:
+            return {"stress": 0.0, "fatigue": 0.0}
+
+        base = datetime.date.fromisoformat(rows[0][3])
+        weights: List[float] = []
+        reps: List[int] = []
+        rpes: List[int] = []
+        times: List[float] = []
+        durations: List[float] = []
+        for r, w, rpe, date, start, end in rows:
+            weights.append(float(w))
+            reps.append(int(r))
+            rpes.append(int(rpe))
+            times.append((datetime.date.fromisoformat(date) - base).days)
+            if start and end:
+                t0 = datetime.datetime.fromisoformat(start)
+                t1 = datetime.datetime.fromisoformat(end)
+                durations.append((t1 - t0).total_seconds())
+            else:
+                durations.append(50.0)
+
+        current_rm = ExercisePrescription._current_1rm(weights, reps)
+        stress = ExercisePrescription._stress_level(
+            weights,
+            reps,
+            rpes,
+            times,
+            current_rm,
+            10,
+        )
+        fatigue = ExercisePrescription._tss_adjusted_fatigue(
+            weights,
+            reps,
+            times,
+            durations,
+            current_rm,
+        )
+        return {"stress": round(stress, 2), "fatigue": round(fatigue, 2)}
+
     def volume_forecast(
         self,
         days: int,
