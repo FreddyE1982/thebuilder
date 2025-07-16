@@ -274,6 +274,49 @@ class APITestCase(unittest.TestCase):
             [{"id": dup_id, "date": dup_date, "training_type": "strength"}],
         )
 
+    def test_planned_set_update_and_get(self) -> None:
+        plan_date = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
+        resp = self.client.post(
+            "/planned_workouts",
+            params={"date": plan_date, "training_type": "strength"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        plan_id = resp.json()["id"]
+
+        resp = self.client.post(
+            f"/planned_workouts/{plan_id}/exercises",
+            params={"name": "Bench", "equipment": "Olympic Barbell"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        ex_id = resp.json()["id"]
+
+        resp = self.client.post(
+            f"/planned_exercises/{ex_id}/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8},
+        )
+        self.assertEqual(resp.status_code, 200)
+        set_id = resp.json()["id"]
+
+        resp = self.client.put(
+            f"/planned_sets/{set_id}",
+            params={"reps": 6, "weight": 105.0, "rpe": 9},
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), {"status": "updated"})
+
+        resp = self.client.get(f"/planned_sets/{set_id}")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(
+            resp.json(),
+            {
+                "id": set_id,
+                "planned_exercise_id": ex_id,
+                "reps": 6,
+                "weight": 105.0,
+                "rpe": 9,
+            },
+        )
+
     def test_equipment_endpoints(self) -> None:
         response = self.client.get("/equipment/types")
         self.assertEqual(response.status_code, 200)

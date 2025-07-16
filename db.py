@@ -785,6 +785,28 @@ class PlannedSetRepository(BaseRepository):
             (exercise_id,),
         )
 
+    def update(self, set_id: int, reps: int, weight: float, rpe: int) -> None:
+        self.execute(
+            "UPDATE planned_sets SET reps = ?, weight = ?, rpe = ? WHERE id = ?;",
+            (reps, weight, rpe, set_id),
+        )
+
+    def fetch_detail(self, set_id: int) -> dict:
+        rows = self.fetch_all(
+            "SELECT id, planned_exercise_id, reps, weight, rpe FROM planned_sets WHERE id = ?;",
+            (set_id,),
+        )
+        if not rows:
+            raise ValueError("planned set not found")
+        sid, ex_id, reps, weight, rpe = rows[0]
+        return {
+            "id": sid,
+            "planned_exercise_id": ex_id,
+            "reps": reps,
+            "weight": weight,
+            "rpe": rpe,
+        }
+
 
 class MuscleRepository(BaseRepository):
     """Repository for muscle alias management."""
