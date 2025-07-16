@@ -551,3 +551,40 @@ class StatisticsService:
                 }
             )
         return result
+
+    def volume_forecast(
+        self,
+        days: int,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> List[Dict[str, float]]:
+        """Forecast daily training volume for upcoming days."""
+        names = self.exercise_names.fetch_all()
+        rows = self.sets.fetch_history_by_names(
+            names,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        if not rows:
+            return []
+
+        volumes: Dict[str, float] = {}
+        for reps, weight, _rpe, date in rows:
+            volumes[date] = volumes.get(date, 0.0) + int(reps) * float(weight)
+
+        ordered_dates = sorted(volumes)
+        base = datetime.date.fromisoformat(ordered_dates[0])
+        hist = [volumes[d] for d in ordered_dates]
+        ts_last = (
+            datetime.date.fromisoformat(ordered_dates[-1]) - base
+        ).days
+
+        vals = hist[:]
+        result: List[Dict[str, float]] = []
+        for i in range(days):
+            next_val = ExercisePrescription._arima_forecast(vals, steps=1)
+            vals.append(next_val)
+            day = base + datetime.timedelta(days=ts_last + i + 1)
+            result.append({"date": day.isoformat(), "volume": round(next_val, 2)})
+
+        return result

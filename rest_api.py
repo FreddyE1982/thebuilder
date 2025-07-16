@@ -650,6 +650,14 @@ class GymAPI:
                 end_date,
             )
 
+        @self.app.get("/stats/volume_forecast")
+        def stats_volume_forecast(
+            days: int = 7,
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            return self.statistics.volume_forecast(days, start_date, end_date)
+
         @self.app.get("/gamification")
         def gamification_status():
             return {
