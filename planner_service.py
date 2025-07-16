@@ -31,9 +31,9 @@ class PlannerService:
         self.gamification = gamification
 
     def create_workout_from_plan(self, plan_id: int) -> int:
-        _pid, date = self.planned_workouts.fetch_detail(plan_id)
+        _pid, date, t_type = self.planned_workouts.fetch_detail(plan_id)
         workout_id = self.workouts.create(
-            date, "strength"
+            date, t_type
         )
         exercises = self.planned_exercises.fetch_for_workout(plan_id)
         for ex_id, name, equipment in exercises:
@@ -52,8 +52,8 @@ class PlannerService:
         return workout_id
 
     def duplicate_plan(self, plan_id: int, new_date: str) -> int:
-        _pid, _date = self.planned_workouts.fetch_detail(plan_id)
-        new_id = self.planned_workouts.create(new_date)
+        _pid, _date, t_type = self.planned_workouts.fetch_detail(plan_id)
+        new_id = self.planned_workouts.create(new_date, t_type)
         exercises = self.planned_exercises.fetch_for_workout(plan_id)
         for ex_id, name, equipment in exercises:
             new_ex_id = self.planned_exercises.add(new_id, name, equipment)

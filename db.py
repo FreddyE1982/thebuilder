@@ -84,9 +84,10 @@ class Database:
         "planned_workouts": (
             """CREATE TABLE planned_workouts (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    date TEXT NOT NULL
+                    date TEXT NOT NULL,
+                    training_type TEXT NOT NULL DEFAULT 'strength'
                 );""",
-            ["id", "date"],
+            ["id", "date", "training_type"],
         ),
         "planned_exercises": (
             """CREATE TABLE planned_exercises (
@@ -685,20 +686,20 @@ class SetRepository(BaseRepository):
 class PlannedWorkoutRepository(BaseRepository):
     """Repository for planned workouts."""
 
-    def create(self, date: str) -> int:
+    def create(self, date: str, training_type: str = "strength") -> int:
         return self.execute(
-            "INSERT INTO planned_workouts (date) VALUES (?);",
-            (date,),
+            "INSERT INTO planned_workouts (date, training_type) VALUES (?, ?);",
+            (date, training_type),
         )
 
-    def fetch_all(self) -> List[Tuple[int, str]]:
+    def fetch_all(self) -> List[Tuple[int, str, str]]:
         return super().fetch_all(
-            "SELECT id, date FROM planned_workouts ORDER BY id DESC;"
+            "SELECT id, date, training_type FROM planned_workouts ORDER BY id DESC;"
         )
 
-    def fetch_detail(self, plan_id: int) -> Tuple[int, str]:
+    def fetch_detail(self, plan_id: int) -> Tuple[int, str, str]:
         rows = super().fetch_all(
-            "SELECT id, date FROM planned_workouts WHERE id = ?;",
+            "SELECT id, date, training_type FROM planned_workouts WHERE id = ?;",
             (plan_id,),
         )
         if not rows:
@@ -715,6 +716,18 @@ class PlannedWorkoutRepository(BaseRepository):
         self.execute(
             "UPDATE planned_workouts SET date = ? WHERE id = ?;",
             (date, plan_id),
+        )
+
+    def set_training_type(self, plan_id: int, training_type: str) -> None:
+        rows = super().fetch_all(
+            "SELECT id FROM planned_workouts WHERE id = ?;",
+            (plan_id,),
+        )
+        if not rows:
+            raise ValueError("planned workout not found")
+        self.execute(
+            "UPDATE planned_workouts SET training_type = ? WHERE id = ?;",
+            (training_type, plan_id),
         )
 
     def delete(self, plan_id: int) -> None:

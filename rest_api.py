@@ -368,19 +368,29 @@ class GymAPI:
             ]
 
         @self.app.post("/planned_workouts")
-        def create_planned_workout(date: str):
-            plan_id = self.planned_workouts.create(date)
+        def create_planned_workout(date: str, training_type: str = "strength"):
+            plan_id = self.planned_workouts.create(date, training_type)
             return {"id": plan_id}
 
         @self.app.get("/planned_workouts")
         def list_planned_workouts():
             plans = self.planned_workouts.fetch_all()
-            return [{"id": pid, "date": date} for pid, date in plans]
+            return [
+                {"id": pid, "date": date, "training_type": t}
+                for pid, date, t in plans
+            ]
 
         @self.app.put("/planned_workouts/{plan_id}")
-        def update_planned_workout(plan_id: int, date: str):
+        def update_planned_workout(
+            plan_id: int,
+            date: str | None = None,
+            training_type: str | None = None,
+        ):
             try:
-                self.planned_workouts.update_date(plan_id, date)
+                if date is not None:
+                    self.planned_workouts.update_date(plan_id, date)
+                if training_type is not None:
+                    self.planned_workouts.set_training_type(plan_id, training_type)
                 return {"status": "updated"}
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))

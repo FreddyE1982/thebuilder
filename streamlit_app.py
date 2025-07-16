@@ -634,8 +634,16 @@ class GymApp:
                 plan_date = st.date_input(
                     "Plan Date", datetime.date.today(), key="plan_date"
                 )
+                training_options = ["strength", "hypertrophy", "highintensity"]
+                plan_type = st.selectbox(
+                    "Training Type",
+                    training_options,
+                    key="plan_type",
+                )
                 if st.button("New Planned Workout"):
-                    pid = self.planned_workouts.create(plan_date.isoformat())
+                    pid = self.planned_workouts.create(
+                        plan_date.isoformat(), plan_type
+                    )
                     st.session_state.selected_planned_workout = pid
             with st.expander("Existing Plans", expanded=True):
                 plans = self.planned_workouts.fetch_all()
@@ -648,12 +656,18 @@ class GymApp:
                         key="select_planned_workout",
                     )
                     st.session_state.selected_planned_workout = int(selected)
-                    for pid, pdate in plans:
+                    for pid, pdate, ptype in plans:
                         with st.expander(f"{pdate} (ID {pid})", expanded=False):
                             edit_date = st.date_input(
                                 "New Date",
                                 datetime.date.fromisoformat(pdate),
                                 key=f"plan_edit_{pid}",
+                            )
+                            type_choice = st.selectbox(
+                                "Type",
+                                training_options,
+                                index=training_options.index(ptype),
+                                key=f"plan_type_{pid}",
                             )
                             dup_date = st.date_input(
                                 "Duplicate To",
@@ -664,6 +678,9 @@ class GymApp:
                             if cols[0].button("Save", key=f"save_plan_{pid}"):
                                 self.planned_workouts.update_date(
                                     pid, edit_date.isoformat()
+                                )
+                                self.planned_workouts.set_training_type(
+                                    pid, type_choice
                                 )
                                 st.success("Updated")
                             if cols[1].button("Duplicate", key=f"dup_plan_{pid}"):
