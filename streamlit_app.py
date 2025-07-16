@@ -1040,6 +1040,10 @@ class GymApp:
                 )
             equip_stats = self.stats.equipment_usage(start_str, end_str)
             st.table(equip_stats)
+            eff_stats = self.stats.session_efficiency(start_str, end_str)
+            if eff_stats:
+                with st.expander("Session Efficiency", expanded=False):
+                    st.table(eff_stats)
         with dist_tab:
             rpe_dist = self.stats.rpe_distribution(
                 ex_choice if ex_choice else None,
