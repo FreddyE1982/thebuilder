@@ -180,20 +180,25 @@ class ExercisePrescription(MathTools):
     @staticmethod
     def _process_pyramid_tests(
         exercise_name: str | None = None,
-    ) -> Tuple[List[float], List[float], List[List[float]]]:
-        """Load pyramid tests and convert to timestamps filtered by exercise."""
+    ) -> Tuple[List[float], List[float], List[List[float]], List[dict[str, float]]]:
+        """Load pyramid tests and convert to timestamps filtered by exercise.
+
+        Returns timestamps, max 1RM values, list of weight series for each test,
+        and progression metrics for every test."""
         repo_t = PyramidTestRepository()
         repo_e = PyramidEntryRepository()
         rows = repo_t.fetch_full_with_weights(repo_e)
         history = [r for r in rows if not exercise_name or r[1] == exercise_name]
+        history.sort(key=lambda r: r[2])
         if not history:
-            return [], [], []
+            return [], [], [], []
         dates = [datetime.date.fromisoformat(r[2]) for r in history]
         first = dates[0]
         ts = [(d - first).days for d in dates]
         rms = [float(r[6]) if r[6] is not None else max(r[-1]) for r in history]
         weights = [r[-1] for r in history]
-        return ts, rms, weights
+        metrics = [ExercisePrescription._pyramid_progression_metrics(w) for w in weights]
+        return ts, rms, weights, metrics
 
     @staticmethod
     def _pyramid_progression_metrics(weights: List[float]) -> dict[str, float]:
@@ -288,6 +293,7 @@ class ExercisePrescription(MathTools):
         pyramid_timestamps: List[float],
         pyramid_1rms: List[float],
         pyramid_weights: List[List[float]],
+        pyramid_metrics: List[dict[str, float]],
         base_fatigue: float,
         current_timestamp: float,
     ) -> float:
@@ -304,13 +310,16 @@ class ExercisePrescription(MathTools):
         if indicators:
             factor = 1.0 + abs(min(sum(indicators), 0.0)) * 0.5
             base_fatigue *= factor
-        if pyramid_weights:
-            metrics = ExercisePrescription._pyramid_progression_metrics(pyramid_weights[-1])
-            if metrics["fatigue_decay"] > 0.2:
+        if pyramid_metrics:
+            weights = [math.exp(-(current_timestamp - t) / 30) for t in pyramid_timestamps]
+            total = sum(weights)
+            avg_decay = sum(m["fatigue_decay"] * w for m, w in zip(pyramid_metrics, weights)) / (total + ExercisePrescription.EPSILON)
+            avg_reserve = sum(m["strength_reserve"] * w for m, w in zip(pyramid_metrics, weights)) / (total + ExercisePrescription.EPSILON)
+            if avg_decay > 0.2:
                 base_fatigue *= 1.1
-            if metrics["strength_reserve"] < 0.05:
+            if avg_reserve < 0.05:
                 base_fatigue *= 1.05
-            elif metrics["strength_reserve"] > 0.15:
+            elif avg_reserve > 0.15:
                 base_fatigue *= 0.95
         return base_fatigue
 
@@ -321,6 +330,7 @@ class ExercisePrescription(MathTools):
         pyramid_timestamps: List[float],
         pyramid_1rms: List[float],
         pyramid_weights: List[List[float]],
+        pyramid_metrics: List[dict[str, float]],
         current_timestamp: float,
     ) -> float:
         if len(pyramid_1rms) < 2:
@@ -340,15 +350,19 @@ class ExercisePrescription(MathTools):
             if actual_progress < -0.02:
                 penalty = max(actual_progress * 0.5, -0.05)
                 base_alpha = cls.clamp(base_alpha + penalty, -0.20, 0.07)
-        if pyramid_weights:
-            metrics = cls._pyramid_progression_metrics(pyramid_weights[-1])
-            if metrics["increment_coeff"] < 0.2:
+        if pyramid_metrics:
+            weights = [math.exp(-(current_timestamp - t) / 30) for t in pyramid_timestamps]
+            total = sum(weights)
+            avg_inc = sum(m["increment_coeff"] * w for m, w in zip(pyramid_metrics, weights)) / (total + cls.EPSILON)
+            avg_eff = sum(m["efficiency_score"] * w for m, w in zip(pyramid_metrics, weights)) / (total + cls.EPSILON)
+            avg_reserve = sum(m["strength_reserve"] * w for m, w in zip(pyramid_metrics, weights)) / (total + cls.EPSILON)
+            if avg_inc < 0.2:
                 base_alpha *= 1.02
-            if metrics["efficiency_score"] > 1.1:
+            if avg_eff > 1.1:
                 base_alpha *= 1.03
-            if metrics["strength_reserve"] > 0.15:
+            if avg_reserve > 0.15:
                 base_alpha *= 1.05
-            elif metrics["strength_reserve"] < 0.05:
+            elif avg_reserve < 0.05:
                 base_alpha *= 0.97
         return cls.clamp(base_alpha, -0.20, 0.07)
 
@@ -1217,7 +1231,9 @@ class ExercisePrescription(MathTools):
 
         current_1rm_calc = cls._current_1rm(list(series_w), list(series_r))
         ts_list = [(t - series_w.index[0]).days for t in series_w.index]
-        pyr_ts, pyr_vals, pyr_weights = cls._process_pyramid_tests(exercise_name)
+        pyr_ts, pyr_vals, pyr_weights, pyr_metrics = cls._process_pyramid_tests(
+            exercise_name
+        )
         current_1rm = cls._enhanced_1rm_calculation(
             list(series_w),
             list(series_r),
@@ -1265,6 +1281,7 @@ class ExercisePrescription(MathTools):
             pyr_ts,
             pyr_vals,
             pyr_weights,
+            pyr_metrics,
             base_fatigue,
             ts_list[-1] if ts_list else 0,
         )
@@ -1371,6 +1388,7 @@ class ExercisePrescription(MathTools):
             pyr_ts,
             pyr_vals,
             pyr_weights,
+            pyr_metrics,
             ts_list[-1] if ts_list else 0,
         )
         required_rate = cls._required_rate(target_1rm, current_1rm, days_remaining)

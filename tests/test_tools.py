@@ -144,6 +144,10 @@ class MathToolsTestCase(unittest.TestCase):
         timestamps = [0, 7, 14, 21, 28]
         rpe = [8, 8, 8, 8, 8]
 
+        repo_t = PyramidTestRepository()
+        repo_e = PyramidEntryRepository()
+        repo_t._delete_all("pyramid_tests")
+        repo_e._delete_all("pyramid_entries")
         base = ExercisePrescription.exercise_prescription(
             weights,
             reps,
@@ -154,9 +158,6 @@ class MathToolsTestCase(unittest.TestCase):
             workouts_per_month=8,
         )
         base_rm = base["analysis"]["current_1RM"]
-
-        repo_t = PyramidTestRepository()
-        repo_e = PyramidEntryRepository()
         tid = repo_t.create("2023-01-01")
         repo_e.add(tid, 130.0)
         result = ExercisePrescription.exercise_prescription(
@@ -186,6 +187,41 @@ class MathToolsTestCase(unittest.TestCase):
         self.assertEqual(trend["trend"], "linear")
         plateau = ExercisePrescription._pyramid_plateau_detection(ts, rms)
         self.assertLessEqual(plateau, 1.0)
+
+    def test_pyramid_series_metrics(self) -> None:
+        repo_t = PyramidTestRepository()
+        repo_e = PyramidEntryRepository()
+        repo_t._delete_all("pyramid_tests")
+        repo_e._delete_all("pyramid_entries")
+        tid1 = repo_t.create("2023-01-01")
+        repo_e.add(tid1, 100.0)
+        repo_e.add(tid1, 110.0)
+        tid2 = repo_t.create("2023-01-08")
+        repo_e.add(tid2, 105.0)
+        repo_e.add(tid2, 115.0)
+        ts, rms, weights, metrics = ExercisePrescription._process_pyramid_tests()
+        self.assertEqual(len(ts), 2)
+        self.assertIn("strength_reserve", metrics[0])
+        fatigue = ExercisePrescription._pyramid_enhanced_fatigue(
+            ts,
+            rms,
+            weights,
+            metrics,
+            1000.0,
+            ts[-1],
+        )
+        alpha = ExercisePrescription._pyramid_enhanced_alpha(
+            0.05,
+            ts,
+            rms,
+            weights,
+            metrics,
+            ts[-1],
+        )
+        repo_t._delete_all("pyramid_tests")
+        repo_e._delete_all("pyramid_entries")
+        self.assertAlmostEqual(fatigue, 1000.0)
+        self.assertAlmostEqual(alpha, 0.051, places=3)
 
     def test_validate_pyramid_test(self) -> None:
         test = {
