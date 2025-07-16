@@ -703,3 +703,18 @@ class StatisticsService:
             result.append({"date": day.isoformat(), "volume": round(next_val, 2)})
 
         return result
+
+    def overtraining_risk(
+        self,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> Dict[str, float]:
+        """Return an overtraining risk score for the period."""
+        overview = self.stress_overview(start_date, end_date)
+        variability = self.weekly_load_variability(start_date, end_date)
+        risk = MathTools.overtraining_index(
+            overview["stress"],
+            overview["fatigue"],
+            variability["variability"],
+        )
+        return {"risk": round(risk, 2)}
