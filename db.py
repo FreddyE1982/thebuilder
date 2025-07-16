@@ -190,6 +190,15 @@ class Database:
                 );""",
             ["id", "pyramid_test_id", "weight"],
         ),
+        "gamification_points": (
+            """CREATE TABLE gamification_points (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    workout_id INTEGER NOT NULL,
+                    points REAL NOT NULL,
+                    FOREIGN KEY(workout_id) REFERENCES workouts(id) ON DELETE CASCADE
+                );""",
+            ["id", "workout_id", "points"],
+        ),
     }
 
     def __init__(self, db_path: str = "workout.db") -> None:
@@ -360,6 +369,7 @@ class Database:
             "body_weight": "80.0",
             "months_active": "1",
             "theme": "light",
+            "game_enabled": "0",
         }
         with self._connection() as conn:
             for key, value in defaults.items():
@@ -1378,4 +1388,25 @@ class PyramidEntryRepository(BaseRepository):
             (test_id,),
         )
         return [float(r[0]) for r in rows]
+
+
+class GamificationRepository(BaseRepository):
+    """Repository for gamification points."""
+
+    def add(self, workout_id: int, points: float) -> int:
+        return self.execute(
+            "INSERT INTO gamification_points (workout_id, points) VALUES (?, ?);",
+            (workout_id, points),
+        )
+
+    def fetch_for_workout(self, workout_id: int) -> List[float]:
+        rows = self.fetch_all(
+            "SELECT points FROM gamification_points WHERE workout_id = ? ORDER BY id;",
+            (workout_id,),
+        )
+        return [float(r[0]) for r in rows]
+
+    def total_points(self) -> float:
+        rows = self.fetch_all("SELECT SUM(points) FROM gamification_points;")
+        return float(rows[0][0] or 0.0)
 

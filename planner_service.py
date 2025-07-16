@@ -6,6 +6,7 @@ from db import (
     PlannedExerciseRepository,
     PlannedSetRepository,
 )
+from gamification_service import GamificationService
 
 
 class PlannerService:
@@ -19,6 +20,7 @@ class PlannerService:
         plan_workout_repo: PlannedWorkoutRepository,
         plan_exercise_repo: PlannedExerciseRepository,
         plan_set_repo: PlannedSetRepository,
+        gamification: GamificationService | None = None,
     ) -> None:
         self.workouts = workout_repo
         self.exercises = exercise_repo
@@ -26,6 +28,7 @@ class PlannerService:
         self.planned_workouts = plan_workout_repo
         self.planned_exercises = plan_exercise_repo
         self.planned_sets = plan_set_repo
+        self.gamification = gamification
 
     def create_workout_from_plan(self, plan_id: int) -> int:
         _pid, date = self.planned_workouts.fetch_detail(plan_id)
@@ -44,6 +47,8 @@ class PlannerService:
                     rpe,
                     planned_set_id=set_id,
                 )
+                if self.gamification:
+                    self.gamification.record_set(new_ex_id, reps, weight, rpe)
         return workout_id
 
     def duplicate_plan(self, plan_id: int, new_date: str) -> int:
