@@ -640,6 +640,13 @@ class GymAPI:
         ):
             return self.statistics.training_monotony(start_date, end_date)
 
+        @self.app.get("/stats/training_strain")
+        def stats_training_strain(
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            return self.statistics.training_strain(start_date, end_date)
+
         @self.app.get("/stats/stress_balance")
         def stats_stress_balance(
             start_date: str = None,

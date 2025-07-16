@@ -1224,6 +1224,13 @@ class GymApp:
                     {"Volume": [d["volume"] for d in daily]},
                     x=[d["date"] for d in daily],
                 )
+        with st.expander("Training Strain", expanded=True):
+            strain = self.stats.training_strain(start_str, end_str)
+            if strain:
+                st.line_chart(
+                    {"Strain": [s["strain"] for s in strain]},
+                    x=[s["week"] for s in strain],
+                )
 
     def _gamification_tab(self) -> None:
         st.header("Gamification Stats")

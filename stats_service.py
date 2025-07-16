@@ -538,6 +538,23 @@ class StatisticsService:
         val = ExercisePrescription._weekly_monotony(weights, reps)
         return {"monotony": round(val, 2)}
 
+    def training_strain(
+        self,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> List[Dict[str, float]]:
+        """Return weekly training strain values."""
+        variability = self.weekly_load_variability(start_date, end_date)
+        if not variability["weeks"]:
+            return []
+        monotony = self.training_monotony(start_date, end_date)["monotony"]
+        var = variability["variability"]
+        strain: List[Dict[str, float]] = []
+        for week, volume in zip(variability["weeks"], variability["volumes"]):
+            score = float(volume) * monotony * (1 + var / 10.0)
+            strain.append({"week": week, "strain": round(score, 2)})
+        return strain
+
     def stress_balance(
         self,
         start_date: Optional[str] = None,
