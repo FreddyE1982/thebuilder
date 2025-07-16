@@ -23,8 +23,8 @@ class LongTermUsageTestCase(unittest.TestCase):
             os.remove(self.db_path)
 
     def test_partial_long_term_usage(self) -> None:
-        start = datetime.date.today() - datetime.timedelta(days=13)
-        end = start + datetime.timedelta(days=13)
+        start = datetime.date.today() - datetime.timedelta(days=27)
+        end = start + datetime.timedelta(days=27)
 
         # add custom equipment
         resp = self.client.post(
@@ -50,6 +50,28 @@ class LongTermUsageTestCase(unittest.TestCase):
         )
         self.assertEqual(resp.status_code, 200)
 
+        # add second equipment and exercise
+        resp = self.client.post(
+            "/equipment",
+            params={
+                "equipment_type": "Free Weights",
+                "name": "Hex Bar",
+                "muscles": "Quadriceps",
+            },
+        )
+        self.assertEqual(resp.status_code, 200)
+        resp = self.client.post(
+            "/exercise_catalog",
+            params={
+                "muscle_group": "Legs",
+                "name": "Trap Bar Deadlift",
+                "variants": "",
+                "equipment_names": "Hex Bar",
+                "primary_muscle": "Quadriceps",
+            },
+        )
+        self.assertEqual(resp.status_code, 200)
+
         expected_volumes: dict[str, float] = {}
         bench_volume_total = 0.0
         bench_sets = 0
@@ -57,10 +79,10 @@ class LongTermUsageTestCase(unittest.TestCase):
         max_1rm = 0.0
         success_count = 0
 
-        for i in range(7):
+        for i in range(14):
             w_date = start + datetime.timedelta(days=i * 2)
             date_str = w_date.isoformat()
-            if i == 2:
+            if i % 5 == 2:
                 # planned workout flow with three sets
                 resp = self.client.post(
                     "/planned_workouts",
@@ -121,7 +143,7 @@ class LongTermUsageTestCase(unittest.TestCase):
                         max_1rm = est
                 volume_bench = 3 * reps * weight
 
-            if i == 1:
+            if i % 9 == 1:
                 r = self.client.put(
                     f"/sets/{ids[0]}",
                     params={"reps": 6, "weight": 105.0, "rpe": 9},
@@ -154,7 +176,26 @@ class LongTermUsageTestCase(unittest.TestCase):
                 self.assertEqual(r.status_code, 200)
             volume_curl = 3 * 8 * curl_weight
 
-            expected_volumes[date_str] = round(volume_bench + volume_curl, 2)
+            volume_deadlift = 0.0
+            if i >= 6:
+                resp = self.client.post(
+                    f"/workouts/{workout_id}/exercises",
+                    params={"name": "Trap Bar Deadlift", "equipment": "Hex Bar"},
+                )
+                self.assertEqual(resp.status_code, 200)
+                dead_id = resp.json()["id"]
+                weight_dl = 150.0 + i
+                for _ in range(2):
+                    r = self.client.post(
+                        f"/exercises/{dead_id}/sets",
+                        params={"reps": 5, "weight": weight_dl, "rpe": 8},
+                    )
+                    self.assertEqual(r.status_code, 200)
+                volume_deadlift = 2 * 5 * weight_dl
+
+            expected_volumes[date_str] = round(
+                volume_bench + volume_curl + volume_deadlift, 2
+            )
             bench_volume_total += volume_bench
             bench_rpe_total += 8 * 3
             bench_sets += 3
@@ -169,13 +210,14 @@ class LongTermUsageTestCase(unittest.TestCase):
 
         resp = self.client.get("/workouts")
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(len(resp.json()), 7)
+        self.assertEqual(len(resp.json()), 14)
 
         resp = self.client.get("/stats/equipment_usage")
         self.assertEqual(resp.status_code, 200)
         usage = {d["equipment"]: d["sets"] for d in resp.json()}
-        self.assertEqual(usage.get("Adj Dumbbell"), 21)
-        self.assertEqual(usage.get("Olympic Barbell"), 21)
+        self.assertEqual(usage.get("Adj Dumbbell"), 42)
+        self.assertEqual(usage.get("Olympic Barbell"), 42)
+        self.assertEqual(usage.get("Hex Bar"), 16)
 
         resp = self.client.get(
             "/stats/exercise_summary", params={"exercise": "Bench Press"}
@@ -192,9 +234,9 @@ class LongTermUsageTestCase(unittest.TestCase):
         conn = sqlite3.connect(self.db_path)
         cur = conn.cursor()
         cur.execute("SELECT COUNT(*) FROM workouts;")
-        self.assertEqual(cur.fetchone()[0], 7)
+        self.assertEqual(cur.fetchone()[0], 14)
         cur.execute("SELECT COUNT(*) FROM sets;")
-        self.assertEqual(cur.fetchone()[0], 42)
+        self.assertEqual(cur.fetchone()[0], 100)
         conn.close()
 
 
