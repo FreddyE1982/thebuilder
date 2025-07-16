@@ -26,3 +26,8 @@ The agent is to always follow there rules:
 - The settings tab includes an "Exercise Aliases" subtab for managing exercise name aliases. Users can link two existing exercise names or add a new alias linked to an existing exercise.
 - All exercise dropdowns must list every exercise name stored in the database.
 - Whenever any database query involves an exercise name, linked names must be treated as the same exercise.
+
+## streamlit gui
+
+ALL functionality MUST be available via the GUI. The assistant groups functionality logically in tabs. It uses the existing tabs for grouping of functionality when possible but creates new tabs if that seems more sensible.
+The agent must ensure that the streamlit GUI will show correctly on desktop AND mobile phones.  the correct "mode" to show in should be recognised automatically. you may NOT remove or simplify ANY part of the gui in ANY mode.
