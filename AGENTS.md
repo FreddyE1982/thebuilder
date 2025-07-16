@@ -33,7 +33,8 @@ The agent is to always follow there rules:
 2. The agent must ensure that the streamlit GUI will show correctly on desktop AND mobile phones.  the correct "mode" to show in should be recognised automatically. you may NOT remove or simplify ANY part of the gui in ANY mode.
 3. The agent must use st.expander to group multiple things that belong to the same functionality or workflow together in a tab as explained here: https://docs.streamlit.io/develop/api-reference/layout/st.expander
 4. The agent must use st.dialog where appropriate as explained here: https://docs.streamlit.io/develop/api-reference/execution-flow/st.dialog
-5. The agent is absolutley forbidden to ever remove existing functionality from the GUI. 
-6. If the agent is asked by the user to "refurbish", "refresh", "rework", "redo", or "redesign" the GUI then the agent ensures that ALL above rules (1. - 5.) about the streamlit gui are strictly adhered to but 
+5. The agent is absolutley forbidden to ever remove existing functionality from the GUI.
+6. group things where it makes sense logically together using expandables. you are allowed to create expendables inside expandables if it makes sense logically
+7. If the agent is asked by the user to "refurbish", "refresh", "rework", "redo", or "redesign" the GUI then the agent ensures that ALL above rules (1. - 5.) about the streamlit gui are strictly adhered to but 
    those rules ALSO apply WHENEVER the agent works on the application in any way.
 
