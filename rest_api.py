@@ -444,6 +444,18 @@ class GymAPI:
                 for sid, reps, weight, rpe in sets
             ]
 
+        @self.app.put("/planned_sets/{set_id}")
+        def update_planned_set(set_id: int, reps: int, weight: float, rpe: int):
+            self.planned_sets.update(set_id, reps, weight, rpe)
+            return {"status": "updated"}
+
+        @self.app.get("/planned_sets/{set_id}")
+        def get_planned_set(set_id: int):
+            try:
+                return self.planned_sets.fetch_detail(set_id)
+            except ValueError as e:
+                raise HTTPException(status_code=404, detail=str(e))
+
         @self.app.delete("/planned_sets/{set_id}")
         def delete_planned_set(set_id: int):
             self.planned_sets.remove(set_id)
