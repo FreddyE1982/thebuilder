@@ -15,10 +15,12 @@ from db import (
     SettingsRepository,
     PyramidTestRepository,
     PyramidEntryRepository,
+    GamificationRepository,
 )
 from planner_service import PlannerService
 from recommendation_service import RecommendationService
 from stats_service import StatisticsService
+from gamification_service import GamificationService
 
 
 class GymApp:
@@ -42,6 +44,12 @@ class GymApp:
         self.exercise_names_repo = ExerciseNameRepository()
         self.pyramid_tests = PyramidTestRepository()
         self.pyramid_entries = PyramidEntryRepository()
+        self.game_repo = GamificationRepository()
+        self.gamification = GamificationService(
+            self.game_repo,
+            self.exercises,
+            self.settings_repo,
+        )
         self.planner = PlannerService(
             self.workouts,
             self.exercises,
@@ -49,6 +57,7 @@ class GymApp:
             self.planned_workouts,
             self.planned_exercises,
             self.planned_sets,
+            self.gamification,
         )
         self.recommender = RecommendationService(
             self.workouts,
@@ -56,6 +65,7 @@ class GymApp:
             self.sets,
             self.exercise_names_repo,
             self.settings_repo,
+            self.gamification,
         )
         self.stats = StatisticsService(
             self.sets,
@@ -500,6 +510,9 @@ class GymApp:
                 st.session_state[f"new_rpe_{exercise_id}"] = int(l[3])
         if st.button("Add Set", key=f"add_set_{exercise_id}"):
             self.sets.add(exercise_id, int(reps), float(weight), int(rpe))
+            self.gamification.record_set(
+                exercise_id, int(reps), float(weight), int(rpe)
+            )
             st.session_state.pop(f"new_reps_{exercise_id}", None)
             st.session_state.pop(f"new_weight_{exercise_id}", None)
             st.session_state.pop(f"new_rpe_{exercise_id}", None)
@@ -521,6 +534,9 @@ class GymApp:
                         st.warning(f"Invalid line: {line}")
                         continue
                     self.sets.add(exercise_id, reps_i, weight_f, rpe_i)
+                    self.gamification.record_set(
+                        exercise_id, reps_i, weight_f, rpe_i
+                    )
                     added += 1
                 if added:
                     st.success(f"Added {added} sets")

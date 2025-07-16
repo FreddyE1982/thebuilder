@@ -7,6 +7,7 @@ from db import (
     SettingsRepository,
 )
 from tools import ExercisePrescription
+from gamification_service import GamificationService
 
 
 class RecommendationService:
@@ -19,12 +20,14 @@ class RecommendationService:
         set_repo: SetRepository,
         exercise_name_repo: ExerciseNameRepository,
         settings_repo: SettingsRepository,
+        gamification: GamificationService | None = None,
     ) -> None:
         self.workouts = workout_repo
         self.exercises = exercise_repo
         self.sets = set_repo
         self.exercise_names = exercise_name_repo
         self.settings = settings_repo
+        self.gamification = gamification
 
     def has_history(self, exercise_name: str) -> bool:
         names = self.exercise_names.aliases(exercise_name)
@@ -143,6 +146,13 @@ class RecommendationService:
             float(data["weight"]),
             int(round(data["target_rpe"])),
         )
+        if self.gamification:
+            self.gamification.record_set(
+                exercise_id,
+                int(data["reps"]),
+                float(data["weight"]),
+                int(round(data["target_rpe"])),
+            )
         return {
             "id": set_id,
             "reps": int(data["reps"]),

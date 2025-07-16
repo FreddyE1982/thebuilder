@@ -138,7 +138,12 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(
             resp.json(),
-            {"body_weight": 80.0, "months_active": 1.0, "theme": "light"},
+            {
+                "body_weight": 80.0,
+                "months_active": 1.0,
+                "theme": "light",
+                "game_enabled": 0.0,
+            },
         )
 
         resp = self.client.post(
@@ -152,7 +157,12 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(
             resp.json(),
-            {"body_weight": 85.5, "months_active": 6.0, "theme": "dark"},
+            {
+                "body_weight": 85.5,
+                "months_active": 6.0,
+                "theme": "dark",
+                "game_enabled": 0.0,
+            },
         )
 
     def test_plan_workflow(self) -> None:
@@ -362,6 +372,29 @@ class APITestCase(unittest.TestCase):
         resp = self.client.get("/exercise_catalog", params={"muscle_groups": "Chest"})
         self.assertEqual(resp.status_code, 200)
         self.assertIn("Barbell Bench Press", resp.json())
+
+    def test_gamification(self) -> None:
+        resp = self.client.get("/gamification")
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(resp.json()["enabled"])
+
+        self.client.post("/gamification/enable", params={"enabled": True})
+        resp = self.client.get("/gamification")
+        self.assertTrue(resp.json()["enabled"])
+
+        self.client.post("/workouts")
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 10, "weight": 100.0, "rpe": 8},
+        )
+
+        resp = self.client.get("/gamification")
+        self.assertEqual(resp.status_code, 200)
+        self.assertAlmostEqual(resp.json()["points"], 101.31, places=2)
 
         resp = self.client.get("/exercise_catalog/Barbell Bench Press")
         self.assertEqual(resp.status_code, 200)

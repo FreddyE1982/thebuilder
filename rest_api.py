@@ -14,10 +14,12 @@ from db import (
     SettingsRepository,
     PyramidTestRepository,
     PyramidEntryRepository,
+    GamificationRepository,
 )
 from planner_service import PlannerService
 from recommendation_service import RecommendationService
 from stats_service import StatisticsService
+from gamification_service import GamificationService
 from tools import ExercisePrescription
 
 
@@ -38,6 +40,12 @@ class GymAPI:
         self.settings = SettingsRepository(db_path)
         self.pyramid_tests = PyramidTestRepository(db_path)
         self.pyramid_entries = PyramidEntryRepository(db_path)
+        self.game_repo = GamificationRepository(db_path)
+        self.gamification = GamificationService(
+            self.game_repo,
+            self.exercises,
+            self.settings,
+        )
         self.planner = PlannerService(
             self.workouts,
             self.exercises,
@@ -45,6 +53,7 @@ class GymAPI:
             self.planned_workouts,
             self.planned_exercises,
             self.planned_sets,
+            self.gamification,
         )
         self.recommender = RecommendationService(
             self.workouts,
@@ -52,6 +61,7 @@ class GymAPI:
             self.sets,
             self.exercise_names,
             self.settings,
+            self.gamification,
         )
         self.statistics = StatisticsService(
             self.sets,
@@ -437,6 +447,10 @@ class GymAPI:
         @self.app.post("/exercises/{exercise_id}/sets")
         def add_set(exercise_id: int, reps: int, weight: float, rpe: int):
             set_id = self.sets.add(exercise_id, reps, weight, rpe)
+            try:
+                self.gamification.record_set(exercise_id, reps, weight, rpe)
+            except Exception:
+                pass
             return {"id": set_id}
 
         @self.app.put("/sets/{set_id}")
@@ -582,6 +596,18 @@ class GymAPI:
                 start_date,
                 end_date,
             )
+
+        @self.app.get("/gamification")
+        def gamification_status():
+            return {
+                "enabled": self.gamification.is_enabled(),
+                "points": self.gamification.total_points(),
+            }
+
+        @self.app.post("/gamification/enable")
+        def gamification_enable(enabled: bool = True):
+            self.gamification.enable(enabled)
+            return {"status": "updated"}
 
         @self.app.get("/stats/progress_insights")
         def stats_progress_insights(
