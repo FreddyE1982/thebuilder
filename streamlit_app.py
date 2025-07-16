@@ -420,7 +420,7 @@ class GymApp:
                             datetime.datetime.now().isoformat(timespec="seconds"),
                         )
                     if cols[9].button("Delete", key=f"del_{set_id}"):
-                        self.sets.remove(set_id)
+                        self._confirm_delete_set(set_id)
                         continue
                     if cols[10].button("Update", key=f"upd_{set_id}"):
                         self.sets.update(
@@ -454,6 +454,8 @@ class GymApp:
                         st.warning(str(e))
             with st.expander("Add Set"):
                 self._add_set_form(exercise_id)
+            if st.button("Bulk Add Sets", key=f"bulk_{exercise_id}"):
+                self._bulk_add_sets_dialog(exercise_id)
 
     def _add_set_form(self, exercise_id: int) -> None:
         reps = st.number_input(
@@ -473,11 +475,51 @@ class GymApp:
             options=list(range(11)),
             key=f"new_rpe_{exercise_id}",
         )
+        last = self.sets.fetch_for_exercise(exercise_id)
+        if last:
+            if st.button("Copy Last Set", key=f"copy_{exercise_id}"):
+                l = last[-1]
+                st.session_state[f"new_reps_{exercise_id}"] = int(l[1])
+                st.session_state[f"new_weight_{exercise_id}"] = float(l[2])
+                st.session_state[f"new_rpe_{exercise_id}"] = int(l[3])
         if st.button("Add Set", key=f"add_set_{exercise_id}"):
             self.sets.add(exercise_id, int(reps), float(weight), int(rpe))
             st.session_state.pop(f"new_reps_{exercise_id}", None)
             st.session_state.pop(f"new_weight_{exercise_id}", None)
             st.session_state.pop(f"new_rpe_{exercise_id}", None)
+
+    def _bulk_add_sets_dialog(self, exercise_id: int) -> None:
+        with st.dialog("Bulk Add Sets"):
+            st.markdown("Enter one set per line as `reps,weight,rpe`")
+            text = st.text_area("Sets", key=f"bulk_text_{exercise_id}")
+            if st.button("Add", key=f"bulk_add_{exercise_id}"):
+                lines = [l.strip() for l in text.splitlines() if l.strip()]
+                added = 0
+                for line in lines:
+                    try:
+                        r_s, w_s, rpe_s = [p.strip() for p in line.split(",")]
+                        reps_i = int(r_s)
+                        weight_f = float(w_s)
+                        rpe_i = int(rpe_s)
+                    except Exception:
+                        st.warning(f"Invalid line: {line}")
+                        continue
+                    self.sets.add(exercise_id, reps_i, weight_f, rpe_i)
+                    added += 1
+                if added:
+                    st.success(f"Added {added} sets")
+                st.session_state.pop(f"bulk_text_{exercise_id}", None)
+            st.button("Close", key=f"bulk_close_{exercise_id}")
+
+    def _confirm_delete_set(self, set_id: int) -> None:
+        with st.dialog("Confirm Delete"):
+            st.write(f"Delete set {set_id}?")
+            cols = st.columns(2)
+            if cols[0].button("Yes", key=f"yes_{set_id}"):
+                self.sets.remove(set_id)
+                st.experimental_rerun()
+            if cols[1].button("No", key=f"no_{set_id}"):
+                st.experimental_rerun()
 
     def _equipment_selector(
         self, prefix: str, muscles: Optional[list] = None
@@ -519,10 +561,15 @@ class GymApp:
             default=selected_muscles,
             key=f"{prefix}_muscles",
         )
+        name_filter = st.text_input(
+            "Name Contains",
+            key=f"{prefix}_name_filter",
+        )
         names = self.exercise_catalog.fetch_names(
             group_sel or None,
             muscle_sel or None,
             equipment,
+            name_filter or None,
         )
         ex_name = st.selectbox("Exercise", [""] + names, key=f"{prefix}_exercise")
         if ex_name:
@@ -736,10 +783,12 @@ class GymApp:
         sel_mus = st.multiselect("Muscles", muscles, key="lib_ex_mus")
         eq_names = self.equipment.fetch_names()
         sel_eq = st.selectbox("Equipment", [""] + eq_names, key="lib_ex_eq")
+        name_filter = st.text_input("Name Contains", key="lib_ex_prefix")
         names = self.exercise_catalog.fetch_names(
             sel_groups or None,
             sel_mus or None,
             sel_eq or None,
+            name_filter or None,
         )
         choice = st.selectbox("Exercise", [""] + names, key="lib_ex_name")
         if choice and st.button("Show Details", key="lib_ex_btn"):
