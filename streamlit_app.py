@@ -196,6 +196,14 @@ class GymApp:
                         {"1RM": [p["est_1rm"] for p in prog]},
                         x=[p["date"] for p in prog],
                     )
+            records = self.stats.personal_records(
+                ex_choice if ex_choice else None,
+                start.isoformat(),
+                end.isoformat(),
+            )
+            if records:
+                with st.expander("Personal Records", expanded=False):
+                    st.table(records[:5])
 
     def run(self) -> None:
         st.title("Workout Logger")
@@ -898,11 +906,12 @@ class GymApp:
             start_str,
             end_str,
         )
-        over_tab, dist_tab, prog_tab = st.tabs(
+        over_tab, dist_tab, prog_tab, rec_tab = st.tabs(
             [
                 "Overview",
                 "Distributions",
                 "Progress",
+                "Records",
             ]
         )
         with over_tab:
@@ -945,6 +954,14 @@ class GymApp:
                         x=[p["date"] for p in prog],
                     )
                 self._progress_forecast_section(ex_choice)
+        with rec_tab:
+            records = self.stats.personal_records(
+                ex_choice if ex_choice else None,
+                start_str,
+                end_str,
+            )
+            if records:
+                st.table(records)
 
     def _progress_forecast_section(self, exercise: str) -> None:
         st.subheader("Progress Forecast")
