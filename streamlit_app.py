@@ -194,81 +194,83 @@ class GymApp:
     def _workout_section(self) -> None:
         st.header("Workouts")
         training_options = ["strength", "hypertrophy", "highintensity"]
-        with st.expander("Create New Workout"):
-            new_type = st.selectbox("Training Type", training_options, key="new_workout_type")
-            if st.button("New Workout"):
-                new_id = self.workouts.create(
-                    datetime.date.today().isoformat(), new_type
-                )
-                st.session_state.selected_workout = new_id
-        with st.expander("Existing Workouts", expanded=True):
-            workouts = self.workouts.fetch_all_workouts()
-            options = {str(w[0]): w for w in workouts}
-            if options:
-                selected = st.selectbox(
-                    "Select Workout", list(options.keys()),
-                    format_func=lambda x: options[x][1]
-                )
-                st.session_state.selected_workout = int(selected)
-                detail = self.workouts.fetch_detail(int(selected))
-                start_time = detail[2]
-                end_time = detail[3]
-                current_type = detail[4]
-                cols = st.columns(3)
-                if cols[0].button("Start Workout", key=f"start_workout_{selected}"):
-                    self.workouts.set_start_time(
-                        int(selected),
-                        datetime.datetime.now().isoformat(timespec="seconds"),
+        with st.expander("Workout Management", expanded=True):
+            with st.expander("Create New Workout"):
+                new_type = st.selectbox("Training Type", training_options, key="new_workout_type")
+                if st.button("New Workout"):
+                    new_id = self.workouts.create(
+                        datetime.date.today().isoformat(), new_type
                     )
-                if cols[1].button("Finish Workout", key=f"finish_workout_{selected}"):
-                    self.workouts.set_end_time(
-                        int(selected),
-                        datetime.datetime.now().isoformat(timespec="seconds"),
+                    st.session_state.selected_workout = new_id
+            with st.expander("Existing Workouts", expanded=True):
+                workouts = self.workouts.fetch_all_workouts()
+                options = {str(w[0]): w for w in workouts}
+                if options:
+                    selected = st.selectbox(
+                        "Select Workout", list(options.keys()),
+                        format_func=lambda x: options[x][1]
                     )
-                type_choice = cols[2].selectbox(
-                    "Type",
-                    training_options,
-                    index=training_options.index(current_type),
-                    key=f"type_select_{selected}"
-                )
-                if cols[2].button("Save", key=f"save_type_{selected}"):
-                    self.workouts.set_training_type(int(selected), type_choice)
-                if start_time:
-                    st.write(f"Start: {start_time}")
-                if end_time:
-                    st.write(f"End: {end_time}")
-                csv_data = self.sets.export_workout_csv(int(selected))
-                st.download_button(
-                    label="Export CSV",
-                    data=csv_data,
-                    file_name=f"workout_{selected}.csv",
-                    mime="text/csv",
-                    key=f"export_{selected}",
-                )
+                    st.session_state.selected_workout = int(selected)
+                    detail = self.workouts.fetch_detail(int(selected))
+                    start_time = detail[2]
+                    end_time = detail[3]
+                    current_type = detail[4]
+                    cols = st.columns(3)
+                    if cols[0].button("Start Workout", key=f"start_workout_{selected}"):
+                        self.workouts.set_start_time(
+                            int(selected),
+                            datetime.datetime.now().isoformat(timespec="seconds"),
+                        )
+                    if cols[1].button("Finish Workout", key=f"finish_workout_{selected}"):
+                        self.workouts.set_end_time(
+                            int(selected),
+                            datetime.datetime.now().isoformat(timespec="seconds"),
+                        )
+                    type_choice = cols[2].selectbox(
+                        "Type",
+                        training_options,
+                        index=training_options.index(current_type),
+                        key=f"type_select_{selected}"
+                    )
+                    if cols[2].button("Save", key=f"save_type_{selected}"):
+                        self.workouts.set_training_type(int(selected), type_choice)
+                    if start_time:
+                        st.write(f"Start: {start_time}")
+                    if end_time:
+                        st.write(f"End: {end_time}")
+                    csv_data = self.sets.export_workout_csv(int(selected))
+                    st.download_button(
+                        label="Export CSV",
+                        data=csv_data,
+                        file_name=f"workout_{selected}.csv",
+                        mime="text/csv",
+                        key=f"export_{selected}",
+                    )
 
     def _exercise_section(self) -> None:
         st.header("Exercises")
         workout_id = st.session_state.selected_workout
-        with st.expander("Add New Exercise"):
-            ex_name = self._exercise_selector(
-                "log_new",
-                None,
-                st.session_state.get("log_new_groups", []),
-                st.session_state.get("log_new_muscles", []),
-            )
-            eq = self._equipment_selector(
-                "log_new",
-                st.session_state.get("log_new_muscles", []),
-            )
-            if st.button("Add Exercise"):
-                if ex_name and eq:
-                    self.exercises.add(workout_id, ex_name, eq)
-                else:
-                    st.warning("Exercise and equipment required")
-        with st.expander("Logged Exercises", expanded=True):
-            exercises = self.exercises.fetch_for_workout(workout_id)
-            for ex_id, name, eq_name in exercises:
-                self._exercise_card(ex_id, name, eq_name)
+        with st.expander("Exercise Management", expanded=True):
+            with st.expander("Add New Exercise"):
+                ex_name = self._exercise_selector(
+                    "log_new",
+                    None,
+                    st.session_state.get("log_new_groups", []),
+                    st.session_state.get("log_new_muscles", []),
+                )
+                eq = self._equipment_selector(
+                    "log_new",
+                    st.session_state.get("log_new_muscles", []),
+                )
+                if st.button("Add Exercise"):
+                    if ex_name and eq:
+                        self.exercises.add(workout_id, ex_name, eq)
+                    else:
+                        st.warning("Exercise and equipment required")
+            with st.expander("Logged Exercises", expanded=True):
+                exercises = self.exercises.fetch_for_workout(workout_id)
+                for ex_id, name, eq_name in exercises:
+                    self._exercise_card(ex_id, name, eq_name)
 
     def _exercise_card(self, exercise_id: int, name: str, equipment: Optional[str]) -> None:
         sets = self.sets.fetch_for_exercise(exercise_id)
@@ -283,55 +285,56 @@ class GymApp:
                 st.markdown("**Muscles:**")
                 for m in muscles:
                     st.markdown(f"- {m}")
-            for set_id, reps, weight, rpe, start_time, end_time in sets:
-                detail = self.sets.fetch_detail(set_id)
-                cols = st.columns(11)
-                with cols[0]:
-                    st.write(f"Set {set_id}")
-                reps_val = cols[1].number_input(
-                    "Reps",
-                    min_value=1,
-                    step=1,
-                    value=int(reps),
-                    key=f"reps_{set_id}",
-                )
-                weight_val = cols[2].number_input(
-                    "Weight (kg)",
-                    min_value=0.0,
-                    step=0.5,
-                    value=float(weight),
-                    key=f"weight_{set_id}",
-                )
-                rpe_val = cols[3].selectbox(
-                    "RPE",
-                    options=list(range(11)),
-                    index=int(rpe),
-                    key=f"rpe_{set_id}",
-                )
-                cols[4].write(f"{detail['diff_reps']:+}")
-                cols[5].write(f"{detail['diff_weight']:+.1f}")
-                cols[6].write(f"{detail['diff_rpe']:+}")
-                if cols[7].button("Start", key=f"start_set_{set_id}"):
-                    self.sets.set_start_time(
-                        set_id,
-                        datetime.datetime.now().isoformat(timespec="seconds"),
+            with st.expander("Sets", expanded=True):
+                for set_id, reps, weight, rpe, start_time, end_time in sets:
+                    detail = self.sets.fetch_detail(set_id)
+                    cols = st.columns(11)
+                    with cols[0]:
+                        st.write(f"Set {set_id}")
+                    reps_val = cols[1].number_input(
+                        "Reps",
+                        min_value=1,
+                        step=1,
+                        value=int(reps),
+                        key=f"reps_{set_id}",
                     )
-                if cols[8].button("Finish", key=f"finish_set_{set_id}"):
-                    self.sets.set_end_time(
-                        set_id,
-                        datetime.datetime.now().isoformat(timespec="seconds"),
+                    weight_val = cols[2].number_input(
+                        "Weight (kg)",
+                        min_value=0.0,
+                        step=0.5,
+                        value=float(weight),
+                        key=f"weight_{set_id}",
                     )
-                if cols[9].button("Delete", key=f"del_{set_id}"):
-                    self.sets.remove(set_id)
-                    continue
-                if cols[10].button("Update", key=f"upd_{set_id}"):
-                    self.sets.update(
-                        set_id, int(reps_val), float(weight_val), int(rpe_val)
+                    rpe_val = cols[3].selectbox(
+                        "RPE",
+                        options=list(range(11)),
+                        index=int(rpe),
+                        key=f"rpe_{set_id}",
                     )
-                if start_time:
-                    cols[7].write(start_time)
-                if end_time:
-                    cols[8].write(end_time)
+                    cols[4].write(f"{detail['diff_reps']:+}")
+                    cols[5].write(f"{detail['diff_weight']:+.1f}")
+                    cols[6].write(f"{detail['diff_rpe']:+}")
+                    if cols[7].button("Start", key=f"start_set_{set_id}"):
+                        self.sets.set_start_time(
+                            set_id,
+                            datetime.datetime.now().isoformat(timespec="seconds"),
+                        )
+                    if cols[8].button("Finish", key=f"finish_set_{set_id}"):
+                        self.sets.set_end_time(
+                            set_id,
+                            datetime.datetime.now().isoformat(timespec="seconds"),
+                        )
+                    if cols[9].button("Delete", key=f"del_{set_id}"):
+                        self.sets.remove(set_id)
+                        continue
+                    if cols[10].button("Update", key=f"upd_{set_id}"):
+                        self.sets.update(
+                            set_id, int(reps_val), float(weight_val), int(rpe_val)
+                        )
+                    if start_time:
+                        cols[7].write(start_time)
+                    if end_time:
+                        cols[8].write(end_time)
             hist = self.stats.exercise_history(name)
             if hist:
                 with st.expander("History (last 5)"):
@@ -342,7 +345,8 @@ class GymApp:
                         self.recommender.recommend_next_set(exercise_id)
                     except ValueError as e:
                         st.warning(str(e))
-            self._add_set_form(exercise_id)
+            with st.expander("Add Set"):
+                self._add_set_form(exercise_id)
 
     def _add_set_form(self, exercise_id: int) -> None:
         reps = st.number_input(
@@ -446,46 +450,48 @@ class GymApp:
 
     def _planned_workout_section(self) -> None:
         st.header("Planned Workouts")
-        with st.expander("Create New Plan"):
-            plan_date = st.date_input("Plan Date", datetime.date.today(), key="plan_date")
-            if st.button("New Planned Workout"):
-                pid = self.planned_workouts.create(plan_date.isoformat())
-                st.session_state.selected_planned_workout = pid
-        with st.expander("Existing Plans", expanded=True):
-            plans = self.planned_workouts.fetch_all()
-            options = {str(p[0]): p for p in plans}
-            if options:
-                selected = st.selectbox(
-                    "Select Planned Workout",
-                    list(options.keys()),
-                    format_func=lambda x: options[x][1],
-                    key="select_planned_workout",
-                )
-                st.session_state.selected_planned_workout = int(selected)
+        with st.expander("Plan Management", expanded=True):
+            with st.expander("Create New Plan"):
+                plan_date = st.date_input("Plan Date", datetime.date.today(), key="plan_date")
+                if st.button("New Planned Workout"):
+                    pid = self.planned_workouts.create(plan_date.isoformat())
+                    st.session_state.selected_planned_workout = pid
+            with st.expander("Existing Plans", expanded=True):
+                plans = self.planned_workouts.fetch_all()
+                options = {str(p[0]): p for p in plans}
+                if options:
+                    selected = st.selectbox(
+                        "Select Planned Workout",
+                        list(options.keys()),
+                        format_func=lambda x: options[x][1],
+                        key="select_planned_workout",
+                    )
+                    st.session_state.selected_planned_workout = int(selected)
 
     def _planned_exercise_section(self) -> None:
         st.header("Planned Exercises")
         workout_id = st.session_state.selected_planned_workout
-        with st.expander("Add Planned Exercise"):
-            ex_name = self._exercise_selector(
-                "plan_new",
-                None,
-                st.session_state.get("plan_new_groups", []),
-                st.session_state.get("plan_new_muscles", []),
-            )
-            plan_eq = self._equipment_selector(
-                "plan_new",
-                st.session_state.get("plan_new_muscles", []),
-            )
-            if st.button("Add Planned Exercise"):
-                if ex_name and plan_eq:
-                    self.planned_exercises.add(workout_id, ex_name, plan_eq)
-                else:
-                    st.warning("Exercise and equipment required")
-        with st.expander("Planned Exercise List", expanded=True):
-            exercises = self.planned_exercises.fetch_for_workout(workout_id)
-            for ex_id, name, eq_name in exercises:
-                self._planned_exercise_card(ex_id, name, eq_name)
+        with st.expander("Planned Exercise Management", expanded=True):
+            with st.expander("Add Planned Exercise"):
+                ex_name = self._exercise_selector(
+                    "plan_new",
+                    None,
+                    st.session_state.get("plan_new_groups", []),
+                    st.session_state.get("plan_new_muscles", []),
+                )
+                plan_eq = self._equipment_selector(
+                    "plan_new",
+                    st.session_state.get("plan_new_muscles", []),
+                )
+                if st.button("Add Planned Exercise"):
+                    if ex_name and plan_eq:
+                        self.planned_exercises.add(workout_id, ex_name, plan_eq)
+                    else:
+                        st.warning("Exercise and equipment required")
+            with st.expander("Planned Exercise List", expanded=True):
+                exercises = self.planned_exercises.fetch_for_workout(workout_id)
+                for ex_id, name, eq_name in exercises:
+                    self._planned_exercise_card(ex_id, name, eq_name)
 
     def _planned_exercise_card(self, exercise_id: int, name: str, equipment: Optional[str]) -> None:
         sets = self.planned_sets.fetch_for_exercise(exercise_id)
@@ -500,33 +506,35 @@ class GymApp:
                 st.markdown("**Muscles:**")
                 for m in muscles:
                     st.markdown(f"- {m}")
-            for set_id, reps, weight, rpe in sets:
-                cols = st.columns(5)
-                with cols[0]:
-                    st.write(f"Set {set_id}")
-                cols[1].number_input(
-                    "Reps",
-                    min_value=1,
-                    step=1,
-                    value=int(reps),
-                    key=f"plan_reps_{set_id}",
-                )
-                cols[2].number_input(
-                    "Weight (kg)",
-                    min_value=0.0,
-                    step=0.5,
-                    value=float(weight),
-                    key=f"plan_weight_{set_id}",
-                )
-                cols[3].selectbox(
-                    "RPE",
-                    options=list(range(11)),
-                    index=int(rpe),
-                    key=f"plan_rpe_{set_id}",
-                )
-                if cols[4].button("Delete", key=f"del_plan_set_{set_id}"):
-                    self.planned_sets.remove(set_id)
-            self._add_planned_set_form(exercise_id)
+            with st.expander("Sets", expanded=True):
+                for set_id, reps, weight, rpe in sets:
+                    cols = st.columns(5)
+                    with cols[0]:
+                        st.write(f"Set {set_id}")
+                    cols[1].number_input(
+                        "Reps",
+                        min_value=1,
+                        step=1,
+                        value=int(reps),
+                        key=f"plan_reps_{set_id}",
+                    )
+                    cols[2].number_input(
+                        "Weight (kg)",
+                        min_value=0.0,
+                        step=0.5,
+                        value=float(weight),
+                        key=f"plan_weight_{set_id}",
+                    )
+                    cols[3].selectbox(
+                        "RPE",
+                        options=list(range(11)),
+                        index=int(rpe),
+                        key=f"plan_rpe_{set_id}",
+                    )
+                    if cols[4].button("Delete", key=f"del_plan_set_{set_id}"):
+                        self.planned_sets.remove(set_id)
+            with st.expander("Add Planned Set"):
+                self._add_planned_set_form(exercise_id)
 
     def _add_planned_set_form(self, exercise_id: int) -> None:
         reps = st.number_input(
@@ -554,55 +562,57 @@ class GymApp:
 
     def _stats_tab(self) -> None:
         st.header("Statistics")
-        exercises = [""] + self.exercise_names_repo.fetch_all()
-        ex_choice = st.selectbox("Exercise", exercises, key="stats_ex")
-        col1, col2 = st.columns(2)
-        with col1:
-            start = st.date_input(
-                "Start",
-                datetime.date.today() - datetime.timedelta(days=30),
-                key="stats_start",
-            )
-        with col2:
-            end = st.date_input("End", datetime.date.today(), key="stats_end")
-        start_str = start.isoformat()
-        end_str = end.isoformat()
+        with st.expander("Filters", expanded=True):
+            exercises = [""] + self.exercise_names_repo.fetch_all()
+            ex_choice = st.selectbox("Exercise", exercises, key="stats_ex")
+            col1, col2 = st.columns(2)
+            with col1:
+                start = st.date_input(
+                    "Start",
+                    datetime.date.today() - datetime.timedelta(days=30),
+                    key="stats_start",
+                )
+            with col2:
+                end = st.date_input("End", datetime.date.today(), key="stats_end")
+            start_str = start.isoformat()
+            end_str = end.isoformat()
         summary = self.stats.exercise_summary(
             ex_choice if ex_choice else None,
             start_str,
             end_str,
         )
-        st.subheader("Summary")
-        st.table(summary)
+        with st.expander("Summary", expanded=True):
+            st.table(summary)
         daily = self.stats.daily_volume(start_str, end_str)
-        st.subheader("Daily Volume")
-        if daily:
-            st.line_chart({"Volume": [d["volume"] for d in daily]}, x=[d["date"] for d in daily])
+        with st.expander("Daily Volume", expanded=True):
+            if daily:
+                st.line_chart({"Volume": [d["volume"] for d in daily]}, x=[d["date"] for d in daily])
         equip_stats = self.stats.equipment_usage(start_str, end_str)
-        st.subheader("Equipment Usage")
-        st.table(equip_stats)
+        with st.expander("Equipment Usage", expanded=True):
+            st.table(equip_stats)
         rpe_dist = self.stats.rpe_distribution(
             ex_choice if ex_choice else None,
             start_str,
             end_str,
         )
-        st.subheader("RPE Distribution")
-        if rpe_dist:
-            st.bar_chart({"Count": [d["count"] for d in rpe_dist]}, x=[str(d["rpe"]) for d in rpe_dist])
+        with st.expander("RPE Distribution", expanded=True):
+            if rpe_dist:
+                st.bar_chart({"Count": [d["count"] for d in rpe_dist]}, x=[str(d["rpe"]) for d in rpe_dist])
         reps_dist = self.stats.reps_distribution(
             ex_choice if ex_choice else None,
             start_str,
             end_str,
         )
-        st.subheader("Reps Distribution")
-        if reps_dist:
-            st.bar_chart({"Count": [d["count"] for d in reps_dist]}, x=[str(d["reps"]) for d in reps_dist])
+        with st.expander("Reps Distribution", expanded=True):
+            if reps_dist:
+                st.bar_chart({"Count": [d["count"] for d in reps_dist]}, x=[str(d["reps"]) for d in reps_dist])
         if ex_choice:
             prog = self.stats.progression(ex_choice, start_str, end_str)
-            st.subheader("1RM Progression")
-            if prog:
-                st.line_chart({"1RM": [p["est_1rm"] for p in prog]}, x=[p["date"] for p in prog])
-            self._progress_forecast_section(ex_choice)
+            with st.expander("1RM Progression", expanded=True):
+                if prog:
+                    st.line_chart({"1RM": [p["est_1rm"] for p in prog]}, x=[p["date"] for p in prog])
+            with st.expander("Progress Forecast", expanded=True):
+                self._progress_forecast_section(ex_choice)
 
     def _progress_forecast_section(self, exercise: str) -> None:
         st.subheader("Progress Forecast")
@@ -615,50 +625,52 @@ class GymApp:
 
     def _tests_tab(self) -> None:
         st.header("Pyramid Test")
-        for idx, val in enumerate(st.session_state.pyramid_inputs):
-            st.session_state.pyramid_inputs[idx] = st.number_input(
-                f"Weight {idx + 1} (kg)",
-                min_value=0.0,
-                step=0.5,
-                value=float(val),
-                key=f"pyr_weight_{idx}",
-            )
-        if st.button("Add Line"):
-            st.session_state.pyramid_inputs.append(0.0)
-        if st.button("Save Pyramid Test"):
-            weights = [float(st.session_state.get(f"pyr_weight_{i}", 0.0)) for i in range(len(st.session_state.pyramid_inputs))]
-            weights = [w for w in weights if w > 0.0]
-            if weights:
-                tid = self.pyramid_tests.create(datetime.date.today().isoformat())
-                for w in weights:
-                    self.pyramid_entries.add(tid, w)
-                st.success("Saved")
-            else:
-                st.warning("Enter weights")
-            st.session_state.pyramid_inputs = [0.0]
-            for i in range(len(weights)):
-                st.session_state.pop(f"pyr_weight_{i}", None)
+        with st.expander("New Test", expanded=True):
+            for idx, val in enumerate(st.session_state.pyramid_inputs):
+                st.session_state.pyramid_inputs[idx] = st.number_input(
+                    f"Weight {idx + 1} (kg)",
+                    min_value=0.0,
+                    step=0.5,
+                    value=float(val),
+                    key=f"pyr_weight_{idx}",
+                )
+            if st.button("Add Line"):
+                st.session_state.pyramid_inputs.append(0.0)
+            if st.button("Save Pyramid Test"):
+                weights = [float(st.session_state.get(f"pyr_weight_{i}", 0.0)) for i in range(len(st.session_state.pyramid_inputs))]
+                weights = [w for w in weights if w > 0.0]
+                if weights:
+                    tid = self.pyramid_tests.create(datetime.date.today().isoformat())
+                    for w in weights:
+                        self.pyramid_entries.add(tid, w)
+                    st.success("Saved")
+                else:
+                    st.warning("Enter weights")
+                st.session_state.pyramid_inputs = [0.0]
+                for i in range(len(weights)):
+                    st.session_state.pop(f"pyr_weight_{i}", None)
 
         history = self.pyramid_tests.fetch_all_with_weights(self.pyramid_entries)
         if history:
-            st.subheader("History")
-            display = [
-                {"date": d, "weights": "|".join([str(w) for w in ws])}
-                for _tid, d, ws in history
-            ]
-            st.table(display)
+            with st.expander("History", expanded=True):
+                display = [
+                    {"date": d, "weights": "|".join([str(w) for w in ws])}
+                    for _tid, d, ws in history
+                ]
+                st.table(display)
 
     def _settings_tab(self) -> None:
         st.header("Settings")
         if "delete_target" not in st.session_state:
             st.session_state.delete_target = None
 
-        if st.button("Delete All Logged and Planned Workouts"):
-            st.session_state.delete_target = "all"
-        if st.button("Delete All Logged Workouts"):
-            st.session_state.delete_target = "logged"
-        if st.button("Delete All Planned Workouts"):
-            st.session_state.delete_target = "planned"
+        with st.expander("Data Deletion", expanded=True):
+            if st.button("Delete All Logged and Planned Workouts"):
+                st.session_state.delete_target = "all"
+            if st.button("Delete All Logged Workouts"):
+                st.session_state.delete_target = "logged"
+            if st.button("Delete All Planned Workouts"):
+                st.session_state.delete_target = "planned"
 
         target = st.session_state.get("delete_target")
         if target:
@@ -708,92 +720,98 @@ class GymApp:
 
         with eq_tab:
             st.header("Equipment Management")
-            muscles_list = self.muscles_repo.fetch_all()
-            new_name = st.text_input("Equipment Name", key="equip_new_name")
-            types = self.equipment.fetch_types()
-            type_choice = st.selectbox("Equipment Type", types, key="equip_new_type")
-            new_muscles = st.multiselect("Muscles", muscles_list, key="equip_new_muscles")
-            if st.button("Add Equipment"):
-                if new_name and type_choice and new_muscles:
-                    try:
-                        self.equipment.add(type_choice, new_name, new_muscles)
-                        st.success("Equipment added")
-                    except ValueError as e:
-                        st.warning(str(e))
-                else:
-                    st.warning("All fields required")
-
-            for name, eq_type, muscles, is_custom in self.equipment.fetch_all_records():
-                exp = st.expander(name)
-                with exp:
-                    musc_list = muscles.split("|")
-                    if is_custom:
-                        edit_name = st.text_input("Name", name, key=f"edit_name_{name}")
-                        edit_type = st.text_input("Type", eq_type, key=f"edit_type_{name}")
-                        edit_muscles = st.multiselect(
-                            "Muscles", muscles_list, musc_list, key=f"edit_mus_{name}"
-                        )
-                        if st.button("Update", key=f"upd_eq_{name}"):
-                            try:
-                                self.equipment.update(name, edit_type, edit_muscles, edit_name)
-                                st.success("Updated")
-                            except ValueError as e:
-                                st.warning(str(e))
-                        if st.button("Delete", key=f"del_eq_{name}"):
-                            try:
-                                self.equipment.remove(name)
-                                st.success("Deleted")
-                            except ValueError as e:
-                                st.warning(str(e))
+            with st.expander("Add Equipment"):
+                muscles_list = self.muscles_repo.fetch_all()
+                new_name = st.text_input("Equipment Name", key="equip_new_name")
+                types = self.equipment.fetch_types()
+                type_choice = st.selectbox("Equipment Type", types, key="equip_new_type")
+                new_muscles = st.multiselect("Muscles", muscles_list, key="equip_new_muscles")
+                if st.button("Add Equipment"):
+                    if new_name and type_choice and new_muscles:
+                        try:
+                            self.equipment.add(type_choice, new_name, new_muscles)
+                            st.success("Equipment added")
+                        except ValueError as e:
+                            st.warning(str(e))
                     else:
-                        st.markdown(f"**Type:** {eq_type}")
-                        st.markdown("**Muscles:**")
-                        for m in musc_list:
-                            st.markdown(f"- {m}")
+                        st.warning("All fields required")
+
+            with st.expander("Equipment List", expanded=True):
+                for name, eq_type, muscles, is_custom in self.equipment.fetch_all_records():
+                    exp = st.expander(name)
+                    with exp:
+                        musc_list = muscles.split("|")
+                        if is_custom:
+                            edit_name = st.text_input("Name", name, key=f"edit_name_{name}")
+                            edit_type = st.text_input("Type", eq_type, key=f"edit_type_{name}")
+                            edit_muscles = st.multiselect(
+                                "Muscles", muscles_list, musc_list, key=f"edit_mus_{name}"
+                            )
+                            if st.button("Update", key=f"upd_eq_{name}"):
+                                try:
+                                    self.equipment.update(name, edit_type, edit_muscles, edit_name)
+                                    st.success("Updated")
+                                except ValueError as e:
+                                    st.warning(str(e))
+                            if st.button("Delete", key=f"del_eq_{name}"):
+                                try:
+                                    self.equipment.remove(name)
+                                    st.success("Deleted")
+                                except ValueError as e:
+                                    st.warning(str(e))
+                        else:
+                            st.markdown(f"**Type:** {eq_type}")
+                            st.markdown("**Muscles:**")
+                            for m in musc_list:
+                                st.markdown(f"- {m}")
 
         with mus_tab:
             st.header("Muscle Linking")
             muscles = self.muscles_repo.fetch_all()
-            if muscles:
-                col1, col2 = st.columns(2)
-                with col1:
-                    m1 = st.selectbox("Muscle 1", muscles, key="link_m1")
-                with col2:
-                    m2 = st.selectbox("Muscle 2", muscles, key="link_m2")
-                if st.button("Link Muscles"):
-                    self.muscles_repo.link(m1, m2)
-                    st.success("Linked")
+            with st.expander("Link Muscles"):
+                if muscles:
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        m1 = st.selectbox("Muscle 1", muscles, key="link_m1")
+                    with col2:
+                        m2 = st.selectbox("Muscle 2", muscles, key="link_m2")
+                    if st.button("Link Muscles"):
+                        self.muscles_repo.link(m1, m2)
+                        st.success("Linked")
 
-            new_muscle = st.text_input("New Muscle Name", key="new_muscle")
-            link_to = st.selectbox("Link To", muscles, key="link_to")
-            if st.button("Add Alias"):
-                if new_muscle:
-                    self.muscles_repo.add_alias(new_muscle, link_to)
-                    st.success("Alias added")
-                else:
-                    st.warning("Name required")
+            with st.expander("Add Alias", expanded=True):
+                new_muscle = st.text_input("New Muscle Name", key="new_muscle")
+                link_to = st.selectbox("Link To", muscles, key="link_to")
+                if st.button("Add Alias"):
+                    if new_muscle:
+                        self.muscles_repo.add_alias(new_muscle, link_to)
+                        st.success("Alias added")
+                    else:
+                        st.warning("Name required")
 
         with ex_tab:
             st.header("Exercise Aliases")
             names = self.exercise_names_repo.fetch_all()
-            if names:
-                col1, col2 = st.columns(2)
-                with col1:
-                    e1 = st.selectbox("Exercise 1", names, key="link_ex1")
-                with col2:
-                    e2 = st.selectbox("Exercise 2", names, key="link_ex2")
-                if st.button("Link Exercises"):
-                    self.exercise_names_repo.link(e1, e2)
-                    st.success("Linked")
+            with st.expander("Link Exercises"):
+                if names:
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        e1 = st.selectbox("Exercise 1", names, key="link_ex1")
+                    with col2:
+                        e2 = st.selectbox("Exercise 2", names, key="link_ex2")
+                    if st.button("Link Exercises"):
+                        self.exercise_names_repo.link(e1, e2)
+                        st.success("Linked")
 
-            new_ex = st.text_input("New Exercise Name", key="new_ex_alias")
-            link_ex = st.selectbox("Link To", names, key="link_ex_to")
-            if st.button("Add Exercise Alias"):
-                if new_ex:
-                    self.exercise_names_repo.add_alias(new_ex, link_ex)
-                    st.success("Alias added")
-                else:
-                    st.warning("Name required")
+            with st.expander("Add Exercise Alias", expanded=True):
+                new_ex = st.text_input("New Exercise Name", key="new_ex_alias")
+                link_ex = st.selectbox("Link To", names, key="link_ex_to")
+                if st.button("Add Exercise Alias"):
+                    if new_ex:
+                        self.exercise_names_repo.add_alias(new_ex, link_ex)
+                        st.success("Alias added")
+                    else:
+                        st.warning("Name required")
 
 
 if __name__ == "__main__":
