@@ -336,3 +336,79 @@ class StatisticsService:
         plateau = ExercisePrescription._pyramid_plateau_detection(ts, rms)
         trend["plateau_score"] = round(plateau, 2)
         return trend
+
+    def training_stress(
+        self,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> List[Dict[str, float]]:
+        """Return daily training stress and cumulative fatigue values."""
+        names = self.exercise_names.fetch_all()
+        rows = self.sets.fetch_history_by_names(
+            names,
+            start_date=start_date,
+            end_date=end_date,
+            with_duration=True,
+        )
+        if not rows:
+            return []
+
+        weights: List[float] = []
+        reps: List[int] = []
+        durs: List[float] = []
+        dates: List[str] = []
+        for r, w, _rpe, date, start, end in rows:
+            weights.append(float(w))
+            reps.append(int(r))
+            if start and end:
+                t0 = datetime.datetime.fromisoformat(start)
+                t1 = datetime.datetime.fromisoformat(end)
+                durs.append((t1 - t0).total_seconds())
+            else:
+                durs.append(50.0)
+            dates.append(date)
+
+        uniq_dates = sorted(set(dates))
+        first = datetime.date.fromisoformat(dates[0])
+        ts_all = [
+            (datetime.date.fromisoformat(d) - first).days for d in dates
+        ]
+
+        stress_map: Dict[str, float] = {d: 0.0 for d in uniq_dates}
+        for d, w, r, dur in zip(dates, weights, reps, durs):
+            rm = MathTools.epley_1rm(w, r)
+            val = ExercisePrescription._calculate_exercise_tss([w], [r], [dur], rm)
+            stress_map[d] += val
+
+        results: List[Dict[str, float]] = []
+        w_seen: List[float] = []
+        r_seen: List[int] = []
+        ts_seen: List[float] = []
+        dur_seen: List[float] = []
+        idx = 0
+        for d in uniq_dates:
+            while idx < len(dates) and dates[idx] == d:
+                w_seen.append(weights[idx])
+                r_seen.append(reps[idx])
+                ts_seen.append(ts_all[idx])
+                dur_seen.append(durs[idx])
+                idx += 1
+            current_rm = max(
+                [MathTools.epley_1rm(w, r) for w, r in zip(w_seen, r_seen)]
+            )
+            fatigue = ExercisePrescription._tss_adjusted_fatigue(
+                w_seen,
+                r_seen,
+                ts_seen,
+                dur_seen,
+                current_rm,
+            )
+            results.append(
+                {
+                    "date": d,
+                    "stress": round(stress_map[d], 2),
+                    "fatigue": round(fatigue, 2),
+                }
+            )
+
+        return results
