@@ -1349,12 +1349,18 @@ class GymApp:
                 ["light", "dark"],
                 index=["light", "dark"].index(self.theme),
             )
+            game_enabled = st.checkbox(
+                "Enable Gamification",
+                value=self.gamification.is_enabled(),
+            )
+            st.metric("Total Points", self.gamification.total_points())
             if st.button("Save General Settings"):
                 self.settings_repo.set_float("body_weight", bw)
                 self.settings_repo.set_float("months_active", ma)
                 self.settings_repo.set_text("theme", theme_opt)
                 self.theme = theme_opt
                 self._apply_theme()
+                self.gamification.enable(game_enabled)
                 st.success("Settings saved")
 
         with eq_tab:
