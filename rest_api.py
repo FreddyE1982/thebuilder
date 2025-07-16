@@ -21,7 +21,7 @@ from planner_service import PlannerService
 from recommendation_service import RecommendationService
 from stats_service import StatisticsService
 from gamification_service import GamificationService
-from ml_service import PerformanceModelService
+from ml_service import PerformanceModelService, VolumeModelService
 from tools import ExercisePrescription, MathTools
 
 
@@ -53,6 +53,7 @@ class GymAPI:
             self.ml_models,
             self.exercise_names,
         )
+        self.volume_model = VolumeModelService(self.ml_models)
         self.planner = PlannerService(
             self.workouts,
             self.exercises,
@@ -75,6 +76,7 @@ class GymAPI:
             self.sets,
             self.exercise_names,
             self.settings,
+            self.volume_model,
         )
         self.app = FastAPI()
         self._setup_routes()
@@ -353,6 +355,13 @@ class GymAPI:
         def finish_workout(workout_id: int):
             timestamp = datetime.datetime.now().isoformat(timespec="seconds")
             self.workouts.set_end_time(workout_id, timestamp)
+            if self.statistics.volume_model is not None:
+                daily = self.statistics.daily_volume()
+                vols = [d["volume"] for d in daily]
+                if len(vols) >= 4:
+                    feats = vols[-4:-1]
+                    target = vols[-1]
+                    self.statistics.volume_model.train(feats, target)
             return {"status": "finished", "timestamp": timestamp}
 
         @self.app.post("/workouts/{workout_id}/exercises")
