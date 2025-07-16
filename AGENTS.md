@@ -39,3 +39,26 @@ The agent is to always follow there rules:
 7. If the agent is asked by the user to "refurbish", "refresh", "rework", "redo", or "redesign" the GUI then the agent ensures that ALL above rules (1. - 6.) about the streamlit gui are strictly adhered to but 
    those rules ALSO apply WHENEVER the agent works on the application in any way.
 
+
+## longterm usage test
+
+the agent creates a long term usage test that fulfills the requirements
+below. since the requirements below are very extensive,
+the agent needs to fulfil below requirements bit by bit whenever
+the agent does any work, iteratively fulfilling below requirements a bit more
+with every run of the agent...working towards the goal of full fullfilment of these requirements:
+
+create a test that realistically simulates a advanced professional user using the app over the course of 6 months, a workout every second day. the user uses all functionality of the app repeatedly in different sequences and workflows. the test needs to check all data (including the db) and values created by the app and its algorithms for every week of simulated time and check for soundness and expected values (generated values are allowed to deviate from expected values as long as results remain scientifically sound).
+
+The user does.
+
+1. create exercises
+2. logs a variety of many different workouts with different combinations of exercises and different combinations of sets there in with different reps and weights
+3. uses different statistics
+4. uses the workout planning
+5. uses the autoplan function multiple times
+6. the user adds equipment 
+7. the user edits logged workouts
+8. the user adds exercises
+
+the simulation must use different versions of 1. - 8. multiple times, must modify exact usage (including values) of 1. - 8. every time, must use each of 1. - 8. at least 72 times
