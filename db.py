@@ -695,6 +695,27 @@ class PlannedWorkoutRepository(BaseRepository):
             raise ValueError("planned workout not found")
         return rows[0]
 
+    def update_date(self, plan_id: int, date: str) -> None:
+        rows = super().fetch_all(
+            "SELECT id FROM planned_workouts WHERE id = ?;",
+            (plan_id,),
+        )
+        if not rows:
+            raise ValueError("planned workout not found")
+        self.execute(
+            "UPDATE planned_workouts SET date = ? WHERE id = ?;",
+            (date, plan_id),
+        )
+
+    def delete(self, plan_id: int) -> None:
+        rows = super().fetch_all(
+            "SELECT id FROM planned_workouts WHERE id = ?;",
+            (plan_id,),
+        )
+        if not rows:
+            raise ValueError("planned workout not found")
+        self.execute("DELETE FROM planned_workouts WHERE id = ?;", (plan_id,))
+
     def delete_all(self) -> None:
         self._delete_all("planned_workouts")
 

@@ -45,3 +45,14 @@ class PlannerService:
                     planned_set_id=set_id,
                 )
         return workout_id
+
+    def duplicate_plan(self, plan_id: int, new_date: str) -> int:
+        _pid, _date = self.planned_workouts.fetch_detail(plan_id)
+        new_id = self.planned_workouts.create(new_date)
+        exercises = self.planned_exercises.fetch_for_workout(plan_id)
+        for ex_id, name, equipment in exercises:
+            new_ex_id = self.planned_exercises.add(new_id, name, equipment)
+            sets = self.planned_sets.fetch_for_exercise(ex_id)
+            for _sid, reps, weight, rpe in sets:
+                self.planned_sets.add(new_ex_id, reps, weight, rpe)
+        return new_id

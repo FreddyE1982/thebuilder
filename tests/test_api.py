@@ -218,6 +218,31 @@ class APITestCase(unittest.TestCase):
             },
         )
 
+        new_date = (datetime.date.today() + datetime.timedelta(days=2)).isoformat()
+        resp = self.client.put(
+            "/planned_workouts/1",
+            params={"date": new_date},
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), {"status": "updated"})
+
+        dup_date = (datetime.date.today() + datetime.timedelta(days=3)).isoformat()
+        resp = self.client.post(
+            "/planned_workouts/1/duplicate",
+            params={"date": dup_date},
+        )
+        self.assertEqual(resp.status_code, 200)
+        dup_id = resp.json()["id"]
+        self.assertEqual(dup_id, 2)
+
+        resp = self.client.delete("/planned_workouts/1")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), {"status": "deleted"})
+
+        resp = self.client.get("/planned_workouts")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), [{"id": dup_id, "date": dup_date}])
+
     def test_equipment_endpoints(self) -> None:
         response = self.client.get("/equipment/types")
         self.assertEqual(response.status_code, 200)
