@@ -682,6 +682,18 @@ class GymAPI:
                 end_date,
             )
 
+        @self.app.get("/stats/deload_recommendation")
+        def stats_deload_recommendation(
+            exercise: str,
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            return self.statistics.deload_recommendation(
+                exercise,
+                start_date,
+                end_date,
+            )
+
         @self.app.get("/prediction/progress")
         def prediction_progress(
             exercise: str,

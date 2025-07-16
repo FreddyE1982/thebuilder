@@ -1066,3 +1066,25 @@ class APITestCase(unittest.TestCase):
         self.assertAlmostEqual(data[0]["volume"], expected[0], places=2)
         self.assertAlmostEqual(data[1]["volume"], expected[1], places=2)
 
+    def test_deload_recommendation_endpoint(self) -> None:
+        self.client.post("/workouts")
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 9},
+        )
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 9},
+        )
+
+        resp = self.client.get(
+            "/stats/deload_recommendation",
+            params={"exercise": "Bench Press"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), {"trigger": 0.33, "score": 0.14})
+
