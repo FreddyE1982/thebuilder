@@ -1021,12 +1021,13 @@ class GymApp:
             start_str,
             end_str,
         )
-        over_tab, dist_tab, prog_tab, rec_tab = st.tabs(
+        over_tab, dist_tab, prog_tab, rec_tab, tsb_tab = st.tabs(
             [
                 "Overview",
                 "Distributions",
                 "Progress",
                 "Records",
+                "Stress Balance",
             ]
         )
         with over_tab:
@@ -1077,6 +1078,10 @@ class GymApp:
             )
             if records:
                 st.table(records)
+        with tsb_tab:
+            tsb = self.stats.stress_balance(start_str, end_str)
+            if tsb:
+                st.line_chart({"TSB": [d["tsb"] for d in tsb]}, x=[d["date"] for d in tsb])
 
     def _progress_forecast_section(self, exercise: str) -> None:
         st.subheader("Progress Forecast")

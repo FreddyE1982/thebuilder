@@ -703,6 +703,40 @@ class ExercisePrescription(MathTools):
         chronic = ExercisePrescription._ewma(vol, span=28)[-1]
         return float(recent / chronic) if chronic != 0 else 1.0
 
+    @staticmethod
+    def _training_stress_balance(
+        weights: list[float],
+        reps: list[int],
+        durations: list[float],
+        timestamps: list[float],
+        current_1rm: float,
+    ) -> tuple[list[int], list[float]]:
+        """Return Training Stress Balance values per day."""
+        tss_list: list[float] = []
+        for w, r, d in zip(weights, reps, durations):
+            tss_val = ExercisePrescription._calculate_exercise_tss(
+                [w],
+                [r],
+                [d],
+                current_1rm,
+            )
+            tss_list.append(tss_val)
+
+        daily: dict[int, float] = {}
+        for t, val in zip(timestamps, tss_list):
+            day = int(t)
+            daily[day] = daily.get(day, 0.0) + val
+
+        days = sorted(daily)
+        loads = [daily[d] for d in days]
+        tsb: list[float] = []
+        for i, _ in enumerate(days):
+            acute = np.mean(loads[max(0, i - 6) : i + 1])
+            chronic = np.mean(loads[max(0, i - 27) : i + 1])
+            tsb.append(acute - chronic)
+
+        return days, tsb
+
     @classmethod
     def _energy_availability(cls, body_weight: float, avg_calories: float | None) -> float:
         ffm = body_weight * cls.FFM_FRACTION
