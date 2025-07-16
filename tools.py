@@ -845,6 +845,21 @@ class ExercisePrescription(MathTools):
         return float(np.mean(loads) / std) if std != 0 else 1.0
 
     @staticmethod
+    def _weekly_load_variability(weights: list[float], reps: list[int], times: list[float]) -> float:
+        if not weights:
+            return 0.0
+        vols: dict[int, float] = {}
+        for w, r, t in zip(weights, reps, times):
+            week = int(t // 7)
+            vols[week] = vols.get(week, 0.0) + w * r
+        if len(vols) < 2:
+            return 0.0
+        values = np.array(list(vols.values()))
+        mean = np.mean(values)
+        std = np.std(values)
+        return float(std / (mean + ExercisePrescription.EPSILON))
+
+    @staticmethod
     def _deload_trigger(
         perf_factor: float,
         rpe_scores: list[float],

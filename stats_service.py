@@ -412,3 +412,45 @@ class StatisticsService:
             )
 
         return results
+
+    def weekly_load_variability(
+        self,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> Dict[str, object]:
+        names = self.exercise_names.fetch_all()
+        rows = self.sets.fetch_history_by_names(
+            names,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        if not rows:
+            return {"variability": 0.0, "weeks": [], "volumes": []}
+
+        base = datetime.date.fromisoformat(rows[0][3])
+        weights: List[float] = []
+        reps: List[int] = []
+        times: List[float] = []
+        for r, w, _rpe, date in rows:
+            weights.append(float(w))
+            reps.append(int(r))
+            days = (datetime.date.fromisoformat(date) - base).days
+            times.append(float(days))
+
+        variability = ExercisePrescription._weekly_load_variability(
+            weights, reps, times
+        )
+        vols: Dict[int, float] = {}
+        for w, r, t in zip(weights, reps, times):
+            week = int(t // 7)
+            vols[week] = vols.get(week, 0.0) + w * r
+        weeks_sorted = sorted(vols)
+        week_labels = [
+            (base + datetime.timedelta(days=w * 7)).isoformat() for w in weeks_sorted
+        ]
+        volumes = [round(vols[w], 2) for w in weeks_sorted]
+        return {
+            "variability": round(variability, 2),
+            "weeks": week_labels,
+            "volumes": volumes,
+        }
