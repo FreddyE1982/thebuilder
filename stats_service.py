@@ -1,7 +1,7 @@
 import datetime
 from typing import List, Optional, Dict
 from db import SetRepository, ExerciseNameRepository, SettingsRepository
-from tools import MathTools, ExerciseProgressEstimator
+from tools import MathTools, ExerciseProgressEstimator, ExercisePrescription
 
 
 class StatisticsService:
@@ -317,3 +317,22 @@ class StatisticsService:
                     "est_1rm": round(est, 2),
                 }
         return sorted(records.values(), key=lambda x: x["exercise"])
+
+    def progress_insights(
+        self,
+        exercise: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> Dict[str, float]:
+        """Return trend analysis and plateau score for an exercise."""
+        prog = self.progression(exercise, start_date, end_date)
+        if not prog:
+            return {}
+        dates = [datetime.date.fromisoformat(p["date"]) for p in prog]
+        first = dates[0]
+        ts = [(d - first).days for d in dates]
+        rms = [float(p["est_1rm"]) for p in prog]
+        trend = ExercisePrescription._analyze_1rm_trends(ts, rms)
+        plateau = ExercisePrescription._pyramid_plateau_detection(ts, rms)
+        trend["plateau_score"] = round(plateau, 2)
+        return trend

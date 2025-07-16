@@ -571,6 +571,30 @@ class APITestCase(unittest.TestCase):
         self.assertAlmostEqual(rec["weight"], 110.0)
         self.assertAlmostEqual(rec["est_1rm"], 139.3, places=1)
 
+    def test_progress_insights(self) -> None:
+        self.client.post("/workouts")
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 10, "weight": 100.0, "rpe": 8},
+        )
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 8, "weight": 110.0, "rpe": 9},
+        )
+
+        resp = self.client.get(
+            "/stats/progress_insights",
+            params={"exercise": "Bench Press"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data["trend"], "insufficient_data")
+        self.assertIn("plateau_score", data)
+
     def test_timestamps(self) -> None:
         resp = self.client.post("/workouts", params={"training_type": "strength"})
         self.assertEqual(resp.status_code, 200)

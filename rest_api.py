@@ -583,6 +583,18 @@ class GymAPI:
                 end_date,
             )
 
+        @self.app.get("/stats/progress_insights")
+        def stats_progress_insights(
+            exercise: str,
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            return self.statistics.progress_insights(
+                exercise,
+                start_date,
+                end_date,
+            )
+
         @self.app.get("/prediction/progress")
         def prediction_progress(
             exercise: str,
