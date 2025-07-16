@@ -264,12 +264,13 @@ class GymApp:
         with history_tab:
             self._history_tab()
         with stats_tab:
-            dash_sub, stats_sub, insights_sub, rep_sub = st.tabs(
+            dash_sub, stats_sub, insights_sub, rep_sub, game_sub = st.tabs(
                 [
                     "Dashboard",
                     "Exercise Stats",
                     "Insights",
                     "Reports",
+                    "Gamification",
                 ]
             )
             with dash_sub:
@@ -280,6 +281,8 @@ class GymApp:
                 self._insights_tab()
             with rep_sub:
                 self._reports_tab()
+            with game_sub:
+                self._gamification_tab()
         with tests_tab:
             self._tests_tab()
         with settings_tab:
@@ -1220,6 +1223,18 @@ class GymApp:
                 st.line_chart(
                     {"Volume": [d["volume"] for d in daily]},
                     x=[d["date"] for d in daily],
+                )
+
+    def _gamification_tab(self) -> None:
+        st.header("Gamification Stats")
+        with st.expander("Summary", expanded=True):
+            st.metric("Total Points", self.gamification.total_points())
+        with st.expander("Points by Workout", expanded=True):
+            data = self.gamification.points_by_workout()
+            if data:
+                st.bar_chart(
+                    {"Points": [p[1] for p in data]},
+                    x=[str(p[0]) for p in data],
                 )
 
     def _tests_tab(self) -> None:

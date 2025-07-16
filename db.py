@@ -1445,3 +1445,10 @@ class GamificationRepository(BaseRepository):
         rows = self.fetch_all("SELECT SUM(points) FROM gamification_points;")
         return float(rows[0][0] or 0.0)
 
+    def workout_totals(self) -> List[Tuple[int, float]]:
+        rows = self.fetch_all(
+            "SELECT workout_id, SUM(points) FROM gamification_points "
+            "GROUP BY workout_id ORDER BY workout_id;"
+        )
+        return [(int(wid), float(pts or 0.0)) for wid, pts in rows]
+
