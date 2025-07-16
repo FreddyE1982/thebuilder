@@ -96,7 +96,10 @@ class APITestCase(unittest.TestCase):
         plan_date = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
 
         self.client.post("/workouts")
-        self.client.post("/planned_workouts", params={"date": plan_date})
+        self.client.post(
+            "/planned_workouts",
+            params={"date": plan_date, "training_type": "strength"},
+        )
 
         response = self.client.post("/settings/delete_all", params={"confirmation": "Yes, I confirm"})
         self.assertEqual(response.status_code, 200)
@@ -111,7 +114,10 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(response.json(), [])
 
         self.client.post("/workouts")
-        self.client.post("/planned_workouts", params={"date": plan_date})
+        self.client.post(
+            "/planned_workouts",
+            params={"date": plan_date, "training_type": "strength"},
+        )
 
         response = self.client.post("/settings/delete_logged", params={"confirmation": "Yes, I confirm"})
         self.assertEqual(response.status_code, 200)
@@ -168,13 +174,19 @@ class APITestCase(unittest.TestCase):
     def test_plan_workflow(self) -> None:
         plan_date = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
 
-        response = self.client.post("/planned_workouts", params={"date": plan_date})
+        response = self.client.post(
+            "/planned_workouts",
+            params={"date": plan_date, "training_type": "hypertrophy"},
+        )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"id": 1})
 
         response = self.client.get("/planned_workouts")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), [{"id": 1, "date": plan_date}])
+        self.assertEqual(
+            response.json(),
+            [{"id": 1, "date": plan_date, "training_type": "hypertrophy"}],
+        )
 
         response = self.client.post(
             "/planned_workouts/1/exercises",
@@ -193,7 +205,13 @@ class APITestCase(unittest.TestCase):
 
         response = self.client.get("/workouts")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), [{"id": 1, "date": plan_date}])
+        self.assertEqual(
+            response.json(),
+            [{"id": 1, "date": plan_date}],
+        )
+        resp_detail = self.client.get("/workouts/1")
+        self.assertEqual(resp_detail.status_code, 200)
+        self.assertEqual(resp_detail.json()["training_type"], "hypertrophy")
 
         response = self.client.get("/workouts/1/exercises")
         self.assertEqual(response.status_code, 200)
@@ -231,7 +249,7 @@ class APITestCase(unittest.TestCase):
         new_date = (datetime.date.today() + datetime.timedelta(days=2)).isoformat()
         resp = self.client.put(
             "/planned_workouts/1",
-            params={"date": new_date},
+            params={"date": new_date, "training_type": "strength"},
         )
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json(), {"status": "updated"})
@@ -251,7 +269,10 @@ class APITestCase(unittest.TestCase):
 
         resp = self.client.get("/planned_workouts")
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.json(), [{"id": dup_id, "date": dup_date}])
+        self.assertEqual(
+            resp.json(),
+            [{"id": dup_id, "date": dup_date, "training_type": "strength"}],
+        )
 
     def test_equipment_endpoints(self) -> None:
         response = self.client.get("/equipment/types")
