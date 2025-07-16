@@ -98,6 +98,11 @@ class MathToolsTestCase(unittest.TestCase):
         stress = ExercisePrescription._stress_level([100, 110], [5, 5], [8, 8], [0, 1], 120.0, 10)
         self.assertAlmostEqual(stress, 2.0)
 
+    def test_readiness_score(self) -> None:
+        val = MathTools.readiness_score(2.0, 3.0)
+        expected = MathTools.clamp(10.0 - math.sqrt(2.0**2 + 3.0**2), 0.0, 10.0)
+        self.assertAlmostEqual(val, expected)
+
     def test_periodization_and_velocity_loss(self) -> None:
         factor = ExercisePrescription._adaptive_periodization_factor([1.0, 1.1, 1.2, 1.3], 2)
         self.assertAlmostEqual(factor, 0.9)

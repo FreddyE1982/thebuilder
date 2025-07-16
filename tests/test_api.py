@@ -1173,3 +1173,28 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertAlmostEqual(resp.json()["risk"], round(expected, 2), places=2)
 
+    def test_readiness_endpoint(self) -> None:
+        self.client.post("/workouts")
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8},
+        )
+        current_rm = ExercisePrescription._current_1rm([100.0], [5])
+        stress = ExercisePrescription._stress_level(
+            [100.0], [5], [8], [0], current_rm, 10
+        )
+        fatigue = ExercisePrescription._tss_adjusted_fatigue(
+            [100.0], [5], [0], [50.0], current_rm
+        )
+        expected = MathTools.readiness_score(stress, fatigue / 1000)
+
+        resp = self.client.get("/stats/readiness")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(len(data), 1)
+        self.assertAlmostEqual(data[0]["readiness"], round(expected, 2), places=2)
+

@@ -89,6 +89,12 @@ class MathTools:
         base = (stress + fatigue) / 2.0
         return MathTools.clamp(base * (1 + variability), 0.0, 10.0)
 
+    @staticmethod
+    def readiness_score(stress: float, fatigue: float) -> float:
+        """Return a training readiness score from stress and fatigue."""
+        score = 10.0 - math.sqrt(stress**2 + fatigue**2)
+        return MathTools.clamp(score, 0.0, 10.0)
+
 
 class ExercisePrescription(MathTools):
     """Advanced utilities for generating detailed workout prescriptions."""
