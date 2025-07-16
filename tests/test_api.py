@@ -933,3 +933,37 @@ class APITestCase(unittest.TestCase):
         self.assertAlmostEqual(data[1]["stress"], 1.02, places=2)
         self.assertAlmostEqual(data[1]["fatigue"], 1.78, places=2)
 
+    def test_load_variability_endpoint(self) -> None:
+        d1 = (datetime.date.today() - datetime.timedelta(days=7)).isoformat()
+        d2 = datetime.date.today().isoformat()
+
+        self.client.post("/workouts", params={"date": d1})
+        self.client.post("/workouts", params={"date": d2})
+
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/workouts/2/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 10, "weight": 100.0, "rpe": 8},
+        )
+        self.client.post(
+            "/exercises/2/sets",
+            params={"reps": 10, "weight": 150.0, "rpe": 8},
+        )
+
+        resp = self.client.get(
+            "/stats/load_variability",
+            params={"start_date": d1, "end_date": d2},
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertAlmostEqual(data["variability"], 0.2, places=2)
+        self.assertEqual(len(data["weeks"]), 2)
+

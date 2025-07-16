@@ -626,6 +626,13 @@ class GymAPI:
         ):
             return self.statistics.training_stress(start_date, end_date)
 
+        @self.app.get("/stats/load_variability")
+        def stats_load_variability(
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            return self.statistics.weekly_load_variability(start_date, end_date)
+
         @self.app.get("/gamification")
         def gamification_status():
             return {
