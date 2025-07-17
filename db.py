@@ -248,6 +248,12 @@ class Database:
                 "stress_level",
             ],
         ),
+        "favorite_exercises": (
+            """CREATE TABLE favorite_exercises (
+                    name TEXT PRIMARY KEY
+                );""",
+            ["name"],
+        ),
     }
 
     def __init__(self, db_path: str = "workout.db") -> None:
@@ -1934,3 +1940,25 @@ class WellnessRepository(BaseRepository):
         if not rows:
             raise ValueError("log not found")
         self.execute("DELETE FROM wellness_logs WHERE id = ?;", (entry_id,))
+
+
+class FavoriteExerciseRepository(BaseRepository):
+    """Repository for managing favorite exercises."""
+
+    def add(self, name: str) -> None:
+        self.execute(
+            "INSERT OR IGNORE INTO favorite_exercises (name) VALUES (?);",
+            (name,),
+        )
+
+    def remove(self, name: str) -> None:
+        self.execute(
+            "DELETE FROM favorite_exercises WHERE name = ?;",
+            (name,),
+        )
+
+    def fetch_all(self) -> list[str]:
+        rows = super().fetch_all(
+            "SELECT name FROM favorite_exercises ORDER BY name;"
+        )
+        return [r[0] for r in rows]

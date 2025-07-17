@@ -20,6 +20,7 @@ from db import (
     MLLogRepository,
     BodyWeightRepository,
     WellnessRepository,
+    FavoriteExerciseRepository,
 )
 from planner_service import PlannerService
 from recommendation_service import RecommendationService
@@ -53,6 +54,7 @@ class GymApp:
         self.exercise_catalog = ExerciseCatalogRepository()
         self.muscles_repo = MuscleRepository()
         self.exercise_names_repo = ExerciseNameRepository()
+        self.favorites_repo = FavoriteExerciseRepository()
         self.pyramid_tests = PyramidTestRepository()
         self.pyramid_entries = PyramidEntryRepository()
         self.game_repo = GamificationRepository()
@@ -905,6 +907,25 @@ class GymApp:
     def _exercise_catalog_library(self) -> None:
         groups = self.exercise_catalog.fetch_muscle_groups()
         muscles = self.muscles_repo.fetch_all()
+        favs = self.favorites_repo.fetch_all()
+        with st.expander("Favorite Exercises", expanded=True):
+            if favs:
+                for f in favs:
+                    cols = st.columns(2)
+                    cols[0].write(f)
+                    if cols[1].button("Remove", key=f"fav_rm_{f}"):
+                        self.favorites_repo.remove(f)
+                        st.experimental_rerun()
+            else:
+                st.write("No favorites.")
+            add_choice = st.selectbox(
+                "Add Favorite",
+                [""] + self.exercise_names_repo.fetch_all(),
+                key="fav_add_name",
+            )
+            if st.button("Add Favorite", key="fav_add_btn") and add_choice:
+                self.favorites_repo.add(add_choice)
+                st.experimental_rerun()
         with st.expander("Filters", expanded=True):
             sel_groups = st.multiselect("Muscle Groups", groups, key="lib_ex_groups")
             sel_mus = st.multiselect("Muscles", muscles, key="lib_ex_mus")

@@ -10,6 +10,7 @@ The Builder is a full featured workout planner, logger and analytics platform bu
 - Plan future workouts, duplicate plans and convert them to logged sessions.
 - Manage equipment and muscle mappings. Custom equipment can be added and linked to muscles.
 - Maintain an exercise catalog with primary/secondary muscles and available equipment.
+- Mark favorite exercises for quick access in the library.
 - Create aliases for muscles and exercise names so queries treat them as the same entry.
 - Extensive statistics including daily volume, progression forecasts, stress metrics, readiness scores and personal records.
 - Optional gamification awarding points for completed sets.

@@ -19,6 +19,7 @@ from db import (
     MLLogRepository,
     BodyWeightRepository,
     WellnessRepository,
+    FavoriteExerciseRepository,
 )
 from planner_service import PlannerService
 from recommendation_service import RecommendationService
@@ -52,6 +53,7 @@ class GymAPI:
         self.exercise_catalog = ExerciseCatalogRepository(db_path)
         self.muscles = MuscleRepository(db_path)
         self.exercise_names = ExerciseNameRepository(db_path)
+        self.favorites = FavoriteExerciseRepository(db_path)
         self.settings = SettingsRepository(db_path, yaml_path)
         self.pyramid_tests = PyramidTestRepository(db_path)
         self.pyramid_entries = PyramidEntryRepository(db_path)
@@ -171,6 +173,20 @@ class GymAPI:
         def add_exercise_alias(new_name: str, existing: str):
             self.exercise_names.add_alias(new_name, existing)
             return {"status": "added"}
+
+        @self.app.get("/favorites/exercises")
+        def list_favorite_exercises():
+            return self.favorites.fetch_all()
+
+        @self.app.post("/favorites/exercises")
+        def add_favorite_exercise(name: str):
+            self.favorites.add(name)
+            return {"status": "added"}
+
+        @self.app.delete("/favorites/exercises/{name}")
+        def delete_favorite_exercise(name: str):
+            self.favorites.remove(name)
+            return {"status": "deleted"}
 
         @self.app.get("/exercise_catalog/muscle_groups")
         def list_muscle_groups():
