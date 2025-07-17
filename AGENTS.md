@@ -73,6 +73,8 @@ If it is determined that we are running on pythonista, then a pythonista gui mus
 The agent is to check the pythonista documentation available here: https://omz-software.com/pythonista/docs/ it may have to follow links. The documentation explains how to use pythonista including tutorials, how to code GUI with it, has information about available packages etc.
 Anytime the streamlit gui is updated, the pythonista gui needs to be updated too. NOTE that the agent will not be able to test anything pythonista related because the agent is not running in an ios environment.
 Also note that under pythonista we CAN NOT IMPORT AND CAN NOT USE TORCH! So under pythonista we must leave anything to do with machine learning out and use pure algorythms instead!
+Note that under pythonista we also CAN NOT INSTALL FASTAPI, UVICORN,...so we need to do access to the rest api manually. you best write your own "rest api client class" for that.
+We need to do whatever packages do that are not part of the standard library ourselfs under pythonista!
 
 
 ## Machine Learning
