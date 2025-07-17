@@ -530,7 +530,7 @@ class GymAPI:
                 and self.settings.get_bool("ml_training_enabled", True)
                 and self.settings.get_bool("ml_rpe_training_enabled", True)
             ):
-                self.ml_service.train(name, rpe)
+                self.ml_service.train(name, reps, weight, rpe)
             try:
                 self.gamification.record_set(exercise_id, reps, weight, rpe)
             except Exception:
@@ -548,7 +548,7 @@ class GymAPI:
                 and self.settings.get_bool("ml_training_enabled", True)
                 and self.settings.get_bool("ml_rpe_training_enabled", True)
             ):
-                self.ml_service.train(name, rpe)
+                self.ml_service.train(name, reps, weight, rpe)
             self.recommender.record_result(set_id, reps, weight, rpe)
             return {"status": "updated"}
 

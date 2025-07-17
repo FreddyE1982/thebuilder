@@ -7,14 +7,18 @@ from typing import Iterable
 torch.manual_seed(0)
 
 class RPEModel(torch.nn.Module):
-    """Simple model storing a single RPE value."""
+    """Feed-forward network predicting RPE from basic set features."""
 
-    def __init__(self, initial: float = 7.0) -> None:
+    def __init__(self, input_size: int = 3, hidden_size: int = 16) -> None:
         super().__init__()
-        self.value = torch.nn.Parameter(torch.tensor(float(initial)))
+        self.net = torch.nn.Sequential(
+            torch.nn.Linear(input_size, hidden_size),
+            torch.nn.ReLU(),
+            torch.nn.Linear(hidden_size, 1),
+        )
 
-    def forward(self) -> torch.Tensor:  # pragma: no cover - simple pass
-        return self.value
+    def forward(self, x: torch.Tensor) -> torch.Tensor:  # pragma: no cover - trivial
+        return self.net(x)
 
 
 class PerformanceModelService:
@@ -45,11 +49,12 @@ class PerformanceModelService:
             self.models[canonical] = (model, opt)
         return self.models[canonical]
 
-    def train(self, name: str, rpe: float) -> None:
+    def train(self, name: str, reps: int, weight: float, rpe: float) -> None:
         model, opt = self._get(name)
         opt.zero_grad()
-        pred = model().view(1)
-        target = torch.tensor([rpe], dtype=torch.float32)
+        x = torch.tensor([[weight / 1000.0, reps / 10.0, rpe / 10.0]], dtype=torch.float32)
+        pred = model(x).view(1)
+        target = torch.tensor([rpe / 10.0], dtype=torch.float32)
         loss = torch.nn.functional.mse_loss(pred, target)
         loss.backward()
         opt.step()
@@ -57,10 +62,12 @@ class PerformanceModelService:
         torch.save(model.state_dict(), buf)
         self.repo.save(self.names.canonical(name), buf.getvalue())
 
-    def predict(self, name: str) -> float:
+    def predict(self, name: str, reps: int, weight: float, prev_rpe: float) -> float:
         model, _ = self._get(name)
         with torch.no_grad():
-            return float(model().item())
+            x = torch.tensor([[weight / 1000.0, reps / 10.0, prev_rpe / 10.0]], dtype=torch.float32)
+            val = model(x)
+            return float(val.item() * 10.0)
 
 
 class VolumePredictor(torch.nn.Module):

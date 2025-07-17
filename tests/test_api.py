@@ -1464,9 +1464,9 @@ class APITestCase(unittest.TestCase):
         import torch, io
 
         state = torch.load(io.BytesIO(row[0]))
-        self.assertIn("value", state)
-        self.assertIsInstance(state["value"].item(), float)
-        self.assertGreater(float(state["value"]), 7.0)
+        self.assertTrue(any(k.endswith("weight") for k in state))
+        w_key = next(k for k in state if k.endswith("weight"))
+        self.assertIsInstance(state[w_key], torch.Tensor)
 
         resp = self.client.post("/exercises/1/recommend_next")
         self.assertEqual(resp.status_code, 400)

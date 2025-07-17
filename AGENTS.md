@@ -78,7 +78,7 @@ Settings and YAML file must always be in synch. If changes are made to the setti
 
 ## README
 
-keep the readme constantly updated! 
+keep the readme constantly updated!
 
 ## AGENTS.md
 
@@ -86,3 +86,4 @@ keep the AGENTS.md updated by adding new sensible rules when they occur to you. 
 
 
 - Add tests for all new analytics endpoints verifying expected numeric results.
+- The RPE machine learning model must utilise reps, weight and previous RPE when training or predicting.
