@@ -743,6 +743,18 @@ class GymAPI:
                 end_date,
             )
 
+        @self.app.get("/stats/intensity_distribution")
+        def stats_intensity_distribution(
+            exercise: str = None,
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            return self.statistics.intensity_distribution(
+                exercise,
+                start_date,
+                end_date,
+            )
+
         @self.app.get("/stats/velocity_history")
         def stats_velocity_history(
             exercise: str,

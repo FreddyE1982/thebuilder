@@ -420,6 +420,59 @@ class StatisticsService:
             result.append({"reps": r, "count": dist[r]})
         return result
 
+    def intensity_distribution(
+        self,
+        exercise: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> List[Dict[str, float | int]]:
+        """Return training volume and set count per intensity zone."""
+        names = self._alias_names(exercise)
+        rows = self.sets.fetch_history_by_names(
+            names,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        bins = [
+            (0.0, 0.5),
+            (0.5, 0.6),
+            (0.6, 0.7),
+            (0.7, 0.8),
+            (0.8, 0.9),
+            (0.9, 2.0),
+        ]
+        stats = {
+            f"{int(lo*100)}-{int(hi*100 if hi < 1.0 else 100)}": {
+                "sets": 0,
+                "volume": 0.0,
+            }
+            for lo, hi in bins
+        }
+        for reps, weight, _rpe, _date in rows:
+            est_rm = MathTools.epley_1rm(float(weight), int(reps))
+            if est_rm <= 0:
+                continue
+            ratio = float(weight) / est_rm
+            for lo, hi in bins:
+                if lo <= ratio < hi:
+                    key = f"{int(lo*100)}-{int(hi*100 if hi < 1.0 else 100)}"
+                    entry = stats[key]
+                    entry["sets"] += 1
+                    entry["volume"] += int(reps) * float(weight)
+                    break
+        result = []
+        for lo, hi in bins:
+            key = f"{int(lo*100)}-{int(hi*100 if hi < 1.0 else 100)}"
+            entry = stats[key]
+            result.append(
+                {
+                    "zone": key,
+                    "sets": entry["sets"],
+                    "volume": round(entry["volume"], 2),
+                }
+            )
+        return result
+
     def velocity_history(
         self,
         exercise: str,
