@@ -72,6 +72,218 @@ For each ML Model there must be a way to seperately enable / disable the models 
 
 Tests verifying machine learning output must only check numeric ranges and types rather than fixed values.
 
+Integrating Confidence Scores into Exercise Prescription Models
+To enhance model interpretability and robustness in your exercise prescription workflow, outputting a confidence score alongside each prediction is a best practice. This allows you to weight model predictions—so that less confident predictions influence the final recommendation less, while more confident ones have greater influence. Here’s how to implement and use this in your system:
+
+1. Model Architecture: Predicting Confidence
+Modern neural networks can output both a prediction and an explicit measure of confidence (or uncertainty). This is commonly achieved in two approaches:
+
+a) Predictive Distribution (Heteroscedastic Regression)
+The model outputs both a mean prediction (e.g., RPE, recommended reps) and a predicted variance (uncertainty).
+
+For example, for RPE prediction:
+
+Output 1: 
+y
+^
+y
+^
+  (predicted RPE)
+
+Output 2: 
+s
+=
+log
+⁡
+σ
+^
+2
+s=log 
+σ
+^
+  
+2
+  (log variance estimate)
+
+The confidence score is 
+Confidence
+=
+1
+/
+(
+exp
+⁡
+(
+s
+)
++
+ϵ
+)
+Confidence=1/(exp(s)+ϵ), with 
+ϵ
+ϵ for stability.
+
+Loss is the negative log likelihood:
+
+L
+=
+1
+2
+σ
+2
+(
+y
+−
+y
+^
+)
+2
++
+1
+2
+log
+⁡
+σ
+2
+L= 
+2σ 
+2
+ 
+1
+ (y− 
+y
+^
+ ) 
+2
+ + 
+2
+1
+ logσ 
+2
+ 
+Lower variance indicates higher confidence.
+
+b) Ensemble or Dropout Methods
+Multiple stochastic forward passes yield a distribution of predictions.
+
+Confidence is inversely related to prediction variance across those passes.
+
+2. Example: Model Output in Python
+Pseudo-interface for a PyTorch model with confidence:
+
+python
+class ConfidenceRPEModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.linear = torch.nn.Linear(input_dim, 1)
+        self.log_var = torch.nn.Parameter(torch.zeros(1))
+
+    def forward(self, x):
+        pred = self.linear(x)
+        var = torch.exp(self.log_var)
+        confidence = 1 / (var + 1e-6)
+        return pred, confidence
+When calling model(x), receive both prediction and confidence.
+
+3. Using Confidence For Weighted Algorithm Fusion
+When combining a model output with a “classical” calculation in your exercise prescription, use the confidence to compute a weighted average:
+
+Final
+=
+w
+model
+×
+ModelPred
++
+w
+algo
+×
+AlgoPred
+Final=w 
+model
+ ×ModelPred+w 
+algo
+ ×AlgoPred
+Where:
+
+w
+model
+=
+Confidence
+model
+Confidence
+model
++
+Confidence
+algo
+w 
+model
+ = 
+Confidence 
+model
+ +Confidence 
+algo
+ 
+Confidence 
+model
+ 
+ 
+
+w
+algo
+=
+1
+−
+w
+model
+w 
+algo
+ =1−w 
+model
+ 
+
+Confidence
+algo
+Confidence 
+algo
+  can be a fixed value (e.g., 1.0) or empirically estimated based on algorithm reliability.
+
+Example code:
+
+python
+def weighted_fusion(model_pred, model_conf, algo_pred, algo_conf=1.0):
+    total = model_conf + algo_conf
+    w_model = model_conf / total
+    w_algo = algo_conf / total
+    return w_model * model_pred + w_algo * algo_pred
+4. Application in Exercise Prescription
+Use the model’s confidence score to adaptively trust model-based recommendations more when the model is confident, and trust algorithmic rules more when confidence is low.
+Recommendations must be a weighted FUSION of both model recommendations and algorithmic rules! 
+The confidence score of the model must be transfered into a precentage value. This value is then used for weighting the recommendations. 
+If the confidence percentage for example is 20 %, then the weight for the model prediction would be 20 % while the weight for the algorithmic recommendation would be 80 %. 
+So the final recommendation would be 20 % model recommendation + 80 % algorithmic recommendation.
+
+
+Store confidence scores in your database for audit and further analysis.
+
+5. Advantages
+Addresses “black box” concerns by quantifying reliability.
+
+Supports safe deployment—defer to known-good algorithms when the model is less certain.
+
+Enables continuous monitoring of model performance: track average confidence versus real-world accuracy.
+
+6. Recommendations
+Integrate confidence outputs into all ML models used for core exercise prescription logic.
+
+Always propagate and log confidence.
+
+Adjust the underlying model if you find that confidence is not meaningful in practice (e.g., poor correlation with accuracy).
+
+Validate the weighted fusion approach using historical data and, if possible, simulate scenarios where model and algorithm disagree.
+
+This enhancement provides users with more reliable, transparent, and actionable prescriptions—improving both trustworthiness and performance of your app’s recommendations.
+
 ## settings
 
 Settings and YAML file must always be in synch. If changes are made to the settings tab, these changes must be reflected in the YAML file. ALL settings configurable in the settings tab must be configurable via the YAML file
