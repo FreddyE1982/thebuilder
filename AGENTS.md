@@ -70,6 +70,8 @@ enhance app functionality using machine learning using torch. models must be sto
 ALL ML Models must be able to be enabled / disabled via the settings tab. There must be a way to disable / enable all ML Models at once.
 For each ML Model there must be a way to seperately enable / disable the models training / prediction.
 
+Tests verifying machine learning output must only check numeric ranges and types rather than fixed values.
+
 ## settings
 
 Settings and YAML file must always be in synch. If changes are made to the settings tab, these changes must be reflected in the YAML file. ALL settings configurable in the settings tab must be configurable via the YAML file

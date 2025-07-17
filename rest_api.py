@@ -28,6 +28,7 @@ from ml_service import (
     ProgressModelService,
     RLGoalModelService,
     InjuryRiskModelService,
+    AdaptationModelService,
 )
 from tools import ExercisePrescription, MathTools
 
@@ -65,6 +66,7 @@ class GymAPI:
         self.progress_model = ProgressModelService(self.ml_models)
         self.goal_model = RLGoalModelService(self.ml_models)
         self.injury_model = InjuryRiskModelService(self.ml_models)
+        self.adaptation_model = AdaptationModelService(self.ml_models)
         self.planner = PlannerService(
             self.workouts,
             self.exercises,
@@ -92,6 +94,7 @@ class GymAPI:
             self.readiness_model,
             self.progress_model,
             self.injury_model,
+            self.adaptation_model,
         )
         self.app = FastAPI()
         self._setup_routes()
@@ -775,6 +778,13 @@ class GymAPI:
             end_date: str = None,
         ):
             return self.statistics.readiness(start_date, end_date)
+
+        @self.app.get("/stats/adaptation_index")
+        def stats_adaptation_index(
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            return self.statistics.adaptation_index(start_date, end_date)
 
         @self.app.get("/gamification")
         def gamification_status():

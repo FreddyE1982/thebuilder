@@ -14,6 +14,7 @@ The Builder is a full featured workout planner, logger and analytics platform bu
 - Extensive statistics including daily volume, progression forecasts, stress metrics, readiness scores and personal records.
 - Optional gamification awarding points for completed sets.
 - Machine learning models for RPE, volume, readiness and progress predictions. Training and prediction can be toggled in the settings. Reinforcement learning dynamically adjusts exercise goals and an LSTM model tracks long‑term adaptation. Injury risk analytics provide preventive insights.
+- Multi-modal adaptation index fuses stress, fatigue and variability metrics using a deep learning model.
 - Utilities such as pyramid strength tests and warm‑up weight suggestions.
 - All settings can be changed in the UI or by editing `settings.yaml` and remain synchronized.
 - Calculate average rest times between sets via `/stats/rest_times`.
@@ -59,3 +60,4 @@ pytest -q
 ```
 
 The tests exercise the entire REST API including machine learning features and a long‑term usage simulation.
+Machine learning predictions may vary slightly; tests only validate value ranges.

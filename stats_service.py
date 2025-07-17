@@ -7,6 +7,7 @@ from ml_service import (
     ReadinessModelService,
     ProgressModelService,
     InjuryRiskModelService,
+    AdaptationModelService,
 )
 from tools import MathTools, ExerciseProgressEstimator, ExercisePrescription
 
@@ -23,6 +24,7 @@ class StatisticsService:
         readiness_model: "ReadinessModelService" | None = None,
         progress_model: "ProgressModelService" | None = None,
         injury_model: "InjuryRiskModelService" | None = None,
+        adaptation_model: "AdaptationModelService" | None = None,
     ) -> None:
         self.sets = set_repo
         self.exercise_names = name_repo
@@ -31,6 +33,7 @@ class StatisticsService:
         self.readiness_model = readiness_model
         self.progress_model = progress_model
         self.injury_model = injury_model
+        self.adaptation_model = adaptation_model
 
     def _alias_names(self, exercise: Optional[str]) -> List[str]:
         if not exercise:
@@ -1003,3 +1006,37 @@ class StatisticsService:
         energy = high / (low + mid + ExercisePrescription.EPSILON)
         momentum = slope * (1 + change / len(ests)) * (1 + energy / 10)
         return {"momentum": round(momentum, 4)}
+
+    def adaptation_index(
+        self,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> Dict[str, float]:
+        """Return a multi-modal adaptation score."""
+        overview = self.stress_overview(start_date, end_date)
+        variability = self.weekly_load_variability(start_date, end_date)
+        monotony = self.training_monotony(start_date, end_date)
+        features = [
+            MathTools.clamp(overview["stress"] / 10.0, 0.0, 1.0),
+            MathTools.clamp(overview["fatigue"] / 10.0, 0.0, 1.0),
+            MathTools.clamp(variability["variability"] / 10.0, 0.0, 1.0),
+            MathTools.clamp(monotony["monotony"] / 10.0, 0.0, 1.0),
+            0.5,
+        ]
+        base = sum(features) / len(features)
+        score = base
+        if (
+            self.adaptation_model is not None
+            and self.settings is not None
+            and self.settings.get_bool("ml_all_enabled", True)
+            and self.settings.get_bool("ml_prediction_enabled", True)
+        ):
+            score = self.adaptation_model.predict(features, base)
+        if (
+            self.adaptation_model is not None
+            and self.settings is not None
+            and self.settings.get_bool("ml_all_enabled", True)
+            and self.settings.get_bool("ml_training_enabled", True)
+        ):
+            self.adaptation_model.train(features, base)
+        return {"adaptation": round(score * 10.0, 2)}
