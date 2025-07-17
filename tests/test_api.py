@@ -740,6 +740,17 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(rep_dist[1]["count"], 1)
 
         resp = self.client.get(
+            "/stats/intensity_distribution",
+            params={"exercise": "Bench Press"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        intensity = resp.json()
+        zone = next((z for z in intensity if z["zone"] == "70-80"), None)
+        self.assertIsNotNone(zone)
+        self.assertEqual(zone["sets"], 2)
+        self.assertAlmostEqual(zone["volume"], 1880.0)
+
+        resp = self.client.get(
             "/prediction/progress",
             params={"exercise": "Bench Press", "weeks": 2, "workouts": 1},
         )
