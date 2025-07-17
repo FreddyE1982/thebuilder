@@ -1144,3 +1144,21 @@ class StatisticsService:
         for _rid, d, w in rows:
             result.append({"date": d, "bmi": round(w / (height**2), 2)})
         return result
+
+    def weight_forecast(self, days: int) -> List[Dict[str, float]]:
+        """Return simple body weight forecast for ``days`` ahead."""
+        if days <= 0 or self.body_weights is None:
+            return []
+        history = self.body_weight_history()
+        if len(history) < 2:
+            last = history[-1]["weight"] if history else 0.0
+            return [{"day": i, "weight": round(last, 2)} for i in range(1, days + 1)]
+        weights = [h["weight"] for h in history]
+        times = list(range(len(weights)))
+        wts = [i + 1 for i in times]
+        slope = ExercisePrescription._weighted_linear_regression(times, weights, wts)
+        last = weights[-1]
+        forecast: List[Dict[str, float]] = []
+        for i in range(1, days + 1):
+            forecast.append({"day": i, "weight": round(last + slope * i, 2)})
+        return forecast
