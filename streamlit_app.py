@@ -492,7 +492,7 @@ class GymApp:
             with st.expander("Sets", expanded=True):
                 for set_id, reps, weight, rpe, start_time, end_time in sets:
                     detail = self.sets.fetch_detail(set_id)
-                    cols = st.columns(11)
+                    cols = st.columns(12)
                     with cols[0]:
                         st.write(f"Set {set_id}")
                     reps_val = cols[1].number_input(
@@ -515,30 +515,36 @@ class GymApp:
                         index=int(rpe),
                         key=f"rpe_{set_id}",
                     )
-                    cols[4].write(f"{detail['diff_reps']:+}")
-                    cols[5].write(f"{detail['diff_weight']:+.1f}")
-                    cols[6].write(f"{detail['diff_rpe']:+}")
-                    if cols[7].button("Start", key=f"start_set_{set_id}"):
+                    note_val = cols[4].text_input(
+                        "Note",
+                        value=detail.get("note") or "",
+                        key=f"note_{set_id}",
+                    )
+                    cols[5].write(f"{detail['diff_reps']:+}")
+                    cols[6].write(f"{detail['diff_weight']:+.1f}")
+                    cols[7].write(f"{detail['diff_rpe']:+}")
+                    if cols[8].button("Start", key=f"start_set_{set_id}"):
                         self.sets.set_start_time(
                             set_id,
                             datetime.datetime.now().isoformat(timespec="seconds"),
                         )
-                    if cols[8].button("Finish", key=f"finish_set_{set_id}"):
+                    if cols[9].button("Finish", key=f"finish_set_{set_id}"):
                         self.sets.set_end_time(
                             set_id,
                             datetime.datetime.now().isoformat(timespec="seconds"),
                         )
-                    if cols[9].button("Delete", key=f"del_{set_id}"):
+                    if cols[10].button("Delete", key=f"del_{set_id}"):
                         self._confirm_delete_set(set_id)
                         continue
-                    if cols[10].button("Update", key=f"upd_{set_id}"):
+                    if cols[11].button("Update", key=f"upd_{set_id}"):
                         self.sets.update(
                             set_id, int(reps_val), float(weight_val), int(rpe_val)
                         )
+                        self.sets.update_note(set_id, note_val or None)
                     if start_time:
-                        cols[7].write(start_time)
+                        cols[8].write(start_time)
                     if end_time:
-                        cols[8].write(end_time)
+                        cols[9].write(end_time)
             hist = self.stats.exercise_history(name)
             if hist:
                 with st.expander("History (last 5)"):
@@ -584,6 +590,7 @@ class GymApp:
             options=list(range(11)),
             key=f"new_rpe_{exercise_id}",
         )
+        note = st.text_input("Note", key=f"new_note_{exercise_id}")
         last = self.sets.fetch_for_exercise(exercise_id)
         if last:
             if st.button("Copy Last Set", key=f"copy_{exercise_id}"):
@@ -592,7 +599,7 @@ class GymApp:
                 st.session_state[f"new_weight_{exercise_id}"] = float(l[2])
                 st.session_state[f"new_rpe_{exercise_id}"] = int(l[3])
         if st.button("Add Set", key=f"add_set_{exercise_id}"):
-            self.sets.add(exercise_id, int(reps), float(weight), int(rpe))
+            self.sets.add(exercise_id, int(reps), float(weight), int(rpe), note or None)
             self.gamification.record_set(
                 exercise_id, int(reps), float(weight), int(rpe)
             )

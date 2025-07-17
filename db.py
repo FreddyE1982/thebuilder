@@ -129,6 +129,7 @@ class Database:
                     diff_rpe INTEGER NOT NULL DEFAULT 0,
                     start_time TEXT,
                     end_time TEXT,
+                    note TEXT,
                     FOREIGN KEY(exercise_id) REFERENCES exercises(id) ON DELETE CASCADE,
                     FOREIGN KEY(planned_set_id) REFERENCES planned_sets(id) ON DELETE SET NULL
                 );""",
@@ -144,6 +145,7 @@ class Database:
                 "diff_rpe",
                 "start_time",
                 "end_time",
+                "note",
             ],
         ),
         "settings": (
@@ -609,6 +611,7 @@ class SetRepository(BaseRepository):
         reps: int,
         weight: float,
         rpe: int,
+        note: Optional[str] = None,
         planned_set_id: Optional[int] = None,
         diff_reps: int = 0,
         diff_weight: float = 0.0,
@@ -621,13 +624,14 @@ class SetRepository(BaseRepository):
         if rpe < 0 or rpe > 10:
             raise ValueError("rpe must be between 0 and 10")
         return self.execute(
-            "INSERT INTO sets (exercise_id, reps, weight, rpe, planned_set_id, diff_reps, diff_weight, diff_rpe) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?);",
+            "INSERT INTO sets (exercise_id, reps, weight, rpe, note, planned_set_id, diff_reps, diff_weight, diff_rpe) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);",
             (
                 exercise_id,
                 reps,
                 weight,
                 rpe,
+                note,
                 planned_set_id,
                 diff_reps,
                 diff_weight,
@@ -640,7 +644,7 @@ class SetRepository(BaseRepository):
     ) -> list[int]:
         ids: list[int] = []
         for reps, weight, rpe in entries:
-            ids.append(self.add(exercise_id, reps, weight, rpe))
+            ids.append(self.add(exercise_id, reps, weight, rpe, None))
         return ids
 
     def update(self, set_id: int, reps: int, weight: float, rpe: int) -> None:
@@ -685,6 +689,12 @@ class SetRepository(BaseRepository):
             (timestamp, set_id),
         )
 
+    def update_note(self, set_id: int, note: Optional[str]) -> None:
+        self.execute(
+            "UPDATE sets SET note = ? WHERE id = ?;",
+            (note, set_id),
+        )
+
     def fetch_exercise_id(self, set_id: int) -> int:
         rows = self.fetch_all(
             "SELECT exercise_id FROM sets WHERE id = ?;",
@@ -704,7 +714,7 @@ class SetRepository(BaseRepository):
 
     def fetch_detail(self, set_id: int) -> dict:
         rows = self.fetch_all(
-            "SELECT id, reps, weight, rpe, planned_set_id, diff_reps, diff_weight, diff_rpe, start_time, end_time FROM sets WHERE id = ?;",
+            "SELECT id, reps, weight, rpe, note, planned_set_id, diff_reps, diff_weight, diff_rpe, start_time, end_time FROM sets WHERE id = ?;",
             (set_id,),
         )
         (
@@ -712,6 +722,7 @@ class SetRepository(BaseRepository):
             reps,
             weight,
             rpe,
+            note,
             planned_set_id,
             diff_reps,
             diff_weight,
@@ -731,6 +742,7 @@ class SetRepository(BaseRepository):
             "diff_rpe": diff_rpe,
             "start_time": start_time,
             "end_time": end_time,
+            "note": note,
             "velocity": velocity,
         }
 
