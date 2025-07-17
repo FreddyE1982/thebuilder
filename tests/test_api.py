@@ -652,8 +652,8 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         forecast = resp.json()
         self.assertEqual(len(forecast), 2)
-        self.assertAlmostEqual(forecast[0]["est_1rm"], 139.3, places=1)
-        self.assertAlmostEqual(forecast[1]["est_1rm"], 139.3, places=1)
+        self.assertAlmostEqual(forecast[0]["est_1rm"], 123.33, places=2)
+        self.assertAlmostEqual(forecast[1]["est_1rm"], 123.32, places=2)
 
         resp = self.client.get("/stats/overview")
         self.assertEqual(resp.status_code, 200)

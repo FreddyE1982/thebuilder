@@ -2,7 +2,11 @@ from __future__ import annotations
 import datetime
 from typing import List, Optional, Dict
 from db import SetRepository, ExerciseNameRepository, SettingsRepository
-from ml_service import VolumeModelService, ReadinessModelService
+from ml_service import (
+    VolumeModelService,
+    ReadinessModelService,
+    ProgressModelService,
+)
 from tools import MathTools, ExerciseProgressEstimator, ExercisePrescription
 
 
@@ -16,12 +20,14 @@ class StatisticsService:
         settings_repo: SettingsRepository | None = None,
         volume_model: "VolumeModelService" | None = None,
         readiness_model: "ReadinessModelService" | None = None,
+        progress_model: "ProgressModelService" | None = None,
     ) -> None:
         self.sets = set_repo
         self.exercise_names = name_repo
         self.settings = settings_repo
         self.volume_model = volume_model
         self.readiness_model = readiness_model
+        self.progress_model = progress_model
 
     def _alias_names(self, exercise: Optional[str]) -> List[str]:
         if not exercise:
@@ -236,7 +242,7 @@ class StatisticsService:
             else 80.0
         )
 
-        return ExerciseProgressEstimator.predict_progress(
+        base = ExerciseProgressEstimator.predict_progress(
             weights,
             reps,
             times,
@@ -247,6 +253,23 @@ class StatisticsService:
             months_active=months_active,
             workouts_per_month=workouts_per_month,
         )
+
+        if self.progress_model is None:
+            return base
+
+        for idx, (r, w) in enumerate(zip(reps, weights)):
+            rm = MathTools.epley_1rm(w, r)
+            self.progress_model.train(float(idx), rm)
+
+        last_idx = len(reps) - 1
+        result: List[Dict[str, float]] = []
+        for item in base:
+            t_idx = last_idx + item["week"] * workouts_per_week
+            ml_pred = self.progress_model.predict(float(t_idx))
+            est = (item["est_1rm"] + ml_pred) / 2
+            result.append({"week": item["week"], "est_1rm": round(est, 2)})
+
+        return result
 
     def equipment_usage(
         self,

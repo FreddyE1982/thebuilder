@@ -25,6 +25,7 @@ from ml_service import (
     PerformanceModelService,
     VolumeModelService,
     ReadinessModelService,
+    ProgressModelService,
 )
 from tools import ExercisePrescription, MathTools
 
@@ -59,6 +60,7 @@ class GymAPI:
         )
         self.volume_model = VolumeModelService(self.ml_models)
         self.readiness_model = ReadinessModelService(self.ml_models)
+        self.progress_model = ProgressModelService(self.ml_models)
         self.planner = PlannerService(
             self.workouts,
             self.exercises,
@@ -83,6 +85,7 @@ class GymAPI:
             self.settings,
             self.volume_model,
             self.readiness_model,
+            self.progress_model,
         )
         self.app = FastAPI()
         self._setup_routes()
