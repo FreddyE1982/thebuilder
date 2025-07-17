@@ -20,9 +20,18 @@ class Database:
                     start_time TEXT,
                     end_time TEXT,
                     training_type TEXT NOT NULL DEFAULT 'strength',
-                    notes TEXT
+                    notes TEXT,
+                    location TEXT
                 );""",
-            ["id", "date", "start_time", "end_time", "training_type", "notes"],
+            [
+                "id",
+                "date",
+                "start_time",
+                "end_time",
+                "training_type",
+                "notes",
+                "location",
+            ],
         ),
         "equipment": (
             """CREATE TABLE equipment (
@@ -483,10 +492,11 @@ class WorkoutRepository(BaseRepository):
         date: str,
         training_type: str = "strength",
         notes: str | None = None,
+        location: str | None = None,
     ) -> int:
         return self.execute(
-            "INSERT INTO workouts (date, training_type, notes) VALUES (?, ?, ?);",
-            (date, training_type, notes),
+            "INSERT INTO workouts (date, training_type, notes, location) VALUES (?, ?, ?, ?);",
+            (date, training_type, notes, location),
         )
 
     def fetch_all_workouts(
@@ -525,11 +535,17 @@ class WorkoutRepository(BaseRepository):
             (training_type, workout_id),
         )
 
+    def set_location(self, workout_id: int, location: Optional[str]) -> None:
+        self.execute(
+            "UPDATE workouts SET location = ? WHERE id = ?;",
+            (location, workout_id),
+        )
+
     def fetch_detail(
         self, workout_id: int
-    ) -> Tuple[int, str, Optional[str], Optional[str], str, Optional[str]]:
+    ) -> Tuple[int, str, Optional[str], Optional[str], str, Optional[str], Optional[str]]:
         rows = self.fetch_all(
-            "SELECT id, date, start_time, end_time, training_type, notes FROM workouts WHERE id = ?;",
+            "SELECT id, date, start_time, end_time, training_type, notes, location FROM workouts WHERE id = ?;",
             (workout_id,),
         )
         if not rows:

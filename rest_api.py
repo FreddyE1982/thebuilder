@@ -329,6 +329,7 @@ class GymAPI:
             date: str = None,
             training_type: str = "strength",
             notes: str | None = None,
+            location: str | None = None,
         ):
             try:
                 workout_date = (
@@ -346,6 +347,7 @@ class GymAPI:
                 workout_date.isoformat(),
                 training_type,
                 notes,
+                location,
             )
             return {"id": workout_id}
 
@@ -387,6 +389,7 @@ class GymAPI:
                 end_time,
                 training_type,
                 notes,
+                location,
             ) = self.workouts.fetch_detail(workout_id)
             return {
                 "id": wid,
@@ -395,6 +398,7 @@ class GymAPI:
                 "end_time": end_time,
                 "training_type": training_type,
                 "notes": notes,
+                "location": location,
             }
 
         @self.app.get("/workouts/{workout_id}/export_csv")
@@ -416,6 +420,11 @@ class GymAPI:
         @self.app.put("/workouts/{workout_id}/note")
         def update_workout_note(workout_id: int, notes: str = None):
             self.workouts.set_note(workout_id, notes)
+            return {"status": "updated"}
+
+        @self.app.put("/workouts/{workout_id}/location")
+        def update_workout_location(workout_id: int, location: str = None):
+            self.workouts.set_location(workout_id, location)
             return {"status": "updated"}
 
         @self.app.post("/workouts/{workout_id}/start")

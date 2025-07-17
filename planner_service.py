@@ -33,7 +33,10 @@ class PlannerService:
     def create_workout_from_plan(self, plan_id: int) -> int:
         _pid, date, t_type = self.planned_workouts.fetch_detail(plan_id)
         workout_id = self.workouts.create(
-            date, t_type
+            date,
+            t_type,
+            None,
+            None,
         )
         exercises = self.planned_exercises.fetch_for_workout(plan_id)
         for ex_id, name, equipment in exercises:
