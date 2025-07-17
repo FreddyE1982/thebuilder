@@ -21,7 +21,11 @@ from planner_service import PlannerService
 from recommendation_service import RecommendationService
 from stats_service import StatisticsService
 from gamification_service import GamificationService
-from ml_service import PerformanceModelService, VolumeModelService
+from ml_service import (
+    PerformanceModelService,
+    VolumeModelService,
+    ReadinessModelService,
+)
 from tools import ExercisePrescription, MathTools
 
 
@@ -54,6 +58,7 @@ class GymAPI:
             self.exercise_names,
         )
         self.volume_model = VolumeModelService(self.ml_models)
+        self.readiness_model = ReadinessModelService(self.ml_models)
         self.planner = PlannerService(
             self.workouts,
             self.exercises,
@@ -77,6 +82,7 @@ class GymAPI:
             self.exercise_names,
             self.settings,
             self.volume_model,
+            self.readiness_model,
         )
         self.app = FastAPI()
         self._setup_routes()
@@ -362,6 +368,16 @@ class GymAPI:
                     feats = vols[-4:-1]
                     target = vols[-1]
                     self.statistics.volume_model.train(feats, target)
+            if self.statistics.readiness_model is not None:
+                stress_data = self.statistics.training_stress(
+                    start_date=None, end_date=None
+                )
+                if stress_data:
+                    s = stress_data[-1]
+                    score = MathTools.readiness_score(s["stress"], s["fatigue"] / 1000)
+                    self.statistics.readiness_model.train(
+                        s["stress"], s["fatigue"], score
+                    )
             return {"status": "finished", "timestamp": timestamp}
 
         @self.app.post("/workouts/{workout_id}/exercises")
