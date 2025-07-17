@@ -420,3 +420,4 @@ keep the AGENTS.md updated by adding new sensible rules when they occur to you. 
 - Wellness logs must be stored in `wellness_logs` table with calories, sleep hours, sleep quality and stress level. Endpoints must support filtering by date range.
 - Intensity distribution analytics must bucket sets into 10% 1RM zones and be available via `/stats/intensity_distribution`.
 - Analytics endpoints should return results sorted by their key fields for consistent ordering.
+- Workouts may record an optional location which must be editable via REST endpoints and the Streamlit GUI.

@@ -190,6 +190,8 @@ class GymApp:
             wid = self.workouts.create(
                 datetime.date.today().isoformat(),
                 "strength",
+                None,
+                None,
             )
             st.session_state.selected_workout = wid
             st.sidebar.success(f"Created workout {wid}")
@@ -376,9 +378,13 @@ class GymApp:
                 new_type = st.selectbox(
                     "Training Type", training_options, key="new_workout_type"
                 )
+                new_location = st.text_input("Location", key="new_workout_location")
                 if st.button("New Workout"):
                     new_id = self.workouts.create(
-                        datetime.date.today().isoformat(), new_type
+                        datetime.date.today().isoformat(),
+                        new_type,
+                        None,
+                        new_location or None,
                     )
                     st.session_state.selected_workout = new_id
             with st.expander("Existing Workouts", expanded=True):
@@ -396,6 +402,7 @@ class GymApp:
                     end_time = detail[3]
                     current_type = detail[4]
                     notes_val = detail[5] or ""
+                    loc_val = detail[6] or ""
                     cols = st.columns(3)
                     if cols[0].button("Start Workout", key=f"start_workout_{selected}"):
                         self.workouts.set_start_time(
@@ -428,6 +435,13 @@ class GymApp:
                     )
                     if st.button("Save Notes", key=f"save_notes_{selected}"):
                         self.workouts.set_note(int(selected), notes_edit)
+                    loc_edit = st.text_input(
+                        "Location",
+                        value=loc_val,
+                        key=f"workout_location_{selected}",
+                    )
+                    if st.button("Save Location", key=f"save_location_{selected}"):
+                        self.workouts.set_location(int(selected), loc_edit or None)
                     csv_data = self.sets.export_workout_csv(int(selected))
                     st.download_button(
                         label="Export CSV",
