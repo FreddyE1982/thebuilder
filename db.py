@@ -1749,6 +1749,28 @@ class MLLogRepository(BaseRepository):
             (name,),
         )
 
+    def fetch_range(
+        self,
+        name: str,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> list[tuple[str, float, float]]:
+        """Return logs for ``name`` optionally filtered by ISO date range."""
+        query = (
+            "SELECT timestamp, prediction, confidence FROM ml_logs "
+            "WHERE name = ?"
+        )
+        params: list[str] = [name]
+        if start_date:
+            query += " AND timestamp >= ?"
+            params.append(start_date)
+        if end_date:
+            query += " AND timestamp <= ?"
+            params.append(end_date)
+        query += " ORDER BY id;"
+        rows = self.fetch_all(query, tuple(params))
+        return [(r[0], float(r[1]), float(r[2])) for r in rows]
+
 
 class BodyWeightRepository(BaseRepository):
     """Repository for body weight logs."""

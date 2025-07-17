@@ -1606,15 +1606,22 @@ class APITestCase(unittest.TestCase):
         w_key = next(k for k in state if k.endswith("weight"))
         self.assertIsInstance(state[w_key], torch.Tensor)
 
-        cur = sqlite3.connect(self.db_path).cursor()
-        cur.execute(
-            "SELECT prediction, confidence FROM ml_logs WHERE name = ?;",
-            ("Bench Press",),
+        logs_resp = self.client.get("/ml_logs/Bench Press")
+        self.assertEqual(logs_resp.status_code, 200)
+        logs = logs_resp.json()
+        self.assertGreaterEqual(len(logs), 1)
+        first = logs[0]
+        self.assertIsInstance(first["prediction"], float)
+        self.assertIsInstance(first["confidence"], float)
+
+        # test date filtering
+        ts_full = first["timestamp"]
+        filtered = self.client.get(
+            "/ml_logs/Bench Press",
+            params={"start_date": ts_full, "end_date": ts_full},
         )
-        log_row = cur.fetchone()
-        self.assertIsNotNone(log_row)
-        self.assertIsInstance(log_row[0], float)
-        self.assertIsInstance(log_row[1], float)
+        self.assertEqual(filtered.status_code, 200)
+        self.assertGreaterEqual(len(filtered.json()), 1)
 
         resp = self.client.post("/exercises/1/recommend_next")
         self.assertEqual(resp.status_code, 400)
