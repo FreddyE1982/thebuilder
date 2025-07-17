@@ -18,6 +18,7 @@ from db import (
     MLModelRepository,
     MLLogRepository,
     BodyWeightRepository,
+    WellnessRepository,
 )
 from planner_service import PlannerService
 from recommendation_service import RecommendationService
@@ -58,6 +59,7 @@ class GymAPI:
         self.ml_models = MLModelRepository(db_path)
         self.ml_logs = MLLogRepository(db_path)
         self.body_weights = BodyWeightRepository(db_path)
+        self.wellness = WellnessRepository(db_path)
         self.gamification = GamificationService(
             self.game_repo,
             self.exercises,
@@ -105,6 +107,7 @@ class GymAPI:
             self.adaptation_model,
             self.body_weights,
             self.equipment,
+            self.wellness,
         )
         self.app = FastAPI()
         self._setup_routes()
@@ -1104,6 +1107,81 @@ class GymAPI:
             except ValueError as e:
                 raise HTTPException(status_code=404, detail=str(e))
 
+        @self.app.post("/wellness")
+        def log_wellness(
+            calories: float | None = None,
+            sleep_hours: float | None = None,
+            sleep_quality: float | None = None,
+            stress_level: int | None = None,
+            date: str | None = None,
+        ):
+            try:
+                log_date = (
+                    datetime.date.today()
+                    if date is None
+                    else datetime.date.fromisoformat(date)
+                )
+            except ValueError:
+                raise HTTPException(status_code=400, detail="invalid date format")
+            try:
+                wid = self.wellness.log(
+                    log_date.isoformat(),
+                    calories,
+                    sleep_hours,
+                    sleep_quality,
+                    stress_level,
+                )
+                return {"id": wid}
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
+        @self.app.get("/wellness")
+        def list_wellness(start_date: str = None, end_date: str = None):
+            rows = self.wellness.fetch_history(start_date, end_date)
+            result = []
+            for rid, d, cal, sh, sq, stress in rows:
+                result.append(
+                    {
+                        "id": rid,
+                        "date": d,
+                        "calories": cal,
+                        "sleep_hours": sh,
+                        "sleep_quality": sq,
+                        "stress_level": stress,
+                    }
+                )
+            return result
+
+        @self.app.put("/wellness/{entry_id}")
+        def update_wellness(
+            entry_id: int,
+            date: str,
+            calories: float | None = None,
+            sleep_hours: float | None = None,
+            sleep_quality: float | None = None,
+            stress_level: int | None = None,
+        ):
+            try:
+                self.wellness.update(
+                    entry_id,
+                    date,
+                    calories,
+                    sleep_hours,
+                    sleep_quality,
+                    stress_level,
+                )
+                return {"status": "updated"}
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
+        @self.app.delete("/wellness/{entry_id}")
+        def delete_wellness(entry_id: int):
+            try:
+                self.wellness.delete(entry_id)
+                return {"status": "deleted"}
+            except ValueError as e:
+                raise HTTPException(status_code=404, detail=str(e))
+
         @self.app.get("/stats/weight_stats")
         def stats_weight_stats(start_date: str = None, end_date: str = None):
             return self.statistics.weight_stats(start_date, end_date)
@@ -1111,6 +1189,10 @@ class GymAPI:
         @self.app.get("/stats/weight_forecast")
         def stats_weight_forecast(days: int):
             return self.statistics.weight_forecast(days)
+
+        @self.app.get("/stats/wellness_summary")
+        def stats_wellness_summary(start_date: str = None, end_date: str = None):
+            return self.statistics.wellness_summary(start_date, end_date)
 
         @self.app.get("/stats/bmi")
         def stats_bmi():

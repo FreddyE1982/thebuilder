@@ -1727,3 +1727,49 @@ class APITestCase(unittest.TestCase):
         )
         self.assertAlmostEqual(data[0]["weight"], round(82.0 + slope * 1, 2))
         self.assertAlmostEqual(data[1]["weight"], round(82.0 + slope * 2, 2))
+
+    def test_wellness_logging_and_stats(self) -> None:
+        d1 = "2023-01-01"
+        d2 = "2023-01-02"
+        r1 = self.client.post(
+            "/wellness",
+            params={
+                "date": d1,
+                "calories": 2500.0,
+                "sleep_hours": 8.0,
+                "sleep_quality": 4.0,
+                "stress_level": 2,
+            },
+        )
+        self.assertEqual(r1.status_code, 200)
+        id1 = r1.json()["id"]
+        r2 = self.client.post(
+            "/wellness",
+            params={
+                "date": d2,
+                "calories": 2600.0,
+                "sleep_hours": 7.5,
+                "sleep_quality": 3.0,
+                "stress_level": 3,
+            },
+        )
+        self.assertEqual(r2.status_code, 200)
+        id2 = r2.json()["id"]
+        resp = self.client.get(
+            "/wellness",
+            params={"start_date": d1, "end_date": d2},
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(len(data), 2)
+        self.assertEqual(data[0]["id"], id1)
+        self.assertAlmostEqual(data[0]["calories"], 2500.0)
+        self.assertEqual(data[1]["id"], id2)
+        summary = self.client.get(
+            "/stats/wellness_summary",
+            params={"start_date": d1, "end_date": d2},
+        ).json()
+        self.assertAlmostEqual(summary["avg_calories"], 2550.0)
+        self.assertAlmostEqual(summary["avg_sleep"], 7.75)
+        self.assertAlmostEqual(summary["avg_quality"], 3.5)
+        self.assertAlmostEqual(summary["avg_stress"], 2.5)
