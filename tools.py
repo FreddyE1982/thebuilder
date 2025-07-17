@@ -81,6 +81,25 @@ class MathTools:
         return [round(target_weight * float(i), 2) for i in inc]
 
     @staticmethod
+    def estimate_velocity_from_set(
+        reps: int,
+        start_time: datetime.datetime | str,
+        finish_time: datetime.datetime | str,
+        rom: float = 0.5,
+    ) -> float:
+        """Estimate mean set velocity from timing and assumed ROM."""
+        if start_time is None or finish_time is None or reps <= 0:
+            return 0.0
+        if isinstance(start_time, str):
+            start_time = datetime.datetime.fromisoformat(start_time)
+        if isinstance(finish_time, str):
+            finish_time = datetime.datetime.fromisoformat(finish_time)
+        total_seconds = (finish_time - start_time).total_seconds()
+        if total_seconds <= 0 or reps <= 0:
+            return 0.0
+        return (reps * rom) / total_seconds
+
+    @staticmethod
     def session_efficiency(
         volume: float, duration_seconds: float, avg_rpe: float | None = None
     ) -> float:
