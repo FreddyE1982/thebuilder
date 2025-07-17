@@ -118,3 +118,64 @@ class VolumeModelService:
             x = torch.tensor([f / self.SCALE for f in features], dtype=torch.float32).view(1, -1)
             pred = self.model(x)
             return float(pred.item() * self.SCALE)
+
+
+class ReadinessPredictor(torch.nn.Module):
+    """Simple linear model for readiness estimation."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.linear = torch.nn.Linear(2, 1)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:  # pragma: no cover - trivial
+        return self.linear(x)
+
+
+class ReadinessModelService:
+    """Handle online training and prediction of readiness values."""
+
+    SCALE: float = 10.0
+
+    def __init__(self, repo: MLModelRepository, lr: float = 0.01) -> None:
+        self.repo = repo
+        self.lr = lr
+        self.model, self.opt, self.initialized = self._load()
+
+    def _load(self) -> tuple[ReadinessPredictor, torch.optim.Optimizer, bool]:
+        model = ReadinessPredictor()
+        opt = torch.optim.SGD(model.parameters(), lr=self.lr)
+        blob = self.repo.load("readiness_model")
+        if blob is not None:
+            buffer = io.BytesIO(blob)
+            state = torch.load(buffer)
+            model.load_state_dict(state["model"])
+            opt.load_state_dict(state["opt"])
+            return model, opt, True
+        return model, opt, False
+
+    def _save(self) -> None:
+        buf = io.BytesIO()
+        torch.save({"model": self.model.state_dict(), "opt": self.opt.state_dict()}, buf)
+        self.repo.save("readiness_model", buf.getvalue())
+        self.initialized = True
+
+    def train(self, stress: float, fatigue: float, readiness: float) -> None:
+        self.model.train()
+        self.opt.zero_grad()
+        x = torch.tensor([[stress / self.SCALE, fatigue / self.SCALE]], dtype=torch.float32)
+        y = torch.tensor([readiness / self.SCALE], dtype=torch.float32)
+        pred = self.model(x).view(1)
+        loss = torch.nn.functional.mse_loss(pred, y)
+        loss.backward()
+        self.opt.step()
+        self._save()
+
+    def predict(self, stress: float, fatigue: float, fallback: float) -> float:
+        if not self.initialized:
+            return fallback
+        self.model.eval()
+        with torch.no_grad():
+            x = torch.tensor([[stress / self.SCALE, fatigue / self.SCALE]], dtype=torch.float32)
+            pred = self.model(x)
+            val = float(pred.item() * self.SCALE)
+        return (val + fallback) / 2

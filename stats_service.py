@@ -2,7 +2,7 @@ from __future__ import annotations
 import datetime
 from typing import List, Optional, Dict
 from db import SetRepository, ExerciseNameRepository, SettingsRepository
-from ml_service import VolumeModelService
+from ml_service import VolumeModelService, ReadinessModelService
 from tools import MathTools, ExerciseProgressEstimator, ExercisePrescription
 
 
@@ -15,11 +15,13 @@ class StatisticsService:
         name_repo: ExerciseNameRepository,
         settings_repo: SettingsRepository | None = None,
         volume_model: "VolumeModelService" | None = None,
+        readiness_model: "ReadinessModelService" | None = None,
     ) -> None:
         self.sets = set_repo
         self.exercise_names = name_repo
         self.settings = settings_repo
         self.volume_model = volume_model
+        self.readiness_model = readiness_model
 
     def _alias_names(self, exercise: Optional[str]) -> List[str]:
         if not exercise:
@@ -842,8 +844,12 @@ class StatisticsService:
             fatigue = ExercisePrescription._tss_adjusted_fatigue(
                 data["w"], data["r"], list(range(len(data["w"]))), data["d"], current_rm
             )
-            ready = MathTools.readiness_score(stress, fatigue / 1000)
-            result.append({"date": d, "readiness": round(ready, 2)})
+            base_ready = MathTools.readiness_score(stress, fatigue / 1000)
+            ready_val = base_ready
+            if self.readiness_model is not None:
+                ready_val = self.readiness_model.predict(stress, fatigue, base_ready)
+                self.readiness_model.train(stress, fatigue, base_ready)
+            result.append({"date": d, "readiness": round(ready_val, 2)})
         return result
 
     def performance_momentum(
