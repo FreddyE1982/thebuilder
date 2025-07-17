@@ -292,6 +292,121 @@ Settings and YAML file must always be in synch. If changes are made to the setti
 
 keep the readme constantly updated!
 
+## velocity
+We do NOT have velocity sensors (or other sensors), when something in code needs velocity...we can not enter it. We need to calculate velocity as demonstrated below instead:
+Universal Set Velocity Formula (No Sensors)
+To provide a single, consistent velocity value per set using only the logged data—reps, weight, start time, finish time—use this definition:
+
+Mean Set Velocity Formula
+Mean Set Velocity
+=
+Total Displacement
+Total Time
+Mean Set Velocity= 
+Total Time
+Total Displacement
+ 
+Since the exact displacement per rep (range of motion) isn't measured, but we need a universal, self-consistent estimate for all exercises, use the following convention:
+
+Assumptions
+Range of motion (ROM), in meters:
+Set a single "reasonable estimate" for all exercises, e.g.,
+ROM
+default
+=
+0.5
+ROM 
+default
+ =0.5 meters per rep
+(You may optionally adjust by exercise type if you later add more data.)
+
+Total time:
+Total Time (seconds)
+=
+finish time
+−
+start time
+Total Time (seconds)=finish time−start time
+
+Number of reps:
+Use the recorded reps value.
+
+Final Fixed Formula
+Estimated Mean Velocity (m/s)
+=
+reps
+×
+ROM
+default
+finish time
+−
+start time
+Estimated Mean Velocity (m/s)= 
+finish time−start time
+reps×ROM 
+default
+ 
+ 
+reps
+reps: number of repetitions
+
+ROM
+default
+ROM 
+default
+ : fixed, e.g. 0.5 meters
+
+finish time/start time
+finish time/start time: timestamps in seconds (ISO8601—convert as needed)
+
+Example—Python Implementation
+python
+def estimate_velocity_from_set(reps, start_time, finish_time, rom=0.5):
+    """
+    Inputs:
+      reps        (int): repetitions performed
+      start_time  (datetime or str): set start time
+      finish_time (datetime or str): set end time
+      rom         (float, meters): assumed range of motion per rep
+        
+    Returns:
+      velocity (float): estimated mean velocity in m/s
+    """
+    if isinstance(start_time, str):
+        from datetime import datetime
+        start_time = datetime.fromisoformat(start_time)
+    if isinstance(finish_time, str):
+        from datetime import datetime
+        finish_time = datetime.fromisoformat(finish_time)
+    total_seconds = (finish_time - start_time).total_seconds()
+    if total_seconds <= 0 or reps <= 0:
+        return 0.0
+    return (reps * rom) / total_seconds
+Plug this formula in everywhere you need velocity (as mean set velocity).
+
+For reporting or analytics, document that the velocity is an estimate derived from set timing and a universal movement assumption.
+
+Limitations
+This is an average concentric velocity for the set—not per-rep or peak velocity.
+
+If the time includes rest pauses or unusual set pacing, results will be lower.
+
+ROM is fixed; this may cause bias for exercises with significantly different movement lengths.
+
+
+Variable	Description	Value/Unit
+reps	Set repetitions	integer
+ROM_default	Assumed range of motion per rep	0.5 meters (fixed)
+start_time	Set start timestamp	ISO, seconds
+finish_time	Set finish timestamp	ISO, seconds
+velocity	Estimated mean set velocity	meters/second
+Recommendations
+Always use the formula above, and document the ROM assumption in your UI and reports.
+
+If ever you record true per-exercise ROM values, substitute those for ROM_default to improve accuracy.
+
+This approach ensures every set in your app receives a velocity value in a uniform, reproducible, and fully transparent manner using only the data you record.
+
 ## AGENTS.md
 
 keep the AGENTS.md updated by adding new sensible rules when they occur to you. YOU MAY ONLY ADD NEW RULES. Any rule you add must NEVER contradict or modify an existing rule
