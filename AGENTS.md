@@ -64,6 +64,14 @@ The user does.
 
 the simulation must use different versions of 1. - 8. multiple times, must modify exact usage (including values) of 1. - 8. every time, must use each of 1. - 8. at least 72 times
 
+
+## pythonista support with gui
+
+The whole app must be able to run using pythonista. 
+When the app starts it needs to check if its running on pythonista, by trying to use one of the pythonista specific functions (= iphone specific functions)..by trying to import one of the pythonista specific libs that come only with pythonista.
+If it is determined that we are running on pythonista, then a pythonista gui must appear. the pythonista gui must have ALL the same functionality as the streamlit gui!
+The agent is to check the pythonista documentation available here: https://omz-software.com/pythonista/docs/ it may have to follow links. The documentation explains how to use pythonista including tutorials, how to code GUI with it, has information about available packages etc.
+
 ## Machine Learning
 enhance app functionality using machine learning using torch. models must be stored and trained persistently, "incremental online training" must be performed when user uses app. models must somehow be used for prediction when user uses app. models must be integrated into existing functionality / algorithms to enhance them. models may NOT be used as fallbacks, alternates of existing algorithms or parts of existing algorithms..they must be used to enhance existing algorithms or parts of existing algorithms by fusing with whats already there.
 
