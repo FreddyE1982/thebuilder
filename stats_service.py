@@ -1,7 +1,12 @@
 from __future__ import annotations
 import datetime
 from typing import List, Optional, Dict
-from db import SetRepository, ExerciseNameRepository, SettingsRepository
+from db import (
+    SetRepository,
+    ExerciseNameRepository,
+    SettingsRepository,
+    BodyWeightRepository,
+)
 from ml_service import (
     VolumeModelService,
     ReadinessModelService,
@@ -25,6 +30,7 @@ class StatisticsService:
         progress_model: "ProgressModelService" | None = None,
         injury_model: "InjuryRiskModelService" | None = None,
         adaptation_model: "AdaptationModelService" | None = None,
+        body_weight_repo: "BodyWeightRepository" | None = None,
     ) -> None:
         self.sets = set_repo
         self.exercise_names = name_repo
@@ -34,6 +40,7 @@ class StatisticsService:
         self.progress_model = progress_model
         self.injury_model = injury_model
         self.adaptation_model = adaptation_model
+        self.body_weights = body_weight_repo
 
     def _alias_names(self, exercise: Optional[str]) -> List[str]:
         if not exercise:
@@ -1044,3 +1051,26 @@ class StatisticsService:
         ):
             self.adaptation_model.train(features, base)
         return {"adaptation": round(score * 10.0, 2)}
+
+    def body_weight_history(
+        self, start_date: Optional[str] = None, end_date: Optional[str] = None
+    ) -> List[Dict[str, float]]:
+        if self.body_weights is None:
+            return []
+        rows = self.body_weights.fetch_history(start_date, end_date)
+        return [
+            {"id": rid, "date": d, "weight": w} for rid, d, w in rows
+        ]
+
+    def weight_stats(
+        self, start_date: Optional[str] = None, end_date: Optional[str] = None
+    ) -> Dict[str, float]:
+        history = self.body_weight_history(start_date, end_date)
+        if not history:
+            return {"avg": 0.0, "min": 0.0, "max": 0.0}
+        weights = [h["weight"] for h in history]
+        return {
+            "avg": round(sum(weights) / len(weights), 2),
+            "min": min(weights),
+            "max": max(weights),
+        }

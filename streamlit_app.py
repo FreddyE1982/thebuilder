@@ -18,6 +18,7 @@ from db import (
     GamificationRepository,
     MLModelRepository,
     MLLogRepository,
+    BodyWeightRepository,
 )
 from planner_service import PlannerService
 from recommendation_service import RecommendationService
@@ -56,6 +57,7 @@ class GymApp:
         self.game_repo = GamificationRepository()
         self.ml_models = MLModelRepository()
         self.ml_logs = MLLogRepository()
+        self.body_weights_repo = BodyWeightRepository()
         self.gamification = GamificationService(
             self.game_repo,
             self.exercises,
@@ -94,6 +96,9 @@ class GymApp:
             self.volume_model,
             self.readiness_model,
             self.progress_model,
+            None,
+            None,
+            self.body_weights_repo,
         )
         self._state_init()
 

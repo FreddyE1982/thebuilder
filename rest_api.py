@@ -17,6 +17,7 @@ from db import (
     GamificationRepository,
     MLModelRepository,
     MLLogRepository,
+    BodyWeightRepository,
 )
 from planner_service import PlannerService
 from recommendation_service import RecommendationService
@@ -56,6 +57,7 @@ class GymAPI:
         self.game_repo = GamificationRepository(db_path)
         self.ml_models = MLModelRepository(db_path)
         self.ml_logs = MLLogRepository(db_path)
+        self.body_weights = BodyWeightRepository(db_path)
         self.gamification = GamificationService(
             self.game_repo,
             self.exercises,
@@ -100,6 +102,7 @@ class GymAPI:
             self.progress_model,
             self.injury_model,
             self.adaptation_model,
+            self.body_weights,
         )
         self.app = FastAPI()
         self._setup_routes()
@@ -1045,6 +1048,30 @@ class GymAPI:
                     }
                 )
             return result
+
+        @self.app.post("/body_weight")
+        def log_body_weight(weight: float, date: str = None):
+            try:
+                log_date = (
+                    datetime.date.today()
+                    if date is None
+                    else datetime.date.fromisoformat(date)
+                )
+            except ValueError:
+                raise HTTPException(status_code=400, detail="invalid date format")
+            wid = self.body_weights.log(log_date.isoformat(), weight)
+            return {"id": wid}
+
+        @self.app.get("/body_weight")
+        def list_body_weight(start_date: str = None, end_date: str = None):
+            rows = self.body_weights.fetch_history(start_date, end_date)
+            return [
+                {"id": rid, "date": d, "weight": w} for rid, d, w in rows
+            ]
+
+        @self.app.get("/stats/weight_stats")
+        def stats_weight_stats(start_date: str = None, end_date: str = None):
+            return self.statistics.weight_stats(start_date, end_date)
 
         @self.app.get("/settings/general")
         def get_general_settings():
