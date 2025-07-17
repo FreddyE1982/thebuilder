@@ -1603,3 +1603,21 @@ class APITestCase(unittest.TestCase):
         self.assertAlmostEqual(stats["avg"], 81.0, places=2)
         self.assertEqual(stats["min"], 80.0)
         self.assertEqual(stats["max"], 82.0)
+
+    def test_current_body_weight_latest_log(self) -> None:
+        d1 = "2023-01-01"
+        d2 = "2023-01-02"
+        self.client.post("/body_weight", params={"weight": 80.0, "date": d1})
+        self.client.post("/body_weight", params={"weight": 85.0, "date": d2})
+
+        weight = self.api.statistics._current_body_weight()
+        self.assertAlmostEqual(weight, 85.0)
+
+    def test_recommender_body_weight_latest_log(self) -> None:
+        d1 = "2023-01-01"
+        d2 = "2023-01-03"
+        self.client.post("/body_weight", params={"weight": 70.0, "date": d1})
+        self.client.post("/body_weight", params={"weight": 72.5, "date": d2})
+
+        weight = self.api.recommender._current_body_weight()
+        self.assertAlmostEqual(weight, 72.5)

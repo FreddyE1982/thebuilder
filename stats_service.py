@@ -42,6 +42,16 @@ class StatisticsService:
         self.adaptation_model = adaptation_model
         self.body_weights = body_weight_repo
 
+    def _current_body_weight(self) -> float:
+        """Fetch the latest logged body weight or fallback to settings."""
+        if self.body_weights is not None:
+            latest = self.body_weights.fetch_latest_weight()
+            if latest is not None:
+                return latest
+        if self.settings is not None:
+            return self.settings.get_float("body_weight", 80.0)
+        return 80.0
+
     def _alias_names(self, exercise: Optional[str]) -> List[str]:
         if not exercise:
             return self.exercise_names.fetch_all()
@@ -207,11 +217,7 @@ class StatisticsService:
             perf_factor, rpe_scores, rec_factor, tut_ratio
         )
         ac_ratio = ExercisePrescription._ac_ratio(weights, reps)
-        body_weight = (
-            self.settings.get_float("body_weight", 80.0)
-            if self.settings
-            else 80.0
-        )
+        body_weight = self._current_body_weight()
         rec_quality = ExercisePrescription._comprehensive_recovery_quality(
             None, None, None, body_weight
         )
@@ -253,11 +259,7 @@ class StatisticsService:
             else 1.0
         )
         workouts_per_month = float(len(set(times)))
-        body_weight = (
-            self.settings.get_float("body_weight", 80.0)
-            if self.settings
-            else 80.0
-        )
+        body_weight = self._current_body_weight()
 
         base = ExerciseProgressEstimator.predict_progress(
             weights,

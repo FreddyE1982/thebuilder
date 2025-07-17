@@ -6,6 +6,7 @@ from db import (
     SetRepository,
     ExerciseNameRepository,
     SettingsRepository,
+    BodyWeightRepository,
 )
 from tools import ExercisePrescription
 from gamification_service import GamificationService
@@ -26,6 +27,7 @@ class RecommendationService:
         gamification: GamificationService | None = None,
         ml_service: PerformanceModelService | None = None,
         rl_goal: "RLGoalModelService" | None = None,
+        body_weight_repo: BodyWeightRepository | None = None,
     ) -> None:
         self.workouts = workout_repo
         self.exercises = exercise_repo
@@ -35,7 +37,15 @@ class RecommendationService:
         self.gamification = gamification
         self.ml = ml_service
         self.rl_goal = rl_goal
+        self.body_weights = body_weight_repo
         self._pending: dict[int, list[float]] = {}
+
+    def _current_body_weight(self) -> float:
+        if self.body_weights is not None:
+            latest = self.body_weights.fetch_latest_weight()
+            if latest is not None:
+                return latest
+        return self.settings.get_float("body_weight", 80.0)
 
     def has_history(self, exercise_name: str) -> bool:
         names = self.exercise_names.aliases(exercise_name)
@@ -143,7 +153,7 @@ class RecommendationService:
             session_volumes=session_volumes,
             recovery_quality_mean=recovery_quality_mean,
             frequency_factor=frequency_factor,
-            body_weight=self.settings.get_float("body_weight", 80.0),
+            body_weight=self._current_body_weight(),
             months_active=months_active,
             workouts_per_month=workouts_per_month,
             exercise_name=name,

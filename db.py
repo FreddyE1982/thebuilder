@@ -1755,3 +1755,12 @@ class BodyWeightRepository(BaseRepository):
         query += " ORDER BY date;"
         rows = self.fetch_all(query, tuple(params))
         return [(int(r[0]), r[1], float(r[2])) for r in rows]
+
+    def fetch_latest_weight(self) -> float | None:
+        """Return the most recent logged body weight if available."""
+        row = self.fetch_all(
+            "SELECT weight FROM body_weight_logs ORDER BY date DESC LIMIT 1;"
+        )
+        if row:
+            return float(row[0][0])
+        return None

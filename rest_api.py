@@ -92,6 +92,7 @@ class GymAPI:
             self.gamification,
             self.ml_service,
             self.goal_model,
+            self.body_weights,
         )
         self.statistics = StatisticsService(
             self.sets,
