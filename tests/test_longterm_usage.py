@@ -13,14 +13,19 @@ from tools import MathTools
 class LongTermUsageTestCase(unittest.TestCase):
     def setUp(self) -> None:
         self.db_path = "test_longterm.db"
+        self.yaml_path = "test_longterm_settings.yaml"
         if os.path.exists(self.db_path):
             os.remove(self.db_path)
-        self.api = GymAPI(db_path=self.db_path)
+        if os.path.exists(self.yaml_path):
+            os.remove(self.yaml_path)
+        self.api = GymAPI(db_path=self.db_path, yaml_path=self.yaml_path)
         self.client = TestClient(self.api.app)
 
     def tearDown(self) -> None:
         if os.path.exists(self.db_path):
             os.remove(self.db_path)
+        if os.path.exists(self.yaml_path):
+            os.remove(self.yaml_path)
 
     def test_partial_long_term_usage(self) -> None:
         start = datetime.date.today() - datetime.timedelta(days=27)
@@ -247,14 +252,19 @@ if __name__ == "__main__":
 class ExtendedUsageTestCase(unittest.TestCase):
     def setUp(self) -> None:
         self.db_path = "test_longterm_ext.db"
+        self.yaml_path = "test_longterm_ext_settings.yaml"
         if os.path.exists(self.db_path):
             os.remove(self.db_path)
-        self.api = GymAPI(db_path=self.db_path)
+        if os.path.exists(self.yaml_path):
+            os.remove(self.yaml_path)
+        self.api = GymAPI(db_path=self.db_path, yaml_path=self.yaml_path)
         self.client = TestClient(self.api.app)
 
     def tearDown(self) -> None:
         if os.path.exists(self.db_path):
             os.remove(self.db_path)
+        if os.path.exists(self.yaml_path):
+            os.remove(self.yaml_path)
 
     def test_extended_long_term_usage(self) -> None:
         start = datetime.date.today() - datetime.timedelta(days=55)
