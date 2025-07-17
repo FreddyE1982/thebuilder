@@ -210,6 +210,10 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.client.post("/workouts")
         self.client.post(
+            "/exercise_names/link",
+            params={"name1": "Barbell Bench Press", "name2": "Bench Press"},
+        )
+        self.client.post(
             "/workouts/1/exercises",
             params={"name": "Bench Press", "equipment": "Olympic Barbell"},
         )
@@ -649,6 +653,10 @@ class APITestCase(unittest.TestCase):
     def test_statistics_endpoints(self) -> None:
         self.client.post("/workouts")
         self.client.post(
+            "/exercise_names/link",
+            params={"name1": "Barbell Bench Press", "name2": "Bench Press"},
+        )
+        self.client.post(
             "/workouts/1/exercises",
             params={"name": "Bench Press", "equipment": "Olympic Barbell"},
         )
@@ -704,6 +712,14 @@ class APITestCase(unittest.TestCase):
         self.assertIsNotNone(target)
         self.assertEqual(target["sets"], 2)
         self.assertAlmostEqual(target["volume"], 1880.0)
+
+        resp = self.client.get("/stats/muscle_group_usage")
+        self.assertEqual(resp.status_code, 200)
+        grp_stats = resp.json()
+        chest = next((g for g in grp_stats if g["muscle_group"] == "Chest"), None)
+        self.assertIsNotNone(chest)
+        self.assertEqual(chest["sets"], 2)
+        self.assertAlmostEqual(chest["volume"], 1880.0)
 
         resp = self.client.get(
             "/stats/rpe_distribution",
