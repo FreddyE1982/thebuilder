@@ -153,7 +153,12 @@ class RecommendationService:
             and self.settings.get_bool("ml_prediction_enabled", True)
             and self.settings.get_bool("ml_rpe_prediction_enabled", True)
         ):
-            ml_rpe = self.ml.predict(name)
+            ml_rpe = self.ml.predict(
+                name,
+                int(data["reps"]),
+                float(data["weight"]),
+                rpe_list[-1],
+            )
             data["target_rpe"] = float((data["target_rpe"] + ml_rpe) / 2)
         action = 1
         state: list[float] | None = None
