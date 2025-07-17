@@ -419,3 +419,4 @@ keep the AGENTS.md updated by adding new sensible rules when they occur to you. 
 - Always record model predictions with their confidence values in the `ml_logs` table for later analysis.
 - Wellness logs must be stored in `wellness_logs` table with calories, sleep hours, sleep quality and stress level. Endpoints must support filtering by date range.
 - Intensity distribution analytics must bucket sets into 10% 1RM zones and be available via `/stats/intensity_distribution`.
+- Analytics endpoints should return results sorted by their key fields for consistent ordering.

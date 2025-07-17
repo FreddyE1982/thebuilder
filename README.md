@@ -22,6 +22,7 @@ The Builder is a full featured workout planner, logger and analytics platform bu
 - Calculate average rest times between sets via `/stats/rest_times`.
 - Analyze training intensity zones with `/stats/intensity_distribution`.
 - Summarize volume by muscle group with `/stats/muscle_group_usage`.
+- Evaluate exercise frequency per week with `/stats/exercise_frequency`.
 - Track body weight over time using `/body_weight` endpoints and `/stats/weight_stats`.
 - Forecast future body weight trends with `/stats/weight_forecast`.
 

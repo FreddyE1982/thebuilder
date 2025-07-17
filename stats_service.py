@@ -1299,3 +1299,41 @@ class StatisticsService:
             "avg_quality": round(sum(quals) / len(quals), 2) if quals else 0.0,
             "avg_stress": round(sum(stress) / len(stress), 2) if stress else 0.0,
         }
+
+    def exercise_frequency(
+        self,
+        exercise: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> list[dict[str, float]]:
+        """Return weekly exercise frequency for each exercise."""
+        names = self._alias_names(exercise)
+        rows = self.sets.fetch_history_by_names(
+            names,
+            start_date=start_date,
+            end_date=end_date,
+            with_equipment=True,
+        )
+        if not rows:
+            return []
+
+        by_name: dict[str, set[str]] = {}
+        all_dates: set[str] = set()
+        for _r, _w, _rpe, date, ex_name, _eq in rows:
+            canonical = self.exercise_names.canonical(ex_name)
+            by_name.setdefault(canonical, set()).add(date)
+            all_dates.add(date)
+
+        if start_date is None:
+            start_date = min(all_dates)
+        if end_date is None:
+            end_date = max(all_dates)
+
+        start = datetime.date.fromisoformat(start_date)
+        end = datetime.date.fromisoformat(end_date)
+        weeks = (end - start).days // 7 + 1
+        result: list[dict[str, float]] = []
+        for name in sorted(by_name):
+            freq = len(by_name[name]) / weeks if weeks > 0 else 0.0
+            result.append({"exercise": name, "frequency_per_week": round(freq, 2)})
+        return result

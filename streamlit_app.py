@@ -1258,6 +1258,10 @@ class GymApp:
             data.sort(key=lambda x: x["volume"], reverse=True)
             if data:
                 st.table(data[:5])
+        with st.expander("Exercise Frequency", expanded=True):
+            freq = self.stats.exercise_frequency(None, start_str, end_str)
+            if freq:
+                st.table(freq)
         with st.expander("Equipment Usage", expanded=True):
             eq_stats = self.stats.equipment_usage(start_str, end_str)
             if eq_stats:
@@ -1793,7 +1797,11 @@ class GymApp:
                     "Sleep Hours", min_value=0.0, step=0.5, key="well_sleep"
                 )
                 sleep_q = st.number_input(
-                    "Sleep Quality", min_value=0.0, max_value=5.0, step=1.0, key="well_quality"
+                    "Sleep Quality",
+                    min_value=0.0,
+                    max_value=5.0,
+                    step=1.0,
+                    key="well_quality",
                 )
                 stress = st.number_input(
                     "Stress Level", min_value=0, max_value=10, step=1, key="well_stress"
