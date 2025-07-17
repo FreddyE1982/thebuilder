@@ -531,13 +531,3 @@ class AdaptationModelService:
             pred = self.model(x)
             val = float(pred.item())
         return (val + fallback) / 2
-
-
-def weighted_fusion(
-    model_pred: float, model_conf: float, algo_pred: float, algo_conf: float = 1.0
-) -> float:
-    """Fuse model and algorithm predictions using confidence weights."""
-    total = model_conf + algo_conf
-    w_model = model_conf / total
-    w_algo = algo_conf / total
-    return w_model * model_pred + w_algo * algo_pred

@@ -9,7 +9,8 @@ from db import (
 )
 from tools import ExercisePrescription
 from gamification_service import GamificationService
-from ml_service import PerformanceModelService, RLGoalModelService, weighted_fusion
+from ml_service import PerformanceModelService, RLGoalModelService
+from tools import MathTools
 
 
 class RecommendationService:
@@ -165,7 +166,7 @@ class RecommendationService:
                 rpe_list[-1],
             )
             data["target_rpe"] = float(
-                weighted_fusion(ml_rpe, conf, float(data["target_rpe"]))
+                MathTools.weighted_fusion(ml_rpe, conf, float(data["target_rpe"]))
             )
         action = 1
         state: list[float] | None = None

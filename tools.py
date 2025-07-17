@@ -103,6 +103,21 @@ class MathTools:
         score = 10.0 - math.sqrt(stress**2 + fatigue**2)
         return MathTools.clamp(score, 0.0, 10.0)
 
+    @staticmethod
+    def weighted_fusion(
+        model_pred: float,
+        model_conf: float,
+        algo_pred: float,
+        algo_conf: float = 1.0,
+    ) -> float:
+        """Fuse model and algorithm predictions using confidence weights."""
+        total = model_conf + algo_conf
+        if total == 0:
+            raise ValueError("total confidence cannot be zero")
+        w_model = model_conf / total
+        w_algo = algo_conf / total
+        return w_model * model_pred + w_algo * algo_pred
+
 
 class ExercisePrescription(MathTools):
     """Advanced utilities for generating detailed workout prescriptions."""
