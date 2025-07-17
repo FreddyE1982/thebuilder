@@ -1258,6 +1258,34 @@ class APITestCase(unittest.TestCase):
         history = resp.json()
         self.assertAlmostEqual(history[0]["velocity"], 0.5, places=2)
 
+    def test_velocity_history_endpoint(self) -> None:
+        today = datetime.date.today().isoformat()
+        self.client.post("/workouts", params={"date": today})
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        for i in range(2):
+            resp = self.client.post(
+                "/exercises/1/sets",
+                params={"reps": 5, "weight": 100.0, "rpe": 8},
+            )
+            set_id = resp.json()["id"]
+            start = f"2023-01-01T00:00:{i*5:02d}"
+            end = f"2023-01-01T00:00:{i*5+5:02d}"
+            self.client.post(f"/sets/{set_id}/start", params={"timestamp": start})
+            self.client.post(f"/sets/{set_id}/finish", params={"timestamp": end})
+
+        resp = self.client.get(
+            "/stats/velocity_history",
+            params={"exercise": "Bench Press"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["date"], today)
+        self.assertAlmostEqual(data[0]["velocity"], 0.5, places=2)
+
     def test_volume_forecast_endpoint(self) -> None:
         d1 = (datetime.date.today() - datetime.timedelta(days=2)).isoformat()
         d2 = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
