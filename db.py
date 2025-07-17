@@ -19,9 +19,10 @@ class Database:
                     date TEXT NOT NULL,
                     start_time TEXT,
                     end_time TEXT,
-                    training_type TEXT NOT NULL DEFAULT 'strength'
+                    training_type TEXT NOT NULL DEFAULT 'strength',
+                    notes TEXT
                 );""",
-            ["id", "date", "start_time", "end_time", "training_type"],
+            ["id", "date", "start_time", "end_time", "training_type", "notes"],
         ),
         "equipment": (
             """CREATE TABLE equipment (
@@ -468,18 +469,25 @@ class BaseRepository(Database):
 class WorkoutRepository(BaseRepository):
     """Repository for workout table operations."""
 
-    def create(self, date: str, training_type: str = "strength") -> int:
+    def create(
+        self,
+        date: str,
+        training_type: str = "strength",
+        notes: str | None = None,
+    ) -> int:
         return self.execute(
-            "INSERT INTO workouts (date, training_type) VALUES (?, ?);",
-            (date, training_type),
+            "INSERT INTO workouts (date, training_type, notes) VALUES (?, ?, ?);",
+            (date, training_type, notes),
         )
 
     def fetch_all_workouts(
         self,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
-    ) -> List[Tuple[int, str, Optional[str], Optional[str], str]]:
-        query = "SELECT id, date, start_time, end_time, training_type FROM workouts"
+    ) -> List[Tuple[int, str, Optional[str], Optional[str], str, Optional[str]]]:
+        query = (
+            "SELECT id, date, start_time, end_time, training_type, notes FROM workouts"
+        )
         params: list[str] = []
         if start_date:
             query += " WHERE date >= ?"
@@ -510,14 +518,20 @@ class WorkoutRepository(BaseRepository):
 
     def fetch_detail(
         self, workout_id: int
-    ) -> Tuple[int, str, Optional[str], Optional[str], str]:
+    ) -> Tuple[int, str, Optional[str], Optional[str], str, Optional[str]]:
         rows = self.fetch_all(
-            "SELECT id, date, start_time, end_time, training_type FROM workouts WHERE id = ?;",
+            "SELECT id, date, start_time, end_time, training_type, notes FROM workouts WHERE id = ?;",
             (workout_id,),
         )
         if not rows:
             raise ValueError("workout not found")
         return rows[0]
+
+    def set_note(self, workout_id: int, note: str | None) -> None:
+        self.execute(
+            "UPDATE workouts SET notes = ? WHERE id = ?;",
+            (note, workout_id),
+        )
 
     def delete_all(self) -> None:
         self._delete_all("workouts")

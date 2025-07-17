@@ -883,6 +883,28 @@ class APITestCase(unittest.TestCase):
         resp = self.client.get(f"/workouts/{wid}")
         self.assertEqual(resp.json()["training_type"], "strength")
 
+    def test_workout_notes(self) -> None:
+        resp = self.client.post(
+            "/workouts",
+            params={"training_type": "strength", "notes": "felt good"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        wid = resp.json()["id"]
+
+        resp = self.client.get(f"/workouts/{wid}")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["notes"], "felt good")
+
+        resp = self.client.put(
+            f"/workouts/{wid}/note",
+            params={"notes": "tired"},
+        )
+        self.assertEqual(resp.status_code, 200)
+
+        resp = self.client.get(f"/workouts/{wid}")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["notes"], "tired")
+
     def test_backdated_workout(self) -> None:
         past_date = (datetime.date.today() - datetime.timedelta(days=3)).isoformat()
         resp = self.client.post(

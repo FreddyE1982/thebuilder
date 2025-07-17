@@ -309,7 +309,11 @@ class GymAPI:
                 raise HTTPException(status_code=400, detail=str(e))
 
         @self.app.post("/workouts")
-        def create_workout(date: str = None, training_type: str = "strength"):
+        def create_workout(
+            date: str = None,
+            training_type: str = "strength",
+            notes: str | None = None,
+        ):
             try:
                 workout_date = (
                     datetime.date.today()
@@ -322,7 +326,11 @@ class GymAPI:
                 raise HTTPException(
                     status_code=400, detail="date cannot be in the future"
                 )
-            workout_id = self.workouts.create(workout_date.isoformat(), training_type)
+            workout_id = self.workouts.create(
+                workout_date.isoformat(),
+                training_type,
+                notes,
+            )
             return {"id": workout_id}
 
         @self.app.get("/workouts")
@@ -338,7 +346,7 @@ class GymAPI:
         ):
             workouts = self.workouts.fetch_all_workouts(start_date, end_date)
             result = []
-            for wid, date, _s, _e, t_type in workouts:
+            for wid, date, _s, _e, t_type, _notes in workouts:
                 if training_type and t_type != training_type:
                     continue
                 summary = self.sets.workout_summary(wid)
@@ -356,15 +364,21 @@ class GymAPI:
 
         @self.app.get("/workouts/{workout_id}")
         def get_workout(workout_id: int):
-            wid, date, start_time, end_time, training_type = self.workouts.fetch_detail(
-                workout_id
-            )
+            (
+                wid,
+                date,
+                start_time,
+                end_time,
+                training_type,
+                notes,
+            ) = self.workouts.fetch_detail(workout_id)
             return {
                 "id": wid,
                 "date": date,
                 "start_time": start_time,
                 "end_time": end_time,
                 "training_type": training_type,
+                "notes": notes,
             }
 
         @self.app.get("/workouts/{workout_id}/export_csv")
@@ -381,6 +395,11 @@ class GymAPI:
         @self.app.put("/workouts/{workout_id}/type")
         def update_workout_type(workout_id: int, training_type: str):
             self.workouts.set_training_type(workout_id, training_type)
+            return {"status": "updated"}
+
+        @self.app.put("/workouts/{workout_id}/note")
+        def update_workout_note(workout_id: int, notes: str = None):
+            self.workouts.set_note(workout_id, notes)
             return {"status": "updated"}
 
         @self.app.post("/workouts/{workout_id}/start")
