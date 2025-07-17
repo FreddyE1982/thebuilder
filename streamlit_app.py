@@ -24,6 +24,7 @@ from db import (
     BodyWeightRepository,
     WellnessRepository,
     FavoriteExerciseRepository,
+    FavoriteTemplateRepository,
     TagRepository,
 )
 from planner_service import PlannerService
@@ -62,6 +63,7 @@ class GymApp:
         self.muscles_repo = MuscleRepository()
         self.exercise_names_repo = ExerciseNameRepository()
         self.favorites_repo = FavoriteExerciseRepository()
+        self.favorite_templates_repo = FavoriteTemplateRepository()
         self.tags_repo = TagRepository()
         self.pyramid_tests = PyramidTestRepository()
         self.pyramid_entries = PyramidEntryRepository()
@@ -940,6 +942,31 @@ class GymApp:
         st.header("Templates")
         training_options = ["strength", "hypertrophy", "highintensity"]
         with st.expander("Template Management", expanded=True):
+            favs = self.favorite_templates_repo.fetch_all()
+            with st.expander("Favorite Templates", expanded=True):
+                if favs:
+                    for fid in favs:
+                        try:
+                            _id, name, _type = self.template_workouts.fetch_detail(fid)
+                        except ValueError:
+                            continue
+                        cols = st.columns(2)
+                        cols[0].write(name)
+                        if cols[1].button("Remove", key=f"fav_tpl_rm_{fid}"):
+                            self.favorite_templates_repo.remove(fid)
+                            st.experimental_rerun()
+                else:
+                    st.write("No favorites.")
+                templates = {str(t[0]): t[1] for t in self.template_workouts.fetch_all()}
+                add_choice = st.selectbox(
+                    "Add Favorite",
+                    [""] + list(templates.keys()),
+                    format_func=lambda x: "" if x == "" else templates[x],
+                    key="fav_tpl_add_choice",
+                )
+                if st.button("Add Favorite", key="fav_tpl_add_btn") and add_choice:
+                    self.favorite_templates_repo.add(int(add_choice))
+                    st.experimental_rerun()
             with st.expander("Create New Template"):
                 name = st.text_input("Name", key="tmpl_name")
                 t_type = st.selectbox(

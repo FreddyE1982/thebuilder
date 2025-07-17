@@ -23,6 +23,7 @@ from db import (
     BodyWeightRepository,
     WellnessRepository,
     FavoriteExerciseRepository,
+    FavoriteTemplateRepository,
     TagRepository,
 )
 from planner_service import PlannerService
@@ -61,6 +62,7 @@ class GymAPI:
         self.muscles = MuscleRepository(db_path)
         self.exercise_names = ExerciseNameRepository(db_path)
         self.favorites = FavoriteExerciseRepository(db_path)
+        self.favorite_templates = FavoriteTemplateRepository(db_path)
         self.tags = TagRepository(db_path)
         self.settings = SettingsRepository(db_path, yaml_path)
         self.pyramid_tests = PyramidTestRepository(db_path)
@@ -197,6 +199,20 @@ class GymAPI:
         @self.app.delete("/favorites/exercises/{name}")
         def delete_favorite_exercise(name: str):
             self.favorites.remove(name)
+            return {"status": "deleted"}
+
+        @self.app.get("/favorites/templates")
+        def list_favorite_templates():
+            return self.favorite_templates.fetch_all()
+
+        @self.app.post("/favorites/templates")
+        def add_favorite_template(template_id: int):
+            self.favorite_templates.add(template_id)
+            return {"status": "added"}
+
+        @self.app.delete("/favorites/templates/{template_id}")
+        def delete_favorite_template(template_id: int):
+            self.favorite_templates.remove(template_id)
             return {"status": "deleted"}
 
         @self.app.get("/tags")

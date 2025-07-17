@@ -2050,3 +2050,29 @@ class APITestCase(unittest.TestCase):
         data = resp.json()
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0]["name"], "Squat")
+
+    def test_favorite_templates(self) -> None:
+        resp = self.client.post(
+            "/templates",
+            params={"name": "Base", "training_type": "strength"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        tid = resp.json()["id"]
+
+        add_resp = self.client.post(
+            "/favorites/templates",
+            params={"template_id": tid},
+        )
+        self.assertEqual(add_resp.status_code, 200)
+        self.assertEqual(add_resp.json(), {"status": "added"})
+
+        list_resp = self.client.get("/favorites/templates")
+        self.assertEqual(list_resp.status_code, 200)
+        self.assertIn(tid, list_resp.json())
+
+        del_resp = self.client.delete(f"/favorites/templates/{tid}")
+        self.assertEqual(del_resp.status_code, 200)
+        self.assertEqual(del_resp.json(), {"status": "deleted"})
+
+        list_resp = self.client.get("/favorites/templates")
+        self.assertNotIn(tid, list_resp.json())
