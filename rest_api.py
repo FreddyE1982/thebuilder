@@ -1202,6 +1202,18 @@ class GymAPI:
         def stats_bmi_history(start_date: str = None, end_date: str = None):
             return self.statistics.bmi_history(start_date, end_date)
 
+        @self.app.get("/ml_logs/{model_name}")
+        def get_ml_logs(model_name: str, start_date: str = None, end_date: str = None):
+            rows = self.ml_logs.fetch_range(model_name, start_date, end_date)
+            return [
+                {
+                    "timestamp": ts,
+                    "prediction": pred,
+                    "confidence": conf,
+                }
+                for ts, pred, conf in rows
+            ]
+
         @self.app.get("/settings/general")
         def get_general_settings():
             return self.settings.all_settings()
