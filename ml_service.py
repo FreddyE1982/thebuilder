@@ -4,6 +4,8 @@ import torch
 from db import MLModelRepository, ExerciseNameRepository
 from typing import Iterable
 
+torch.manual_seed(0)
+
 class RPEModel(torch.nn.Module):
     """Simple model storing a single RPE value."""
 
@@ -33,6 +35,7 @@ class PerformanceModelService:
         canonical = self.names.canonical(name)
         if canonical not in self.models:
             blob = self.repo.load(canonical)
+            torch.manual_seed(0)
             model = RPEModel()
             opt = torch.optim.SGD(model.parameters(), lr=self.lr)
             if blob is not None:
@@ -82,6 +85,7 @@ class VolumeModelService:
         self.model, self.opt, self.initialized = self._load()
 
     def _load(self) -> tuple[VolumePredictor, torch.optim.Optimizer, bool]:
+        torch.manual_seed(0)
         model = VolumePredictor()
         opt = torch.optim.SGD(model.parameters(), lr=self.lr)
         blob = self.repo.load("volume_model")
@@ -142,6 +146,7 @@ class ReadinessModelService:
         self.model, self.opt, self.initialized = self._load()
 
     def _load(self) -> tuple[ReadinessPredictor, torch.optim.Optimizer, bool]:
+        torch.manual_seed(0)
         model = ReadinessPredictor()
         opt = torch.optim.SGD(model.parameters(), lr=self.lr)
         blob = self.repo.load("readiness_model")
@@ -179,3 +184,64 @@ class ReadinessModelService:
             pred = self.model(x)
             val = float(pred.item() * self.SCALE)
         return (val + fallback) / 2
+
+
+class ProgressPredictor(torch.nn.Module):
+    """Linear model for estimating 1RM progression over time."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.linear = torch.nn.Linear(1, 1)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:  # pragma: no cover - trivial
+        return self.linear(x)
+
+
+class ProgressModelService:
+    """Handle online training and prediction of 1RM values."""
+
+    SCALE: float = 200.0
+
+    def __init__(self, repo: MLModelRepository, lr: float = 0.001) -> None:
+        self.repo = repo
+        self.lr = lr
+        self.model, self.opt, self.initialized = self._load()
+
+    def _load(self) -> tuple[ProgressPredictor, torch.optim.Optimizer, bool]:
+        torch.manual_seed(0)
+        model = ProgressPredictor()
+        opt = torch.optim.SGD(model.parameters(), lr=self.lr)
+        blob = self.repo.load("progress_model")
+        if blob is not None:
+            buffer = io.BytesIO(blob)
+            state = torch.load(buffer)
+            model.load_state_dict(state["model"])
+            opt.load_state_dict(state["opt"])
+            return model, opt, True
+        return model, opt, False
+
+    def _save(self) -> None:
+        buf = io.BytesIO()
+        torch.save({"model": self.model.state_dict(), "opt": self.opt.state_dict()}, buf)
+        self.repo.save("progress_model", buf.getvalue())
+        self.initialized = True
+
+    def train(self, time_index: float, one_rm: float) -> None:
+        self.model.train()
+        self.opt.zero_grad()
+        x = torch.tensor([[time_index / 100.0]], dtype=torch.float32)
+        y = torch.tensor([one_rm / self.SCALE], dtype=torch.float32)
+        pred = self.model(x).view(1)
+        loss = torch.nn.functional.mse_loss(pred, y)
+        loss.backward()
+        self.opt.step()
+        self._save()
+
+    def predict(self, time_index: float) -> float:
+        if not self.initialized:
+            return 0.0
+        self.model.eval()
+        with torch.no_grad():
+            x = torch.tensor([[time_index / 100.0]], dtype=torch.float32)
+            pred = self.model(x)
+            return float(pred.item() * self.SCALE)

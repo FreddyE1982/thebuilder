@@ -22,7 +22,12 @@ from planner_service import PlannerService
 from recommendation_service import RecommendationService
 from stats_service import StatisticsService
 from gamification_service import GamificationService
-from ml_service import PerformanceModelService, VolumeModelService, ReadinessModelService
+from ml_service import (
+    PerformanceModelService,
+    VolumeModelService,
+    ReadinessModelService,
+    ProgressModelService,
+)
 from tools import MathTools
 
 
@@ -60,6 +65,7 @@ class GymApp:
         )
         self.volume_model = VolumeModelService(self.ml_models)
         self.readiness_model = ReadinessModelService(self.ml_models)
+        self.progress_model = ProgressModelService(self.ml_models)
         self.planner = PlannerService(
             self.workouts,
             self.exercises,
@@ -84,6 +90,7 @@ class GymApp:
             self.settings_repo,
             self.volume_model,
             self.readiness_model,
+            self.progress_model,
         )
         self._state_init()
 
