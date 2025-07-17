@@ -267,8 +267,9 @@ class ExtendedUsageTestCase(unittest.TestCase):
             os.remove(self.yaml_path)
 
     def test_extended_long_term_usage(self) -> None:
-        start = datetime.date.today() - datetime.timedelta(days=55)
-        end = start + datetime.timedelta(days=55)
+        n = 60
+        start = datetime.date.today() - datetime.timedelta(days=n * 2 - 1)
+        end = start + datetime.timedelta(days=n * 2 - 1)
 
         resp = self.client.post(
             "/equipment",
@@ -320,7 +321,7 @@ class ExtendedUsageTestCase(unittest.TestCase):
         max_1rm = 0.0
         success_count = 0
 
-        for i in range(28):
+        for i in range(n):
             w_date = start + datetime.timedelta(days=i * 2)
             date_str = w_date.isoformat()
             reps = 5
@@ -456,14 +457,14 @@ class ExtendedUsageTestCase(unittest.TestCase):
 
         resp = self.client.get("/workouts")
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(len(resp.json()), 28)
+        self.assertEqual(len(resp.json()), n)
 
         resp = self.client.get("/stats/equipment_usage")
         self.assertEqual(resp.status_code, 200)
         usage = {d["equipment"]: d["sets"] for d in resp.json()}
-        self.assertEqual(usage.get("Adj Dumbbell"), 84)
+        self.assertEqual(usage.get("Adj Dumbbell"), 3 * n)
         self.assertEqual(usage.get("Olympic Barbell"), bench_sets)
-        self.assertEqual(usage.get("Hex Bar"), 44)
+        self.assertEqual(usage.get("Hex Bar"), 2 * (n - 6))
 
         resp = self.client.get(
             "/stats/exercise_summary", params={"exercise": "Bench Press"}
@@ -479,8 +480,8 @@ class ExtendedUsageTestCase(unittest.TestCase):
         conn = sqlite3.connect(self.db_path)
         cur = conn.cursor()
         cur.execute("SELECT COUNT(*) FROM workouts;")
-        self.assertEqual(cur.fetchone()[0], 28)
+        self.assertEqual(cur.fetchone()[0], n)
         cur.execute("SELECT COUNT(*) FROM sets;")
-        self.assertEqual(cur.fetchone()[0], 212)
+        self.assertEqual(cur.fetchone()[0], 3 * n + 3 * n + 2 * (n - 6))
         conn.close()
 
