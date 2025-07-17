@@ -108,6 +108,7 @@ class GymAPI:
             self.body_weights,
             self.equipment,
             self.wellness,
+            self.exercise_catalog,
         )
         self.app = FastAPI()
         self._setup_routes()
@@ -718,6 +719,13 @@ class GymAPI:
             end_date: str = None,
         ):
             return self.statistics.muscle_usage(start_date, end_date)
+
+        @self.app.get("/stats/muscle_group_usage")
+        def stats_muscle_group_usage(
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            return self.statistics.muscle_group_usage(start_date, end_date)
 
         @self.app.get("/stats/rpe_distribution")
         def stats_rpe_distribution(

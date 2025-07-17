@@ -35,6 +35,7 @@ class StatisticsService:
         body_weight_repo: "BodyWeightRepository" | None = None,
         equipment_repo: "EquipmentRepository" | None = None,
         wellness_repo: "WellnessRepository" | None = None,
+        catalog_repo: "ExerciseCatalogRepository" | None = None,
     ) -> None:
         self.sets = set_repo
         self.exercise_names = name_repo
@@ -47,6 +48,7 @@ class StatisticsService:
         self.body_weights = body_weight_repo
         self.equipment = equipment_repo
         self.wellness = wellness_repo
+        self.catalog = catalog_repo
 
     def _current_body_weight(self) -> float:
         """Fetch the latest logged body weight or fallback to settings."""
@@ -370,6 +372,43 @@ class StatisticsService:
             result.append(
                 {
                     "muscle": mus,
+                    "volume": round(data["volume"], 2),
+                    "sets": data["sets"],
+                }
+            )
+        return result
+
+    def muscle_group_usage(
+        self,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> List[Dict[str, float]]:
+        """Return volume and set count per muscle group."""
+        if self.catalog is None:
+            return []
+        names = self.exercise_names.fetch_all()
+        rows = self.sets.fetch_history_by_names(
+            names,
+            start_date=start_date,
+            end_date=end_date,
+            with_equipment=True,
+        )
+        stats: Dict[str, Dict[str, float]] = {}
+        for reps, weight, _rpe, _date, ex_name, _eq in rows:
+            canonical = self.exercise_names.canonical(ex_name)
+            detail = self.catalog.fetch_detail(canonical)
+            if detail is None:
+                continue
+            group = detail[0]
+            item = stats.setdefault(group, {"volume": 0.0, "sets": 0})
+            item["volume"] += int(reps) * float(weight)
+            item["sets"] += 1
+        result = []
+        for group in sorted(stats):
+            data = stats[group]
+            result.append(
+                {
+                    "muscle_group": group,
                     "volume": round(data["volume"], 2),
                     "sets": data["sets"],
                 }
