@@ -7,6 +7,9 @@ from db import (
     PlannedWorkoutRepository,
     PlannedExerciseRepository,
     PlannedSetRepository,
+    TemplateWorkoutRepository,
+    TemplateExerciseRepository,
+    TemplateSetRepository,
     EquipmentRepository,
     ExerciseCatalogRepository,
     MuscleRepository,
@@ -49,6 +52,9 @@ class GymAPI:
         self.planned_workouts = PlannedWorkoutRepository(db_path)
         self.planned_exercises = PlannedExerciseRepository(db_path)
         self.planned_sets = PlannedSetRepository(db_path)
+        self.template_workouts = TemplateWorkoutRepository(db_path)
+        self.template_exercises = TemplateExerciseRepository(db_path)
+        self.template_sets = TemplateSetRepository(db_path)
         self.equipment = EquipmentRepository(db_path)
         self.exercise_catalog = ExerciseCatalogRepository(db_path)
         self.muscles = MuscleRepository(db_path)
@@ -86,6 +92,9 @@ class GymAPI:
             self.planned_exercises,
             self.planned_sets,
             self.gamification,
+            self.template_workouts,
+            self.template_exercises,
+            self.template_sets,
         )
         self.recommender = RecommendationService(
             self.workouts,
@@ -602,6 +611,78 @@ class GymAPI:
         def use_planned_workout(plan_id: int):
             workout_id = self.planner.create_workout_from_plan(plan_id)
             return {"id": workout_id}
+
+        @self.app.post("/templates")
+        def create_template(name: str, training_type: str = "strength"):
+            tid = self.template_workouts.create(name, training_type)
+            return {"id": tid}
+
+        @self.app.get("/templates")
+        def list_templates():
+            templates = self.template_workouts.fetch_all()
+            return [
+                {"id": tid, "name": name, "training_type": t}
+                for tid, name, t in templates
+            ]
+
+        @self.app.put("/templates/{template_id}")
+        def update_template(
+            template_id: int,
+            name: str | None = None,
+            training_type: str | None = None,
+        ):
+            try:
+                self.template_workouts.update(template_id, name, training_type)
+                return {"status": "updated"}
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
+        @self.app.delete("/templates/{template_id}")
+        def delete_template(template_id: int):
+            try:
+                self.template_workouts.delete(template_id)
+                return {"status": "deleted"}
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
+        @self.app.post("/templates/{template_id}/exercises")
+        def add_template_exercise(template_id: int, name: str, equipment: str):
+            ex_id = self.template_exercises.add(template_id, name, equipment)
+            return {"id": ex_id}
+
+        @self.app.get("/templates/{template_id}/exercises")
+        def list_template_exercises(template_id: int):
+            exercises = self.template_exercises.fetch_for_template(template_id)
+            return [
+                {"id": ex_id, "name": name, "equipment": eq}
+                for ex_id, name, eq in exercises
+            ]
+
+        @self.app.delete("/template_exercises/{exercise_id}")
+        def delete_template_exercise(exercise_id: int):
+            self.template_exercises.remove(exercise_id)
+            return {"status": "deleted"}
+
+        @self.app.post("/template_exercises/{exercise_id}/sets")
+        def add_template_set(exercise_id: int, reps: int, weight: float, rpe: int):
+            sid = self.template_sets.add(exercise_id, reps, weight, rpe)
+            return {"id": sid}
+
+        @self.app.get("/template_exercises/{exercise_id}/sets")
+        def list_template_sets(exercise_id: int):
+            sets = self.template_sets.fetch_for_exercise(exercise_id)
+            return [
+                {"id": sid, "reps": reps, "weight": weight, "rpe": rpe}
+                for sid, reps, weight, rpe in sets
+            ]
+
+        @self.app.post("/templates/{template_id}/plan")
+        def create_plan_from_template(template_id: int, date: str):
+            try:
+                plan_id = self.planner.create_plan_from_template(template_id, date)
+                return {"id": plan_id}
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
 
         @self.app.post("/exercises/{exercise_id}/sets")
         def add_set(

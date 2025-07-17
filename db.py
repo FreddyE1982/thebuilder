@@ -125,6 +125,36 @@ class Database:
                 );""",
             ["id", "planned_exercise_id", "reps", "weight", "rpe"],
         ),
+        "workout_templates": (
+            """CREATE TABLE workout_templates (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    training_type TEXT NOT NULL DEFAULT 'strength'
+                );""",
+            ["id", "name", "training_type"],
+        ),
+        "template_exercises": (
+            """CREATE TABLE template_exercises (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    template_id INTEGER NOT NULL,
+                    name TEXT NOT NULL,
+                    equipment_name TEXT,
+                    FOREIGN KEY(template_id) REFERENCES workout_templates(id) ON DELETE CASCADE,
+                    FOREIGN KEY(equipment_name) REFERENCES equipment(name)
+                );""",
+            ["id", "template_id", "name", "equipment_name"],
+        ),
+        "template_sets": (
+            """CREATE TABLE template_sets (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    template_exercise_id INTEGER NOT NULL,
+                    reps INTEGER NOT NULL,
+                    weight REAL NOT NULL,
+                    rpe INTEGER NOT NULL,
+                    FOREIGN KEY(template_exercise_id) REFERENCES template_exercises(id) ON DELETE CASCADE
+                );""",
+            ["id", "template_exercise_id", "reps", "weight", "rpe"],
+        ),
         "sets": (
             """CREATE TABLE sets (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1990,3 +2020,90 @@ class FavoriteExerciseRepository(BaseRepository):
             "SELECT name FROM favorite_exercises ORDER BY name;"
         )
         return [r[0] for r in rows]
+
+
+class TemplateWorkoutRepository(BaseRepository):
+    """Repository for workout templates."""
+
+    def create(self, name: str, training_type: str = "strength") -> int:
+        return self.execute(
+            "INSERT INTO workout_templates (name, training_type) VALUES (?, ?);",
+            (name, training_type),
+        )
+
+    def fetch_all(self) -> list[tuple[int, str, str]]:
+        return super().fetch_all(
+            "SELECT id, name, training_type FROM workout_templates ORDER BY id DESC;"
+        )
+
+    def fetch_detail(self, template_id: int) -> tuple[int, str, str]:
+        rows = super().fetch_all(
+            "SELECT id, name, training_type FROM workout_templates WHERE id = ?;",
+            (template_id,),
+        )
+        if not rows:
+            raise ValueError("template not found")
+        return rows[0]
+
+    def update(self, template_id: int, name: str | None, training_type: str | None) -> None:
+        rows = super().fetch_all(
+            "SELECT id FROM workout_templates WHERE id = ?;",
+            (template_id,),
+        )
+        if not rows:
+            raise ValueError("template not found")
+        if name is not None:
+            self.execute(
+                "UPDATE workout_templates SET name = ? WHERE id = ?;",
+                (name, template_id),
+            )
+        if training_type is not None:
+            self.execute(
+                "UPDATE workout_templates SET training_type = ? WHERE id = ?;",
+                (training_type, template_id),
+            )
+
+    def delete(self, template_id: int) -> None:
+        rows = super().fetch_all(
+            "SELECT id FROM workout_templates WHERE id = ?;",
+            (template_id,),
+        )
+        if not rows:
+            raise ValueError("template not found")
+        self.execute("DELETE FROM workout_templates WHERE id = ?;", (template_id,))
+
+
+class TemplateExerciseRepository(BaseRepository):
+    """Repository for exercises belonging to templates."""
+
+    def add(self, template_id: int, name: str, equipment_name: str | None) -> int:
+        return self.execute(
+            "INSERT INTO template_exercises (template_id, name, equipment_name) VALUES (?, ?, ?);",
+            (template_id, name, equipment_name),
+        )
+
+    def remove(self, exercise_id: int) -> None:
+        self.execute("DELETE FROM template_exercises WHERE id = ?;", (exercise_id,))
+
+    def fetch_for_template(self, template_id: int) -> list[tuple[int, str, str | None]]:
+        return self.fetch_all(
+            "SELECT id, name, equipment_name FROM template_exercises WHERE template_id = ?;",
+            (template_id,),
+        )
+
+
+class TemplateSetRepository(BaseRepository):
+    """Repository for template sets."""
+
+    def add(self, exercise_id: int, reps: int, weight: float, rpe: int) -> int:
+        return self.execute(
+            "INSERT INTO template_sets (template_exercise_id, reps, weight, rpe) VALUES (?, ?, ?, ?);",
+            (exercise_id, reps, weight, rpe),
+        )
+
+    def fetch_for_exercise(self, exercise_id: int) -> list[tuple[int, int, float, int]]:
+        return self.fetch_all(
+            "SELECT id, reps, weight, rpe FROM template_sets WHERE template_exercise_id = ?;",
+            (exercise_id,),
+        )
+

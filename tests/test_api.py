@@ -1964,3 +1964,38 @@ class APITestCase(unittest.TestCase):
 
         resp = self.client.get("/favorites/exercises")
         self.assertNotIn("Bench Press", resp.json())
+
+    def test_template_workflow(self) -> None:
+        resp = self.client.post(
+            "/templates",
+            params={"name": "Strength Base", "training_type": "strength"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        tid = resp.json()["id"]
+
+        resp = self.client.post(
+            f"/templates/{tid}/exercises",
+            params={"name": "Squat", "equipment": "Olympic Barbell"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        ex_id = resp.json()["id"]
+
+        resp = self.client.post(
+            f"/template_exercises/{ex_id}/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8},
+        )
+        self.assertEqual(resp.status_code, 200)
+
+        plan_date = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
+        resp = self.client.post(
+            f"/templates/{tid}/plan",
+            params={"date": plan_date},
+        )
+        self.assertEqual(resp.status_code, 200)
+        plan_id = resp.json()["id"]
+
+        resp = self.client.get(f"/planned_workouts/{plan_id}/exercises")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["name"], "Squat")

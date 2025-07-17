@@ -5,6 +5,9 @@ from db import (
     PlannedWorkoutRepository,
     PlannedExerciseRepository,
     PlannedSetRepository,
+    TemplateWorkoutRepository,
+    TemplateExerciseRepository,
+    TemplateSetRepository,
 )
 from gamification_service import GamificationService
 
@@ -21,6 +24,9 @@ class PlannerService:
         plan_exercise_repo: PlannedExerciseRepository,
         plan_set_repo: PlannedSetRepository,
         gamification: GamificationService | None = None,
+        template_workout_repo: TemplateWorkoutRepository | None = None,
+        template_exercise_repo: TemplateExerciseRepository | None = None,
+        template_set_repo: TemplateSetRepository | None = None,
     ) -> None:
         self.workouts = workout_repo
         self.exercises = exercise_repo
@@ -29,6 +35,9 @@ class PlannerService:
         self.planned_exercises = plan_exercise_repo
         self.planned_sets = plan_set_repo
         self.gamification = gamification
+        self.templates = template_workout_repo or TemplateWorkoutRepository()
+        self.template_exercises = template_exercise_repo or TemplateExerciseRepository()
+        self.template_sets = template_set_repo or TemplateSetRepository()
 
     def create_workout_from_plan(self, plan_id: int) -> int:
         _pid, date, t_type = self.planned_workouts.fetch_detail(plan_id)
@@ -64,3 +73,14 @@ class PlannerService:
             for _sid, reps, weight, rpe in sets:
                 self.planned_sets.add(new_ex_id, reps, weight, rpe)
         return new_id
+
+    def create_plan_from_template(self, template_id: int, date: str) -> int:
+        _tid, _name, t_type = self.templates.fetch_detail(template_id)
+        plan_id = self.planned_workouts.create(date, t_type)
+        exercises = self.template_exercises.fetch_for_template(template_id)
+        for ex_id, name, equipment in exercises:
+            new_ex_id = self.planned_exercises.add(plan_id, name, equipment)
+            sets = self.template_sets.fetch_for_exercise(ex_id)
+            for _sid, reps, weight, rpe in sets:
+                self.planned_sets.add(new_ex_id, reps, weight, rpe)
+        return plan_id
