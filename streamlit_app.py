@@ -1438,13 +1438,14 @@ class GymApp:
                 if st.button("Cancel"):
                     st.session_state.delete_target = None
 
-        gen_tab, eq_tab, mus_tab, ex_tab, cust_tab = st.tabs(
+        gen_tab, eq_tab, mus_tab, ex_tab, cust_tab, bw_tab = st.tabs(
             [
                 "General",
                 "Equipment",
                 "Muscles",
                 "Exercise Aliases",
                 "Custom Exercises",
+                "Body Weight Logs",
             ]
         )
 
@@ -1680,6 +1681,62 @@ class GymApp:
         with cust_tab:
             st.header("Custom Exercises")
             self._custom_exercise_management()
+
+        with bw_tab:
+            st.header("Body Weight Logs")
+            with st.expander("Add Entry"):
+                bw_date = st.date_input(
+                    "Date",
+                    datetime.date.today(),
+                    key="bw_date",
+                )
+                bw_val = st.number_input(
+                    "Weight (kg)",
+                    min_value=1.0,
+                    step=0.1,
+                    key="bw_val",
+                )
+                if st.button("Log Weight", key="bw_add"):
+                    try:
+                        self.body_weights_repo.log(bw_date.isoformat(), bw_val)
+                        st.success("Logged")
+                    except ValueError as e:
+                        st.warning(str(e))
+
+            with st.expander("History", expanded=True):
+                rows = self.body_weights_repo.fetch_history()
+                for rid, d, w in rows:
+                    exp = st.expander(f"{d} - {w} kg")
+                    with exp:
+                        date_edit = st.date_input(
+                            "Date",
+                            datetime.date.fromisoformat(d),
+                            key=f"bw_edit_date_{rid}",
+                        )
+                        weight_edit = st.number_input(
+                            "Weight (kg)",
+                            value=w,
+                            min_value=1.0,
+                            step=0.1,
+                            key=f"bw_edit_val_{rid}",
+                        )
+                        cols = st.columns(2)
+                        if cols[0].button("Update", key=f"bw_upd_{rid}"):
+                            try:
+                                self.body_weights_repo.update(
+                                    rid,
+                                    date_edit.isoformat(),
+                                    weight_edit,
+                                )
+                                st.success("Updated")
+                            except ValueError as e:
+                                st.warning(str(e))
+                        if cols[1].button("Delete", key=f"bw_del_{rid}"):
+                            try:
+                                self.body_weights_repo.delete(rid)
+                                st.success("Deleted")
+                            except ValueError as e:
+                                st.warning(str(e))
 
 
 if __name__ == "__main__":

@@ -1649,3 +1649,30 @@ class APITestCase(unittest.TestCase):
 
         weight = self.api.recommender._current_body_weight()
         self.assertAlmostEqual(weight, 72.5)
+
+    def test_body_weight_update_and_delete(self) -> None:
+        d1 = "2023-01-01"
+        resp = self.client.post("/body_weight", params={"weight": 80.0, "date": d1})
+        self.assertEqual(resp.status_code, 200)
+        eid = resp.json()["id"]
+
+        d2 = "2023-01-02"
+        resp = self.client.put(
+            f"/body_weight/{eid}",
+            params={"weight": 82.0, "date": d2},
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), {"status": "updated"})
+
+        resp = self.client.get("/body_weight")
+        self.assertEqual(len(resp.json()), 1)
+        entry = resp.json()[0]
+        self.assertEqual(entry["date"], d2)
+        self.assertAlmostEqual(entry["weight"], 82.0)
+
+        resp = self.client.delete(f"/body_weight/{eid}")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), {"status": "deleted"})
+
+        resp = self.client.get("/body_weight")
+        self.assertEqual(resp.json(), [])

@@ -1756,6 +1756,29 @@ class BodyWeightRepository(BaseRepository):
         rows = self.fetch_all(query, tuple(params))
         return [(int(r[0]), r[1], float(r[2])) for r in rows]
 
+    def update(self, entry_id: int, date: str, weight: float) -> None:
+        if weight <= 0:
+            raise ValueError("weight must be positive")
+        rows = self.fetch_all(
+            "SELECT id FROM body_weight_logs WHERE id = ?;",
+            (entry_id,),
+        )
+        if not rows:
+            raise ValueError("log not found")
+        self.execute(
+            "UPDATE body_weight_logs SET date = ?, weight = ? WHERE id = ?;",
+            (date, weight, entry_id),
+        )
+
+    def delete(self, entry_id: int) -> None:
+        rows = self.fetch_all(
+            "SELECT id FROM body_weight_logs WHERE id = ?;",
+            (entry_id,),
+        )
+        if not rows:
+            raise ValueError("log not found")
+        self.execute("DELETE FROM body_weight_logs WHERE id = ?;", (entry_id,))
+
     def fetch_latest_weight(self) -> float | None:
         """Return the most recent logged body weight if available."""
         row = self.fetch_all(

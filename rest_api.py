@@ -1082,6 +1082,22 @@ class GymAPI:
                 {"id": rid, "date": d, "weight": w} for rid, d, w in rows
             ]
 
+        @self.app.put("/body_weight/{entry_id}")
+        def update_body_weight(entry_id: int, weight: float, date: str):
+            try:
+                self.body_weights.update(entry_id, date, weight)
+                return {"status": "updated"}
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
+        @self.app.delete("/body_weight/{entry_id}")
+        def delete_body_weight(entry_id: int):
+            try:
+                self.body_weights.delete(entry_id)
+                return {"status": "deleted"}
+            except ValueError as e:
+                raise HTTPException(status_code=404, detail=str(e))
+
         @self.app.get("/stats/weight_stats")
         def stats_weight_stats(start_date: str = None, end_date: str = None):
             return self.statistics.weight_stats(start_date, end_date)

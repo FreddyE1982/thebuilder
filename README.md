@@ -19,6 +19,7 @@ The Builder is a full featured workout planner, logger and analytics platform bu
 - Utilities such as pyramid strength tests and warm‑up weight suggestions.
 - All settings can be changed in the UI or by editing `settings.yaml` and remain synchronized.
 - Calculate average rest times between sets via `/stats/rest_times`.
+- Track body weight over time using `/body_weight` endpoints and `/stats/weight_stats`.
 
 ## Installation
 
