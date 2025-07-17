@@ -1713,3 +1713,17 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(len(data), 2)
         self.assertAlmostEqual(data[0]["bmi"], round(80.0 / (1.8**2), 2))
         self.assertAlmostEqual(data[1]["bmi"], round(82.0 / (1.8**2), 2))
+
+    def test_weight_forecast_endpoint(self) -> None:
+        self.client.post("/body_weight", params={"weight": 80.0, "date": "2023-01-01"})
+        self.client.post("/body_weight", params={"weight": 81.0, "date": "2023-01-02"})
+        self.client.post("/body_weight", params={"weight": 82.0, "date": "2023-01-03"})
+        resp = self.client.get("/stats/weight_forecast", params={"days": 2})
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(len(data), 2)
+        slope = ExercisePrescription._weighted_linear_regression(
+            [0, 1, 2], [80.0, 81.0, 82.0], [1, 2, 3]
+        )
+        self.assertAlmostEqual(data[0]["weight"], round(82.0 + slope * 1, 2))
+        self.assertAlmostEqual(data[1]["weight"], round(82.0 + slope * 2, 2))
