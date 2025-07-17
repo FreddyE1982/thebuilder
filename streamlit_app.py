@@ -30,6 +30,7 @@ from ml_service import (
     ProgressModelService,
 )
 from tools import MathTools
+from pythonista_app import EnvironmentDetector, PythonistaApp
 
 
 class GymApp:
@@ -1677,4 +1678,7 @@ class GymApp:
 
 
 if __name__ == "__main__":
-    GymApp().run()
+    if EnvironmentDetector.is_pythonista():
+        PythonistaApp().run()
+    else:
+        GymApp().run()

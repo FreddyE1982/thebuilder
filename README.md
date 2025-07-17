@@ -44,6 +44,14 @@ uvicorn rest_api:app --reload
 
 Data is stored in `workout.db` and settings in `settings.yaml` in the current directory.
 
+### Pythonista
+
+If the app detects it is running in the Pythonista environment on iOS it
+automatically launches a dedicated GUI built with the `ui` module. The
+Pythonista interface provides the same features as the Streamlit version but
+communicates with the REST API through a lightweight client implemented with the
+standard library.
+
 ### Deleting Data
 
 Send the parameter `confirmation=Yes, I confirm` to any of the endpoints below:
