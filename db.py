@@ -547,6 +547,12 @@ class SetRepository(BaseRepository):
         diff_weight: float = 0.0,
         diff_rpe: int = 0,
     ) -> int:
+        if reps <= 0:
+            raise ValueError("reps must be positive")
+        if weight < 0:
+            raise ValueError("weight must be non-negative")
+        if rpe < 0 or rpe > 10:
+            raise ValueError("rpe must be between 0 and 10")
         return self.execute(
             "INSERT INTO sets (exercise_id, reps, weight, rpe, planned_set_id, diff_reps, diff_weight, diff_rpe) "
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?);",
@@ -562,7 +568,20 @@ class SetRepository(BaseRepository):
             ),
         )
 
+    def bulk_add(
+        self, exercise_id: int, entries: Iterable[tuple[int, float, int]]
+    ) -> list[int]:
+        ids: list[int] = []
+        for reps, weight, rpe in entries:
+            ids.append(self.add(exercise_id, reps, weight, rpe))
+        return ids
     def update(self, set_id: int, reps: int, weight: float, rpe: int) -> None:
+        if reps <= 0:
+            raise ValueError("reps must be positive")
+        if weight < 0:
+            raise ValueError("weight must be non-negative")
+        if rpe < 0 or rpe > 10:
+            raise ValueError("rpe must be between 0 and 10")
         row = self.fetch_all("SELECT planned_set_id FROM sets WHERE id = ?;", (set_id,))
         diff_reps = 0
         diff_weight = 0.0
@@ -1025,7 +1044,7 @@ class SettingsRepository(BaseRepository):
         }
         for k, v in rows:
             if k in bool_keys:
-                result[k] = v
+                result[k] = v in {"1", "1.0", "true", "True"}
                 continue
             try:
                 result[k] = float(v)
@@ -1132,10 +1151,7 @@ class SettingsRepository(BaseRepository):
         }
         for k in bool_keys:
             if k in data:
-                try:
-                    data[k] = float(data[k])
-                except ValueError:
-                    data[k] = 0.0
+                data[k] = bool(data[k])
         return data
 
 

@@ -160,7 +160,7 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(data["body_weight"], 80.0)
         self.assertEqual(data["months_active"], 1.0)
         self.assertEqual(data["theme"], "light")
-        self.assertEqual(data["game_enabled"], 0.0)
+        self.assertFalse(data["game_enabled"])
         self.assertIn("ml_all_enabled", data)
 
         resp = self.client.post(
@@ -197,8 +197,8 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(data["body_weight"], 90.0)
         self.assertEqual(data["months_active"], 12.0)
         self.assertEqual(data["theme"], "light")
-        self.assertEqual(data["game_enabled"], 0.0)
-        self.assertEqual(float(data["ml_all_enabled"]), 0.0)
+        self.assertFalse(data["game_enabled"])
+        self.assertFalse(data["ml_all_enabled"])
 
     def test_ml_toggle(self) -> None:
         resp = self.client.post("/settings/general", params={"ml_all_enabled": False})
@@ -430,6 +430,33 @@ class APITestCase(unittest.TestCase):
 
         # ensure imported equipment cannot be removed
         resp = self.client.delete("/equipment/Olympic Barbell")
+        self.assertEqual(resp.status_code, 400)
+
+    def test_bulk_sets_endpoint(self) -> None:
+        self.client.post("/workouts")
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        resp = self.client.post(
+            "/exercises/1/bulk_sets",
+            params={"sets": "5,100,8|5,105,9"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), {"added": 2})
+        data = self.client.get("/exercises/1/sets").json()
+        self.assertEqual(len(data), 2)
+
+    def test_invalid_set_values(self) -> None:
+        self.client.post("/workouts")
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        resp = self.client.post(
+            "/exercises/1/sets",
+            params={"reps": -1, "weight": 100.0, "rpe": 8},
+        )
         self.assertEqual(resp.status_code, 400)
 
     def test_schema_migration(self) -> None:
