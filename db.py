@@ -228,6 +228,24 @@ class Database:
                 );""",
             ["id", "date", "weight"],
         ),
+        "wellness_logs": (
+            """CREATE TABLE wellness_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    date TEXT NOT NULL,
+                    calories REAL,
+                    sleep_hours REAL,
+                    sleep_quality REAL,
+                    stress_level INTEGER
+                );""",
+            [
+                "id",
+                "date",
+                "calories",
+                "sleep_hours",
+                "sleep_quality",
+                "stress_level",
+            ],
+        ),
     }
 
     def __init__(self, db_path: str = "workout.db") -> None:
@@ -1789,3 +1807,83 @@ class BodyWeightRepository(BaseRepository):
         if row:
             return float(row[0][0])
         return None
+
+
+class WellnessRepository(BaseRepository):
+    """Repository for daily wellness logs."""
+
+    def log(
+        self,
+        date: str,
+        calories: float | None = None,
+        sleep_hours: float | None = None,
+        sleep_quality: float | None = None,
+        stress_level: int | None = None,
+    ) -> int:
+        if (
+            calories is None
+            and sleep_hours is None
+            and sleep_quality is None
+            and stress_level is None
+        ):
+            raise ValueError("at least one value required")
+        return self.execute(
+            "INSERT INTO wellness_logs (date, calories, sleep_hours, sleep_quality, stress_level) VALUES (?, ?, ?, ?, ?);",
+            (date, calories, sleep_hours, sleep_quality, stress_level),
+        )
+
+    def fetch_history(
+        self, start_date: str | None = None, end_date: str | None = None
+    ) -> list[tuple[int, str, float | None, float | None, float | None, int | None]]:
+        query = (
+            "SELECT id, date, calories, sleep_hours, sleep_quality, stress_level FROM wellness_logs WHERE 1=1"
+        )
+        params: list[str] = []
+        if start_date:
+            query += " AND date >= ?"
+            params.append(start_date)
+        if end_date:
+            query += " AND date <= ?"
+            params.append(end_date)
+        query += " ORDER BY date;"
+        rows = self.fetch_all(query, tuple(params))
+        return [
+            (
+                int(r[0]),
+                r[1],
+                float(r[2]) if r[2] is not None else None,
+                float(r[3]) if r[3] is not None else None,
+                float(r[4]) if r[4] is not None else None,
+                int(r[5]) if r[5] is not None else None,
+            )
+            for r in rows
+        ]
+
+    def update(
+        self,
+        entry_id: int,
+        date: str,
+        calories: float | None = None,
+        sleep_hours: float | None = None,
+        sleep_quality: float | None = None,
+        stress_level: int | None = None,
+    ) -> None:
+        rows = self.fetch_all(
+            "SELECT id FROM wellness_logs WHERE id = ?;",
+            (entry_id,),
+        )
+        if not rows:
+            raise ValueError("log not found")
+        self.execute(
+            "UPDATE wellness_logs SET date = ?, calories = ?, sleep_hours = ?, sleep_quality = ?, stress_level = ? WHERE id = ?;",
+            (date, calories, sleep_hours, sleep_quality, stress_level, entry_id),
+        )
+
+    def delete(self, entry_id: int) -> None:
+        rows = self.fetch_all(
+            "SELECT id FROM wellness_logs WHERE id = ?;",
+            (entry_id,),
+        )
+        if not rows:
+            raise ValueError("log not found")
+        self.execute("DELETE FROM wellness_logs WHERE id = ?;", (entry_id,))

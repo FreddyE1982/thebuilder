@@ -19,6 +19,7 @@ from db import (
     MLModelRepository,
     MLLogRepository,
     BodyWeightRepository,
+    WellnessRepository,
 )
 from planner_service import PlannerService
 from recommendation_service import RecommendationService
@@ -58,6 +59,7 @@ class GymApp:
         self.ml_models = MLModelRepository()
         self.ml_logs = MLLogRepository()
         self.body_weights_repo = BodyWeightRepository()
+        self.wellness_repo = WellnessRepository()
         self.gamification = GamificationService(
             self.game_repo,
             self.exercises,
@@ -101,6 +103,7 @@ class GymApp:
             None,
             self.body_weights_repo,
             self.equipment,
+            self.wellness_repo,
         )
         self._state_init()
 
@@ -1459,7 +1462,7 @@ class GymApp:
                 if st.button("Cancel"):
                     st.session_state.delete_target = None
 
-        gen_tab, eq_tab, mus_tab, ex_tab, cust_tab, bw_tab = st.tabs(
+        gen_tab, eq_tab, mus_tab, ex_tab, cust_tab, bw_tab, well_tab = st.tabs(
             [
                 "General",
                 "Equipment",
@@ -1467,6 +1470,7 @@ class GymApp:
                 "Exercise Aliases",
                 "Custom Exercises",
                 "Body Weight Logs",
+                "Wellness Logs",
             ]
         )
 
@@ -1773,6 +1777,94 @@ class GymApp:
                         {"BMI": [b["bmi"] for b in bmi_hist]},
                         x=[b["date"] for b in bmi_hist],
                     )
+
+        with well_tab:
+            st.header("Wellness Logs")
+            with st.expander("Add Entry"):
+                w_date = st.date_input(
+                    "Date",
+                    datetime.date.today(),
+                    key="well_date",
+                )
+                calories = st.number_input(
+                    "Calories", min_value=0.0, step=50.0, key="well_calories"
+                )
+                sleep_h = st.number_input(
+                    "Sleep Hours", min_value=0.0, step=0.5, key="well_sleep"
+                )
+                sleep_q = st.number_input(
+                    "Sleep Quality", min_value=0.0, max_value=5.0, step=1.0, key="well_quality"
+                )
+                stress = st.number_input(
+                    "Stress Level", min_value=0, max_value=10, step=1, key="well_stress"
+                )
+                if st.button("Log Wellness", key="well_add"):
+                    try:
+                        self.wellness_repo.log(
+                            w_date.isoformat(),
+                            calories,
+                            sleep_h,
+                            sleep_q,
+                            int(stress),
+                        )
+                        st.success("Logged")
+                    except ValueError as e:
+                        st.warning(str(e))
+
+            with st.expander("History", expanded=True):
+                rows = self.wellness_repo.fetch_history()
+                for rid, d, cal, sh, sq, st_lvl in rows:
+                    exp = st.expander(f"{d}")
+                    with exp:
+                        date_e = st.date_input(
+                            "Date",
+                            datetime.date.fromisoformat(d),
+                            key=f"well_edit_date_{rid}",
+                        )
+                        cal_e = st.number_input(
+                            "Calories",
+                            value=cal or 0.0,
+                            step=50.0,
+                            key=f"well_edit_cal_{rid}",
+                        )
+                        sh_e = st.number_input(
+                            "Sleep Hours",
+                            value=sh or 0.0,
+                            step=0.5,
+                            key=f"well_edit_sleep_{rid}",
+                        )
+                        sq_e = st.number_input(
+                            "Sleep Quality",
+                            value=sq or 0.0,
+                            step=1.0,
+                            key=f"well_edit_quality_{rid}",
+                        )
+                        st_e = st.number_input(
+                            "Stress Level",
+                            value=st_lvl or 0,
+                            step=1,
+                            key=f"well_edit_stress_{rid}",
+                        )
+                        cols = st.columns(2)
+                        if cols[0].button("Update", key=f"well_upd_{rid}"):
+                            try:
+                                self.wellness_repo.update(
+                                    rid,
+                                    date_e.isoformat(),
+                                    cal_e,
+                                    sh_e,
+                                    sq_e,
+                                    int(st_e),
+                                )
+                                st.success("Updated")
+                            except ValueError as e:
+                                st.warning(str(e))
+                        if cols[1].button("Delete", key=f"well_del_{rid}"):
+                            try:
+                                self.wellness_repo.delete(rid)
+                                st.success("Deleted")
+                            except ValueError as e:
+                                st.warning(str(e))
 
 
 if __name__ == "__main__":

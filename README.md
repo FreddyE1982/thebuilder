@@ -18,6 +18,7 @@ The Builder is a full featured workout planner, logger and analytics platform bu
 - Multi-modal adaptation index fuses stress, fatigue and variability metrics using a deep learning model.
 - Utilities such as pyramid strength tests and warm‑up weight suggestions.
 - All settings can be changed in the UI or by editing `settings.yaml` and remain synchronized.
+- Log daily wellness metrics like calories, sleep and stress and view summary statistics.
 - Calculate average rest times between sets via `/stats/rest_times`.
 - Track body weight over time using `/body_weight` endpoints and `/stats/weight_stats`.
 - Forecast future body weight trends with `/stats/weight_forecast`.

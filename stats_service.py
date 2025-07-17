@@ -7,6 +7,7 @@ from db import (
     SettingsRepository,
     BodyWeightRepository,
     EquipmentRepository,
+    WellnessRepository,
 )
 from ml_service import (
     VolumeModelService,
@@ -33,6 +34,7 @@ class StatisticsService:
         adaptation_model: "AdaptationModelService" | None = None,
         body_weight_repo: "BodyWeightRepository" | None = None,
         equipment_repo: "EquipmentRepository" | None = None,
+        wellness_repo: "WellnessRepository" | None = None,
     ) -> None:
         self.sets = set_repo
         self.exercise_names = name_repo
@@ -44,6 +46,7 @@ class StatisticsService:
         self.adaptation_model = adaptation_model
         self.body_weights = body_weight_repo
         self.equipment = equipment_repo
+        self.wellness = wellness_repo
 
     def _current_body_weight(self) -> float:
         """Fetch the latest logged body weight or fallback to settings."""
@@ -1162,3 +1165,45 @@ class StatisticsService:
         for i in range(1, days + 1):
             forecast.append({"day": i, "weight": round(last + slope * i, 2)})
         return forecast
+
+    def wellness_history(
+        self, start_date: str | None = None, end_date: str | None = None
+    ) -> List[Dict[str, float | int | None]]:
+        if self.wellness is None:
+            return []
+        rows = self.wellness.fetch_history(start_date, end_date)
+        result: List[Dict[str, float | int | None]] = []
+        for rid, d, cal, sh, sq, stress in rows:
+            result.append(
+                {
+                    "id": rid,
+                    "date": d,
+                    "calories": cal,
+                    "sleep_hours": sh,
+                    "sleep_quality": sq,
+                    "stress_level": stress,
+                }
+            )
+        return result
+
+    def wellness_summary(
+        self, start_date: str | None = None, end_date: str | None = None
+    ) -> Dict[str, float]:
+        history = self.wellness_history(start_date, end_date)
+        if not history:
+            return {
+                "avg_calories": 0.0,
+                "avg_sleep": 0.0,
+                "avg_quality": 0.0,
+                "avg_stress": 0.0,
+            }
+        cals = [h["calories"] for h in history if h["calories"] is not None]
+        sleeps = [h["sleep_hours"] for h in history if h["sleep_hours"] is not None]
+        quals = [h["sleep_quality"] for h in history if h["sleep_quality"] is not None]
+        stress = [h["stress_level"] for h in history if h["stress_level"] is not None]
+        return {
+            "avg_calories": round(sum(cals) / len(cals), 2) if cals else 0.0,
+            "avg_sleep": round(sum(sleeps) / len(sleeps), 2) if sleeps else 0.0,
+            "avg_quality": round(sum(quals) / len(quals), 2) if quals else 0.0,
+            "avg_stress": round(sum(stress) / len(stress), 2) if stress else 0.0,
+        }
