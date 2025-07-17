@@ -220,6 +220,14 @@ class Database:
                 );""",
             ["id", "name", "timestamp", "prediction", "confidence"],
         ),
+        "body_weight_logs": (
+            """CREATE TABLE body_weight_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    date TEXT NOT NULL,
+                    weight REAL NOT NULL
+                );""",
+            ["id", "date", "weight"],
+        ),
     }
 
     def __init__(self, db_path: str = "workout.db") -> None:
@@ -1720,3 +1728,30 @@ class MLLogRepository(BaseRepository):
             "SELECT timestamp, prediction, confidence FROM ml_logs WHERE name = ? ORDER BY id;",
             (name,),
         )
+
+
+class BodyWeightRepository(BaseRepository):
+    """Repository for body weight logs."""
+
+    def log(self, date: str, weight: float) -> int:
+        if weight <= 0:
+            raise ValueError("weight must be positive")
+        return self.execute(
+            "INSERT INTO body_weight_logs (date, weight) VALUES (?, ?);",
+            (date, weight),
+        )
+
+    def fetch_history(
+        self, start_date: Optional[str] = None, end_date: Optional[str] = None
+    ) -> list[tuple[int, str, float]]:
+        query = "SELECT id, date, weight FROM body_weight_logs WHERE 1=1"
+        params: list[str] = []
+        if start_date:
+            query += " AND date >= ?"
+            params.append(start_date)
+        if end_date:
+            query += " AND date <= ?"
+            params.append(end_date)
+        query += " ORDER BY date;"
+        rows = self.fetch_all(query, tuple(params))
+        return [(int(r[0]), r[1], float(r[2])) for r in rows]

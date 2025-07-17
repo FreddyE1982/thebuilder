@@ -1577,3 +1577,29 @@ class APITestCase(unittest.TestCase):
 
         resp = self.client.post("/exercises/1/recommend_next")
         self.assertEqual(resp.status_code, 400)
+
+    def test_body_weight_logging_and_stats(self) -> None:
+        d1 = "2023-01-01"
+        d2 = "2023-01-02"
+        resp = self.client.post("/body_weight", params={"weight": 80.0, "date": d1})
+        self.assertEqual(resp.status_code, 200)
+        id1 = resp.json()["id"]
+        resp = self.client.post("/body_weight", params={"weight": 82.0, "date": d2})
+        self.assertEqual(resp.status_code, 200)
+        id2 = resp.json()["id"]
+
+        resp = self.client.get("/body_weight", params={"start_date": d1, "end_date": d2})
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(len(data), 2)
+        self.assertEqual(data[0]["id"], id1)
+        self.assertAlmostEqual(data[0]["weight"], 80.0)
+        self.assertEqual(data[1]["id"], id2)
+        self.assertAlmostEqual(data[1]["weight"], 82.0)
+
+        resp = self.client.get("/stats/weight_stats", params={"start_date": d1, "end_date": d2})
+        self.assertEqual(resp.status_code, 200)
+        stats = resp.json()
+        self.assertAlmostEqual(stats["avg"], 81.0, places=2)
+        self.assertEqual(stats["min"], 80.0)
+        self.assertEqual(stats["max"], 82.0)
