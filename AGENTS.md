@@ -75,6 +75,7 @@ Anytime the streamlit gui is updated, the pythonista gui needs to be updated too
 Also note that under pythonista we CAN NOT IMPORT AND CAN NOT USE TORCH! So under pythonista we must leave anything to do with machine learning out and use pure algorythms instead!
 Note that under pythonista we also CAN NOT INSTALL FASTAPI, UVICORN,...so we need to do access to the rest api manually. you best write your own "rest api client class" for that.
 We need to do whatever packages do that are not part of the standard library ourselfs under pythonista!
+The agent must translate EACH tab found in the streamlit gui to the pythonista gui one by one iteratively. Only when one tab has been completley translated to pythonista gui may the agents move on to the next tab.
 
 
 ## Machine Learning
