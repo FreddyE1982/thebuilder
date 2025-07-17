@@ -1,3 +1,4 @@
+from __future__ import annotations
 import datetime
 from db import (
     WorkoutRepository,
@@ -8,7 +9,7 @@ from db import (
 )
 from tools import ExercisePrescription
 from gamification_service import GamificationService
-from ml_service import PerformanceModelService
+from ml_service import PerformanceModelService, RLGoalModelService
 
 
 class RecommendationService:
@@ -23,6 +24,7 @@ class RecommendationService:
         settings_repo: SettingsRepository,
         gamification: GamificationService | None = None,
         ml_service: PerformanceModelService | None = None,
+        rl_goal: "RLGoalModelService" | None = None,
     ) -> None:
         self.workouts = workout_repo
         self.exercises = exercise_repo
@@ -31,6 +33,8 @@ class RecommendationService:
         self.settings = settings_repo
         self.gamification = gamification
         self.ml = ml_service
+        self.rl_goal = rl_goal
+        self._pending: dict[int, list[float]] = {}
 
     def has_history(self, exercise_name: str) -> bool:
         names = self.exercise_names.aliases(exercise_name)
@@ -151,12 +155,25 @@ class RecommendationService:
         ):
             ml_rpe = self.ml.predict(name)
             data["target_rpe"] = float((data["target_rpe"] + ml_rpe) / 2)
+        action = 1
+        state: list[float] | None = None
+        if (
+            self.rl_goal
+            and self.settings.get_bool("ml_all_enabled", True)
+            and self.settings.get_bool("ml_prediction_enabled", True)
+            and self.settings.get_bool("ml_goal_prediction_enabled", True)
+        ):
+            state = [weight_list[-1] / 1000.0, reps_list[-1] / 10.0, rpe_list[-1] / 10.0]
+            action = self.rl_goal.predict(state)
+            data["weight"] = float(data["weight"] + self.rl_goal.ACTIONS[action])
         set_id = self.sets.add(
             exercise_id,
             int(data["reps"]),
             float(data["weight"]),
             int(round(data["target_rpe"])),
         )
+        if state is not None:
+            self.rl_goal.register(set_id, state, action)
         if self.gamification:
             self.gamification.record_set(
                 exercise_id,
@@ -170,3 +187,9 @@ class RecommendationService:
             "weight": float(data["weight"]),
             "rpe": int(round(data["target_rpe"])),
         }
+
+    def record_result(self, set_id: int, reps: int, weight: float, rpe: int) -> None:
+        if self.rl_goal and set_id in self.rl_goal.pending:
+            new_state = [weight / 1000.0, reps / 10.0, rpe / 10.0]
+            reward = 1.0 - abs(rpe - 8.0) / 10.0
+            self.rl_goal.complete(set_id, new_state, reward)

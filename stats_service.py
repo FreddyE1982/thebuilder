@@ -6,6 +6,7 @@ from ml_service import (
     VolumeModelService,
     ReadinessModelService,
     ProgressModelService,
+    InjuryRiskModelService,
 )
 from tools import MathTools, ExerciseProgressEstimator, ExercisePrescription
 
@@ -21,6 +22,7 @@ class StatisticsService:
         volume_model: "VolumeModelService" | None = None,
         readiness_model: "ReadinessModelService" | None = None,
         progress_model: "ProgressModelService" | None = None,
+        injury_model: "InjuryRiskModelService" | None = None,
     ) -> None:
         self.sets = set_repo
         self.exercise_names = name_repo
@@ -28,6 +30,7 @@ class StatisticsService:
         self.volume_model = volume_model
         self.readiness_model = readiness_model
         self.progress_model = progress_model
+        self.injury_model = injury_model
 
     def _alias_names(self, exercise: Optional[str]) -> List[str]:
         if not exercise:
@@ -876,6 +879,37 @@ class StatisticsService:
             variability["variability"],
         )
         return {"risk": round(risk, 2)}
+
+    def injury_risk(
+        self,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> Dict[str, float]:
+        """Predict injury risk probability for the period."""
+        overview = self.stress_overview(start_date, end_date)
+        variability = self.weekly_load_variability(start_date, end_date)
+        features = [overview["stress"], overview["fatigue"], variability["variability"]]
+        base = (
+            MathTools.clamp(sum(features) / 3.0, 0.0, 10.0) / 10.0
+        )
+        risk = base
+        if (
+            self.injury_model is not None
+            and self.settings is not None
+            and self.settings.get_bool("ml_all_enabled", True)
+            and self.settings.get_bool("ml_prediction_enabled", True)
+            and self.settings.get_bool("ml_injury_prediction_enabled", True)
+        ):
+            risk = self.injury_model.predict(features)
+        if (
+            self.injury_model is not None
+            and self.settings is not None
+            and self.settings.get_bool("ml_all_enabled", True)
+            and self.settings.get_bool("ml_training_enabled", True)
+            and self.settings.get_bool("ml_injury_training_enabled", True)
+        ):
+            self.injury_model.train(features, base)
+        return {"injury_risk": round(risk, 2)}
 
     def readiness(
         self,

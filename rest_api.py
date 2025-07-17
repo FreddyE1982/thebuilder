@@ -26,6 +26,8 @@ from ml_service import (
     VolumeModelService,
     ReadinessModelService,
     ProgressModelService,
+    RLGoalModelService,
+    InjuryRiskModelService,
 )
 from tools import ExercisePrescription, MathTools
 
@@ -61,6 +63,8 @@ class GymAPI:
         self.volume_model = VolumeModelService(self.ml_models)
         self.readiness_model = ReadinessModelService(self.ml_models)
         self.progress_model = ProgressModelService(self.ml_models)
+        self.goal_model = RLGoalModelService(self.ml_models)
+        self.injury_model = InjuryRiskModelService(self.ml_models)
         self.planner = PlannerService(
             self.workouts,
             self.exercises,
@@ -78,6 +82,7 @@ class GymAPI:
             self.settings,
             self.gamification,
             self.ml_service,
+            self.goal_model,
         )
         self.statistics = StatisticsService(
             self.sets,
@@ -86,6 +91,7 @@ class GymAPI:
             self.volume_model,
             self.readiness_model,
             self.progress_model,
+            self.injury_model,
         )
         self.app = FastAPI()
         self._setup_routes()
@@ -526,6 +532,7 @@ class GymAPI:
                 self.gamification.record_set(exercise_id, reps, weight, rpe)
             except Exception:
                 pass
+            self.recommender.record_result(set_id, reps, weight, rpe)
             return {"id": set_id}
 
         @self.app.put("/sets/{set_id}")
@@ -539,6 +546,7 @@ class GymAPI:
                 and self.settings.get_bool("ml_rpe_training_enabled", True)
             ):
                 self.ml_service.train(name, rpe)
+            self.recommender.record_result(set_id, reps, weight, rpe)
             return {"status": "updated"}
 
         @self.app.delete("/sets/{set_id}")
@@ -753,6 +761,13 @@ class GymAPI:
             end_date: str = None,
         ):
             return self.statistics.overtraining_risk(start_date, end_date)
+
+        @self.app.get("/stats/injury_risk")
+        def stats_injury_risk(
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            return self.statistics.injury_risk(start_date, end_date)
 
         @self.app.get("/stats/readiness")
         def stats_readiness(
@@ -984,6 +999,10 @@ class GymAPI:
             ml_readiness_prediction_enabled: bool = None,
             ml_progress_training_enabled: bool = None,
             ml_progress_prediction_enabled: bool = None,
+            ml_goal_training_enabled: bool = None,
+            ml_goal_prediction_enabled: bool = None,
+            ml_injury_training_enabled: bool = None,
+            ml_injury_prediction_enabled: bool = None,
         ):
             if body_weight is not None:
                 self.settings.set_float("body_weight", body_weight)
@@ -1013,6 +1032,14 @@ class GymAPI:
                 self.settings.set_bool("ml_progress_training_enabled", ml_progress_training_enabled)
             if ml_progress_prediction_enabled is not None:
                 self.settings.set_bool("ml_progress_prediction_enabled", ml_progress_prediction_enabled)
+            if ml_goal_training_enabled is not None:
+                self.settings.set_bool("ml_goal_training_enabled", ml_goal_training_enabled)
+            if ml_goal_prediction_enabled is not None:
+                self.settings.set_bool("ml_goal_prediction_enabled", ml_goal_prediction_enabled)
+            if ml_injury_training_enabled is not None:
+                self.settings.set_bool("ml_injury_training_enabled", ml_injury_training_enabled)
+            if ml_injury_prediction_enabled is not None:
+                self.settings.set_bool("ml_injury_prediction_enabled", ml_injury_prediction_enabled)
             return {"status": "updated"}
 
         @self.app.post("/settings/delete_all")

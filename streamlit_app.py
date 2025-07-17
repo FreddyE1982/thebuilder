@@ -1513,6 +1513,22 @@ class GymApp:
                 "Progress Model Prediction",
                 value=self.settings_repo.get_bool("ml_progress_prediction_enabled", True),
             )
+            goal_train = st.checkbox(
+                "Goal Model Training",
+                value=self.settings_repo.get_bool("ml_goal_training_enabled", True),
+            )
+            goal_pred = st.checkbox(
+                "Goal Model Prediction",
+                value=self.settings_repo.get_bool("ml_goal_prediction_enabled", True),
+            )
+            inj_train = st.checkbox(
+                "Injury Model Training",
+                value=self.settings_repo.get_bool("ml_injury_training_enabled", True),
+            )
+            inj_pred = st.checkbox(
+                "Injury Model Prediction",
+                value=self.settings_repo.get_bool("ml_injury_prediction_enabled", True),
+            )
             st.metric("Total Points", self.gamification.total_points())
             if st.button("Save General Settings"):
                 self.settings_repo.set_float("body_weight", bw)
@@ -1532,6 +1548,10 @@ class GymApp:
                 self.settings_repo.set_bool("ml_readiness_prediction_enabled", read_pred)
                 self.settings_repo.set_bool("ml_progress_training_enabled", prog_train)
                 self.settings_repo.set_bool("ml_progress_prediction_enabled", prog_pred)
+                self.settings_repo.set_bool("ml_goal_training_enabled", goal_train)
+                self.settings_repo.set_bool("ml_goal_prediction_enabled", goal_pred)
+                self.settings_repo.set_bool("ml_injury_training_enabled", inj_train)
+                self.settings_repo.set_bool("ml_injury_prediction_enabled", inj_pred)
                 st.success("Settings saved")
 
         with eq_tab:
