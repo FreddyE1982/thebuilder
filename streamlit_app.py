@@ -450,15 +450,16 @@ class GymApp:
                     "log_new",
                     st.session_state.get("log_new_muscles", []),
                 )
+                note_val = st.text_input("Note", key="new_exercise_note")
                 if st.button("Add Exercise"):
                     if ex_name and eq:
-                        self.exercises.add(workout_id, ex_name, eq)
+                        self.exercises.add(workout_id, ex_name, eq, note_val or None)
                     else:
                         st.warning("Exercise and equipment required")
             with st.expander("Logged Exercises", expanded=True):
                 exercises = self.exercises.fetch_for_workout(workout_id)
-                for ex_id, name, eq_name in exercises:
-                    self._exercise_card(ex_id, name, eq_name)
+                for ex_id, name, eq_name, note in exercises:
+                    self._exercise_card(ex_id, name, eq_name, note)
             summary = self.sets.workout_summary(workout_id)
             with st.expander("Workout Summary", expanded=True):
                 col1, col2, col3 = st.columns(3)
@@ -467,10 +468,12 @@ class GymApp:
                 col3.metric("Avg RPE", summary["avg_rpe"])
 
     def _exercise_card(
-        self, exercise_id: int, name: str, equipment: Optional[str]
+        self, exercise_id: int, name: str, equipment: Optional[str], note: Optional[str]
     ) -> None:
         sets = self.sets.fetch_for_exercise(exercise_id)
         header = name if not equipment else f"{name} ({equipment})"
+        if note:
+            header += f" - {note}"
         expander = st.expander(header)
         with expander:
             if st.button("Remove Exercise", key=f"remove_ex_{exercise_id}"):
@@ -481,6 +484,9 @@ class GymApp:
                 st.markdown("**Muscles:**")
                 for m in muscles:
                     st.markdown(f"- {m}")
+            note_val = st.text_input("Note", value=note or "", key=f"note_{exercise_id}")
+            if st.button("Update Note", key=f"upd_note_{exercise_id}"):
+                self.exercises.update_note(exercise_id, note_val or None)
             with st.expander("Sets", expanded=True):
                 for set_id, reps, weight, rpe, start_time, end_time in sets:
                     detail = self.sets.fetch_detail(set_id)
@@ -1070,9 +1076,11 @@ class GymApp:
     def _workout_details_dialog(self, workout_id: int) -> None:
         exercises = self.exercises.fetch_for_workout(workout_id)
         with st.dialog("Workout Details"):
-            for ex_id, name, eq in exercises:
+            for ex_id, name, eq, note in exercises:
                 sets = self.sets.fetch_for_exercise(ex_id)
                 header = name if not eq else f"{name} ({eq})"
+                if note:
+                    header += f" - {note}"
                 with st.expander(header, expanded=True):
                     for sid, reps, weight, rpe, stime, etime in sets:
                         line = f"{reps} reps x {weight} kg (RPE {rpe})"

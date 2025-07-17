@@ -50,7 +50,14 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.json(),
-            [{"id": 1, "name": "Bench Press", "equipment": "Olympic Barbell"}],
+            [
+                {
+                    "id": 1,
+                    "name": "Bench Press",
+                    "equipment": "Olympic Barbell",
+                    "note": None,
+                }
+            ],
         )
 
         response = self.client.post(
@@ -276,7 +283,14 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.json(),
-            [{"id": 1, "name": "Squat", "equipment": "Olympic Barbell"}],
+            [
+                {
+                    "id": 1,
+                    "name": "Squat",
+                    "equipment": "Olympic Barbell",
+                    "note": None,
+                }
+            ],
         )
 
         response = self.client.get("/exercises/1/sets")
@@ -407,7 +421,14 @@ class APITestCase(unittest.TestCase):
         resp = self.client.get("/workouts/1/exercises")
         self.assertEqual(
             resp.json(),
-            [{"id": 1, "name": "Clean", "equipment": "Olympic Barbell"}],
+            [
+                {
+                    "id": 1,
+                    "name": "Clean",
+                    "equipment": "Olympic Barbell",
+                    "note": None,
+                }
+            ],
         )
 
         # custom equipment lifecycle
@@ -1863,3 +1884,23 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0]["exercise"], "Bench Press")
         self.assertAlmostEqual(data[0]["frequency_per_week"], 1.0)
+
+    def test_exercise_notes(self) -> None:
+        self.client.post("/workouts")
+        resp = self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell", "note": "Focus"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        ex_id = resp.json()["id"]
+
+        resp = self.client.get("/workouts/1/exercises")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()[0]["note"], "Focus")
+
+        resp = self.client.put(f"/exercises/{ex_id}/note", params={"note": "Updated"})
+        self.assertEqual(resp.status_code, 200)
+
+        resp = self.client.get(f"/exercises/{ex_id}")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["note"], "Updated")

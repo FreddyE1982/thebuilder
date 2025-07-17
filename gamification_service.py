@@ -31,7 +31,7 @@ class GamificationService:
     def record_set(self, exercise_id: int, reps: int, weight: float, rpe: int) -> None:
         if not self.is_enabled():
             return
-        wid, _name, _eq = self.exercises.fetch_detail(exercise_id)
+        wid, _name, _eq, _note = self.exercises.fetch_detail(exercise_id)
         pts = self._points(reps, weight, rpe)
         self.repo.add(wid, pts)
 

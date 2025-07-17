@@ -80,10 +80,11 @@ class Database:
                     workout_id INTEGER NOT NULL,
                     name TEXT NOT NULL,
                     equipment_name TEXT,
+                    note TEXT,
                     FOREIGN KEY(workout_id) REFERENCES workouts(id) ON DELETE CASCADE,
                     FOREIGN KEY(equipment_name) REFERENCES equipment(name)
                 );""",
-            ["id", "workout_id", "name", "equipment_name"],
+            ["id", "workout_id", "name", "equipment_name", "note"],
         ),
         "planned_workouts": (
             """CREATE TABLE planned_workouts (
@@ -545,12 +546,16 @@ class ExerciseRepository(BaseRepository):
         self.exercise_names = ExerciseNameRepository(db_path)
 
     def add(
-        self, workout_id: int, name: str, equipment_name: Optional[str] = None
+        self,
+        workout_id: int,
+        name: str,
+        equipment_name: Optional[str] = None,
+        note: Optional[str] = None,
     ) -> int:
         self.exercise_names.ensure([name])
         return self.execute(
-            "INSERT INTO exercises (workout_id, name, equipment_name) VALUES (?, ?, ?);",
-            (workout_id, name, equipment_name),
+            "INSERT INTO exercises (workout_id, name, equipment_name, note) VALUES (?, ?, ?, ?);",
+            (workout_id, name, equipment_name, note),
         )
 
     def remove(self, exercise_id: int) -> None:
@@ -558,20 +563,26 @@ class ExerciseRepository(BaseRepository):
 
     def fetch_for_workout(
         self, workout_id: int
-    ) -> List[Tuple[int, str, Optional[str]]]:
+    ) -> List[Tuple[int, str, Optional[str], Optional[str]]]:
         return self.fetch_all(
-            "SELECT id, name, equipment_name FROM exercises WHERE workout_id = ?;",
+            "SELECT id, name, equipment_name, note FROM exercises WHERE workout_id = ?;",
             (workout_id,),
         )
 
-    def fetch_detail(self, exercise_id: int) -> Tuple[int, str, Optional[str]]:
+    def fetch_detail(self, exercise_id: int) -> Tuple[int, str, Optional[str], Optional[str]]:
         rows = self.fetch_all(
-            "SELECT workout_id, name, equipment_name FROM exercises WHERE id = ?;",
+            "SELECT workout_id, name, equipment_name, note FROM exercises WHERE id = ?;",
             (exercise_id,),
         )
         if not rows:
             raise ValueError("exercise not found")
         return rows[0]
+
+    def update_note(self, exercise_id: int, note: Optional[str]) -> None:
+        self.execute(
+            "UPDATE exercises SET note = ? WHERE id = ?;",
+            (note, exercise_id),
+        )
 
 
 class SetRepository(BaseRepository):

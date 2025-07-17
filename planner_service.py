@@ -37,7 +37,7 @@ class PlannerService:
         )
         exercises = self.planned_exercises.fetch_for_workout(plan_id)
         for ex_id, name, equipment in exercises:
-            new_ex_id = self.exercises.add(workout_id, name, equipment)
+            new_ex_id = self.exercises.add(workout_id, name, equipment, None)
             sets = self.planned_sets.fetch_for_exercise(ex_id)
             for set_id, reps, weight, rpe in sets:
                 self.sets.add(

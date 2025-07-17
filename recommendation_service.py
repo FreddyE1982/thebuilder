@@ -53,7 +53,7 @@ class RecommendationService:
         return len(history) > 0
 
     def recommend_next_set(self, exercise_id: int) -> dict:
-        workout_id, name, _ = self.exercises.fetch_detail(exercise_id)
+        workout_id, name, _, _ = self.exercises.fetch_detail(exercise_id)
         alias_names = self.exercise_names.aliases(name)
         history = self.sets.fetch_history_by_names(
             alias_names, with_duration=True, with_workout_id=True

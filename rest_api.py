@@ -442,10 +442,10 @@ class GymAPI:
             return {"status": "finished", "timestamp": timestamp}
 
         @self.app.post("/workouts/{workout_id}/exercises")
-        def add_exercise(workout_id: int, name: str, equipment: str):
+        def add_exercise(workout_id: int, name: str, equipment: str, note: str | None = None):
             if not equipment:
                 raise HTTPException(status_code=400, detail="equipment required")
-            ex_id = self.exercises.add(workout_id, name, equipment)
+            ex_id = self.exercises.add(workout_id, name, equipment, note)
             return {"id": ex_id}
 
         @self.app.delete("/exercises/{exercise_id}")
@@ -453,12 +453,31 @@ class GymAPI:
             self.exercises.remove(exercise_id)
             return {"status": "deleted"}
 
+        @self.app.get("/exercises/{exercise_id}")
+        def get_exercise(exercise_id: int):
+            try:
+                wid, name, equipment, note = self.exercises.fetch_detail(exercise_id)
+                return {
+                    "id": exercise_id,
+                    "workout_id": wid,
+                    "name": name,
+                    "equipment": equipment,
+                    "note": note,
+                }
+            except ValueError as e:
+                raise HTTPException(status_code=404, detail=str(e))
+
+        @self.app.put("/exercises/{exercise_id}/note")
+        def update_exercise_note(exercise_id: int, note: str | None = None):
+            self.exercises.update_note(exercise_id, note)
+            return {"status": "updated"}
+
         @self.app.get("/workouts/{workout_id}/exercises")
         def list_exercises(workout_id: int):
             exercises = self.exercises.fetch_for_workout(workout_id)
             return [
-                {"id": ex_id, "name": name, "equipment": eq}
-                for ex_id, name, eq in exercises
+                {"id": ex_id, "name": name, "equipment": eq, "note": note}
+                for ex_id, name, eq, note in exercises
             ]
 
         @self.app.post("/planned_workouts")
@@ -566,7 +585,7 @@ class GymAPI:
                 set_id = self.sets.add(exercise_id, reps, weight, rpe)
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
-            _, name, _ = self.exercises.fetch_detail(exercise_id)
+            _, name, _, _ = self.exercises.fetch_detail(exercise_id)
             if (
                 self.settings.get_bool("ml_all_enabled", True)
                 and self.settings.get_bool("ml_training_enabled", True)
@@ -612,7 +631,7 @@ class GymAPI:
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
             ex_id = self.sets.fetch_exercise_id(set_id)
-            _, name, _ = self.exercises.fetch_detail(ex_id)
+            _, name, _, _ = self.exercises.fetch_detail(ex_id)
             if (
                 self.settings.get_bool("ml_all_enabled", True)
                 and self.settings.get_bool("ml_training_enabled", True)
