@@ -21,7 +21,8 @@ class Database:
                     end_time TEXT,
                     training_type TEXT NOT NULL DEFAULT 'strength',
                     notes TEXT,
-                    location TEXT
+                    location TEXT,
+                    rating INTEGER
                 );""",
             [
                 "id",
@@ -31,6 +32,7 @@ class Database:
                 "training_type",
                 "notes",
                 "location",
+                "rating",
             ],
         ),
         "equipment": (
@@ -540,20 +542,21 @@ class WorkoutRepository(BaseRepository):
         training_type: str = "strength",
         notes: str | None = None,
         location: str | None = None,
+        rating: Optional[int] = None,
     ) -> int:
         return self.execute(
-            "INSERT INTO workouts (date, training_type, notes, location) VALUES (?, ?, ?, ?);",
-            (date, training_type, notes, location),
+            "INSERT INTO workouts (date, training_type, notes, location, rating) VALUES (?, ?, ?, ?, ?);",
+            (date, training_type, notes, location, rating),
         )
 
     def fetch_all_workouts(
         self,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
-    ) -> List[Tuple[int, str, Optional[str], Optional[str], str, Optional[str]]]:
-        query = (
-            "SELECT id, date, start_time, end_time, training_type, notes FROM workouts"
-        )
+    ) -> List[
+        Tuple[int, str, Optional[str], Optional[str], str, Optional[str], Optional[int]]
+    ]:
+        query = "SELECT id, date, start_time, end_time, training_type, notes, rating FROM workouts"
         params: list[str] = []
         if start_date:
             query += " WHERE date >= ?"
@@ -588,11 +591,24 @@ class WorkoutRepository(BaseRepository):
             (location, workout_id),
         )
 
-    def fetch_detail(
-        self, workout_id: int
-    ) -> Tuple[int, str, Optional[str], Optional[str], str, Optional[str], Optional[str]]:
+    def set_rating(self, workout_id: int, rating: Optional[int]) -> None:
+        self.execute(
+            "UPDATE workouts SET rating = ? WHERE id = ?;",
+            (rating, workout_id),
+        )
+
+    def fetch_detail(self, workout_id: int) -> Tuple[
+        int,
+        str,
+        Optional[str],
+        Optional[str],
+        str,
+        Optional[str],
+        Optional[str],
+        Optional[int],
+    ]:
         rows = self.fetch_all(
-            "SELECT id, date, start_time, end_time, training_type, notes, location FROM workouts WHERE id = ?;",
+            "SELECT id, date, start_time, end_time, training_type, notes, location, rating FROM workouts WHERE id = ?;",
             (workout_id,),
         )
         if not rows:
@@ -640,7 +656,9 @@ class ExerciseRepository(BaseRepository):
             (workout_id,),
         )
 
-    def fetch_detail(self, exercise_id: int) -> Tuple[int, str, Optional[str], Optional[str]]:
+    def fetch_detail(
+        self, exercise_id: int
+    ) -> Tuple[int, str, Optional[str], Optional[str]]:
         rows = self.fetch_all(
             "SELECT workout_id, name, equipment_name, note FROM exercises WHERE id = ?;",
             (exercise_id,),
@@ -1863,8 +1881,7 @@ class MLLogRepository(BaseRepository):
     ) -> list[tuple[str, float, float]]:
         """Return logs for ``name`` optionally filtered by ISO date range."""
         query = (
-            "SELECT timestamp, prediction, confidence FROM ml_logs "
-            "WHERE name = ?"
+            "SELECT timestamp, prediction, confidence FROM ml_logs " "WHERE name = ?"
         )
         params: list[str] = [name]
         if start_date:
@@ -1963,9 +1980,7 @@ class WellnessRepository(BaseRepository):
     def fetch_history(
         self, start_date: str | None = None, end_date: str | None = None
     ) -> list[tuple[int, str, float | None, float | None, float | None, int | None]]:
-        query = (
-            "SELECT id, date, calories, sleep_hours, sleep_quality, stress_level FROM wellness_logs WHERE 1=1"
-        )
+        query = "SELECT id, date, calories, sleep_hours, sleep_quality, stress_level FROM wellness_logs WHERE 1=1"
         params: list[str] = []
         if start_date:
             query += " AND date >= ?"
@@ -2033,9 +2048,7 @@ class FavoriteExerciseRepository(BaseRepository):
         )
 
     def fetch_all(self) -> list[str]:
-        rows = super().fetch_all(
-            "SELECT name FROM favorite_exercises ORDER BY name;"
-        )
+        rows = super().fetch_all("SELECT name FROM favorite_exercises ORDER BY name;")
         return [r[0] for r in rows]
 
 
@@ -2062,7 +2075,9 @@ class TemplateWorkoutRepository(BaseRepository):
             raise ValueError("template not found")
         return rows[0]
 
-    def update(self, template_id: int, name: str | None, training_type: str | None) -> None:
+    def update(
+        self, template_id: int, name: str | None, training_type: str | None
+    ) -> None:
         rows = super().fetch_all(
             "SELECT id FROM workout_templates WHERE id = ?;",
             (template_id,),
@@ -2169,10 +2184,11 @@ class TagRepository(BaseRepository):
 
     def set_tags(self, workout_id: int, tag_ids: list[int]) -> None:
         with self._connection() as conn:
-            conn.execute("DELETE FROM workout_tags WHERE workout_id = ?;", (workout_id,))
+            conn.execute(
+                "DELETE FROM workout_tags WHERE workout_id = ?;", (workout_id,)
+            )
             for tid in tag_ids:
                 conn.execute(
                     "INSERT INTO workout_tags (workout_id, tag_id) VALUES (?, ?);",
                     (workout_id, tid),
                 )
-
