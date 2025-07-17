@@ -1807,3 +1807,37 @@ class APITestCase(unittest.TestCase):
         self.assertAlmostEqual(summary["avg_sleep"], 7.75)
         self.assertAlmostEqual(summary["avg_quality"], 3.5)
         self.assertAlmostEqual(summary["avg_stress"], 2.5)
+
+    def test_exercise_frequency(self) -> None:
+        d1 = (datetime.date.today() - datetime.timedelta(days=7)).isoformat()
+        d2 = datetime.date.today().isoformat()
+
+        self.client.post("/workouts", params={"date": d1})
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8},
+        )
+
+        self.client.post("/workouts", params={"date": d2})
+        self.client.post(
+            "/workouts/2/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/exercises/2/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8},
+        )
+
+        resp = self.client.get(
+            "/stats/exercise_frequency",
+            params={"exercise": "Bench Press"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["exercise"], "Bench Press")
+        self.assertAlmostEqual(data[0]["frequency_per_week"], 1.0)
