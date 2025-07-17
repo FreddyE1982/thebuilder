@@ -1139,6 +1139,32 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(data[0]["workout_id"], 1)
         self.assertAlmostEqual(data[0]["efficiency"], round(expected, 2), places=2)
 
+    def test_rest_times_endpoint(self) -> None:
+        self.client.post("/workouts")
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        ids = []
+        for _ in range(2):
+            resp = self.client.post(
+                "/exercises/1/sets",
+                params={"reps": 5, "weight": 100.0, "rpe": 8},
+            )
+            ids.append(resp.json()["id"])
+        t0 = datetime.datetime(2023, 1, 1, 0, 0, 0)
+        self.api.sets.set_start_time(ids[0], t0.isoformat())
+        self.api.sets.set_end_time(ids[0], (t0 + datetime.timedelta(seconds=10)).isoformat())
+        self.api.sets.set_start_time(ids[1], (t0 + datetime.timedelta(seconds=70)).isoformat())
+        self.api.sets.set_end_time(ids[1], (t0 + datetime.timedelta(seconds=80)).isoformat())
+        resp = self.client.get("/stats/rest_times")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["workout_id"], 1)
+        self.assertAlmostEqual(data[0]["avg_rest"], 60.0, places=2)
+
+
     def test_volume_forecast_endpoint(self) -> None:
         d1 = (datetime.date.today() - datetime.timedelta(days=2)).isoformat()
         d2 = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()

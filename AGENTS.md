@@ -83,3 +83,4 @@ keep the readme constantly updated!
 keep the AGENTS.md updated by adding new sensible rules when they occur to you. YOU MAY ONLY ADD NEW RULES. Any rule you add must NEVER contradict or modify an existing rule
 
 
+- Add tests for all new analytics endpoints verifying expected numeric results.

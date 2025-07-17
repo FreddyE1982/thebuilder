@@ -16,6 +16,7 @@ The Builder is a full featured workout planner, logger and analytics platform bu
 - Machine learning models for RPE, volume, readiness and progress predictions. Training and prediction can be toggled in the settings.
 - Utilities such as pyramid strength tests and warm‑up weight suggestions.
 - All settings can be changed in the UI or by editing `settings.yaml` and remain synchronized.
+- Calculate average rest times between sets via `/stats/rest_times`.
 
 ## Installation
 
