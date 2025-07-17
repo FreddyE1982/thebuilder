@@ -2,6 +2,7 @@ import sqlite3
 import csv
 import os
 import io
+import datetime
 from contextlib import contextmanager
 from typing import List, Tuple, Optional, Iterable, Set
 
@@ -209,6 +210,16 @@ class Database:
                 );""",
             ["name", "state"],
         ),
+        "ml_logs": (
+            """CREATE TABLE ml_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    timestamp TEXT NOT NULL,
+                    prediction REAL NOT NULL,
+                    confidence REAL NOT NULL
+                );""",
+            ["id", "name", "timestamp", "prediction", "confidence"],
+        ),
     }
 
     def __init__(self, db_path: str = "workout.db") -> None:
@@ -263,7 +274,9 @@ class Database:
         conn.execute(f"DROP TABLE {table}_old;")
 
     def _import_equipment_data(self) -> None:
-        csv_path = os.path.join(os.path.dirname(__file__), "table3_equipment_muscles.csv")
+        csv_path = os.path.join(
+            os.path.dirname(__file__), "table3_equipment_muscles.csv"
+        )
         if not os.path.exists(csv_path):
             return
         with open(csv_path, newline="") as csvfile:
@@ -285,7 +298,9 @@ class Database:
                 )
 
     def _import_exercise_catalog_data(self) -> None:
-        csv_path = os.path.join(os.path.dirname(__file__), "table1_exercise_database.csv")
+        csv_path = os.path.join(
+            os.path.dirname(__file__), "table1_exercise_database.csv"
+        )
         if not os.path.exists(csv_path):
             return
         with open(csv_path, newline="") as csvfile:
@@ -437,9 +452,7 @@ class WorkoutRepository(BaseRepository):
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
     ) -> List[Tuple[int, str, Optional[str], Optional[str], str]]:
-        query = (
-            "SELECT id, date, start_time, end_time, training_type FROM workouts"
-        )
+        query = "SELECT id, date, start_time, end_time, training_type FROM workouts"
         params: list[str] = []
         if start_date:
             query += " WHERE date >= ?"
@@ -502,7 +515,9 @@ class ExerciseRepository(BaseRepository):
     def remove(self, exercise_id: int) -> None:
         self.execute("DELETE FROM exercises WHERE id = ?;", (exercise_id,))
 
-    def fetch_for_workout(self, workout_id: int) -> List[Tuple[int, str, Optional[str]]]:
+    def fetch_for_workout(
+        self, workout_id: int
+    ) -> List[Tuple[int, str, Optional[str]]]:
         return self.fetch_all(
             "SELECT id, name, equipment_name FROM exercises WHERE workout_id = ?;",
             (workout_id,),
@@ -535,7 +550,16 @@ class SetRepository(BaseRepository):
         return self.execute(
             "INSERT INTO sets (exercise_id, reps, weight, rpe, planned_set_id, diff_reps, diff_weight, diff_rpe) "
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?);",
-            (exercise_id, reps, weight, rpe, planned_set_id, diff_reps, diff_weight, diff_rpe),
+            (
+                exercise_id,
+                reps,
+                weight,
+                rpe,
+                planned_set_id,
+                diff_reps,
+                diff_weight,
+                diff_rpe,
+            ),
         )
 
     def update(self, set_id: int, reps: int, weight: float, rpe: int) -> None:
@@ -583,7 +607,9 @@ class SetRepository(BaseRepository):
             raise ValueError("set not found")
         return int(rows[0][0])
 
-    def fetch_for_exercise(self, exercise_id: int) -> List[Tuple[int, int, float, int, Optional[str], Optional[str]]]:
+    def fetch_for_exercise(
+        self, exercise_id: int
+    ) -> List[Tuple[int, int, float, int, Optional[str], Optional[str]]]:
         return self.fetch_all(
             "SELECT id, reps, weight, rpe, start_time, end_time FROM sets WHERE exercise_id = ?;",
             (exercise_id,),
@@ -618,6 +644,27 @@ class SetRepository(BaseRepository):
             "start_time": start_time,
             "end_time": end_time,
         }
+
+    def last_rpe(self, exercise_id: int) -> int | None:
+        rows = self.fetch_all(
+            "SELECT rpe FROM sets WHERE exercise_id = ? ORDER BY id DESC LIMIT 1;",
+            (exercise_id,),
+        )
+        return int(rows[0][0]) if rows else None
+
+    def previous_rpe(self, set_id: int) -> int | None:
+        ex_rows = self.fetch_all(
+            "SELECT exercise_id FROM sets WHERE id = ?;",
+            (set_id,),
+        )
+        if not ex_rows:
+            return None
+        ex_id = int(ex_rows[0][0])
+        rows = self.fetch_all(
+            "SELECT rpe FROM sets WHERE exercise_id = ? AND id < ? ORDER BY id DESC LIMIT 1;",
+            (ex_id, set_id),
+        )
+        return int(rows[0][0]) if rows else None
 
     def fetch_history_by_names(
         self,
@@ -659,9 +706,7 @@ class SetRepository(BaseRepository):
 
     def fetch_for_workout(
         self, workout_id: int
-    ) -> List[
-        Tuple[str, Optional[str], int, float, int, Optional[str], Optional[str]]
-    ]:
+    ) -> List[Tuple[str, Optional[str], int, float, int, Optional[str], Optional[str]]]:
         return self.fetch_all(
             "SELECT e.name, e.equipment_name, s.reps, s.weight, s.rpe,"
             " s.start_time, s.end_time "
@@ -793,7 +838,9 @@ class PlannedExerciseRepository(BaseRepository):
             (exercise_id,),
         )
 
-    def fetch_for_workout(self, workout_id: int) -> List[Tuple[int, str, Optional[str]]]:
+    def fetch_for_workout(
+        self, workout_id: int
+    ) -> List[Tuple[int, str, Optional[str]]]:
         return super().fetch_all(
             "SELECT id, name, equipment_name FROM planned_exercises WHERE planned_workout_id = ?;",
             (workout_id,),
@@ -947,7 +994,9 @@ class ExerciseNameRepository(BaseRepository):
 class SettingsRepository(BaseRepository):
     """Repository for general application settings synchronized with YAML."""
 
-    def __init__(self, db_path: str = "workout.db", yaml_path: str = "settings.yaml") -> None:
+    def __init__(
+        self, db_path: str = "workout.db", yaml_path: str = "settings.yaml"
+    ) -> None:
         super().__init__(db_path)
         self._yaml = YamlConfig(yaml_path)
         self._sync_from_yaml()
@@ -1050,7 +1099,12 @@ class SettingsRepository(BaseRepository):
         self._sync_to_yaml()
 
     def get_bool(self, key: str, default: bool) -> bool:
-        return self.get_text(key, "1" if default else "0") in {"1", "true", "True", "1.0"}
+        return self.get_text(key, "1" if default else "0") in {
+            "1",
+            "true",
+            "True",
+            "1.0",
+        }
 
     def set_bool(self, key: str, value: bool) -> None:
         self.set_text(key, "1" if value else "0")
@@ -1272,7 +1326,9 @@ class ExerciseCatalogRepository(BaseRepository):
             result.extend(self.exercise_names.aliases(name))
         return sorted(dict.fromkeys(result))
 
-    def fetch_detail(self, name: str) -> Optional[Tuple[str, str, str, str, str, str, str]]:
+    def fetch_detail(
+        self, name: str
+    ) -> Optional[Tuple[str, str, str, str, str, str, str]]:
         canonical = self.exercise_names.canonical(name)
         rows = self.fetch_all(
             "SELECT muscle_group, variants, equipment_names, primary_muscle, secondary_muscle, tertiary_muscle, other_muscles, is_custom FROM exercise_catalog WHERE name = ?;",
@@ -1289,9 +1345,11 @@ class ExerciseCatalogRepository(BaseRepository):
                 other,
                 is_custom,
             ) = rows[0]
+
             def canon_list(text: str) -> str:
                 items = [self.muscles.canonical(m) for m in text.split("|") if m]
                 return "|".join(dict.fromkeys(items))
+
             return (
                 group,
                 variants,
@@ -1328,9 +1386,11 @@ class ExerciseCatalogRepository(BaseRepository):
             other,
             is_custom,
         ) in rows:
+
             def canon(text: str) -> str:
                 items = [self.muscles.canonical(m) for m in text.split("|") if m]
                 return "|".join(dict.fromkeys(items))
+
             result.append(
                 (
                     name,
@@ -1377,18 +1437,23 @@ class ExerciseCatalogRepository(BaseRepository):
         if existing:
             raise ValueError("exercise exists")
         self.exercise_names.ensure([name])
-        muscs = [primary_muscle] + secondary_muscle.split("|") + tertiary_muscle.split("|") + other_muscles.split("|")
+        muscs = (
+            [primary_muscle]
+            + secondary_muscle.split("|")
+            + tertiary_muscle.split("|")
+            + other_muscles.split("|")
+        )
         self.muscles.ensure([m for m in muscs if m])
         primary_muscle = self.muscles.canonical(primary_muscle)
-        secondary_muscle = "|".join([
-            self.muscles.canonical(m) for m in secondary_muscle.split("|") if m
-        ])
-        tertiary_muscle = "|".join([
-            self.muscles.canonical(m) for m in tertiary_muscle.split("|") if m
-        ])
-        other_muscles = "|".join([
-            self.muscles.canonical(m) for m in other_muscles.split("|") if m
-        ])
+        secondary_muscle = "|".join(
+            [self.muscles.canonical(m) for m in secondary_muscle.split("|") if m]
+        )
+        tertiary_muscle = "|".join(
+            [self.muscles.canonical(m) for m in tertiary_muscle.split("|") if m]
+        )
+        other_muscles = "|".join(
+            [self.muscles.canonical(m) for m in other_muscles.split("|") if m]
+        )
         return self.execute(
             "INSERT INTO exercise_catalog (muscle_group, name, variants, equipment_names, primary_muscle, secondary_muscle, tertiary_muscle, other_muscles, is_custom) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1);",
             (
@@ -1425,18 +1490,23 @@ class ExerciseCatalogRepository(BaseRepository):
             raise ValueError("cannot modify imported exercise")
         target = new_name or name
         self.exercise_names.ensure([target])
-        muscs = [primary_muscle] + secondary_muscle.split("|") + tertiary_muscle.split("|") + other_muscles.split("|")
+        muscs = (
+            [primary_muscle]
+            + secondary_muscle.split("|")
+            + tertiary_muscle.split("|")
+            + other_muscles.split("|")
+        )
         self.muscles.ensure([m for m in muscs if m])
         primary_muscle = self.muscles.canonical(primary_muscle)
-        secondary_muscle = "|".join([
-            self.muscles.canonical(m) for m in secondary_muscle.split("|") if m
-        ])
-        tertiary_muscle = "|".join([
-            self.muscles.canonical(m) for m in tertiary_muscle.split("|") if m
-        ])
-        other_muscles = "|".join([
-            self.muscles.canonical(m) for m in other_muscles.split("|") if m
-        ])
+        secondary_muscle = "|".join(
+            [self.muscles.canonical(m) for m in secondary_muscle.split("|") if m]
+        )
+        tertiary_muscle = "|".join(
+            [self.muscles.canonical(m) for m in tertiary_muscle.split("|") if m]
+        )
+        other_muscles = "|".join(
+            [self.muscles.canonical(m) for m in other_muscles.split("|") if m]
+        )
         self.execute(
             "UPDATE exercise_catalog SET muscle_group = ?, name = ?, variants = ?, equipment_names = ?, primary_muscle = ?, secondary_muscle = ?, tertiary_muscle = ?, other_muscles = ? WHERE name = ?;",
             (
@@ -1519,16 +1589,16 @@ class PyramidTestRepository(BaseRepository):
         )
 
     def fetch_all(self) -> List[Tuple[int, str]]:
-        return super().fetch_all(
-            "SELECT id, date FROM pyramid_tests ORDER BY id DESC;"
-        )
+        return super().fetch_all("SELECT id, date FROM pyramid_tests ORDER BY id DESC;")
 
     def fetch_all_full(self) -> List[Tuple]:
         return super().fetch_all(
             "SELECT id, exercise_name, date, equipment_name, starting_weight, failed_weight, max_achieved, test_duration_minutes, rest_between_attempts, rpe_per_attempt, time_of_day, sleep_hours, stress_level, nutrition_quality FROM pyramid_tests ORDER BY id DESC;"
         )
 
-    def fetch_all_with_weights(self, entries: 'PyramidEntryRepository') -> List[Tuple[int, str, List[float]]]:
+    def fetch_all_with_weights(
+        self, entries: "PyramidEntryRepository"
+    ) -> List[Tuple[int, str, List[float]]]:
         tests = self.fetch_all()
         result = []
         for tid, date in tests:
@@ -1536,7 +1606,7 @@ class PyramidTestRepository(BaseRepository):
             result.append((tid, date, weights))
         return result
 
-    def fetch_full_with_weights(self, entries: 'PyramidEntryRepository') -> List[Tuple]:
+    def fetch_full_with_weights(self, entries: "PyramidEntryRepository") -> List[Tuple]:
         tests = self.fetch_all_full()
         result = []
         for row in tests:
@@ -1608,3 +1678,18 @@ class MLModelRepository(BaseRepository):
         )
         return rows[0][0] if rows else None
 
+
+class MLLogRepository(BaseRepository):
+    """Repository for logging model predictions and confidence."""
+
+    def add(self, name: str, prediction: float, confidence: float) -> int:
+        return self.execute(
+            "INSERT INTO ml_logs (name, timestamp, prediction, confidence) VALUES (?, ?, ?, ?);",
+            (name, datetime.datetime.now().isoformat(), prediction, confidence),
+        )
+
+    def fetch(self, name: str) -> list[tuple[str, float, float]]:
+        return self.fetch_all(
+            "SELECT timestamp, prediction, confidence FROM ml_logs WHERE name = ? ORDER BY id;",
+            (name,),
+        )

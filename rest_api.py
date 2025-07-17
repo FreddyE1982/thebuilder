@@ -16,6 +16,7 @@ from db import (
     PyramidEntryRepository,
     GamificationRepository,
     MLModelRepository,
+    MLLogRepository,
 )
 from planner_service import PlannerService
 from recommendation_service import RecommendationService
@@ -36,7 +37,9 @@ from tools import ExercisePrescription, MathTools
 class GymAPI:
     """Provides REST endpoints for workout logging."""
 
-    def __init__(self, db_path: str = "workout.db", yaml_path: str = "settings.yaml") -> None:
+    def __init__(
+        self, db_path: str = "workout.db", yaml_path: str = "settings.yaml"
+    ) -> None:
         self.workouts = WorkoutRepository(db_path)
         self.exercises = ExerciseRepository(db_path)
         self.sets = SetRepository(db_path)
@@ -52,6 +55,7 @@ class GymAPI:
         self.pyramid_entries = PyramidEntryRepository(db_path)
         self.game_repo = GamificationRepository(db_path)
         self.ml_models = MLModelRepository(db_path)
+        self.ml_logs = MLLogRepository(db_path)
         self.gamification = GamificationService(
             self.game_repo,
             self.exercises,
@@ -60,6 +64,7 @@ class GymAPI:
         self.ml_service = PerformanceModelService(
             self.ml_models,
             self.exercise_names,
+            self.ml_logs,
         )
         self.volume_model = VolumeModelService(self.ml_models)
         self.readiness_model = ReadinessModelService(self.ml_models)
@@ -125,9 +130,7 @@ class GymAPI:
         @self.app.post("/equipment")
         def add_equipment(equipment_type: str, name: str, muscles: str):
             try:
-                eid = self.equipment.add(
-                    equipment_type, name, muscles.split("|")
-                )
+                eid = self.equipment.add(equipment_type, name, muscles.split("|"))
                 return {"id": eid}
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
@@ -198,10 +201,16 @@ class GymAPI:
             return {
                 "muscle_group": muscle_group,
                 "variants": variants.split("|") if variants else [],
-                "equipment_names": equipment_names.split("|") if equipment_names else [],
+                "equipment_names": (
+                    equipment_names.split("|") if equipment_names else []
+                ),
                 "primary_muscle": primary_muscle,
-                "secondary_muscle": secondary_muscle.split("|") if secondary_muscle else [],
-                "tertiary_muscle": tertiary_muscle.split("|") if tertiary_muscle else [],
+                "secondary_muscle": (
+                    secondary_muscle.split("|") if secondary_muscle else []
+                ),
+                "tertiary_muscle": (
+                    tertiary_muscle.split("|") if tertiary_muscle else []
+                ),
                 "other_muscles": other_muscles.split("|") if other_muscles else [],
             }
 
@@ -301,10 +310,10 @@ class GymAPI:
             except ValueError:
                 raise HTTPException(status_code=400, detail="invalid date format")
             if workout_date > datetime.date.today():
-                raise HTTPException(status_code=400, detail="date cannot be in the future")
-            workout_id = self.workouts.create(
-                workout_date.isoformat(), training_type
-            )
+                raise HTTPException(
+                    status_code=400, detail="date cannot be in the future"
+                )
+            workout_id = self.workouts.create(workout_date.isoformat(), training_type)
             return {"id": workout_id}
 
         @self.app.get("/workouts")
@@ -338,7 +347,9 @@ class GymAPI:
 
         @self.app.get("/workouts/{workout_id}")
         def get_workout(workout_id: int):
-            wid, date, start_time, end_time, training_type = self.workouts.fetch_detail(workout_id)
+            wid, date, start_time, end_time, training_type = self.workouts.fetch_detail(
+                workout_id
+            )
             return {
                 "id": wid,
                 "date": date,
@@ -431,8 +442,7 @@ class GymAPI:
         def list_planned_workouts():
             plans = self.planned_workouts.fetch_all()
             return [
-                {"id": pid, "date": date, "training_type": t}
-                for pid, date, t in plans
+                {"id": pid, "date": date, "training_type": t} for pid, date, t in plans
             ]
 
         @self.app.put("/planned_workouts/{plan_id}")
@@ -523,6 +533,7 @@ class GymAPI:
 
         @self.app.post("/exercises/{exercise_id}/sets")
         def add_set(exercise_id: int, reps: int, weight: float, rpe: int):
+            prev = self.sets.last_rpe(exercise_id)
             set_id = self.sets.add(exercise_id, reps, weight, rpe)
             _, name, _ = self.exercises.fetch_detail(exercise_id)
             if (
@@ -530,7 +541,13 @@ class GymAPI:
                 and self.settings.get_bool("ml_training_enabled", True)
                 and self.settings.get_bool("ml_rpe_training_enabled", True)
             ):
-                self.ml_service.train(name, reps, weight, rpe)
+                self.ml_service.train(
+                    name,
+                    reps,
+                    weight,
+                    rpe,
+                    prev if prev is not None else rpe,
+                )
             try:
                 self.gamification.record_set(exercise_id, reps, weight, rpe)
             except Exception:
@@ -540,6 +557,7 @@ class GymAPI:
 
         @self.app.put("/sets/{set_id}")
         def update_set(set_id: int, reps: int, weight: float, rpe: int):
+            prev = self.sets.previous_rpe(set_id)
             self.sets.update(set_id, reps, weight, rpe)
             ex_id = self.sets.fetch_exercise_id(set_id)
             _, name, _ = self.exercises.fetch_detail(ex_id)
@@ -548,7 +566,13 @@ class GymAPI:
                 and self.settings.get_bool("ml_training_enabled", True)
                 and self.settings.get_bool("ml_rpe_training_enabled", True)
             ):
-                self.ml_service.train(name, reps, weight, rpe)
+                self.ml_service.train(
+                    name,
+                    reps,
+                    weight,
+                    rpe,
+                    prev if prev is not None else rpe,
+                )
             self.recommender.record_result(set_id, reps, weight, rpe)
             return {"status": "updated"}
 
@@ -943,7 +967,8 @@ class GymAPI:
         def list_pyramid_tests():
             tests = self.pyramid_tests.fetch_all_with_weights(self.pyramid_entries)
             return [
-                {"id": tid, "date": date, "weights": weights} for tid, date, weights in tests
+                {"id": tid, "date": date, "weights": weights}
+                for tid, date, weights in tests
             ]
 
         @self.app.get("/pyramid_tests/full")
@@ -1027,29 +1052,53 @@ class GymAPI:
             if ml_prediction_enabled is not None:
                 self.settings.set_bool("ml_prediction_enabled", ml_prediction_enabled)
             if ml_rpe_training_enabled is not None:
-                self.settings.set_bool("ml_rpe_training_enabled", ml_rpe_training_enabled)
+                self.settings.set_bool(
+                    "ml_rpe_training_enabled", ml_rpe_training_enabled
+                )
             if ml_rpe_prediction_enabled is not None:
-                self.settings.set_bool("ml_rpe_prediction_enabled", ml_rpe_prediction_enabled)
+                self.settings.set_bool(
+                    "ml_rpe_prediction_enabled", ml_rpe_prediction_enabled
+                )
             if ml_volume_training_enabled is not None:
-                self.settings.set_bool("ml_volume_training_enabled", ml_volume_training_enabled)
+                self.settings.set_bool(
+                    "ml_volume_training_enabled", ml_volume_training_enabled
+                )
             if ml_volume_prediction_enabled is not None:
-                self.settings.set_bool("ml_volume_prediction_enabled", ml_volume_prediction_enabled)
+                self.settings.set_bool(
+                    "ml_volume_prediction_enabled", ml_volume_prediction_enabled
+                )
             if ml_readiness_training_enabled is not None:
-                self.settings.set_bool("ml_readiness_training_enabled", ml_readiness_training_enabled)
+                self.settings.set_bool(
+                    "ml_readiness_training_enabled", ml_readiness_training_enabled
+                )
             if ml_readiness_prediction_enabled is not None:
-                self.settings.set_bool("ml_readiness_prediction_enabled", ml_readiness_prediction_enabled)
+                self.settings.set_bool(
+                    "ml_readiness_prediction_enabled", ml_readiness_prediction_enabled
+                )
             if ml_progress_training_enabled is not None:
-                self.settings.set_bool("ml_progress_training_enabled", ml_progress_training_enabled)
+                self.settings.set_bool(
+                    "ml_progress_training_enabled", ml_progress_training_enabled
+                )
             if ml_progress_prediction_enabled is not None:
-                self.settings.set_bool("ml_progress_prediction_enabled", ml_progress_prediction_enabled)
+                self.settings.set_bool(
+                    "ml_progress_prediction_enabled", ml_progress_prediction_enabled
+                )
             if ml_goal_training_enabled is not None:
-                self.settings.set_bool("ml_goal_training_enabled", ml_goal_training_enabled)
+                self.settings.set_bool(
+                    "ml_goal_training_enabled", ml_goal_training_enabled
+                )
             if ml_goal_prediction_enabled is not None:
-                self.settings.set_bool("ml_goal_prediction_enabled", ml_goal_prediction_enabled)
+                self.settings.set_bool(
+                    "ml_goal_prediction_enabled", ml_goal_prediction_enabled
+                )
             if ml_injury_training_enabled is not None:
-                self.settings.set_bool("ml_injury_training_enabled", ml_injury_training_enabled)
+                self.settings.set_bool(
+                    "ml_injury_training_enabled", ml_injury_training_enabled
+                )
             if ml_injury_prediction_enabled is not None:
-                self.settings.set_bool("ml_injury_prediction_enabled", ml_injury_prediction_enabled)
+                self.settings.set_bool(
+                    "ml_injury_prediction_enabled", ml_injury_prediction_enabled
+                )
             return {"status": "updated"}
 
         @self.app.post("/settings/delete_all")
