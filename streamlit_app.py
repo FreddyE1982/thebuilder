@@ -142,6 +142,12 @@ class GymApp:
                     width: 100% !important;
                     flex: 1 1 100% !important;
                 }
+                button[kind="primary"] {
+                    width: 100%;
+                }
+                div[data-testid="metric-container"] > label {
+                    font-size: 0.9rem;
+                }
             }
             </style>
             """,
@@ -184,6 +190,8 @@ class GymApp:
         with st.sidebar.expander("Help & About"):
             if st.button("Show Help", key="help_btn"):
                 self._help_dialog()
+            if st.button("Show About", key="about_btn"):
+                self._about_dialog()
 
     def _help_dialog(self) -> None:
         with st.dialog("Help"):
@@ -193,6 +201,17 @@ class GymApp:
             )
             st.markdown(
                 "All data is saved to an internal database and can be managed via the settings tab."
+            )
+            st.button("Close")
+
+    def _about_dialog(self) -> None:
+        with st.dialog("About"):
+            st.markdown("## About The Builder")
+            st.markdown(
+                "This application is a comprehensive workout planner and logger built with Streamlit and FastAPI."
+            )
+            st.markdown(
+                "It offers a responsive interface and a complete REST API for advanced tracking, planning and analytics."
             )
             st.button("Close")
 
