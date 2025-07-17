@@ -8,6 +8,9 @@ from db import (
     PlannedWorkoutRepository,
     PlannedExerciseRepository,
     PlannedSetRepository,
+    TemplateWorkoutRepository,
+    TemplateExerciseRepository,
+    TemplateSetRepository,
     EquipmentRepository,
     ExerciseCatalogRepository,
     MuscleRepository,
@@ -50,6 +53,9 @@ class GymApp:
         self.planned_workouts = PlannedWorkoutRepository()
         self.planned_exercises = PlannedExerciseRepository()
         self.planned_sets = PlannedSetRepository()
+        self.template_workouts = TemplateWorkoutRepository()
+        self.template_exercises = TemplateExerciseRepository()
+        self.template_sets = TemplateSetRepository()
         self.equipment = EquipmentRepository()
         self.exercise_catalog = ExerciseCatalogRepository()
         self.muscles_repo = MuscleRepository()
@@ -83,6 +89,9 @@ class GymApp:
             self.planned_exercises,
             self.planned_sets,
             self.gamification,
+            self.template_workouts,
+            self.template_exercises,
+            self.template_sets,
         )
         self.recommender = RecommendationService(
             self.workouts,
@@ -181,6 +190,8 @@ class GymApp:
             st.session_state.exercise_inputs = {}
         if "selected_planned_workout" not in st.session_state:
             st.session_state.selected_planned_workout = None
+        if "selected_template" not in st.session_state:
+            st.session_state.selected_template = None
         if "pyramid_inputs" not in st.session_state:
             st.session_state.pyramid_inputs = [0.0]
 
@@ -366,6 +377,9 @@ class GymApp:
             self._exercise_section()
 
     def _plan_tab(self) -> None:
+        self._template_section()
+        if st.session_state.get("selected_template") is not None:
+            self._template_exercise_section()
         self._planned_workout_section()
         if st.session_state.selected_planned_workout:
             self._planned_exercise_section()
@@ -892,6 +906,104 @@ class GymApp:
             st.session_state.pop(f"plan_new_reps_{exercise_id}", None)
             st.session_state.pop(f"plan_new_weight_{exercise_id}", None)
             st.session_state.pop(f"plan_new_rpe_{exercise_id}", None)
+
+    def _template_section(self) -> None:
+        st.header("Templates")
+        training_options = ["strength", "hypertrophy", "highintensity"]
+        with st.expander("Template Management", expanded=True):
+            with st.expander("Create New Template"):
+                name = st.text_input("Name", key="tmpl_name")
+                t_type = st.selectbox("Training Type", training_options, key="tmpl_type")
+                if st.button("Create Template") and name:
+                    tid = self.template_workouts.create(name, t_type)
+                    st.session_state.selected_template = tid
+            with st.expander("Existing Templates", expanded=True):
+                templates = self.template_workouts.fetch_all()
+                options = {str(t[0]): t for t in templates}
+                if options:
+                    selected = st.selectbox(
+                        "Select Template",
+                        list(options.keys()),
+                        format_func=lambda x: options[x][1],
+                        key="select_template",
+                    )
+                    st.session_state.selected_template = int(selected)
+                    for tid, name, t_type in templates:
+                        with st.expander(f"{name} (ID {tid})", expanded=False):
+                            edit_name = st.text_input("Name", value=name, key=f"tmpl_edit_name_{tid}")
+                            edit_type = st.selectbox(
+                                "Type",
+                                training_options,
+                                index=training_options.index(t_type),
+                                key=f"tmpl_edit_type_{tid}",
+                            )
+                            plan_date = st.date_input(
+                                "Create Plan Date",
+                                datetime.date.today(),
+                                key=f"tmpl_plan_{tid}",
+                            )
+                            cols = st.columns(3)
+                            if cols[0].button("Save", key=f"tmpl_save_{tid}"):
+                                self.template_workouts.update(tid, edit_name, edit_type)
+                                st.success("Updated")
+                            if cols[1].button("Plan", key=f"tmpl_plan_btn_{tid}"):
+                                self.planner.create_plan_from_template(tid, plan_date.isoformat())
+                                st.success("Planned")
+                            if cols[2].button("Delete", key=f"tmpl_del_{tid}"):
+                                self.template_workouts.delete(tid)
+                                st.success("Deleted")
+                else:
+                    st.write("No templates.")
+
+    def _template_exercise_section(self) -> None:
+        st.header("Template Exercises")
+        template_id = st.session_state.selected_template
+        with st.expander("Exercise Management", expanded=True):
+            with st.expander("Add Exercise"):
+                ex_name = self._exercise_selector(
+                    "tmpl_new",
+                    None,
+                    st.session_state.get("tmpl_new_groups", []),
+                    st.session_state.get("tmpl_new_muscles", []),
+                )
+                eq = self._equipment_selector(
+                    "tmpl_new",
+                    st.session_state.get("tmpl_new_muscles", []),
+                )
+                if st.button("Add Template Exercise"):
+                    if ex_name and eq:
+                        self.template_exercises.add(template_id, ex_name, eq)
+                    else:
+                        st.warning("Exercise and equipment required")
+            with st.expander("Exercise List", expanded=True):
+                exercises = self.template_exercises.fetch_for_template(template_id)
+                for ex_id, name, eq in exercises:
+                    self._template_exercise_card(ex_id, name, eq)
+
+    def _template_exercise_card(self, exercise_id: int, name: str, equipment: Optional[str]) -> None:
+        sets = self.template_sets.fetch_for_exercise(exercise_id)
+        header = name if not equipment else f"{name} ({equipment})"
+        exp = st.expander(header)
+        with exp:
+            if st.button("Remove Exercise", key=f"tmpl_ex_rm_{exercise_id}"):
+                self.template_exercises.remove(exercise_id)
+                return
+            with st.expander("Sets", expanded=True):
+                for sid, reps, weight, rpe in sets:
+                    cols = st.columns(4)
+                    cols[0].write(f"Set {sid}")
+                    cols[1].number_input("Reps", min_value=1, step=1, value=int(reps), key=f"tmpl_reps_{sid}")
+                    cols[2].number_input("Weight", min_value=0.0, step=0.5, value=float(weight), key=f"tmpl_w_{sid}")
+                    cols[3].selectbox("RPE", options=list(range(11)), index=int(rpe), key=f"tmpl_rpe_{sid}")
+            with st.expander("Add Set"):
+                reps = st.number_input("Reps", min_value=1, step=1, key=f"tmpl_new_reps_{exercise_id}")
+                weight = st.number_input("Weight", min_value=0.0, step=0.5, key=f"tmpl_new_w_{exercise_id}")
+                rpe = st.selectbox("RPE", options=list(range(11)), key=f"tmpl_new_rpe_{exercise_id}")
+                if st.button("Add Set", key=f"tmpl_add_set_{exercise_id}"):
+                    self.template_sets.add(exercise_id, int(reps), float(weight), int(rpe))
+                    st.session_state.pop(f"tmpl_new_reps_{exercise_id}", None)
+                    st.session_state.pop(f"tmpl_new_w_{exercise_id}", None)
+                    st.session_state.pop(f"tmpl_new_rpe_{exercise_id}", None)
 
     def _library_tab(self) -> None:
         st.header("Library")
