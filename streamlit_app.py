@@ -1469,6 +1469,50 @@ class GymApp:
                 "Enable Gamification",
                 value=self.gamification.is_enabled(),
             )
+            ml_global = st.checkbox(
+                "Enable ML Models",
+                value=self.settings_repo.get_bool("ml_all_enabled", True),
+            )
+            ml_train = st.checkbox(
+                "Enable ML Training",
+                value=self.settings_repo.get_bool("ml_training_enabled", True),
+            )
+            ml_pred = st.checkbox(
+                "Enable ML Prediction",
+                value=self.settings_repo.get_bool("ml_prediction_enabled", True),
+            )
+            rpe_train = st.checkbox(
+                "RPE Model Training",
+                value=self.settings_repo.get_bool("ml_rpe_training_enabled", True),
+            )
+            rpe_pred = st.checkbox(
+                "RPE Model Prediction",
+                value=self.settings_repo.get_bool("ml_rpe_prediction_enabled", True),
+            )
+            vol_train = st.checkbox(
+                "Volume Model Training",
+                value=self.settings_repo.get_bool("ml_volume_training_enabled", True),
+            )
+            vol_pred = st.checkbox(
+                "Volume Model Prediction",
+                value=self.settings_repo.get_bool("ml_volume_prediction_enabled", True),
+            )
+            read_train = st.checkbox(
+                "Readiness Model Training",
+                value=self.settings_repo.get_bool("ml_readiness_training_enabled", True),
+            )
+            read_pred = st.checkbox(
+                "Readiness Model Prediction",
+                value=self.settings_repo.get_bool("ml_readiness_prediction_enabled", True),
+            )
+            prog_train = st.checkbox(
+                "Progress Model Training",
+                value=self.settings_repo.get_bool("ml_progress_training_enabled", True),
+            )
+            prog_pred = st.checkbox(
+                "Progress Model Prediction",
+                value=self.settings_repo.get_bool("ml_progress_prediction_enabled", True),
+            )
             st.metric("Total Points", self.gamification.total_points())
             if st.button("Save General Settings"):
                 self.settings_repo.set_float("body_weight", bw)
@@ -1477,6 +1521,17 @@ class GymApp:
                 self.theme = theme_opt
                 self._apply_theme()
                 self.gamification.enable(game_enabled)
+                self.settings_repo.set_bool("ml_all_enabled", ml_global)
+                self.settings_repo.set_bool("ml_training_enabled", ml_train)
+                self.settings_repo.set_bool("ml_prediction_enabled", ml_pred)
+                self.settings_repo.set_bool("ml_rpe_training_enabled", rpe_train)
+                self.settings_repo.set_bool("ml_rpe_prediction_enabled", rpe_pred)
+                self.settings_repo.set_bool("ml_volume_training_enabled", vol_train)
+                self.settings_repo.set_bool("ml_volume_prediction_enabled", vol_pred)
+                self.settings_repo.set_bool("ml_readiness_training_enabled", read_train)
+                self.settings_repo.set_bool("ml_readiness_prediction_enabled", read_pred)
+                self.settings_repo.set_bool("ml_progress_training_enabled", prog_train)
+                self.settings_repo.set_bool("ml_progress_prediction_enabled", prog_pred)
                 st.success("Settings saved")
 
         with eq_tab:

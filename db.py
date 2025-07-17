@@ -380,6 +380,17 @@ class Database:
             "months_active": "1",
             "theme": "light",
             "game_enabled": "0",
+            "ml_all_enabled": "1",
+            "ml_training_enabled": "1",
+            "ml_prediction_enabled": "1",
+            "ml_rpe_training_enabled": "1",
+            "ml_rpe_prediction_enabled": "1",
+            "ml_volume_training_enabled": "1",
+            "ml_volume_prediction_enabled": "1",
+            "ml_readiness_training_enabled": "1",
+            "ml_readiness_prediction_enabled": "1",
+            "ml_progress_training_enabled": "1",
+            "ml_progress_prediction_enabled": "1",
         }
         with self._connection() as conn:
             for key, value in defaults.items():
@@ -941,8 +952,22 @@ class SettingsRepository(BaseRepository):
     def _raw_all_settings(self) -> dict:
         rows = self.fetch_all("SELECT key, value FROM settings ORDER BY key;")
         result: dict[str, float | str] = {}
+        bool_keys = {
+            "game_enabled",
+            "ml_all_enabled",
+            "ml_training_enabled",
+            "ml_prediction_enabled",
+            "ml_rpe_training_enabled",
+            "ml_rpe_prediction_enabled",
+            "ml_volume_training_enabled",
+            "ml_volume_prediction_enabled",
+            "ml_readiness_training_enabled",
+            "ml_readiness_prediction_enabled",
+            "ml_progress_training_enabled",
+            "ml_progress_prediction_enabled",
+        }
         for k, v in rows:
-            if k == "game_enabled":
+            if k in bool_keys:
                 result[k] = v
                 continue
             try:
@@ -956,9 +981,23 @@ class SettingsRepository(BaseRepository):
         if not data:
             return
         with self._connection() as conn:
+            bool_keys = {
+                "game_enabled",
+                "ml_all_enabled",
+                "ml_training_enabled",
+                "ml_prediction_enabled",
+                "ml_rpe_training_enabled",
+                "ml_rpe_prediction_enabled",
+                "ml_volume_training_enabled",
+                "ml_volume_prediction_enabled",
+                "ml_readiness_training_enabled",
+                "ml_readiness_prediction_enabled",
+                "ml_progress_training_enabled",
+                "ml_progress_prediction_enabled",
+            }
             for key, value in data.items():
                 val = str(value)
-                if key == "game_enabled":
+                if key in bool_keys:
                     if val in {"1", "1.0", "true", "True"}:
                         val = "1"
                     else:
@@ -998,14 +1037,35 @@ class SettingsRepository(BaseRepository):
         )
         self._sync_to_yaml()
 
+    def get_bool(self, key: str, default: bool) -> bool:
+        return self.get_text(key, "1" if default else "0") in {"1", "true", "True", "1.0"}
+
+    def set_bool(self, key: str, value: bool) -> None:
+        self.set_text(key, "1" if value else "0")
+
     def all_settings(self) -> dict:
         self._sync_from_yaml()
         data = self._raw_all_settings()
-        if "game_enabled" in data:
-            try:
-                data["game_enabled"] = float(data["game_enabled"])
-            except ValueError:
-                data["game_enabled"] = 0.0
+        bool_keys = {
+            "game_enabled",
+            "ml_all_enabled",
+            "ml_training_enabled",
+            "ml_prediction_enabled",
+            "ml_rpe_training_enabled",
+            "ml_rpe_prediction_enabled",
+            "ml_volume_training_enabled",
+            "ml_volume_prediction_enabled",
+            "ml_readiness_training_enabled",
+            "ml_readiness_prediction_enabled",
+            "ml_progress_training_enabled",
+            "ml_progress_prediction_enabled",
+        }
+        for k in bool_keys:
+            if k in data:
+                try:
+                    data[k] = float(data[k])
+                except ValueError:
+                    data[k] = 0.0
         return data
 
 

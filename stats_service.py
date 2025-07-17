@@ -257,15 +257,28 @@ class StatisticsService:
         if self.progress_model is None:
             return base
 
-        for idx, (r, w) in enumerate(zip(reps, weights)):
-            rm = MathTools.epley_1rm(w, r)
-            self.progress_model.train(float(idx), rm)
+        if (
+            self.settings is not None
+            and self.settings.get_bool("ml_all_enabled", True)
+            and self.settings.get_bool("ml_training_enabled", True)
+            and self.settings.get_bool("ml_progress_training_enabled", True)
+        ):
+            for idx, (r, w) in enumerate(zip(reps, weights)):
+                rm = MathTools.epley_1rm(w, r)
+                self.progress_model.train(float(idx), rm)
 
         last_idx = len(reps) - 1
         result: List[Dict[str, float]] = []
         for item in base:
             t_idx = last_idx + item["week"] * workouts_per_week
-            ml_pred = self.progress_model.predict(float(t_idx))
+            ml_pred = item["est_1rm"]
+            if (
+                self.settings is not None
+                and self.settings.get_bool("ml_all_enabled", True)
+                and self.settings.get_bool("ml_prediction_enabled", True)
+                and self.settings.get_bool("ml_progress_prediction_enabled", True)
+            ):
+                ml_pred = self.progress_model.predict(float(t_idx))
             est = (item["est_1rm"] + ml_pred) / 2
             result.append({"week": item["week"], "est_1rm": round(est, 2)})
 
@@ -798,11 +811,15 @@ class StatisticsService:
         for i in range(days):
             next_arima = ExercisePrescription._arima_forecast(vals, steps=1)
             features = vals[-3:] if len(vals) >= 3 else ([vals[-1]] * 3)
-            ml_pred = (
-                self.volume_model.predict(features, next_arima)
-                if self.volume_model is not None
-                else next_arima
-            )
+            ml_pred = next_arima
+            if (
+                self.volume_model is not None
+                and self.settings is not None
+                and self.settings.get_bool("ml_all_enabled", True)
+                and self.settings.get_bool("ml_prediction_enabled", True)
+                and self.settings.get_bool("ml_volume_prediction_enabled", True)
+            ):
+                ml_pred = self.volume_model.predict(features, next_arima)
             next_val = (next_arima + ml_pred) / 2
             vals.append(next_val)
             day = base + datetime.timedelta(days=ts_last + i + 1)
@@ -869,8 +886,21 @@ class StatisticsService:
             )
             base_ready = MathTools.readiness_score(stress, fatigue / 1000)
             ready_val = base_ready
-            if self.readiness_model is not None:
+            if (
+                self.readiness_model is not None
+                and self.settings is not None
+                and self.settings.get_bool("ml_all_enabled", True)
+                and self.settings.get_bool("ml_prediction_enabled", True)
+                and self.settings.get_bool("ml_readiness_prediction_enabled", True)
+            ):
                 ready_val = self.readiness_model.predict(stress, fatigue, base_ready)
+            if (
+                self.readiness_model is not None
+                and self.settings is not None
+                and self.settings.get_bool("ml_all_enabled", True)
+                and self.settings.get_bool("ml_training_enabled", True)
+                and self.settings.get_bool("ml_readiness_training_enabled", True)
+            ):
                 self.readiness_model.train(stress, fatigue, base_ready)
             result.append({"date": d, "readiness": round(ready_val, 2)})
         return result

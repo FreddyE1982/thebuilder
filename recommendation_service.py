@@ -143,11 +143,14 @@ class RecommendationService:
         if index >= len(prescription["prescription"]):
             raise ValueError("no more sets recommended")
         data = prescription["prescription"][index]
-        if self.ml:
+        if (
+            self.ml
+            and self.settings.get_bool("ml_all_enabled", True)
+            and self.settings.get_bool("ml_prediction_enabled", True)
+            and self.settings.get_bool("ml_rpe_prediction_enabled", True)
+        ):
             ml_rpe = self.ml.predict(name)
-            data["target_rpe"] = float(
-                (data["target_rpe"] + ml_rpe) / 2
-            )
+            data["target_rpe"] = float((data["target_rpe"] + ml_rpe) / 2)
         set_id = self.sets.add(
             exercise_id,
             int(data["reps"]),
