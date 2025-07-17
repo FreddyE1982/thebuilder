@@ -88,6 +88,7 @@ class GymApp:
             self.settings_repo,
             self.gamification,
             self.ml_service,
+            body_weight_repo=self.body_weights_repo,
         )
         self.stats = StatisticsService(
             self.sets,
