@@ -401,3 +401,68 @@ class InjuryRiskModelService:
             x = torch.tensor([list(features)], dtype=torch.float32)
             pred = self.model(x)
             return float(pred.item())
+
+
+class FusionNet(torch.nn.Module):
+    """Multi-modal network for overall adaptation scoring."""
+
+    def __init__(self, input_size: int = 5, hidden_size: int = 16) -> None:
+        super().__init__()
+        self.net = torch.nn.Sequential(
+            torch.nn.Linear(input_size, hidden_size),
+            torch.nn.ReLU(),
+            torch.nn.Linear(hidden_size, 1),
+            torch.nn.Sigmoid(),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:  # pragma: no cover - trivial
+        return self.net(x)
+
+
+class AdaptationModelService:
+    """Predict overall adaptation index from multiple metrics."""
+
+    def __init__(self, repo: MLModelRepository, lr: float = 0.001) -> None:
+        self.repo = repo
+        self.lr = lr
+        self.model, self.opt, self.initialized = self._load()
+
+    def _load(self) -> tuple[FusionNet, torch.optim.Optimizer, bool]:
+        torch.manual_seed(0)
+        model = FusionNet()
+        opt = torch.optim.Adam(model.parameters(), lr=self.lr)
+        blob = self.repo.load("adaptation_model")
+        if blob is not None:
+            buffer = io.BytesIO(blob)
+            state = torch.load(buffer)
+            model.load_state_dict(state["model"])
+            opt.load_state_dict(state["opt"])
+            return model, opt, True
+        return model, opt, False
+
+    def _save(self) -> None:
+        buf = io.BytesIO()
+        torch.save({"model": self.model.state_dict(), "opt": self.opt.state_dict()}, buf)
+        self.repo.save("adaptation_model", buf.getvalue())
+        self.initialized = True
+
+    def train(self, features: Iterable[float], label: float) -> None:
+        self.model.train()
+        self.opt.zero_grad()
+        x = torch.tensor([list(features)], dtype=torch.float32)
+        y = torch.tensor([label], dtype=torch.float32)
+        pred = self.model(x).view(1)
+        loss = torch.nn.functional.mse_loss(pred, y)
+        loss.backward()
+        self.opt.step()
+        self._save()
+
+    def predict(self, features: Iterable[float], fallback: float) -> float:
+        if not self.initialized:
+            return fallback
+        self.model.eval()
+        with torch.no_grad():
+            x = torch.tensor([list(features)], dtype=torch.float32)
+            pred = self.model(x)
+            val = float(pred.item())
+        return (val + fallback) / 2
