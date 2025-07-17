@@ -421,3 +421,4 @@ keep the AGENTS.md updated by adding new sensible rules when they occur to you. 
 - Intensity distribution analytics must bucket sets into 10% 1RM zones and be available via `/stats/intensity_distribution`.
 - Analytics endpoints should return results sorted by their key fields for consistent ordering.
 - Workouts may record an optional location which must be editable via REST endpoints and the Streamlit GUI.
+- Workouts can be labeled with user-defined tags managed via the settings tab. Tags must be assignable through REST endpoints and the Streamlit GUI.
