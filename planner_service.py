@@ -46,6 +46,7 @@ class PlannerService:
             t_type,
             None,
             None,
+            None,
         )
         exercises = self.planned_exercises.fetch_for_workout(plan_id)
         for ex_id, name, equipment in exercises:

@@ -93,7 +93,7 @@ class RecommendationService:
 
         sessions: list[dict] = []
         for wid in session_map:
-            wid_d, date, start, end, t_type = self.workouts.fetch_detail(wid)
+            wid_d, date, start, end, t_type, *_ = self.workouts.fetch_detail(wid)
             sessions.append(
                 {
                     "id": wid_d,

@@ -382,6 +382,7 @@ class GymAPI:
             training_type: str = "strength",
             notes: str | None = None,
             location: str | None = None,
+            rating: int | None = None,
         ):
             try:
                 workout_date = (
@@ -400,6 +401,7 @@ class GymAPI:
                 training_type,
                 notes,
                 location,
+                rating,
             )
             return {"id": workout_id}
 
@@ -416,7 +418,7 @@ class GymAPI:
         ):
             workouts = self.workouts.fetch_all_workouts(start_date, end_date)
             result = []
-            for wid, date, _s, _e, t_type, _notes in workouts:
+            for wid, date, _s, _e, t_type, _notes, _rating in workouts:
                 if training_type and t_type != training_type:
                     continue
                 summary = self.sets.workout_summary(wid)
@@ -442,6 +444,7 @@ class GymAPI:
                 training_type,
                 notes,
                 location,
+                rating,
             ) = self.workouts.fetch_detail(workout_id)
             return {
                 "id": wid,
@@ -451,6 +454,7 @@ class GymAPI:
                 "training_type": training_type,
                 "notes": notes,
                 "location": location,
+                "rating": rating,
             }
 
         @self.app.get("/workouts/{workout_id}/export_csv")
@@ -477,6 +481,11 @@ class GymAPI:
         @self.app.put("/workouts/{workout_id}/location")
         def update_workout_location(workout_id: int, location: str = None):
             self.workouts.set_location(workout_id, location)
+            return {"status": "updated"}
+
+        @self.app.put("/workouts/{workout_id}/rating")
+        def update_workout_rating(workout_id: int, rating: int | None = None):
+            self.workouts.set_rating(workout_id, rating)
             return {"status": "updated"}
 
         @self.app.post("/workouts/{workout_id}/start")
@@ -519,7 +528,9 @@ class GymAPI:
             return {"status": "finished", "timestamp": timestamp}
 
         @self.app.post("/workouts/{workout_id}/exercises")
-        def add_exercise(workout_id: int, name: str, equipment: str, note: str | None = None):
+        def add_exercise(
+            workout_id: int, name: str, equipment: str, note: str | None = None
+        ):
             if not equipment:
                 raise HTTPException(status_code=400, detail="equipment required")
             ex_id = self.exercises.add(workout_id, name, equipment, note)

@@ -948,6 +948,27 @@ class APITestCase(unittest.TestCase):
         resp = self.client.get(f"/workouts/{wid}")
         self.assertEqual(resp.json()["location"], "Gym")
 
+    def test_workout_rating(self) -> None:
+        resp = self.client.post(
+            "/workouts",
+            params={"training_type": "strength", "rating": 4},
+        )
+        self.assertEqual(resp.status_code, 200)
+        wid = resp.json()["id"]
+
+        resp = self.client.get(f"/workouts/{wid}")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["rating"], 4)
+
+        resp = self.client.put(
+            f"/workouts/{wid}/rating",
+            params={"rating": 5},
+        )
+        self.assertEqual(resp.status_code, 200)
+
+        resp = self.client.get(f"/workouts/{wid}")
+        self.assertEqual(resp.json()["rating"], 5)
+
     def test_set_notes(self) -> None:
         self.client.post("/workouts")
         self.client.post(
@@ -1930,7 +1951,11 @@ class APITestCase(unittest.TestCase):
         self.client.post("/workouts")
         resp = self.client.post(
             "/workouts/1/exercises",
-            params={"name": "Bench Press", "equipment": "Olympic Barbell", "note": "Focus"},
+            params={
+                "name": "Bench Press",
+                "equipment": "Olympic Barbell",
+                "note": "Focus",
+            },
         )
         self.assertEqual(resp.status_code, 200)
         ex_id = resp.json()["id"]
