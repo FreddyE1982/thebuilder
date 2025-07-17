@@ -364,14 +364,24 @@ class GymAPI:
         def finish_workout(workout_id: int):
             timestamp = datetime.datetime.now().isoformat(timespec="seconds")
             self.workouts.set_end_time(workout_id, timestamp)
-            if self.statistics.volume_model is not None:
+            if (
+                self.statistics.volume_model is not None
+                and self.settings.get_bool("ml_all_enabled", True)
+                and self.settings.get_bool("ml_training_enabled", True)
+                and self.settings.get_bool("ml_volume_training_enabled", True)
+            ):
                 daily = self.statistics.daily_volume()
                 vols = [d["volume"] for d in daily]
                 if len(vols) >= 4:
                     feats = vols[-4:-1]
                     target = vols[-1]
                     self.statistics.volume_model.train(feats, target)
-            if self.statistics.readiness_model is not None:
+            if (
+                self.statistics.readiness_model is not None
+                and self.settings.get_bool("ml_all_enabled", True)
+                and self.settings.get_bool("ml_training_enabled", True)
+                and self.settings.get_bool("ml_readiness_training_enabled", True)
+            ):
                 stress_data = self.statistics.training_stress(
                     start_date=None, end_date=None
                 )
@@ -506,7 +516,12 @@ class GymAPI:
         def add_set(exercise_id: int, reps: int, weight: float, rpe: int):
             set_id = self.sets.add(exercise_id, reps, weight, rpe)
             _, name, _ = self.exercises.fetch_detail(exercise_id)
-            self.ml_service.train(name, rpe)
+            if (
+                self.settings.get_bool("ml_all_enabled", True)
+                and self.settings.get_bool("ml_training_enabled", True)
+                and self.settings.get_bool("ml_rpe_training_enabled", True)
+            ):
+                self.ml_service.train(name, rpe)
             try:
                 self.gamification.record_set(exercise_id, reps, weight, rpe)
             except Exception:
@@ -518,7 +533,12 @@ class GymAPI:
             self.sets.update(set_id, reps, weight, rpe)
             ex_id = self.sets.fetch_exercise_id(set_id)
             _, name, _ = self.exercises.fetch_detail(ex_id)
-            self.ml_service.train(name, rpe)
+            if (
+                self.settings.get_bool("ml_all_enabled", True)
+                and self.settings.get_bool("ml_training_enabled", True)
+                and self.settings.get_bool("ml_rpe_training_enabled", True)
+            ):
+                self.ml_service.train(name, rpe)
             return {"status": "updated"}
 
         @self.app.delete("/sets/{set_id}")
@@ -946,6 +966,17 @@ class GymAPI:
             body_weight: float = None,
             months_active: float = None,
             theme: str = None,
+            ml_all_enabled: bool = None,
+            ml_training_enabled: bool = None,
+            ml_prediction_enabled: bool = None,
+            ml_rpe_training_enabled: bool = None,
+            ml_rpe_prediction_enabled: bool = None,
+            ml_volume_training_enabled: bool = None,
+            ml_volume_prediction_enabled: bool = None,
+            ml_readiness_training_enabled: bool = None,
+            ml_readiness_prediction_enabled: bool = None,
+            ml_progress_training_enabled: bool = None,
+            ml_progress_prediction_enabled: bool = None,
         ):
             if body_weight is not None:
                 self.settings.set_float("body_weight", body_weight)
@@ -953,6 +984,28 @@ class GymAPI:
                 self.settings.set_float("months_active", months_active)
             if theme is not None:
                 self.settings.set_text("theme", theme)
+            if ml_all_enabled is not None:
+                self.settings.set_bool("ml_all_enabled", ml_all_enabled)
+            if ml_training_enabled is not None:
+                self.settings.set_bool("ml_training_enabled", ml_training_enabled)
+            if ml_prediction_enabled is not None:
+                self.settings.set_bool("ml_prediction_enabled", ml_prediction_enabled)
+            if ml_rpe_training_enabled is not None:
+                self.settings.set_bool("ml_rpe_training_enabled", ml_rpe_training_enabled)
+            if ml_rpe_prediction_enabled is not None:
+                self.settings.set_bool("ml_rpe_prediction_enabled", ml_rpe_prediction_enabled)
+            if ml_volume_training_enabled is not None:
+                self.settings.set_bool("ml_volume_training_enabled", ml_volume_training_enabled)
+            if ml_volume_prediction_enabled is not None:
+                self.settings.set_bool("ml_volume_prediction_enabled", ml_volume_prediction_enabled)
+            if ml_readiness_training_enabled is not None:
+                self.settings.set_bool("ml_readiness_training_enabled", ml_readiness_training_enabled)
+            if ml_readiness_prediction_enabled is not None:
+                self.settings.set_bool("ml_readiness_prediction_enabled", ml_readiness_prediction_enabled)
+            if ml_progress_training_enabled is not None:
+                self.settings.set_bool("ml_progress_training_enabled", ml_progress_training_enabled)
+            if ml_progress_prediction_enabled is not None:
+                self.settings.set_bool("ml_progress_prediction_enabled", ml_progress_prediction_enabled)
             return {"status": "updated"}
 
         @self.app.post("/settings/delete_all")

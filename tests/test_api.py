@@ -149,19 +149,16 @@ class APITestCase(unittest.TestCase):
     def test_general_settings(self) -> None:
         resp = self.client.get("/settings/general")
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(
-            resp.json(),
-            {
-                "body_weight": 80.0,
-                "months_active": 1.0,
-                "theme": "light",
-                "game_enabled": 0.0,
-            },
-        )
+        data = resp.json()
+        self.assertEqual(data["body_weight"], 80.0)
+        self.assertEqual(data["months_active"], 1.0)
+        self.assertEqual(data["theme"], "light")
+        self.assertEqual(data["game_enabled"], 0.0)
+        self.assertIn("ml_all_enabled", data)
 
         resp = self.client.post(
             "/settings/general",
-            params={"body_weight": 85.5, "months_active": 6.0, "theme": "dark"},
+            params={"body_weight": 85.5, "months_active": 6.0, "theme": "dark", "ml_all_enabled": False},
         )
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json(), {"status": "updated"})
@@ -177,21 +174,38 @@ class APITestCase(unittest.TestCase):
             "months_active": 12.0,
             "theme": "light",
             "game_enabled": "0",
+            "ml_all_enabled": "0",
         }
         with open(self.yaml_path, "w", encoding="utf-8") as f:
             yaml.safe_dump(new_data, f)
 
         resp = self.client.get("/settings/general")
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(
-            resp.json(),
-            {
-                "body_weight": 90.0,
-                "months_active": 12.0,
-                "theme": "light",
-                "game_enabled": 0.0,
-            },
+        data = resp.json()
+        self.assertEqual(data["body_weight"], 90.0)
+        self.assertEqual(data["months_active"], 12.0)
+        self.assertEqual(data["theme"], "light")
+        self.assertEqual(data["game_enabled"], 0.0)
+        self.assertEqual(float(data["ml_all_enabled"]), 0.0)
+
+    def test_ml_toggle(self) -> None:
+        resp = self.client.post("/settings/general", params={"ml_all_enabled": False})
+        self.assertEqual(resp.status_code, 200)
+        self.client.post("/workouts")
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
         )
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8},
+        )
+        conn = sqlite3.connect(self.db_path)
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM ml_models;")
+        count = cur.fetchone()[0]
+        conn.close()
+        self.assertEqual(count, 0)
 
     def test_plan_workflow(self) -> None:
         plan_date = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
