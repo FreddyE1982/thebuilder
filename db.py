@@ -295,6 +295,23 @@ class Database:
                 );""",
             ["name"],
         ),
+        "tags": (
+            """CREATE TABLE tags (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL UNIQUE
+                );""",
+            ["id", "name"],
+        ),
+        "workout_tags": (
+            """CREATE TABLE workout_tags (
+                    workout_id INTEGER NOT NULL,
+                    tag_id INTEGER NOT NULL,
+                    PRIMARY KEY (workout_id, tag_id),
+                    FOREIGN KEY(workout_id) REFERENCES workouts(id) ON DELETE CASCADE,
+                    FOREIGN KEY(tag_id) REFERENCES tags(id) ON DELETE CASCADE
+                );""",
+            ["workout_id", "tag_id"],
+        ),
     }
 
     def __init__(self, db_path: str = "workout.db") -> None:
@@ -2106,4 +2123,56 @@ class TemplateSetRepository(BaseRepository):
             "SELECT id, reps, weight, rpe FROM template_sets WHERE template_exercise_id = ?;",
             (exercise_id,),
         )
+
+
+class TagRepository(BaseRepository):
+    """Repository for workout tags."""
+
+    def add(self, name: str) -> int:
+        return self.execute("INSERT INTO tags (name) VALUES (?);", (name,))
+
+    def update(self, tag_id: int, name: str) -> None:
+        rows = super().fetch_all("SELECT id FROM tags WHERE id = ?;", (tag_id,))
+        if not rows:
+            raise ValueError("tag not found")
+        self.execute("UPDATE tags SET name = ? WHERE id = ?;", (name, tag_id))
+
+    def delete(self, tag_id: int) -> None:
+        rows = super().fetch_all("SELECT id FROM tags WHERE id = ?;", (tag_id,))
+        if not rows:
+            raise ValueError("tag not found")
+        self.execute("DELETE FROM tags WHERE id = ?;", (tag_id,))
+        self.execute("DELETE FROM workout_tags WHERE tag_id = ?;", (tag_id,))
+
+    def fetch_all(self) -> list[tuple[int, str]]:
+        rows = super().fetch_all("SELECT id, name FROM tags ORDER BY name;")
+        return [(r[0], r[1]) for r in rows]
+
+    def assign(self, workout_id: int, tag_id: int) -> None:
+        self.execute(
+            "INSERT OR IGNORE INTO workout_tags (workout_id, tag_id) VALUES (?, ?);",
+            (workout_id, tag_id),
+        )
+
+    def remove(self, workout_id: int, tag_id: int) -> None:
+        self.execute(
+            "DELETE FROM workout_tags WHERE workout_id = ? AND tag_id = ?;",
+            (workout_id, tag_id),
+        )
+
+    def fetch_for_workout(self, workout_id: int) -> list[tuple[int, str]]:
+        rows = super().fetch_all(
+            "SELECT t.id, t.name FROM tags t JOIN workout_tags w ON t.id = w.tag_id WHERE w.workout_id = ? ORDER BY t.name;",
+            (workout_id,),
+        )
+        return [(r[0], r[1]) for r in rows]
+
+    def set_tags(self, workout_id: int, tag_ids: list[int]) -> None:
+        with self._connection() as conn:
+            conn.execute("DELETE FROM workout_tags WHERE workout_id = ?;", (workout_id,))
+            for tid in tag_ids:
+                conn.execute(
+                    "INSERT INTO workout_tags (workout_id, tag_id) VALUES (?, ?);",
+                    (workout_id, tid),
+                )
 

@@ -24,6 +24,7 @@ from db import (
     BodyWeightRepository,
     WellnessRepository,
     FavoriteExerciseRepository,
+    TagRepository,
 )
 from planner_service import PlannerService
 from recommendation_service import RecommendationService
@@ -61,6 +62,7 @@ class GymApp:
         self.muscles_repo = MuscleRepository()
         self.exercise_names_repo = ExerciseNameRepository()
         self.favorites_repo = FavoriteExerciseRepository()
+        self.tags_repo = TagRepository()
         self.pyramid_tests = PyramidTestRepository()
         self.pyramid_entries = PyramidEntryRepository()
         self.game_repo = GamificationRepository()
@@ -456,6 +458,18 @@ class GymApp:
                     )
                     if st.button("Save Location", key=f"save_location_{selected}"):
                         self.workouts.set_location(int(selected), loc_edit or None)
+                    tags_all = self.tags_repo.fetch_all()
+                    name_map = {n: tid for tid, n in tags_all}
+                    current_tags = [n for _, n in self.tags_repo.fetch_for_workout(int(selected))]
+                    tag_sel = st.multiselect(
+                        "Tags",
+                        [n for _, n in tags_all],
+                        current_tags,
+                        key=f"tags_sel_{selected}",
+                    )
+                    if st.button("Save Tags", key=f"save_tags_{selected}"):
+                        ids = [name_map[n] for n in tag_sel]
+                        self.tags_repo.set_tags(int(selected), ids)
                     csv_data = self.sets.export_workout_csv(int(selected))
                     st.download_button(
                         label="Export CSV",
@@ -1636,7 +1650,16 @@ class GymApp:
                 if st.button("Cancel"):
                     st.session_state.delete_target = None
 
-        gen_tab, eq_tab, mus_tab, ex_tab, cust_tab, bw_tab, well_tab = st.tabs(
+        (
+            gen_tab,
+            eq_tab,
+            mus_tab,
+            ex_tab,
+            cust_tab,
+            bw_tab,
+            well_tab,
+            tag_tab,
+        ) = st.tabs(
             [
                 "General",
                 "Equipment",
@@ -1645,6 +1668,7 @@ class GymApp:
                 "Custom Exercises",
                 "Body Weight Logs",
                 "Wellness Logs",
+                "Workout Tags",
             ]
         )
 
@@ -2044,6 +2068,39 @@ class GymApp:
                             except ValueError as e:
                                 st.warning(str(e))
 
+        with tag_tab:
+            st.header("Workout Tags")
+            with st.expander("Add Tag"):
+                tag_name = st.text_input("Name", key="new_tag")
+                if st.button("Add Tag", key="add_tag"):
+                    if tag_name:
+                        try:
+                            self.tags_repo.add(tag_name)
+                            st.success("Added")
+                        except Exception as e:
+                            st.warning(str(e))
+                    else:
+                        st.warning("Name required")
+
+            with st.expander("Existing Tags", expanded=True):
+                tags = self.tags_repo.fetch_all()
+                for tid, name in tags:
+                    exp = st.expander(name)
+                    with exp:
+                        name_edit = st.text_input("Name", value=name, key=f"tag_name_{tid}")
+                        cols = st.columns(2)
+                        if cols[0].button("Update", key=f"tag_upd_{tid}"):
+                            try:
+                                self.tags_repo.update(tid, name_edit)
+                                st.success("Updated")
+                            except ValueError as e:
+                                st.warning(str(e))
+                        if cols[1].button("Delete", key=f"tag_del_{tid}"):
+                            try:
+                                self.tags_repo.delete(tid)
+                                st.success("Deleted")
+                            except ValueError as e:
+                                st.warning(str(e))
 
 if __name__ == "__main__":
     GymApp().run()

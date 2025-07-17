@@ -1965,6 +1965,32 @@ class APITestCase(unittest.TestCase):
         resp = self.client.get("/favorites/exercises")
         self.assertNotIn("Bench Press", resp.json())
 
+    def test_workout_tags(self) -> None:
+        t_resp = self.client.post("/tags", params={"name": "Upper"})
+        self.assertEqual(t_resp.status_code, 200)
+        tid = t_resp.json()["id"]
+
+        self.client.post("/workouts")
+        add_resp = self.client.post("/workouts/1/tags", params={"tag_id": tid})
+        self.assertEqual(add_resp.status_code, 200)
+
+        list_resp = self.client.get("/workouts/1/tags")
+        self.assertEqual(list_resp.status_code, 200)
+        self.assertEqual(list_resp.json(), [{"id": tid, "name": "Upper"}])
+
+        upd = self.client.put(f"/tags/{tid}", params={"name": "UpperA"})
+        self.assertEqual(upd.status_code, 200)
+
+        tags = self.client.get("/tags").json()
+        self.assertEqual(tags[0]["name"], "UpperA")
+
+        del_resp = self.client.delete(f"/workouts/1/tags/{tid}")
+        self.assertEqual(del_resp.status_code, 200)
+        self.assertEqual(self.client.get("/workouts/1/tags").json(), [])
+
+        self.client.delete(f"/tags/{tid}")
+        self.assertEqual(self.client.get("/tags").json(), [])
+
     def test_template_workflow(self) -> None:
         resp = self.client.post(
             "/templates",

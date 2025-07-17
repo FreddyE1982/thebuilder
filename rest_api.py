@@ -23,6 +23,7 @@ from db import (
     BodyWeightRepository,
     WellnessRepository,
     FavoriteExerciseRepository,
+    TagRepository,
 )
 from planner_service import PlannerService
 from recommendation_service import RecommendationService
@@ -60,6 +61,7 @@ class GymAPI:
         self.muscles = MuscleRepository(db_path)
         self.exercise_names = ExerciseNameRepository(db_path)
         self.favorites = FavoriteExerciseRepository(db_path)
+        self.tags = TagRepository(db_path)
         self.settings = SettingsRepository(db_path, yaml_path)
         self.pyramid_tests = PyramidTestRepository(db_path)
         self.pyramid_entries = PyramidEntryRepository(db_path)
@@ -195,6 +197,47 @@ class GymAPI:
         @self.app.delete("/favorites/exercises/{name}")
         def delete_favorite_exercise(name: str):
             self.favorites.remove(name)
+            return {"status": "deleted"}
+
+        @self.app.get("/tags")
+        def list_tags():
+            rows = self.tags.fetch_all()
+            return [{"id": tid, "name": name} for tid, name in rows]
+
+        @self.app.post("/tags")
+        def add_tag(name: str):
+            tid = self.tags.add(name)
+            return {"id": tid}
+
+        @self.app.put("/tags/{tag_id}")
+        def update_tag(tag_id: int, name: str):
+            try:
+                self.tags.update(tag_id, name)
+                return {"status": "updated"}
+            except ValueError as e:
+                raise HTTPException(status_code=404, detail=str(e))
+
+        @self.app.delete("/tags/{tag_id}")
+        def delete_tag(tag_id: int):
+            try:
+                self.tags.delete(tag_id)
+                return {"status": "deleted"}
+            except ValueError as e:
+                raise HTTPException(status_code=404, detail=str(e))
+
+        @self.app.get("/workouts/{workout_id}/tags")
+        def list_workout_tags(workout_id: int):
+            rows = self.tags.fetch_for_workout(workout_id)
+            return [{"id": tid, "name": name} for tid, name in rows]
+
+        @self.app.post("/workouts/{workout_id}/tags")
+        def add_workout_tag(workout_id: int, tag_id: int):
+            self.tags.assign(workout_id, tag_id)
+            return {"status": "added"}
+
+        @self.app.delete("/workouts/{workout_id}/tags/{tag_id}")
+        def remove_workout_tag(workout_id: int, tag_id: int):
+            self.tags.remove(workout_id, tag_id)
             return {"status": "deleted"}
 
         @self.app.get("/exercise_catalog/muscle_groups")
