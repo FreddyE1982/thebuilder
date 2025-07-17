@@ -4,6 +4,7 @@ import datetime
 import unittest
 import sqlite3
 from fastapi.testclient import TestClient
+import yaml
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from rest_api import GymAPI
@@ -13,14 +14,19 @@ from tools import MathTools, ExercisePrescription
 class APITestCase(unittest.TestCase):
     def setUp(self) -> None:
         self.db_path = "test_workout.db"
+        self.yaml_path = "test_settings.yaml"
         if os.path.exists(self.db_path):
             os.remove(self.db_path)
-        self.api = GymAPI(db_path=self.db_path)
+        if os.path.exists(self.yaml_path):
+            os.remove(self.yaml_path)
+        self.api = GymAPI(db_path=self.db_path, yaml_path=self.yaml_path)
         self.client = TestClient(self.api.app)
 
     def tearDown(self) -> None:
         if os.path.exists(self.db_path):
             os.remove(self.db_path)
+        if os.path.exists(self.yaml_path):
+            os.remove(self.yaml_path)
 
     def test_full_workflow(self) -> None:
         today = datetime.date.today().isoformat()
@@ -160,14 +166,29 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json(), {"status": "updated"})
 
+        with open(self.yaml_path, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+        self.assertEqual(float(data["body_weight"]), 85.5)
+        self.assertEqual(float(data["months_active"]), 6.0)
+        self.assertEqual(data["theme"], "dark")
+
+        new_data = {
+            "body_weight": 90.0,
+            "months_active": 12.0,
+            "theme": "light",
+            "game_enabled": "0",
+        }
+        with open(self.yaml_path, "w", encoding="utf-8") as f:
+            yaml.safe_dump(new_data, f)
+
         resp = self.client.get("/settings/general")
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(
             resp.json(),
             {
-                "body_weight": 85.5,
-                "months_active": 6.0,
-                "theme": "dark",
+                "body_weight": 90.0,
+                "months_active": 12.0,
+                "theme": "light",
                 "game_enabled": 0.0,
             },
         )

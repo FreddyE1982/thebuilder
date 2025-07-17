@@ -33,7 +33,7 @@ from tools import ExercisePrescription, MathTools
 class GymAPI:
     """Provides REST endpoints for workout logging."""
 
-    def __init__(self, db_path: str = "workout.db") -> None:
+    def __init__(self, db_path: str = "workout.db", yaml_path: str = "settings.yaml") -> None:
         self.workouts = WorkoutRepository(db_path)
         self.exercises = ExerciseRepository(db_path)
         self.sets = SetRepository(db_path)
@@ -44,7 +44,7 @@ class GymAPI:
         self.exercise_catalog = ExerciseCatalogRepository(db_path)
         self.muscles = MuscleRepository(db_path)
         self.exercise_names = ExerciseNameRepository(db_path)
-        self.settings = SettingsRepository(db_path)
+        self.settings = SettingsRepository(db_path, yaml_path)
         self.pyramid_tests = PyramidTestRepository(db_path)
         self.pyramid_entries = PyramidEntryRepository(db_path)
         self.game_repo = GamificationRepository(db_path)

@@ -5,6 +5,8 @@ import io
 from contextlib import contextmanager
 from typing import List, Tuple, Optional, Iterable, Set
 
+from config import YamlConfig
+
 
 class Database:
     """Provides SQLite connection management and schema initialization."""
@@ -928,9 +930,50 @@ class ExerciseNameRepository(BaseRepository):
 
 
 class SettingsRepository(BaseRepository):
-    """Repository for general application settings."""
+    """Repository for general application settings synchronized with YAML."""
+
+    def __init__(self, db_path: str = "workout.db", yaml_path: str = "settings.yaml") -> None:
+        super().__init__(db_path)
+        self._yaml = YamlConfig(yaml_path)
+        self._sync_from_yaml()
+        self._sync_to_yaml()
+
+    def _raw_all_settings(self) -> dict:
+        rows = self.fetch_all("SELECT key, value FROM settings ORDER BY key;")
+        result: dict[str, float | str] = {}
+        for k, v in rows:
+            if k == "game_enabled":
+                result[k] = v
+                continue
+            try:
+                result[k] = float(v)
+            except ValueError:
+                result[k] = v
+        return result
+
+    def _sync_from_yaml(self) -> None:
+        data = self._yaml.load()
+        if not data:
+            return
+        with self._connection() as conn:
+            for key, value in data.items():
+                val = str(value)
+                if key == "game_enabled":
+                    if val in {"1", "1.0", "true", "True"}:
+                        val = "1"
+                    else:
+                        val = "0"
+                conn.execute(
+                    "INSERT INTO settings (key, value) VALUES (?, ?) "
+                    "ON CONFLICT(key) DO UPDATE SET value=excluded.value;",
+                    (key, val),
+                )
+
+    def _sync_to_yaml(self) -> None:
+        self._yaml.save(self._raw_all_settings())
 
     def get_float(self, key: str, default: float) -> float:
+        self._sync_from_yaml()
         rows = self.fetch_all("SELECT value FROM settings WHERE key = ?;", (key,))
         return float(rows[0][0]) if rows else default
 
@@ -940,8 +983,10 @@ class SettingsRepository(BaseRepository):
             "ON CONFLICT(key) DO UPDATE SET value=excluded.value;",
             (key, str(value)),
         )
+        self._sync_to_yaml()
 
     def get_text(self, key: str, default: str) -> str:
+        self._sync_from_yaml()
         rows = self.fetch_all("SELECT value FROM settings WHERE key = ?;", (key,))
         return rows[0][0] if rows else default
 
@@ -951,16 +996,17 @@ class SettingsRepository(BaseRepository):
             "ON CONFLICT(key) DO UPDATE SET value=excluded.value;",
             (key, value),
         )
+        self._sync_to_yaml()
 
     def all_settings(self) -> dict:
-        rows = self.fetch_all("SELECT key, value FROM settings ORDER BY key;")
-        result: dict[str, float | str] = {}
-        for k, v in rows:
+        self._sync_from_yaml()
+        data = self._raw_all_settings()
+        if "game_enabled" in data:
             try:
-                result[k] = float(v)
+                data["game_enabled"] = float(data["game_enabled"])
             except ValueError:
-                result[k] = v
-        return result
+                data["game_enabled"] = 0.0
+        return data
 
 
 class EquipmentRepository(BaseRepository):

@@ -34,8 +34,8 @@ from tools import MathTools
 class GymApp:
     """Streamlit application for workout logging."""
 
-    def __init__(self) -> None:
-        self.settings_repo = SettingsRepository()
+    def __init__(self, yaml_path: str = "settings.yaml") -> None:
+        self.settings_repo = SettingsRepository(yaml_path=yaml_path)
         self.theme = self.settings_repo.get_text("theme", "light")
         self._configure_page()
         self._inject_responsive_css()
