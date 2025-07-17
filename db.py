@@ -391,6 +391,10 @@ class Database:
             "ml_readiness_prediction_enabled": "1",
             "ml_progress_training_enabled": "1",
             "ml_progress_prediction_enabled": "1",
+            "ml_goal_training_enabled": "1",
+            "ml_goal_prediction_enabled": "1",
+            "ml_injury_training_enabled": "1",
+            "ml_injury_prediction_enabled": "1",
         }
         with self._connection() as conn:
             for key, value in defaults.items():
@@ -965,6 +969,10 @@ class SettingsRepository(BaseRepository):
             "ml_readiness_prediction_enabled",
             "ml_progress_training_enabled",
             "ml_progress_prediction_enabled",
+            "ml_goal_training_enabled",
+            "ml_goal_prediction_enabled",
+            "ml_injury_training_enabled",
+            "ml_injury_prediction_enabled",
         }
         for k, v in rows:
             if k in bool_keys:
@@ -994,6 +1002,10 @@ class SettingsRepository(BaseRepository):
                 "ml_readiness_prediction_enabled",
                 "ml_progress_training_enabled",
                 "ml_progress_prediction_enabled",
+                "ml_goal_training_enabled",
+                "ml_goal_prediction_enabled",
+                "ml_injury_training_enabled",
+                "ml_injury_prediction_enabled",
             }
             for key, value in data.items():
                 val = str(value)
@@ -1059,6 +1071,10 @@ class SettingsRepository(BaseRepository):
             "ml_readiness_prediction_enabled",
             "ml_progress_training_enabled",
             "ml_progress_prediction_enabled",
+            "ml_goal_training_enabled",
+            "ml_goal_prediction_enabled",
+            "ml_injury_training_enabled",
+            "ml_injury_prediction_enabled",
         }
         for k in bool_keys:
             if k in data:

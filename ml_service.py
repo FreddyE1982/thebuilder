@@ -186,32 +186,190 @@ class ReadinessModelService:
         return (val + fallback) / 2
 
 
-class ProgressPredictor(torch.nn.Module):
-    """Linear model for estimating 1RM progression over time."""
+class LSTMProgressPredictor(torch.nn.Module):
+    """LSTM based model for estimating 1RM progression over time."""
 
-    def __init__(self) -> None:
+    def __init__(self, input_size: int = 2, hidden_size: int = 16) -> None:
         super().__init__()
-        self.linear = torch.nn.Linear(1, 1)
+        self.lstm = torch.nn.LSTM(input_size, hidden_size, batch_first=True)
+        self.linear = torch.nn.Linear(hidden_size, 1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:  # pragma: no cover - trivial
-        return self.linear(x)
+        out, _ = self.lstm(x)
+        out = out[:, -1, :]
+        return self.linear(out)
 
 
 class ProgressModelService:
-    """Handle online training and prediction of 1RM values."""
+    """Handle online training and prediction of 1RM values using an LSTM."""
 
     SCALE: float = 200.0
 
     def __init__(self, repo: MLModelRepository, lr: float = 0.001) -> None:
         self.repo = repo
         self.lr = lr
-        self.model, self.opt, self.initialized = self._load()
+        self.model, self.opt, self.initialized, self.history = self._load()
 
-    def _load(self) -> tuple[ProgressPredictor, torch.optim.Optimizer, bool]:
+    def _load(self) -> tuple[LSTMProgressPredictor, torch.optim.Optimizer, bool, list]:
         torch.manual_seed(0)
-        model = ProgressPredictor()
+        model = LSTMProgressPredictor()
         opt = torch.optim.SGD(model.parameters(), lr=self.lr)
         blob = self.repo.load("progress_model")
+        history: list = []
+        if blob is not None:
+            buffer = io.BytesIO(blob)
+            state = torch.load(buffer)
+            model.load_state_dict(state["model"])
+            opt.load_state_dict(state["opt"])
+            history = state.get("history", [])
+            return model, opt, True, history
+        return model, opt, False, history
+
+    def _save(self) -> None:
+        buf = io.BytesIO()
+        torch.save(
+            {"model": self.model.state_dict(), "opt": self.opt.state_dict(), "history": self.history},
+            buf,
+        )
+        self.repo.save("progress_model", buf.getvalue())
+        self.initialized = True
+
+    def train(self, time_index: float, one_rm: float, feature: float = 0.0) -> None:
+        if not self.history:
+            self.history.append([time_index / 100.0, feature])
+            return
+        self.model.train()
+        self.opt.zero_grad()
+        x = torch.tensor([self.history], dtype=torch.float32)
+        y = torch.tensor([one_rm / self.SCALE], dtype=torch.float32)
+        pred = self.model(x).view(1)
+        loss = torch.nn.functional.mse_loss(pred, y)
+        loss.backward()
+        self.opt.step()
+        self.history.append([time_index / 100.0, feature])
+        self._save()
+
+    def predict(self, time_index: float, feature: float = 0.0) -> float:
+        if not self.initialized and not self.history:
+            return 0.0
+        self.model.eval()
+        seq = self.history + [[time_index / 100.0, feature]]
+        with torch.no_grad():
+            x = torch.tensor([seq], dtype=torch.float32)
+            pred = self.model(x)
+            return float(pred.item() * self.SCALE)
+
+
+class RLGoalNet(torch.nn.Module):
+    """Simple DQN for adaptive goal setting."""
+
+    def __init__(self, input_size: int = 3, hidden_size: int = 16, actions: int = 3) -> None:
+        super().__init__()
+        self.net = torch.nn.Sequential(
+            torch.nn.Linear(input_size, hidden_size),
+            torch.nn.ReLU(),
+            torch.nn.Linear(hidden_size, actions),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:  # pragma: no cover - trivial
+        return self.net(x)
+
+
+class RLGoalModelService:
+    """Deep Q-learning model for dynamic exercise goals."""
+
+    ACTIONS = [-2.5, 0.0, 2.5]
+
+    def __init__(self, repo: MLModelRepository, lr: float = 0.001, gamma: float = 0.9) -> None:
+        self.repo = repo
+        self.lr = lr
+        self.gamma = gamma
+        self.model, self.opt, self.initialized, self.history = self._load()
+        self.pending: dict[int, tuple[list[float], int]] = {}
+
+    def _load(self) -> tuple[RLGoalNet, torch.optim.Optimizer, bool, list]:
+        torch.manual_seed(0)
+        model = RLGoalNet()
+        opt = torch.optim.Adam(model.parameters(), lr=self.lr)
+        blob = self.repo.load("rl_goal_model")
+        history: list = []
+        if blob is not None:
+            buffer = io.BytesIO(blob)
+            state = torch.load(buffer)
+            model.load_state_dict(state["model"])
+            opt.load_state_dict(state["opt"])
+            history = state.get("history", [])
+            return model, opt, True, history
+        return model, opt, False, history
+
+    def _save(self) -> None:
+        buf = io.BytesIO()
+        torch.save(
+            {"model": self.model.state_dict(), "opt": self.opt.state_dict(), "history": self.history},
+            buf,
+        )
+        self.repo.save("rl_goal_model", buf.getvalue())
+        self.initialized = True
+
+    def predict(self, state: Iterable[float]) -> int:
+        self.model.eval()
+        with torch.no_grad():
+            x = torch.tensor(list(state), dtype=torch.float32)
+            q = self.model(x)
+            return int(torch.argmax(q).item())
+
+    def train_step(self, state: Iterable[float], action: int, reward: float, next_state: Iterable[float]) -> None:
+        self.model.train()
+        self.opt.zero_grad()
+        s = torch.tensor(list(state), dtype=torch.float32)
+        ns = torch.tensor(list(next_state), dtype=torch.float32)
+        q = self.model(s)[action]
+        with torch.no_grad():
+            next_q = torch.max(self.model(ns))
+        target = reward + self.gamma * next_q
+        loss = torch.nn.functional.mse_loss(q, target)
+        loss.backward()
+        self.opt.step()
+        self._save()
+
+    def register(self, set_id: int, state: list[float], action: int) -> None:
+        self.pending[set_id] = (state, action)
+
+    def complete(self, set_id: int, new_state: list[float], reward: float) -> None:
+        if set_id in self.pending:
+            state, action = self.pending.pop(set_id)
+            self.train_step(state, action, reward, new_state)
+
+
+class InjuryRiskPredictor(torch.nn.Module):
+    """Feed-forward network for injury risk estimation."""
+
+    def __init__(self, input_size: int = 3) -> None:
+        super().__init__()
+        self.net = torch.nn.Sequential(
+            torch.nn.Linear(input_size, 8),
+            torch.nn.ReLU(),
+            torch.nn.Linear(8, 1),
+            torch.nn.Sigmoid(),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:  # pragma: no cover - trivial
+        return self.net(x)
+
+
+class InjuryRiskModelService:
+    """Predict injury probability based on training load metrics."""
+
+    def __init__(self, repo: MLModelRepository, lr: float = 0.001) -> None:
+        self.repo = repo
+        self.lr = lr
+        self.model, self.opt, self.initialized = self._load()
+
+    def _load(self) -> tuple[InjuryRiskPredictor, torch.optim.Optimizer, bool]:
+        torch.manual_seed(0)
+        model = InjuryRiskPredictor()
+        opt = torch.optim.Adam(model.parameters(), lr=self.lr)
+        blob = self.repo.load("injury_model")
         if blob is not None:
             buffer = io.BytesIO(blob)
             state = torch.load(buffer)
@@ -223,25 +381,23 @@ class ProgressModelService:
     def _save(self) -> None:
         buf = io.BytesIO()
         torch.save({"model": self.model.state_dict(), "opt": self.opt.state_dict()}, buf)
-        self.repo.save("progress_model", buf.getvalue())
+        self.repo.save("injury_model", buf.getvalue())
         self.initialized = True
 
-    def train(self, time_index: float, one_rm: float) -> None:
+    def train(self, features: Iterable[float], label: float) -> None:
         self.model.train()
         self.opt.zero_grad()
-        x = torch.tensor([[time_index / 100.0]], dtype=torch.float32)
-        y = torch.tensor([one_rm / self.SCALE], dtype=torch.float32)
+        x = torch.tensor([list(features)], dtype=torch.float32)
+        y = torch.tensor([label], dtype=torch.float32)
         pred = self.model(x).view(1)
-        loss = torch.nn.functional.mse_loss(pred, y)
+        loss = torch.nn.functional.binary_cross_entropy(pred, y)
         loss.backward()
         self.opt.step()
         self._save()
 
-    def predict(self, time_index: float) -> float:
-        if not self.initialized:
-            return 0.0
+    def predict(self, features: Iterable[float]) -> float:
         self.model.eval()
         with torch.no_grad():
-            x = torch.tensor([[time_index / 100.0]], dtype=torch.float32)
+            x = torch.tensor([list(features)], dtype=torch.float32)
             pred = self.model(x)
-            return float(pred.item() * self.SCALE)
+            return float(pred.item())
