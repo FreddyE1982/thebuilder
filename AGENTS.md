@@ -74,4 +74,12 @@ For each ML Model there must be a way to seperately enable / disable the models 
 
 Settings and YAML file must always be in synch. If changes are made to the settings tab, these changes must be reflected in the YAML file. ALL settings configurable in the settings tab must be configurable via the YAML file
 
+## README
+
+keep the readme constantly updated! 
+
+## AGENTS.md
+
+keep the AGENTS.md updated by adding new sensible rules when they occur to you. YOU MAY ONLY ADD NEW RULES. Any rule you add must NEVER contradict or modify an existing rule
+
 
