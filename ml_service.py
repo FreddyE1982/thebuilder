@@ -2,7 +2,7 @@ from __future__ import annotations
 import io
 import torch
 from db import MLModelRepository, ExerciseNameRepository, MLLogRepository
-from typing import Iterable
+from typing import Iterable, Optional
 
 torch.manual_seed(0)
 
@@ -26,6 +26,36 @@ class RPEModel(torch.nn.Module):
         var = torch.exp(self.log_var)
         conf = 1.0 / (var + 1e-6)
         return pred, conf
+
+
+class BaseModelService:
+    """Base functionality for persistent Torch models."""
+
+    def __init__(self, repo: MLModelRepository, name: str, lr: float) -> None:
+        self.repo = repo
+        self.name = name
+        self.lr = lr
+
+    def _save_state(
+        self,
+        model: torch.nn.Module,
+        opt: torch.optim.Optimizer,
+        extra: Optional[dict] = None,
+    ) -> None:
+        buf = io.BytesIO()
+        state = {"model": model.state_dict(), "opt": opt.state_dict()}
+        if extra:
+            state.update(extra)
+        torch.save(state, buf)
+        self.repo.save(self.name, buf.getvalue())
+
+    def _load_state(self) -> Optional[dict]:
+        blob = self.repo.load(self.name)
+        if blob is None:
+            return None
+        buffer = io.BytesIO(blob)
+        state = torch.load(buffer)
+        return state
 
 
 class PerformanceModelService:
@@ -103,35 +133,28 @@ class VolumePredictor(torch.nn.Module):
         return self.linear(x)
 
 
-class VolumeModelService:
+class VolumeModelService(BaseModelService):
     """Handle online training and prediction of daily volumes."""
 
     SCALE: float = 1000.0
 
     def __init__(self, repo: MLModelRepository, lr: float = 0.001) -> None:
-        self.repo = repo
-        self.lr = lr
+        super().__init__(repo, "volume_model", lr)
         self.model, self.opt, self.initialized = self._load()
 
     def _load(self) -> tuple[VolumePredictor, torch.optim.Optimizer, bool]:
         torch.manual_seed(0)
         model = VolumePredictor()
         opt = torch.optim.SGD(model.parameters(), lr=self.lr)
-        blob = self.repo.load("volume_model")
-        if blob is not None:
-            buffer = io.BytesIO(blob)
-            state = torch.load(buffer)
-            model.load_state_dict(state["model"])
-            opt.load_state_dict(state["opt"])
+        state = self._load_state()
+        if state is not None:
+            model.load_state_dict(state.get("model", {}))
+            opt.load_state_dict(state.get("opt", {}))
             return model, opt, True
         return model, opt, False
 
     def _save(self) -> None:
-        buf = io.BytesIO()
-        torch.save(
-            {"model": self.model.state_dict(), "opt": self.opt.state_dict()}, buf
-        )
-        self.repo.save("volume_model", buf.getvalue())
+        self._save_state(self.model, self.opt)
         self.initialized = True
 
     def train(self, features: Iterable[float], target: float) -> None:
@@ -172,35 +195,28 @@ class ReadinessPredictor(torch.nn.Module):
         return self.linear(x)
 
 
-class ReadinessModelService:
+class ReadinessModelService(BaseModelService):
     """Handle online training and prediction of readiness values."""
 
     SCALE: float = 10.0
 
     def __init__(self, repo: MLModelRepository, lr: float = 0.01) -> None:
-        self.repo = repo
-        self.lr = lr
+        super().__init__(repo, "readiness_model", lr)
         self.model, self.opt, self.initialized = self._load()
 
     def _load(self) -> tuple[ReadinessPredictor, torch.optim.Optimizer, bool]:
         torch.manual_seed(0)
         model = ReadinessPredictor()
         opt = torch.optim.SGD(model.parameters(), lr=self.lr)
-        blob = self.repo.load("readiness_model")
-        if blob is not None:
-            buffer = io.BytesIO(blob)
-            state = torch.load(buffer)
-            model.load_state_dict(state["model"])
-            opt.load_state_dict(state["opt"])
+        state = self._load_state()
+        if state is not None:
+            model.load_state_dict(state.get("model", {}))
+            opt.load_state_dict(state.get("opt", {}))
             return model, opt, True
         return model, opt, False
 
     def _save(self) -> None:
-        buf = io.BytesIO()
-        torch.save(
-            {"model": self.model.state_dict(), "opt": self.opt.state_dict()}, buf
-        )
-        self.repo.save("readiness_model", buf.getvalue())
+        self._save_state(self.model, self.opt)
         self.initialized = True
 
     def train(self, stress: float, fatigue: float, readiness: float) -> None:
@@ -243,42 +259,34 @@ class LSTMProgressPredictor(torch.nn.Module):
         return self.linear(out)
 
 
-class ProgressModelService:
+class ProgressModelService(BaseModelService):
     """Handle online training and prediction of 1RM values using an LSTM."""
 
     SCALE: float = 200.0
 
     def __init__(self, repo: MLModelRepository, lr: float = 0.001) -> None:
-        self.repo = repo
-        self.lr = lr
+        super().__init__(repo, "progress_model", lr)
         self.model, self.opt, self.initialized, self.history = self._load()
 
     def _load(self) -> tuple[LSTMProgressPredictor, torch.optim.Optimizer, bool, list]:
         torch.manual_seed(0)
         model = LSTMProgressPredictor()
         opt = torch.optim.SGD(model.parameters(), lr=self.lr)
-        blob = self.repo.load("progress_model")
+        state = self._load_state()
         history: list = []
-        if blob is not None:
-            buffer = io.BytesIO(blob)
-            state = torch.load(buffer)
-            model.load_state_dict(state["model"])
-            opt.load_state_dict(state["opt"])
+        if state is not None:
+            model.load_state_dict(state.get("model", {}))
+            opt.load_state_dict(state.get("opt", {}))
             history = state.get("history", [])
             return model, opt, True, history
         return model, opt, False, history
 
     def _save(self) -> None:
-        buf = io.BytesIO()
-        torch.save(
-            {
-                "model": self.model.state_dict(),
-                "opt": self.opt.state_dict(),
-                "history": self.history,
-            },
-            buf,
+        self._save_state(
+            self.model,
+            self.opt,
+            extra={"history": self.history},
         )
-        self.repo.save("progress_model", buf.getvalue())
         self.initialized = True
 
     def train(self, time_index: float, one_rm: float, feature: float = 0.0) -> None:
@@ -324,7 +332,7 @@ class RLGoalNet(torch.nn.Module):
         return self.net(x)
 
 
-class RLGoalModelService:
+class RLGoalModelService(BaseModelService):
     """Deep Q-learning model for dynamic exercise goals."""
 
     ACTIONS = [-2.5, 0.0, 2.5]
@@ -332,8 +340,7 @@ class RLGoalModelService:
     def __init__(
         self, repo: MLModelRepository, lr: float = 0.001, gamma: float = 0.9
     ) -> None:
-        self.repo = repo
-        self.lr = lr
+        super().__init__(repo, "rl_goal_model", lr)
         self.gamma = gamma
         self.model, self.opt, self.initialized, self.history = self._load()
         self.pending: dict[int, tuple[list[float], int]] = {}
@@ -342,28 +349,21 @@ class RLGoalModelService:
         torch.manual_seed(0)
         model = RLGoalNet()
         opt = torch.optim.Adam(model.parameters(), lr=self.lr)
-        blob = self.repo.load("rl_goal_model")
+        state = self._load_state()
         history: list = []
-        if blob is not None:
-            buffer = io.BytesIO(blob)
-            state = torch.load(buffer)
-            model.load_state_dict(state["model"])
-            opt.load_state_dict(state["opt"])
+        if state is not None:
+            model.load_state_dict(state.get("model", {}))
+            opt.load_state_dict(state.get("opt", {}))
             history = state.get("history", [])
             return model, opt, True, history
         return model, opt, False, history
 
     def _save(self) -> None:
-        buf = io.BytesIO()
-        torch.save(
-            {
-                "model": self.model.state_dict(),
-                "opt": self.opt.state_dict(),
-                "history": self.history,
-            },
-            buf,
+        self._save_state(
+            self.model,
+            self.opt,
+            extra={"history": self.history},
         )
-        self.repo.save("rl_goal_model", buf.getvalue())
         self.initialized = True
 
     def predict(self, state: Iterable[float]) -> int:
@@ -418,33 +418,26 @@ class InjuryRiskPredictor(torch.nn.Module):
         return self.net(x)
 
 
-class InjuryRiskModelService:
+class InjuryRiskModelService(BaseModelService):
     """Predict injury probability based on training load metrics."""
 
     def __init__(self, repo: MLModelRepository, lr: float = 0.001) -> None:
-        self.repo = repo
-        self.lr = lr
+        super().__init__(repo, "injury_model", lr)
         self.model, self.opt, self.initialized = self._load()
 
     def _load(self) -> tuple[InjuryRiskPredictor, torch.optim.Optimizer, bool]:
         torch.manual_seed(0)
         model = InjuryRiskPredictor()
         opt = torch.optim.Adam(model.parameters(), lr=self.lr)
-        blob = self.repo.load("injury_model")
-        if blob is not None:
-            buffer = io.BytesIO(blob)
-            state = torch.load(buffer)
-            model.load_state_dict(state["model"])
-            opt.load_state_dict(state["opt"])
+        state = self._load_state()
+        if state is not None:
+            model.load_state_dict(state.get("model", {}))
+            opt.load_state_dict(state.get("opt", {}))
             return model, opt, True
         return model, opt, False
 
     def _save(self) -> None:
-        buf = io.BytesIO()
-        torch.save(
-            {"model": self.model.state_dict(), "opt": self.opt.state_dict()}, buf
-        )
-        self.repo.save("injury_model", buf.getvalue())
+        self._save_state(self.model, self.opt)
         self.initialized = True
 
     def train(self, features: Iterable[float], label: float) -> None:
@@ -482,33 +475,26 @@ class FusionNet(torch.nn.Module):
         return self.net(x)
 
 
-class AdaptationModelService:
+class AdaptationModelService(BaseModelService):
     """Predict overall adaptation index from multiple metrics."""
 
     def __init__(self, repo: MLModelRepository, lr: float = 0.001) -> None:
-        self.repo = repo
-        self.lr = lr
+        super().__init__(repo, "adaptation_model", lr)
         self.model, self.opt, self.initialized = self._load()
 
     def _load(self) -> tuple[FusionNet, torch.optim.Optimizer, bool]:
         torch.manual_seed(0)
         model = FusionNet()
         opt = torch.optim.Adam(model.parameters(), lr=self.lr)
-        blob = self.repo.load("adaptation_model")
-        if blob is not None:
-            buffer = io.BytesIO(blob)
-            state = torch.load(buffer)
-            model.load_state_dict(state["model"])
-            opt.load_state_dict(state["opt"])
+        state = self._load_state()
+        if state is not None:
+            model.load_state_dict(state.get("model", {}))
+            opt.load_state_dict(state.get("opt", {}))
             return model, opt, True
         return model, opt, False
 
     def _save(self) -> None:
-        buf = io.BytesIO()
-        torch.save(
-            {"model": self.model.state_dict(), "opt": self.opt.state_dict()}, buf
-        )
-        self.repo.save("adaptation_model", buf.getvalue())
+        self._save_state(self.model, self.opt)
         self.initialized = True
 
     def train(self, features: Iterable[float], label: float) -> None:

@@ -52,9 +52,10 @@ class StatisticsService:
             start_date=start_date,
             end_date=end_date,
             with_equipment=True,
+            with_duration=True,
         )
         history = []
-        for reps, weight, rpe, date, ex_name, eq_name in rows:
+        for reps, weight, rpe, date, ex_name, eq_name, start, end in rows:
             history.append(
                 {
                     "exercise": ex_name,
@@ -65,6 +66,9 @@ class StatisticsService:
                     "rpe": int(rpe),
                     "volume": int(reps) * float(weight),
                     "est_1rm": MathTools.epley_1rm(float(weight), int(reps)),
+                    "velocity": MathTools.estimate_velocity_from_set(
+                        int(reps), start, end
+                    )
                 }
             )
         return history

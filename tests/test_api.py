@@ -297,6 +297,7 @@ class APITestCase(unittest.TestCase):
                 "diff_rpe": 1,
                 "start_time": None,
                 "end_time": None,
+                "velocity": 0.0,
             },
         )
 
@@ -1204,15 +1205,21 @@ class APITestCase(unittest.TestCase):
             )
             ids.append(resp.json()["id"])
         t0 = datetime.datetime(2023, 1, 1, 0, 0, 0)
-        self.api.sets.set_start_time(ids[0], t0.isoformat())
-        self.api.sets.set_end_time(
-            ids[0], (t0 + datetime.timedelta(seconds=10)).isoformat()
+        self.client.post(
+            f"/sets/{ids[0]}/start",
+            params={"timestamp": t0.isoformat()},
         )
-        self.api.sets.set_start_time(
-            ids[1], (t0 + datetime.timedelta(seconds=70)).isoformat()
+        self.client.post(
+            f"/sets/{ids[0]}/finish",
+            params={"timestamp": (t0 + datetime.timedelta(seconds=10)).isoformat()},
         )
-        self.api.sets.set_end_time(
-            ids[1], (t0 + datetime.timedelta(seconds=80)).isoformat()
+        self.client.post(
+            f"/sets/{ids[1]}/start",
+            params={"timestamp": (t0 + datetime.timedelta(seconds=70)).isoformat()},
+        )
+        self.client.post(
+            f"/sets/{ids[1]}/finish",
+            params={"timestamp": (t0 + datetime.timedelta(seconds=80)).isoformat()},
         )
         resp = self.client.get("/stats/rest_times")
         self.assertEqual(resp.status_code, 200)
@@ -1220,6 +1227,36 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0]["workout_id"], 1)
         self.assertAlmostEqual(data[0]["avg_rest"], 60.0, places=2)
+
+    def test_set_velocity_and_history(self) -> None:
+        self.client.post("/workouts")
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        resp = self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8},
+        )
+        set_id = resp.json()["id"]
+        start = "2023-01-01T00:00:00"
+        end = "2023-01-01T00:00:05"
+        self.client.post(f"/sets/{set_id}/start", params={"timestamp": start})
+        self.client.post(f"/sets/{set_id}/finish", params={"timestamp": end})
+
+        resp = self.client.get(f"/sets/{set_id}")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn("velocity", data)
+        self.assertAlmostEqual(data["velocity"], 0.5, places=2)
+
+        resp = self.client.get(
+            "/stats/exercise_history",
+            params={"exercise": "Bench Press"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        history = resp.json()
+        self.assertAlmostEqual(history[0]["velocity"], 0.5, places=2)
 
     def test_volume_forecast_endpoint(self) -> None:
         d1 = (datetime.date.today() - datetime.timedelta(days=2)).isoformat()

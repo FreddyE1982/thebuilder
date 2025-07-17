@@ -536,6 +536,15 @@ class ExerciseRepository(BaseRepository):
 class SetRepository(BaseRepository):
     """Repository for sets table operations."""
 
+    @staticmethod
+    def _velocity(reps: int, start: Optional[str], end: Optional[str]) -> float:
+        if not start or not end or reps <= 0:
+            return 0.0
+        t0 = datetime.datetime.fromisoformat(start)
+        t1 = datetime.datetime.fromisoformat(end)
+        secs = (t1 - t0).total_seconds()
+        return (reps * 0.5) / secs if secs > 0 else 0.0
+
     def add(
         self,
         exercise_id: int,
@@ -651,6 +660,7 @@ class SetRepository(BaseRepository):
             start_time,
             end_time,
         ) = rows[0]
+        velocity = self._velocity(int(reps), start_time, end_time)
         return {
             "id": sid,
             "reps": reps,
@@ -662,6 +672,7 @@ class SetRepository(BaseRepository):
             "diff_rpe": diff_rpe,
             "start_time": start_time,
             "end_time": end_time,
+            "velocity": velocity,
         }
 
     def last_rpe(self, exercise_id: int) -> int | None:

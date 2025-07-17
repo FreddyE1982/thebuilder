@@ -606,16 +606,24 @@ class GymAPI:
             return {"status": "deleted"}
 
         @self.app.post("/sets/{set_id}/start")
-        def start_set(set_id: int):
-            timestamp = datetime.datetime.now().isoformat(timespec="seconds")
-            self.sets.set_start_time(set_id, timestamp)
-            return {"status": "started", "timestamp": timestamp}
+        def start_set(set_id: int, timestamp: str | None = None):
+            ts = (
+                datetime.datetime.now().isoformat(timespec="seconds")
+                if timestamp is None
+                else timestamp
+            )
+            self.sets.set_start_time(set_id, ts)
+            return {"status": "started", "timestamp": ts}
 
         @self.app.post("/sets/{set_id}/finish")
-        def finish_set(set_id: int):
-            timestamp = datetime.datetime.now().isoformat(timespec="seconds")
-            self.sets.set_end_time(set_id, timestamp)
-            return {"status": "finished", "timestamp": timestamp}
+        def finish_set(set_id: int, timestamp: str | None = None):
+            ts = (
+                datetime.datetime.now().isoformat(timespec="seconds")
+                if timestamp is None
+                else timestamp
+            )
+            self.sets.set_end_time(set_id, ts)
+            return {"status": "finished", "timestamp": ts}
 
         @self.app.get("/sets/{set_id}")
         def get_set(set_id: int):
