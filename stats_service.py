@@ -726,6 +726,41 @@ class StatisticsService:
                 }
             )
         return result
+    def rest_times(
+
+        self,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> List[Dict[str, float]]:
+        """Return average rest duration between sets per workout."""
+        names = self.exercise_names.fetch_all()
+        rows = self.sets.fetch_history_by_names(
+            names,
+            start_date=start_date,
+            end_date=end_date,
+            with_duration=True,
+            with_workout_id=True,
+        )
+        if not rows:
+            return []
+        by_workout: Dict[int, List[Tuple[str, str]]] = {}
+        for _r, _w, _rpe, _date, start, end, wid in rows:
+            if start and end:
+                by_workout.setdefault(wid, []).append((start, end))
+        result: List[Dict[str, float]] = []
+        for wid, times in sorted(by_workout.items()):
+            times_sorted = sorted(times, key=lambda t: t[0])
+            rests: List[float] = []
+            for i in range(1, len(times_sorted)):
+                prev_end = datetime.datetime.fromisoformat(times_sorted[i-1][1])
+                curr_start = datetime.datetime.fromisoformat(times_sorted[i][0])
+                diff = (curr_start - prev_end).total_seconds()
+                if diff > 0:
+                    rests.append(diff)
+            avg = sum(rests) / len(rests) if rests else 0.0
+            result.append({"workout_id": wid, "avg_rest": round(avg, 2)})
+        return result
+
 
     def stress_overview(
         self,
