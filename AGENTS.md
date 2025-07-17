@@ -15,6 +15,7 @@ The agent is to always follow there rules:
 9. Tests may only use the original functions provided in the code. NO monkeypatching of any kind is allowed.
 10. ALL functionality that is available via the streamlit interface must also be available via REST endpoints. The REST endpoints need to be used for testing because the streamlit interface can not be tested directly.
 11. Fix ALL warnings that occur during any tests by correcting app code
+12. if the user asks the agent to roll back the last merged PR then the agent is allowed to do so...even if the rollback violates ANY rules.
 
 ## Muscle linking
 
