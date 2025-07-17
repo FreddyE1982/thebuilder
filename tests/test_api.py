@@ -692,6 +692,14 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(eq_stats[0]["equipment"], "Olympic Barbell")
         self.assertEqual(eq_stats[0]["sets"], 2)
 
+        resp = self.client.get("/stats/muscle_usage")
+        self.assertEqual(resp.status_code, 200)
+        mus_stats = resp.json()
+        target = next((m for m in mus_stats if m["muscle"] == "Pectoralis Major"), None)
+        self.assertIsNotNone(target)
+        self.assertEqual(target["sets"], 2)
+        self.assertAlmostEqual(target["volume"], 1880.0)
+
         resp = self.client.get(
             "/stats/rpe_distribution",
             params={"exercise": "Bench Press"},

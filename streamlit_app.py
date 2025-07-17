@@ -100,6 +100,7 @@ class GymApp:
             None,
             None,
             self.body_weights_repo,
+            self.equipment,
         )
         self._state_init()
 
