@@ -414,3 +414,4 @@ keep the AGENTS.md updated by adding new sensible rules when they occur to you. 
 
 - Add tests for all new analytics endpoints verifying expected numeric results.
 - The RPE machine learning model must utilise reps, weight and previous RPE when training or predicting.
+- Always record model predictions with their confidence values in the `ml_logs` table for later analysis.

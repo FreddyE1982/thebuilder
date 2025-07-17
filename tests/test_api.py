@@ -49,7 +49,8 @@ class APITestCase(unittest.TestCase):
         response = self.client.get("/workouts/1/exercises")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
-            response.json(), [{"id": 1, "name": "Bench Press", "equipment": "Olympic Barbell"}]
+            response.json(),
+            [{"id": 1, "name": "Bench Press", "equipment": "Olympic Barbell"}],
         )
 
         response = self.client.post(
@@ -108,7 +109,9 @@ class APITestCase(unittest.TestCase):
             params={"date": plan_date, "training_type": "strength"},
         )
 
-        response = self.client.post("/settings/delete_all", params={"confirmation": "Yes, I confirm"})
+        response = self.client.post(
+            "/settings/delete_all", params={"confirmation": "Yes, I confirm"}
+        )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"status": "deleted"})
 
@@ -126,7 +129,9 @@ class APITestCase(unittest.TestCase):
             params={"date": plan_date, "training_type": "strength"},
         )
 
-        response = self.client.post("/settings/delete_logged", params={"confirmation": "Yes, I confirm"})
+        response = self.client.post(
+            "/settings/delete_logged", params={"confirmation": "Yes, I confirm"}
+        )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"status": "deleted"})
 
@@ -138,7 +143,9 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.json()), 1)
 
-        response = self.client.post("/settings/delete_planned", params={"confirmation": "Yes, I confirm"})
+        response = self.client.post(
+            "/settings/delete_planned", params={"confirmation": "Yes, I confirm"}
+        )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"status": "deleted"})
 
@@ -158,7 +165,12 @@ class APITestCase(unittest.TestCase):
 
         resp = self.client.post(
             "/settings/general",
-            params={"body_weight": 85.5, "months_active": 6.0, "theme": "dark", "ml_all_enabled": False},
+            params={
+                "body_weight": 85.5,
+                "months_active": 6.0,
+                "theme": "dark",
+                "ml_all_enabled": False,
+            },
         )
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json(), {"status": "updated"})
@@ -231,7 +243,9 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"id": 1})
 
-        response = self.client.post("/planned_exercises/1/sets", params={"reps": 5, "weight": 150.0, "rpe": 8})
+        response = self.client.post(
+            "/planned_exercises/1/sets", params={"reps": 5, "weight": 150.0, "rpe": 8}
+        )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"id": 1})
 
@@ -258,9 +272,13 @@ class APITestCase(unittest.TestCase):
 
         response = self.client.get("/exercises/1/sets")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), [{"id": 1, "reps": 5, "weight": 150.0, "rpe": 8}])
+        self.assertEqual(
+            response.json(), [{"id": 1, "reps": 5, "weight": 150.0, "rpe": 8}]
+        )
 
-        response = self.client.put("/sets/1", params={"reps": 6, "weight": 160.0, "rpe": 9})
+        response = self.client.put(
+            "/sets/1", params={"reps": 6, "weight": 160.0, "rpe": 9}
+        )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"status": "updated"})
 
@@ -373,7 +391,8 @@ class APITestCase(unittest.TestCase):
 
         self.client.post("/workouts")
         self.client.post(
-            "/workouts/1/exercises", params={"name": "Clean", "equipment": "Olympic Barbell"}
+            "/workouts/1/exercises",
+            params={"name": "Clean", "equipment": "Olympic Barbell"},
         )
         resp = self.client.get("/workouts/1/exercises")
         self.assertEqual(
@@ -551,7 +570,8 @@ class APITestCase(unittest.TestCase):
         self.assertIn("Biceps Brachii", resp.json())
 
         resp = self.client.post(
-            "/muscles/alias", params={"new_name": "My Biceps", "existing": "Biceps Brachii"}
+            "/muscles/alias",
+            params={"new_name": "My Biceps", "existing": "Biceps Brachii"},
         )
         self.assertEqual(resp.status_code, 200)
 
@@ -564,9 +584,7 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIn("EZ Curl Bar", resp.json())
 
-        resp = self.client.get(
-            "/exercise_catalog", params={"muscles": "My Biceps"}
-        )
+        resp = self.client.get("/exercise_catalog", params={"muscles": "My Biceps"})
         self.assertEqual(resp.status_code, 200)
         self.assertIn("Pull-up", resp.json())
 
@@ -826,7 +844,9 @@ class APITestCase(unittest.TestCase):
         d2 = datetime.date.today().isoformat()
 
         self.client.post("/workouts", params={"date": d1, "training_type": "strength"})
-        self.client.post("/workouts", params={"date": d2, "training_type": "hypertrophy"})
+        self.client.post(
+            "/workouts", params={"date": d2, "training_type": "hypertrophy"}
+        )
         self.client.post(
             "/workouts/1/exercises",
             params={"name": "Bench Press", "equipment": "Olympic Barbell"},
@@ -878,7 +898,11 @@ class APITestCase(unittest.TestCase):
 
         resp_invalid = self.client.post(
             "/pyramid_tests",
-            params={"weights": "130|120", "starting_weight": 100.0, "max_achieved": 90.0},
+            params={
+                "weights": "130|120",
+                "starting_weight": 100.0,
+                "max_achieved": 90.0,
+            },
         )
         self.assertEqual(resp_invalid.status_code, 400)
 
@@ -1154,16 +1178,21 @@ class APITestCase(unittest.TestCase):
             ids.append(resp.json()["id"])
         t0 = datetime.datetime(2023, 1, 1, 0, 0, 0)
         self.api.sets.set_start_time(ids[0], t0.isoformat())
-        self.api.sets.set_end_time(ids[0], (t0 + datetime.timedelta(seconds=10)).isoformat())
-        self.api.sets.set_start_time(ids[1], (t0 + datetime.timedelta(seconds=70)).isoformat())
-        self.api.sets.set_end_time(ids[1], (t0 + datetime.timedelta(seconds=80)).isoformat())
+        self.api.sets.set_end_time(
+            ids[0], (t0 + datetime.timedelta(seconds=10)).isoformat()
+        )
+        self.api.sets.set_start_time(
+            ids[1], (t0 + datetime.timedelta(seconds=70)).isoformat()
+        )
+        self.api.sets.set_end_time(
+            ids[1], (t0 + datetime.timedelta(seconds=80)).isoformat()
+        )
         resp = self.client.get("/stats/rest_times")
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0]["workout_id"], 1)
         self.assertAlmostEqual(data[0]["avg_rest"], 60.0, places=2)
-
 
     def test_volume_forecast_endpoint(self) -> None:
         d1 = (datetime.date.today() - datetime.timedelta(days=2)).isoformat()
@@ -1364,7 +1393,9 @@ class APITestCase(unittest.TestCase):
     def test_training_strain_endpoint(self) -> None:
         start = (datetime.date.today() - datetime.timedelta(days=6)).isoformat()
         for i in range(7):
-            date = (datetime.date.fromisoformat(start) + datetime.timedelta(days=i)).isoformat()
+            date = (
+                datetime.date.fromisoformat(start) + datetime.timedelta(days=i)
+            ).isoformat()
             self.client.post("/workouts", params={"date": date})
             self.client.post(
                 f"/workouts/{i + 1}/exercises",
@@ -1400,8 +1431,7 @@ class APITestCase(unittest.TestCase):
         start = (datetime.date.today() - datetime.timedelta(days=5)).isoformat()
         for i in range(6):
             date = (
-                datetime.date.fromisoformat(start)
-                + datetime.timedelta(days=i)
+                datetime.date.fromisoformat(start) + datetime.timedelta(days=i)
             ).isoformat()
             self.client.post("/workouts", params={"date": date})
             self.client.post(
@@ -1455,6 +1485,9 @@ class APITestCase(unittest.TestCase):
             params={"reps": 5, "weight": 105.0, "rpe": 8},
         )
 
+        # trigger prediction to log confidence
+        self.api.ml_service.predict("Bench Press", 5, 110.0, 8)
+
         conn = sqlite3.connect(self.db_path)
         cur = conn.cursor()
         cur.execute("SELECT state FROM ml_models WHERE name = ?;", ("Bench Press",))
@@ -1468,6 +1501,15 @@ class APITestCase(unittest.TestCase):
         w_key = next(k for k in state if k.endswith("weight"))
         self.assertIsInstance(state[w_key], torch.Tensor)
 
+        cur = sqlite3.connect(self.db_path).cursor()
+        cur.execute(
+            "SELECT prediction, confidence FROM ml_logs WHERE name = ?;",
+            ("Bench Press",),
+        )
+        log_row = cur.fetchone()
+        self.assertIsNotNone(log_row)
+        self.assertIsInstance(log_row[0], float)
+        self.assertIsInstance(log_row[1], float)
+
         resp = self.client.post("/exercises/1/recommend_next")
         self.assertEqual(resp.status_code, 400)
-

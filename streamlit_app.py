@@ -17,6 +17,7 @@ from db import (
     PyramidEntryRepository,
     GamificationRepository,
     MLModelRepository,
+    MLLogRepository,
 )
 from planner_service import PlannerService
 from recommendation_service import RecommendationService
@@ -54,6 +55,7 @@ class GymApp:
         self.pyramid_entries = PyramidEntryRepository()
         self.game_repo = GamificationRepository()
         self.ml_models = MLModelRepository()
+        self.ml_logs = MLLogRepository()
         self.gamification = GamificationService(
             self.game_repo,
             self.exercises,
@@ -62,6 +64,7 @@ class GymApp:
         self.ml_service = PerformanceModelService(
             self.ml_models,
             self.exercise_names_repo,
+            self.ml_logs,
         )
         self.volume_model = VolumeModelService(self.ml_models)
         self.readiness_model = ReadinessModelService(self.ml_models)
@@ -246,7 +249,9 @@ class GymApp:
                     {"Sets": [e["sets"] for e in eq_stats]},
                     x=[e["equipment"] for e in eq_stats],
                 )
-            top_ex = self.stats.exercise_summary(None, start.isoformat(), end.isoformat())
+            top_ex = self.stats.exercise_summary(
+                None, start.isoformat(), end.isoformat()
+            )
             top_ex.sort(key=lambda x: x["volume"], reverse=True)
             if top_ex:
                 with st.expander("Top Exercises", expanded=False):
@@ -566,9 +571,7 @@ class GymApp:
                         st.warning(f"Invalid line: {line}")
                         continue
                     self.sets.add(exercise_id, reps_i, weight_f, rpe_i)
-                    self.gamification.record_set(
-                        exercise_id, reps_i, weight_f, rpe_i
-                    )
+                    self.gamification.record_set(exercise_id, reps_i, weight_f, rpe_i)
                     added += 1
                 if added:
                     st.success(f"Added {added} sets")
@@ -682,9 +685,7 @@ class GymApp:
                     key="plan_type",
                 )
                 if st.button("New Planned Workout"):
-                    pid = self.planned_workouts.create(
-                        plan_date.isoformat(), plan_type
-                    )
+                    pid = self.planned_workouts.create(plan_date.isoformat(), plan_type)
                     st.session_state.selected_planned_workout = pid
             with st.expander("Existing Plans", expanded=True):
                 plans = self.planned_workouts.fetch_all()
@@ -725,9 +726,7 @@ class GymApp:
                                 )
                                 st.success("Updated")
                             if cols[1].button("Duplicate", key=f"dup_plan_{pid}"):
-                                self.planner.duplicate_plan(
-                                    pid, dup_date.isoformat()
-                                )
+                                self.planner.duplicate_plan(pid, dup_date.isoformat())
                                 st.success("Duplicated")
                             if cols[2].button("Delete", key=f"del_plan_{pid}"):
                                 self.planned_workouts.delete(pid)
@@ -1131,7 +1130,9 @@ class GymApp:
         with tsb_tab:
             tsb = self.stats.stress_balance(start_str, end_str)
             if tsb:
-                st.line_chart({"TSB": [d["tsb"] for d in tsb]}, x=[d["date"] for d in tsb])
+                st.line_chart(
+                    {"TSB": [d["tsb"] for d in tsb]}, x=[d["date"] for d in tsb]
+                )
             overview = self.stats.stress_overview(start_str, end_str)
             if overview:
                 st.metric("Stress", overview["stress"])
@@ -1173,16 +1174,12 @@ class GymApp:
                     key="insights_start",
                 )
             with col2:
-                end = st.date_input(
-                    "End", datetime.date.today(), key="insights_end"
-                )
+                end = st.date_input("End", datetime.date.today(), key="insights_end")
         if ex_choice:
             insights = self.stats.progress_insights(
                 ex_choice, start.isoformat(), end.isoformat()
             )
-            prog = self.stats.progression(
-                ex_choice, start.isoformat(), end.isoformat()
-            )
+            prog = self.stats.progression(ex_choice, start.isoformat(), end.isoformat())
             if insights:
                 with st.expander("Trend Analysis", expanded=True):
                     st.write(f"Trend: {insights.get('trend', '')}")
@@ -1211,7 +1208,9 @@ class GymApp:
             col1, col2 = st.columns(2)
             with col1:
                 start = st.date_input(
-                    "Start", datetime.date.today() - datetime.timedelta(days=30), key="rep_start"
+                    "Start",
+                    datetime.date.today() - datetime.timedelta(days=30),
+                    key="rep_start",
                 )
             with col2:
                 end = st.date_input("End", datetime.date.today(), key="rep_end")
@@ -1395,10 +1394,7 @@ class GymApp:
                 try:
                     weights = MathTools.warmup_weights(float(tgt), int(count))
                     st.table(
-                        [
-                            {"set": i + 1, "weight": w}
-                            for i, w in enumerate(weights)
-                        ]
+                        [{"set": i + 1, "weight": w} for i, w in enumerate(weights)]
                     )
                 except ValueError as e:
                     st.warning(str(e))
@@ -1499,11 +1495,15 @@ class GymApp:
             )
             read_train = st.checkbox(
                 "Readiness Model Training",
-                value=self.settings_repo.get_bool("ml_readiness_training_enabled", True),
+                value=self.settings_repo.get_bool(
+                    "ml_readiness_training_enabled", True
+                ),
             )
             read_pred = st.checkbox(
                 "Readiness Model Prediction",
-                value=self.settings_repo.get_bool("ml_readiness_prediction_enabled", True),
+                value=self.settings_repo.get_bool(
+                    "ml_readiness_prediction_enabled", True
+                ),
             )
             prog_train = st.checkbox(
                 "Progress Model Training",
@@ -1511,7 +1511,9 @@ class GymApp:
             )
             prog_pred = st.checkbox(
                 "Progress Model Prediction",
-                value=self.settings_repo.get_bool("ml_progress_prediction_enabled", True),
+                value=self.settings_repo.get_bool(
+                    "ml_progress_prediction_enabled", True
+                ),
             )
             goal_train = st.checkbox(
                 "Goal Model Training",
@@ -1545,7 +1547,9 @@ class GymApp:
                 self.settings_repo.set_bool("ml_volume_training_enabled", vol_train)
                 self.settings_repo.set_bool("ml_volume_prediction_enabled", vol_pred)
                 self.settings_repo.set_bool("ml_readiness_training_enabled", read_train)
-                self.settings_repo.set_bool("ml_readiness_prediction_enabled", read_pred)
+                self.settings_repo.set_bool(
+                    "ml_readiness_prediction_enabled", read_pred
+                )
                 self.settings_repo.set_bool("ml_progress_training_enabled", prog_train)
                 self.settings_repo.set_bool("ml_progress_prediction_enabled", prog_pred)
                 self.settings_repo.set_bool("ml_goal_training_enabled", goal_train)

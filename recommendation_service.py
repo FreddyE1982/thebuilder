@@ -9,7 +9,7 @@ from db import (
 )
 from tools import ExercisePrescription
 from gamification_service import GamificationService
-from ml_service import PerformanceModelService, RLGoalModelService
+from ml_service import PerformanceModelService, RLGoalModelService, weighted_fusion
 
 
 class RecommendationService:
@@ -86,15 +86,17 @@ class RecommendationService:
             sessions.append(
                 {
                     "id": wid_d,
-                    "start": datetime.datetime.fromisoformat(start)
-                    if start
-                    else None,
+                    "start": datetime.datetime.fromisoformat(start) if start else None,
                     "end": datetime.datetime.fromisoformat(end) if end else None,
                     "type": t_type,
                     "volume": session_map[wid]["volume"],
-                    "avg_rpe": float(sum(session_map[wid]["rpe"]) / len(session_map[wid]["rpe"]))
-                    if session_map[wid]["rpe"]
-                    else 6.0,
+                    "avg_rpe": (
+                        float(
+                            sum(session_map[wid]["rpe"]) / len(session_map[wid]["rpe"])
+                        )
+                        if session_map[wid]["rpe"]
+                        else 6.0
+                    ),
                 }
             )
         sessions.sort(key=lambda x: x["start"] or datetime.datetime.min)
@@ -114,7 +116,10 @@ class RecommendationService:
             for rt, ot in zip(recovery_times, optimal_times)
         ]
         recovery_quality_mean = (
-            float(sum(recovery_qualities[-ExercisePrescription.L:]) / len(recovery_qualities[-ExercisePrescription.L:]))
+            float(
+                sum(recovery_qualities[-ExercisePrescription.L :])
+                / len(recovery_qualities[-ExercisePrescription.L :])
+            )
             if recovery_qualities
             else 1.0
         )
@@ -153,13 +158,15 @@ class RecommendationService:
             and self.settings.get_bool("ml_prediction_enabled", True)
             and self.settings.get_bool("ml_rpe_prediction_enabled", True)
         ):
-            ml_rpe = self.ml.predict(
+            ml_rpe, conf = self.ml.predict(
                 name,
                 int(data["reps"]),
                 float(data["weight"]),
                 rpe_list[-1],
             )
-            data["target_rpe"] = float((data["target_rpe"] + ml_rpe) / 2)
+            data["target_rpe"] = float(
+                weighted_fusion(ml_rpe, conf, float(data["target_rpe"]))
+            )
         action = 1
         state: list[float] | None = None
         if (
@@ -168,7 +175,11 @@ class RecommendationService:
             and self.settings.get_bool("ml_prediction_enabled", True)
             and self.settings.get_bool("ml_goal_prediction_enabled", True)
         ):
-            state = [weight_list[-1] / 1000.0, reps_list[-1] / 10.0, rpe_list[-1] / 10.0]
+            state = [
+                weight_list[-1] / 1000.0,
+                reps_list[-1] / 10.0,
+                rpe_list[-1] / 10.0,
+            ]
             action = self.rl_goal.predict(state)
             data["weight"] = float(data["weight"] + self.rl_goal.ACTIONS[action])
         set_id = self.sets.add(

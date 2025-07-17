@@ -1,13 +1,14 @@
 from __future__ import annotations
 import io
 import torch
-from db import MLModelRepository, ExerciseNameRepository
+from db import MLModelRepository, ExerciseNameRepository, MLLogRepository
 from typing import Iterable
 
 torch.manual_seed(0)
 
+
 class RPEModel(torch.nn.Module):
-    """Feed-forward network predicting RPE from basic set features."""
+    """Feed-forward network predicting RPE with confidence."""
 
     def __init__(self, input_size: int = 3, hidden_size: int = 16) -> None:
         super().__init__()
@@ -16,9 +17,15 @@ class RPEModel(torch.nn.Module):
             torch.nn.ReLU(),
             torch.nn.Linear(hidden_size, 1),
         )
+        self.log_var = torch.nn.Parameter(torch.zeros(1))
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:  # pragma: no cover - trivial
-        return self.net(x)
+    def forward(
+        self, x: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor]:  # pragma: no cover - trivial
+        pred = self.net(x)
+        var = torch.exp(self.log_var)
+        conf = 1.0 / (var + 1e-6)
+        return pred, conf
 
 
 class PerformanceModelService:
@@ -28,10 +35,12 @@ class PerformanceModelService:
         self,
         repo: MLModelRepository,
         name_repo: ExerciseNameRepository,
+        log_repo: MLLogRepository | None = None,
         lr: float = 0.1,
     ) -> None:
         self.repo = repo
         self.names = name_repo
+        self.log_repo = log_repo
         self.lr = lr
         self.models: dict[str, tuple[RPEModel, torch.optim.Optimizer]] = {}
 
@@ -49,25 +58,38 @@ class PerformanceModelService:
             self.models[canonical] = (model, opt)
         return self.models[canonical]
 
-    def train(self, name: str, reps: int, weight: float, rpe: float) -> None:
+    def train(
+        self, name: str, reps: int, weight: float, rpe: float, prev_rpe: float
+    ) -> None:
         model, opt = self._get(name)
         opt.zero_grad()
-        x = torch.tensor([[weight / 1000.0, reps / 10.0, rpe / 10.0]], dtype=torch.float32)
-        pred = model(x).view(1)
+        x = torch.tensor(
+            [[weight / 1000.0, reps / 10.0, prev_rpe / 10.0]], dtype=torch.float32
+        )
+        pred, _ = model(x)
         target = torch.tensor([rpe / 10.0], dtype=torch.float32)
-        loss = torch.nn.functional.mse_loss(pred, target)
+        var = torch.exp(model.log_var)
+        loss = 0.5 * ((pred - target) ** 2 / var + torch.log(var))
         loss.backward()
         opt.step()
         buf = io.BytesIO()
         torch.save(model.state_dict(), buf)
         self.repo.save(self.names.canonical(name), buf.getvalue())
 
-    def predict(self, name: str, reps: int, weight: float, prev_rpe: float) -> float:
+    def predict(
+        self, name: str, reps: int, weight: float, prev_rpe: float
+    ) -> tuple[float, float]:
         model, _ = self._get(name)
         with torch.no_grad():
-            x = torch.tensor([[weight / 1000.0, reps / 10.0, prev_rpe / 10.0]], dtype=torch.float32)
-            val = model(x)
-            return float(val.item() * 10.0)
+            x = torch.tensor(
+                [[weight / 1000.0, reps / 10.0, prev_rpe / 10.0]], dtype=torch.float32
+            )
+            pred, conf = model(x)
+            value = float(pred.item() * 10.0)
+            conf_v = float(conf.item())
+        if self.log_repo is not None:
+            self.log_repo.add(self.names.canonical(name), value, conf_v)
+        return value, conf_v
 
 
 class VolumePredictor(torch.nn.Module):
@@ -106,14 +128,18 @@ class VolumeModelService:
 
     def _save(self) -> None:
         buf = io.BytesIO()
-        torch.save({"model": self.model.state_dict(), "opt": self.opt.state_dict()}, buf)
+        torch.save(
+            {"model": self.model.state_dict(), "opt": self.opt.state_dict()}, buf
+        )
         self.repo.save("volume_model", buf.getvalue())
         self.initialized = True
 
     def train(self, features: Iterable[float], target: float) -> None:
         self.model.train()
         self.opt.zero_grad()
-        x = torch.tensor([f / self.SCALE for f in features], dtype=torch.float32).view(1, -1)
+        x = torch.tensor([f / self.SCALE for f in features], dtype=torch.float32).view(
+            1, -1
+        )
         y = torch.tensor([target / self.SCALE], dtype=torch.float32)
         pred = self.model(x).view(1)
         loss = torch.nn.functional.mse_loss(pred, y)
@@ -121,12 +147,16 @@ class VolumeModelService:
         self.opt.step()
         self._save()
 
-    def predict(self, features: Iterable[float], fallback: float | None = None) -> float:
+    def predict(
+        self, features: Iterable[float], fallback: float | None = None
+    ) -> float:
         if not self.initialized and fallback is not None:
             return float(fallback)
         self.model.eval()
         with torch.no_grad():
-            x = torch.tensor([f / self.SCALE for f in features], dtype=torch.float32).view(1, -1)
+            x = torch.tensor(
+                [f / self.SCALE for f in features], dtype=torch.float32
+            ).view(1, -1)
             pred = self.model(x)
             return float(pred.item() * self.SCALE)
 
@@ -167,14 +197,18 @@ class ReadinessModelService:
 
     def _save(self) -> None:
         buf = io.BytesIO()
-        torch.save({"model": self.model.state_dict(), "opt": self.opt.state_dict()}, buf)
+        torch.save(
+            {"model": self.model.state_dict(), "opt": self.opt.state_dict()}, buf
+        )
         self.repo.save("readiness_model", buf.getvalue())
         self.initialized = True
 
     def train(self, stress: float, fatigue: float, readiness: float) -> None:
         self.model.train()
         self.opt.zero_grad()
-        x = torch.tensor([[stress / self.SCALE, fatigue / self.SCALE]], dtype=torch.float32)
+        x = torch.tensor(
+            [[stress / self.SCALE, fatigue / self.SCALE]], dtype=torch.float32
+        )
         y = torch.tensor([readiness / self.SCALE], dtype=torch.float32)
         pred = self.model(x).view(1)
         loss = torch.nn.functional.mse_loss(pred, y)
@@ -187,7 +221,9 @@ class ReadinessModelService:
             return fallback
         self.model.eval()
         with torch.no_grad():
-            x = torch.tensor([[stress / self.SCALE, fatigue / self.SCALE]], dtype=torch.float32)
+            x = torch.tensor(
+                [[stress / self.SCALE, fatigue / self.SCALE]], dtype=torch.float32
+            )
             pred = self.model(x)
             val = float(pred.item() * self.SCALE)
         return (val + fallback) / 2
@@ -235,7 +271,11 @@ class ProgressModelService:
     def _save(self) -> None:
         buf = io.BytesIO()
         torch.save(
-            {"model": self.model.state_dict(), "opt": self.opt.state_dict(), "history": self.history},
+            {
+                "model": self.model.state_dict(),
+                "opt": self.opt.state_dict(),
+                "history": self.history,
+            },
             buf,
         )
         self.repo.save("progress_model", buf.getvalue())
@@ -270,7 +310,9 @@ class ProgressModelService:
 class RLGoalNet(torch.nn.Module):
     """Simple DQN for adaptive goal setting."""
 
-    def __init__(self, input_size: int = 3, hidden_size: int = 16, actions: int = 3) -> None:
+    def __init__(
+        self, input_size: int = 3, hidden_size: int = 16, actions: int = 3
+    ) -> None:
         super().__init__()
         self.net = torch.nn.Sequential(
             torch.nn.Linear(input_size, hidden_size),
@@ -287,7 +329,9 @@ class RLGoalModelService:
 
     ACTIONS = [-2.5, 0.0, 2.5]
 
-    def __init__(self, repo: MLModelRepository, lr: float = 0.001, gamma: float = 0.9) -> None:
+    def __init__(
+        self, repo: MLModelRepository, lr: float = 0.001, gamma: float = 0.9
+    ) -> None:
         self.repo = repo
         self.lr = lr
         self.gamma = gamma
@@ -312,7 +356,11 @@ class RLGoalModelService:
     def _save(self) -> None:
         buf = io.BytesIO()
         torch.save(
-            {"model": self.model.state_dict(), "opt": self.opt.state_dict(), "history": self.history},
+            {
+                "model": self.model.state_dict(),
+                "opt": self.opt.state_dict(),
+                "history": self.history,
+            },
             buf,
         )
         self.repo.save("rl_goal_model", buf.getvalue())
@@ -325,7 +373,13 @@ class RLGoalModelService:
             q = self.model(x)
             return int(torch.argmax(q).item())
 
-    def train_step(self, state: Iterable[float], action: int, reward: float, next_state: Iterable[float]) -> None:
+    def train_step(
+        self,
+        state: Iterable[float],
+        action: int,
+        reward: float,
+        next_state: Iterable[float],
+    ) -> None:
         self.model.train()
         self.opt.zero_grad()
         s = torch.tensor(list(state), dtype=torch.float32)
@@ -387,7 +441,9 @@ class InjuryRiskModelService:
 
     def _save(self) -> None:
         buf = io.BytesIO()
-        torch.save({"model": self.model.state_dict(), "opt": self.opt.state_dict()}, buf)
+        torch.save(
+            {"model": self.model.state_dict(), "opt": self.opt.state_dict()}, buf
+        )
         self.repo.save("injury_model", buf.getvalue())
         self.initialized = True
 
@@ -449,7 +505,9 @@ class AdaptationModelService:
 
     def _save(self) -> None:
         buf = io.BytesIO()
-        torch.save({"model": self.model.state_dict(), "opt": self.opt.state_dict()}, buf)
+        torch.save(
+            {"model": self.model.state_dict(), "opt": self.opt.state_dict()}, buf
+        )
         self.repo.save("adaptation_model", buf.getvalue())
         self.initialized = True
 
@@ -473,3 +531,13 @@ class AdaptationModelService:
             pred = self.model(x)
             val = float(pred.item())
         return (val + fallback) / 2
+
+
+def weighted_fusion(
+    model_pred: float, model_conf: float, algo_pred: float, algo_conf: float = 1.0
+) -> float:
+    """Fuse model and algorithm predictions using confidence weights."""
+    total = model_conf + algo_conf
+    w_model = model_conf / total
+    w_algo = algo_conf / total
+    return w_model * model_pred + w_algo * algo_pred
