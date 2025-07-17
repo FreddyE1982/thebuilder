@@ -379,6 +379,31 @@ class StatisticsService:
             result.append({"reps": r, "count": dist[r]})
         return result
 
+    def velocity_history(
+        self,
+        exercise: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> List[Dict[str, float]]:
+        """Return average set velocity per day for ``exercise``."""
+        names = self._alias_names(exercise)
+        rows = self.sets.fetch_history_by_names(
+            names,
+            start_date=start_date,
+            end_date=end_date,
+            with_duration=True,
+        )
+        by_date: Dict[str, List[float]] = {}
+        for reps, _weight, _rpe, date, start, end in rows:
+            vel = MathTools.estimate_velocity_from_set(int(reps), start, end)
+            by_date.setdefault(date, []).append(vel)
+        result: List[Dict[str, float]] = []
+        for d in sorted(by_date):
+            vals = by_date[d]
+            avg = sum(vals) / len(vals) if vals else 0.0
+            result.append({"date": d, "velocity": round(avg, 2)})
+        return result
+
     def overview(
         self,
         start_date: Optional[str] = None,
