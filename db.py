@@ -297,6 +297,13 @@ class Database:
                 );""",
             ["name"],
         ),
+        "favorite_templates": (
+            """CREATE TABLE favorite_templates (
+                    template_id INTEGER PRIMARY KEY,
+                    FOREIGN KEY(template_id) REFERENCES workout_templates(id) ON DELETE CASCADE
+                );""",
+            ["template_id"],
+        ),
         "tags": (
             """CREATE TABLE tags (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2050,6 +2057,28 @@ class FavoriteExerciseRepository(BaseRepository):
     def fetch_all(self) -> list[str]:
         rows = super().fetch_all("SELECT name FROM favorite_exercises ORDER BY name;")
         return [r[0] for r in rows]
+
+
+class FavoriteTemplateRepository(BaseRepository):
+    """Repository for managing favorite workout templates."""
+
+    def add(self, template_id: int) -> None:
+        self.execute(
+            "INSERT OR IGNORE INTO favorite_templates (template_id) VALUES (?);",
+            (template_id,),
+        )
+
+    def remove(self, template_id: int) -> None:
+        self.execute(
+            "DELETE FROM favorite_templates WHERE template_id = ?;",
+            (template_id,),
+        )
+
+    def fetch_all(self) -> list[int]:
+        rows = super().fetch_all(
+            "SELECT template_id FROM favorite_templates ORDER BY template_id;"
+        )
+        return [int(r[0]) for r in rows]
 
 
 class TemplateWorkoutRepository(BaseRepository):
