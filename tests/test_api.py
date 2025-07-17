@@ -320,6 +320,7 @@ class APITestCase(unittest.TestCase):
                 "diff_rpe": 1,
                 "start_time": None,
                 "end_time": None,
+                "note": None,
                 "velocity": 0.0,
             },
         )
@@ -925,6 +926,25 @@ class APITestCase(unittest.TestCase):
         resp = self.client.get(f"/workouts/{wid}")
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json()["notes"], "tired")
+
+    def test_set_notes(self) -> None:
+        self.client.post("/workouts")
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        resp = self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8, "note": "tough"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        set_id = resp.json()["id"]
+        data = self.client.get(f"/sets/{set_id}").json()
+        self.assertEqual(data["note"], "tough")
+        upd = self.client.put(f"/sets/{set_id}/note", params={"note": "easy"})
+        self.assertEqual(upd.status_code, 200)
+        data = self.client.get(f"/sets/{set_id}").json()
+        self.assertEqual(data["note"], "easy")
 
     def test_backdated_workout(self) -> None:
         past_date = (datetime.date.today() - datetime.timedelta(days=3)).isoformat()

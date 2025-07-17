@@ -595,10 +595,16 @@ class GymAPI:
             return {"id": workout_id}
 
         @self.app.post("/exercises/{exercise_id}/sets")
-        def add_set(exercise_id: int, reps: int, weight: float, rpe: int):
+        def add_set(
+            exercise_id: int,
+            reps: int,
+            weight: float,
+            rpe: int,
+            note: str | None = None,
+        ):
             prev = self.sets.last_rpe(exercise_id)
             try:
-                set_id = self.sets.add(exercise_id, reps, weight, rpe)
+                set_id = self.sets.add(exercise_id, reps, weight, rpe, note)
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
             _, name, _, _ = self.exercises.fetch_detail(exercise_id)
@@ -661,6 +667,11 @@ class GymAPI:
                     prev if prev is not None else rpe,
                 )
             self.recommender.record_result(set_id, reps, weight, rpe)
+            return {"status": "updated"}
+
+        @self.app.put("/sets/{set_id}/note")
+        def update_set_note(set_id: int, note: str | None = None):
+            self.sets.update_note(set_id, note)
             return {"status": "updated"}
 
         @self.app.delete("/sets/{set_id}")
