@@ -400,6 +400,7 @@ class Database:
     def _init_settings(self) -> None:
         defaults = {
             "body_weight": "80.0",
+            "height": "1.75",
             "months_active": "1",
             "theme": "light",
             "game_enabled": "0",
@@ -592,6 +593,7 @@ class SetRepository(BaseRepository):
         for reps, weight, rpe in entries:
             ids.append(self.add(exercise_id, reps, weight, rpe))
         return ids
+
     def update(self, set_id: int, reps: int, weight: float, rpe: int) -> None:
         if reps <= 0:
             raise ValueError("reps must be positive")
