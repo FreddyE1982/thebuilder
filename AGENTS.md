@@ -14,6 +14,7 @@ The agent is to always follow there rules:
 8. For testing the agent must create full test data. The agent must predetermine expected resulting data and values and tests may only be seen successfull if they output exactly said expected data and values.
 9. Tests may only use the original functions provided in the code. NO monkeypatching of any kind is allowed.
 10. ALL functionality that is available via the streamlit interface must also be available via REST endpoints. The REST endpoints need to be used for testing because the streamlit interface can not be tested directly.
+11. Fix ALL warnings that occur during any tests by correcting app code
 
 ## Muscle linking
 
@@ -62,3 +63,15 @@ The user does.
 8. the user adds exercises
 
 the simulation must use different versions of 1. - 8. multiple times, must modify exact usage (including values) of 1. - 8. every time, must use each of 1. - 8. at least 72 times
+
+## Machine Learning
+enhance app functionality using machine learning using torch. models must be stored and trained persistently, "incremental online training" must be performed when user uses app. models must somehow be used for prediction when user uses app. models must be integrated into existing functionality / algorithms to enhance them. models may NOT be used as fallbacks, alternates of existing algorithms or parts of existing algorithms..they must be used to enhance existing algorithms or parts of existing algorithms by fusing with whats already there.
+
+ALL ML Models must be able to be enabled / disabled via the settings tab. There must be a way to disable / enable all ML Models at once.
+For each ML Model there must be a way to seperately enable / disable the models training / prediction.
+
+## settings
+
+Settings and YAML file must always be in synch. If changes are made to the settings tab, these changes must be reflected in the YAML file. ALL settings configurable in the settings tab must be configurable via the YAML file
+
+
