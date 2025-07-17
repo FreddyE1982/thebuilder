@@ -393,6 +393,7 @@ class GymApp:
                     start_time = detail[2]
                     end_time = detail[3]
                     current_type = detail[4]
+                    notes_val = detail[5] or ""
                     cols = st.columns(3)
                     if cols[0].button("Start Workout", key=f"start_workout_{selected}"):
                         self.workouts.set_start_time(
@@ -418,6 +419,13 @@ class GymApp:
                         st.write(f"Start: {start_time}")
                     if end_time:
                         st.write(f"End: {end_time}")
+                    notes_edit = st.text_area(
+                        "Notes",
+                        value=notes_val,
+                        key=f"workout_notes_{selected}",
+                    )
+                    if st.button("Save Notes", key=f"save_notes_{selected}"):
+                        self.workouts.set_note(int(selected), notes_edit)
                     csv_data = self.sets.export_workout_csv(int(selected))
                     st.download_button(
                         label="Export CSV",
