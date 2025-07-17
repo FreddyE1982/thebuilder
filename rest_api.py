@@ -534,7 +534,10 @@ class GymAPI:
         @self.app.post("/exercises/{exercise_id}/sets")
         def add_set(exercise_id: int, reps: int, weight: float, rpe: int):
             prev = self.sets.last_rpe(exercise_id)
-            set_id = self.sets.add(exercise_id, reps, weight, rpe)
+            try:
+                set_id = self.sets.add(exercise_id, reps, weight, rpe)
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
             _, name, _ = self.exercises.fetch_detail(exercise_id)
             if (
                 self.settings.get_bool("ml_all_enabled", True)
@@ -555,10 +558,31 @@ class GymAPI:
             self.recommender.record_result(set_id, reps, weight, rpe)
             return {"id": set_id}
 
+        @self.app.post("/exercises/{exercise_id}/bulk_sets")
+        def bulk_add_sets(exercise_id: int, sets: str):
+            lines = [l.strip() for l in sets.split("|") if l.strip()]
+            entries: list[tuple[int, float, int]] = []
+            for line in lines:
+                try:
+                    r_s, w_s, rpe_s = [p.strip() for p in line.split(",")]
+                    entries.append((int(r_s), float(w_s), int(rpe_s)))
+                except Exception:
+                    raise HTTPException(status_code=400, detail="invalid format")
+            try:
+                ids = self.sets.bulk_add(exercise_id, entries)
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+            for rid, (reps_i, weight_i, rpe_i) in zip(ids, entries):
+                self.recommender.record_result(rid, reps_i, weight_i, rpe_i)
+            return {"added": len(ids)}
+
         @self.app.put("/sets/{set_id}")
         def update_set(set_id: int, reps: int, weight: float, rpe: int):
             prev = self.sets.previous_rpe(set_id)
-            self.sets.update(set_id, reps, weight, rpe)
+            try:
+                self.sets.update(set_id, reps, weight, rpe)
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
             ex_id = self.sets.fetch_exercise_id(set_id)
             _, name, _ = self.exercises.fetch_detail(ex_id)
             if (
