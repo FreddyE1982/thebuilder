@@ -88,7 +88,7 @@ class StatisticsService:
                     "est_1rm": MathTools.epley_1rm(float(weight), int(reps)),
                     "velocity": MathTools.estimate_velocity_from_set(
                         int(reps), start, end
-                    )
+                    ),
                 }
             )
         return history
@@ -108,12 +108,15 @@ class StatisticsService:
         )
         stats: Dict[str, Dict[str, float]] = {}
         for reps, weight, rpe, date, ex_name, _ in rows:
-            item = stats.setdefault(ex_name, {
-                "volume": 0.0,
-                "rpe_total": 0.0,
-                "count": 0,
-                "max_1rm": 0.0,
-            })
+            item = stats.setdefault(
+                ex_name,
+                {
+                    "volume": 0.0,
+                    "rpe_total": 0.0,
+                    "count": 0,
+                    "max_1rm": 0.0,
+                },
+            )
             vol = int(reps) * float(weight)
             item["volume"] += vol
             item["rpe_total"] += int(rpe)
@@ -147,9 +150,7 @@ class StatisticsService:
             est = item["est_1rm"]
             if date not in by_date or est > by_date[date]:
                 by_date[date] = est
-        return [
-            {"date": d, "est_1rm": round(by_date[d], 2)} for d in sorted(by_date)
-        ]
+        return [{"date": d, "est_1rm": round(by_date[d], 2)} for d in sorted(by_date)]
 
     def daily_volume(
         self,
@@ -257,9 +258,7 @@ class StatisticsService:
         times = list(range(len(rows)))
 
         months_active = (
-            self.settings.get_float("months_active", 1.0)
-            if self.settings
-            else 1.0
+            self.settings.get_float("months_active", 1.0) if self.settings else 1.0
         )
         workouts_per_month = float(len(set(times)))
         body_weight = self._current_body_weight()
@@ -545,13 +544,8 @@ class StatisticsService:
         rpes = [int(r[2]) for r in rows]
         dates = [r[3] for r in rows]
         base = datetime.date.fromisoformat(dates[0])
-        times = [
-            (datetime.date.fromisoformat(d) - base).days for d in dates
-        ]
-        perf = [
-            MathTools.epley_1rm(w, r)
-            for w, r in zip(weights, reps)
-        ]
+        times = [(datetime.date.fromisoformat(d) - base).days for d in dates]
+        perf = [MathTools.epley_1rm(w, r) for w, r in zip(weights, reps)]
         vols = [w * r for w, r in zip(weights, reps)]
         score = ExercisePrescription._advanced_plateau_detection(
             perf, times, rpes, vols
@@ -591,9 +585,7 @@ class StatisticsService:
 
         uniq_dates = sorted(set(dates))
         first = datetime.date.fromisoformat(dates[0])
-        ts_all = [
-            (datetime.date.fromisoformat(d) - first).days for d in dates
-        ]
+        ts_all = [(datetime.date.fromisoformat(d) - first).days for d in dates]
 
         stress_map: Dict[str, float] = {d: 0.0 for d in uniq_dates}
         for d, w, r, dur in zip(dates, weights, reps, durs):
@@ -793,14 +785,8 @@ class StatisticsService:
         result: List[Dict[str, float]] = []
         for wid, data in sorted(by_workout.items()):
             duration = float(data["dur"])
-            avg_rpe = (
-                sum(data["rpe"]) / len(data["rpe"])
-                if data["rpe"]
-                else None
-            )
-            eff = MathTools.session_efficiency(
-                data["volume"], duration, avg_rpe
-            )
+            avg_rpe = sum(data["rpe"]) / len(data["rpe"]) if data["rpe"] else None
+            eff = MathTools.session_efficiency(data["volume"], duration, avg_rpe)
             result.append(
                 {
                     "workout_id": wid,
@@ -809,8 +795,8 @@ class StatisticsService:
                 }
             )
         return result
-    def rest_times(
 
+    def rest_times(
         self,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
@@ -835,7 +821,7 @@ class StatisticsService:
             times_sorted = sorted(times, key=lambda t: t[0])
             rests: List[float] = []
             for i in range(1, len(times_sorted)):
-                prev_end = datetime.datetime.fromisoformat(times_sorted[i-1][1])
+                prev_end = datetime.datetime.fromisoformat(times_sorted[i - 1][1])
                 curr_start = datetime.datetime.fromisoformat(times_sorted[i][0])
                 diff = (curr_start - prev_end).total_seconds()
                 if diff > 0:
@@ -843,7 +829,6 @@ class StatisticsService:
             avg = sum(rests) / len(rests) if rests else 0.0
             result.append({"workout_id": wid, "avg_rest": round(avg, 2)})
         return result
-
 
     def stress_overview(
         self,
@@ -920,9 +905,7 @@ class StatisticsService:
         ordered_dates = sorted(volumes)
         base = datetime.date.fromisoformat(ordered_dates[0])
         hist = [volumes[d] for d in ordered_dates]
-        ts_last = (
-            datetime.date.fromisoformat(ordered_dates[-1]) - base
-        ).days
+        ts_last = (datetime.date.fromisoformat(ordered_dates[-1]) - base).days
 
         vals = hist[:]
         result: List[Dict[str, float]] = []
@@ -969,9 +952,7 @@ class StatisticsService:
         overview = self.stress_overview(start_date, end_date)
         variability = self.weekly_load_variability(start_date, end_date)
         features = [overview["stress"], overview["fatigue"], variability["variability"]]
-        base = (
-            MathTools.clamp(sum(features) / 3.0, 0.0, 10.0) / 10.0
-        )
+        base = MathTools.clamp(sum(features) / 3.0, 0.0, 10.0) / 10.0
         risk = base
         if (
             self.injury_model is not None
@@ -1124,9 +1105,7 @@ class StatisticsService:
         if self.body_weights is None:
             return []
         rows = self.body_weights.fetch_history(start_date, end_date)
-        return [
-            {"id": rid, "date": d, "weight": w} for rid, d, w in rows
-        ]
+        return [{"id": rid, "date": d, "weight": w} for rid, d, w in rows]
 
     def weight_stats(
         self, start_date: Optional[str] = None, end_date: Optional[str] = None
@@ -1140,3 +1119,28 @@ class StatisticsService:
             "min": min(weights),
             "max": max(weights),
         }
+
+    def bmi(self) -> float:
+        """Return current BMI using latest weight and height setting."""
+        if self.settings is None:
+            return 0.0
+        weight = self._current_body_weight()
+        height = self.settings.get_float("height", 1.75)
+        if height <= 0:
+            return 0.0
+        return round(weight / (height**2), 2)
+
+    def bmi_history(
+        self, start_date: Optional[str] = None, end_date: Optional[str] = None
+    ) -> List[Dict[str, float]]:
+        """Return BMI values for all logged body weight entries."""
+        if self.body_weights is None or self.settings is None:
+            return []
+        height = self.settings.get_float("height", 1.75)
+        if height <= 0:
+            return []
+        rows = self.body_weights.fetch_history(start_date, end_date)
+        result: List[Dict[str, float]] = []
+        for _rid, d, w in rows:
+            result.append({"date": d, "bmi": round(w / (height**2), 2)})
+        return result

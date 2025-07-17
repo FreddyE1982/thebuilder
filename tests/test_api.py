@@ -158,6 +158,7 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertEqual(data["body_weight"], 80.0)
+        self.assertEqual(data["height"], 1.75)
         self.assertEqual(data["months_active"], 1.0)
         self.assertEqual(data["theme"], "light")
         self.assertFalse(data["game_enabled"])
@@ -167,6 +168,7 @@ class APITestCase(unittest.TestCase):
             "/settings/general",
             params={
                 "body_weight": 85.5,
+                "height": 1.8,
                 "months_active": 6.0,
                 "theme": "dark",
                 "ml_all_enabled": False,
@@ -178,11 +180,13 @@ class APITestCase(unittest.TestCase):
         with open(self.yaml_path, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f)
         self.assertEqual(float(data["body_weight"]), 85.5)
+        self.assertEqual(float(data["height"]), 1.8)
         self.assertEqual(float(data["months_active"]), 6.0)
         self.assertEqual(data["theme"], "dark")
 
         new_data = {
             "body_weight": 90.0,
+            "height": 1.7,
             "months_active": 12.0,
             "theme": "light",
             "game_enabled": "0",
@@ -195,6 +199,7 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertEqual(data["body_weight"], 90.0)
+        self.assertEqual(data["height"], 1.7)
         self.assertEqual(data["months_active"], 12.0)
         self.assertEqual(data["theme"], "light")
         self.assertFalse(data["game_enabled"])
@@ -1624,7 +1629,9 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         id2 = resp.json()["id"]
 
-        resp = self.client.get("/body_weight", params={"start_date": d1, "end_date": d2})
+        resp = self.client.get(
+            "/body_weight", params={"start_date": d1, "end_date": d2}
+        )
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertEqual(len(data), 2)
@@ -1633,7 +1640,9 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(data[1]["id"], id2)
         self.assertAlmostEqual(data[1]["weight"], 82.0)
 
-        resp = self.client.get("/stats/weight_stats", params={"start_date": d1, "end_date": d2})
+        resp = self.client.get(
+            "/stats/weight_stats", params={"start_date": d1, "end_date": d2}
+        )
         self.assertEqual(resp.status_code, 200)
         stats = resp.json()
         self.assertAlmostEqual(stats["avg"], 81.0, places=2)
@@ -1684,3 +1693,23 @@ class APITestCase(unittest.TestCase):
 
         resp = self.client.get("/body_weight")
         self.assertEqual(resp.json(), [])
+
+    def test_bmi_endpoints(self) -> None:
+        self.client.post("/body_weight", params={"weight": 80.0, "date": "2023-01-01"})
+        self.client.post("/body_weight", params={"weight": 82.0, "date": "2023-01-02"})
+        resp = self.client.post(
+            "/settings/general",
+            params={"height": 1.8},
+        )
+        self.assertEqual(resp.status_code, 200)
+
+        resp = self.client.get("/stats/bmi")
+        self.assertEqual(resp.status_code, 200)
+        self.assertAlmostEqual(resp.json()["bmi"], round(82.0 / (1.8**2), 2))
+
+        resp = self.client.get("/stats/bmi_history")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(len(data), 2)
+        self.assertAlmostEqual(data[0]["bmi"], round(80.0 / (1.8**2), 2))
+        self.assertAlmostEqual(data[1]["bmi"], round(82.0 / (1.8**2), 2))

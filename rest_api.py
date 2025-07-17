@@ -1086,9 +1086,7 @@ class GymAPI:
         @self.app.get("/body_weight")
         def list_body_weight(start_date: str = None, end_date: str = None):
             rows = self.body_weights.fetch_history(start_date, end_date)
-            return [
-                {"id": rid, "date": d, "weight": w} for rid, d, w in rows
-            ]
+            return [{"id": rid, "date": d, "weight": w} for rid, d, w in rows]
 
         @self.app.put("/body_weight/{entry_id}")
         def update_body_weight(entry_id: int, weight: float, date: str):
@@ -1110,6 +1108,14 @@ class GymAPI:
         def stats_weight_stats(start_date: str = None, end_date: str = None):
             return self.statistics.weight_stats(start_date, end_date)
 
+        @self.app.get("/stats/bmi")
+        def stats_bmi():
+            return {"bmi": self.statistics.bmi()}
+
+        @self.app.get("/stats/bmi_history")
+        def stats_bmi_history(start_date: str = None, end_date: str = None):
+            return self.statistics.bmi_history(start_date, end_date)
+
         @self.app.get("/settings/general")
         def get_general_settings():
             return self.settings.all_settings()
@@ -1117,6 +1123,7 @@ class GymAPI:
         @self.app.post("/settings/general")
         def update_general_settings(
             body_weight: float = None,
+            height: float = None,
             months_active: float = None,
             theme: str = None,
             ml_all_enabled: bool = None,
@@ -1137,6 +1144,8 @@ class GymAPI:
         ):
             if body_weight is not None:
                 self.settings.set_float("body_weight", body_weight)
+            if height is not None:
+                self.settings.set_float("height", height)
             if months_active is not None:
                 self.settings.set_float("months_active", months_active)
             if theme is not None:

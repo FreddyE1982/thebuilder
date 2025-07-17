@@ -237,6 +237,7 @@ class GymApp:
                 ("Volume", stats["volume"]),
                 ("Avg RPE", stats["avg_rpe"]),
                 ("Exercises", stats["exercises"]),
+                ("BMI", self.stats.bmi()),
             ]
             for idx, (label, val) in enumerate(metrics):
                 cols[idx % col_num].metric(label, val)
@@ -1477,6 +1478,12 @@ class GymApp:
                 value=self.settings_repo.get_float("body_weight", 80.0),
                 step=0.5,
             )
+            height = st.number_input(
+                "Height (m)",
+                min_value=0.5,
+                value=self.settings_repo.get_float("height", 1.75),
+                step=0.01,
+            )
             ma = st.number_input(
                 "Months Active",
                 min_value=0.0,
@@ -1561,6 +1568,7 @@ class GymApp:
             st.metric("Total Points", self.gamification.total_points())
             if st.button("Save General Settings"):
                 self.settings_repo.set_float("body_weight", bw)
+                self.settings_repo.set_float("height", height)
                 self.settings_repo.set_float("months_active", ma)
                 self.settings_repo.set_text("theme", theme_opt)
                 self.theme = theme_opt
@@ -1757,6 +1765,14 @@ class GymApp:
                                 st.success("Deleted")
                             except ValueError as e:
                                 st.warning(str(e))
+
+            with st.expander("BMI History", expanded=False):
+                bmi_hist = self.stats.bmi_history()
+                if bmi_hist:
+                    st.line_chart(
+                        {"BMI": [b["bmi"] for b in bmi_hist]},
+                        x=[b["date"] for b in bmi_hist],
+                    )
 
 
 if __name__ == "__main__":
