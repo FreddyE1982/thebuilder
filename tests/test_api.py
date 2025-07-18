@@ -2076,3 +2076,23 @@ class APITestCase(unittest.TestCase):
 
         list_resp = self.client.get("/favorites/templates")
         self.assertNotIn(tid, list_resp.json())
+
+    def test_favorite_workouts(self) -> None:
+        self.client.post("/workouts")
+        add_resp = self.client.post(
+            "/favorites/workouts",
+            params={"workout_id": 1},
+        )
+        self.assertEqual(add_resp.status_code, 200)
+        self.assertEqual(add_resp.json(), {"status": "added"})
+
+        list_resp = self.client.get("/favorites/workouts")
+        self.assertEqual(list_resp.status_code, 200)
+        self.assertIn(1, list_resp.json())
+
+        del_resp = self.client.delete("/favorites/workouts/1")
+        self.assertEqual(del_resp.status_code, 200)
+        self.assertEqual(del_resp.json(), {"status": "deleted"})
+
+        list_resp = self.client.get("/favorites/workouts")
+        self.assertNotIn(1, list_resp.json())
