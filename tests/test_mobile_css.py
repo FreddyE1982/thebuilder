@@ -14,6 +14,7 @@ class MobileCSSTest(unittest.TestCase):
         self.assertIn("font-size: 1.25rem;", content)
         self.assertIn("orientation: landscape", content)
         self.assertIn("textarea,", content)
+        self.assertIn("Math.min", content)
 
 if __name__ == "__main__":
     unittest.main()
