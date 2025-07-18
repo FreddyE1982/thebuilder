@@ -594,59 +594,114 @@ class GymApp:
             with st.expander("Sets", expanded=True):
                 for set_id, reps, weight, rpe, start_time, end_time in sets:
                     detail = self.sets.fetch_detail(set_id)
-                    cols = st.columns(12)
-                    with cols[0]:
-                        st.write(f"Set {set_id}")
-                    reps_val = cols[1].number_input(
-                        "Reps",
-                        min_value=1,
-                        step=1,
-                        value=int(reps),
-                        key=f"reps_{set_id}",
-                    )
-                    weight_val = cols[2].number_input(
-                        "Weight (kg)",
-                        min_value=0.0,
-                        step=0.5,
-                        value=float(weight),
-                        key=f"weight_{set_id}",
-                    )
-                    rpe_val = cols[3].selectbox(
-                        "RPE",
-                        options=list(range(11)),
-                        index=int(rpe),
-                        key=f"rpe_{set_id}",
-                    )
-                    note_val = cols[4].text_input(
-                        "Note",
-                        value=detail.get("note") or "",
-                        key=f"note_{set_id}",
-                    )
-                    cols[5].write(f"{detail['diff_reps']:+}")
-                    cols[6].write(f"{detail['diff_weight']:+.1f}")
-                    cols[7].write(f"{detail['diff_rpe']:+}")
-                    if cols[8].button("Start", key=f"start_set_{set_id}"):
-                        self.sets.set_start_time(
-                            set_id,
-                            datetime.datetime.now().isoformat(timespec="seconds"),
+                    if st.session_state.is_mobile:
+                        with st.expander(f"Set {set_id}"):
+                            reps_val = st.number_input(
+                                "Reps",
+                                min_value=1,
+                                step=1,
+                                value=int(reps),
+                                key=f"reps_{set_id}",
+                            )
+                            weight_val = st.number_input(
+                                "Weight (kg)",
+                                min_value=0.0,
+                                step=0.5,
+                                value=float(weight),
+                                key=f"weight_{set_id}",
+                            )
+                            rpe_val = st.selectbox(
+                                "RPE",
+                                options=list(range(11)),
+                                index=int(rpe),
+                                key=f"rpe_{set_id}",
+                            )
+                            note_val = st.text_input(
+                                "Note",
+                                value=detail.get("note") or "",
+                                key=f"note_{set_id}",
+                            )
+                            st.write(f"{detail['diff_reps']:+}")
+                            st.write(f"{detail['diff_weight']:+.1f}")
+                            st.write(f"{detail['diff_rpe']:+}")
+                            start_col, finish_col = st.columns(2)
+                            if start_col.button("Start", key=f"start_set_{set_id}"):
+                                self.sets.set_start_time(
+                                    set_id,
+                                    datetime.datetime.now().isoformat(timespec="seconds"),
+                                )
+                            if finish_col.button("Finish", key=f"finish_set_{set_id}"):
+                                self.sets.set_end_time(
+                                    set_id,
+                                    datetime.datetime.now().isoformat(timespec="seconds"),
+                                )
+                            del_col, upd_col = st.columns(2)
+                            if del_col.button("Delete", key=f"del_{set_id}"):
+                                self._confirm_delete_set(set_id)
+                                continue
+                            if upd_col.button("Update", key=f"upd_{set_id}"):
+                                self.sets.update(
+                                    set_id, int(reps_val), float(weight_val), int(rpe_val)
+                                )
+                                self.sets.update_note(set_id, note_val or None)
+                            if start_time:
+                                st.write(start_time)
+                            if end_time:
+                                st.write(end_time)
+                    else:
+                        cols = st.columns(12)
+                        with cols[0]:
+                            st.write(f"Set {set_id}")
+                        reps_val = cols[1].number_input(
+                            "Reps",
+                            min_value=1,
+                            step=1,
+                            value=int(reps),
+                            key=f"reps_{set_id}",
                         )
-                    if cols[9].button("Finish", key=f"finish_set_{set_id}"):
-                        self.sets.set_end_time(
-                            set_id,
-                            datetime.datetime.now().isoformat(timespec="seconds"),
+                        weight_val = cols[2].number_input(
+                            "Weight (kg)",
+                            min_value=0.0,
+                            step=0.5,
+                            value=float(weight),
+                            key=f"weight_{set_id}",
                         )
-                    if cols[10].button("Delete", key=f"del_{set_id}"):
-                        self._confirm_delete_set(set_id)
-                        continue
-                    if cols[11].button("Update", key=f"upd_{set_id}"):
-                        self.sets.update(
-                            set_id, int(reps_val), float(weight_val), int(rpe_val)
+                        rpe_val = cols[3].selectbox(
+                            "RPE",
+                            options=list(range(11)),
+                            index=int(rpe),
+                            key=f"rpe_{set_id}",
                         )
-                        self.sets.update_note(set_id, note_val or None)
-                    if start_time:
-                        cols[8].write(start_time)
-                    if end_time:
-                        cols[9].write(end_time)
+                        note_val = cols[4].text_input(
+                            "Note",
+                            value=detail.get("note") or "",
+                            key=f"note_{set_id}",
+                        )
+                        cols[5].write(f"{detail['diff_reps']:+}")
+                        cols[6].write(f"{detail['diff_weight']:+.1f}")
+                        cols[7].write(f"{detail['diff_rpe']:+}")
+                        if cols[8].button("Start", key=f"start_set_{set_id}"):
+                            self.sets.set_start_time(
+                                set_id,
+                                datetime.datetime.now().isoformat(timespec="seconds"),
+                            )
+                        if cols[9].button("Finish", key=f"finish_set_{set_id}"):
+                            self.sets.set_end_time(
+                                set_id,
+                                datetime.datetime.now().isoformat(timespec="seconds"),
+                            )
+                        if cols[10].button("Delete", key=f"del_{set_id}"):
+                            self._confirm_delete_set(set_id)
+                            continue
+                        if cols[11].button("Update", key=f"upd_{set_id}"):
+                            self.sets.update(
+                                set_id, int(reps_val), float(weight_val), int(rpe_val)
+                            )
+                            self.sets.update_note(set_id, note_val or None)
+                        if start_time:
+                            cols[8].write(start_time)
+                        if end_time:
+                            cols[9].write(end_time)
             hist = self.stats.exercise_history(name)
             if hist:
                 with st.expander("History (last 5)"):
