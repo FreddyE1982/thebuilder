@@ -984,31 +984,66 @@ class GymApp:
                     st.markdown(f"- {m}")
             with st.expander("Sets", expanded=True):
                 for set_id, reps, weight, rpe in sets:
-                    cols = st.columns(5)
-                    with cols[0]:
-                        st.write(f"Set {set_id}")
-                    cols[1].number_input(
-                        "Reps",
-                        min_value=1,
-                        step=1,
-                        value=int(reps),
-                        key=f"plan_reps_{set_id}",
-                    )
-                    cols[2].number_input(
-                        "Weight (kg)",
-                        min_value=0.0,
-                        step=0.5,
-                        value=float(weight),
-                        key=f"plan_weight_{set_id}",
-                    )
-                    cols[3].selectbox(
-                        "RPE",
-                        options=list(range(11)),
-                        index=int(rpe),
-                        key=f"plan_rpe_{set_id}",
-                    )
-                    if cols[4].button("Delete", key=f"del_plan_set_{set_id}"):
-                        self.planned_sets.remove(set_id)
+                    if st.session_state.is_mobile:
+                        with st.expander(f"Set {set_id}"):
+                            reps_val = st.number_input(
+                                "Reps",
+                                min_value=1,
+                                step=1,
+                                value=int(reps),
+                                key=f"plan_reps_{set_id}",
+                            )
+                            weight_val = st.number_input(
+                                "Weight (kg)",
+                                min_value=0.0,
+                                step=0.5,
+                                value=float(weight),
+                                key=f"plan_weight_{set_id}",
+                            )
+                            rpe_val = st.selectbox(
+                                "RPE",
+                                options=list(range(11)),
+                                index=int(rpe),
+                                key=f"plan_rpe_{set_id}",
+                            )
+                            del_col, upd_col = st.columns(2)
+                            if del_col.button("Delete", key=f"del_plan_set_{set_id}"):
+                                self.planned_sets.remove(set_id)
+                                continue
+                            if upd_col.button("Update", key=f"upd_plan_set_{set_id}"):
+                                self.planned_sets.update(
+                                    set_id, int(reps_val), float(weight_val), int(rpe_val)
+                                )
+                    else:
+                        cols = st.columns(6)
+                        cols[0].write(f"Set {set_id}")
+                        reps_val = cols[1].number_input(
+                            "Reps",
+                            min_value=1,
+                            step=1,
+                            value=int(reps),
+                            key=f"plan_reps_{set_id}",
+                        )
+                        weight_val = cols[2].number_input(
+                            "Weight (kg)",
+                            min_value=0.0,
+                            step=0.5,
+                            value=float(weight),
+                            key=f"plan_weight_{set_id}",
+                        )
+                        rpe_val = cols[3].selectbox(
+                            "RPE",
+                            options=list(range(11)),
+                            index=int(rpe),
+                            key=f"plan_rpe_{set_id}",
+                        )
+                        if cols[4].button("Delete", key=f"del_plan_set_{set_id}"):
+                            self.planned_sets.remove(set_id)
+                            continue
+                        if cols[5].button("Update", key=f"upd_plan_set_{set_id}"):
+                            self.planned_sets.update(
+                                set_id, int(reps_val), float(weight_val), int(rpe_val)
+                            )
             with st.expander("Add Planned Set"):
                 self._add_planned_set_form(exercise_id)
 
@@ -1154,28 +1189,66 @@ class GymApp:
                 return
             with st.expander("Sets", expanded=True):
                 for sid, reps, weight, rpe in sets:
-                    cols = st.columns(4)
-                    cols[0].write(f"Set {sid}")
-                    cols[1].number_input(
-                        "Reps",
-                        min_value=1,
-                        step=1,
-                        value=int(reps),
-                        key=f"tmpl_reps_{sid}",
-                    )
-                    cols[2].number_input(
-                        "Weight",
-                        min_value=0.0,
-                        step=0.5,
-                        value=float(weight),
-                        key=f"tmpl_w_{sid}",
-                    )
-                    cols[3].selectbox(
-                        "RPE",
-                        options=list(range(11)),
-                        index=int(rpe),
-                        key=f"tmpl_rpe_{sid}",
-                    )
+                    if st.session_state.is_mobile:
+                        with st.expander(f"Set {sid}"):
+                            reps_val = st.number_input(
+                                "Reps",
+                                min_value=1,
+                                step=1,
+                                value=int(reps),
+                                key=f"tmpl_reps_{sid}",
+                            )
+                            weight_val = st.number_input(
+                                "Weight",
+                                min_value=0.0,
+                                step=0.5,
+                                value=float(weight),
+                                key=f"tmpl_w_{sid}",
+                            )
+                            rpe_val = st.selectbox(
+                                "RPE",
+                                options=list(range(11)),
+                                index=int(rpe),
+                                key=f"tmpl_rpe_{sid}",
+                            )
+                            del_col, upd_col = st.columns(2)
+                            if del_col.button("Delete", key=f"tmpl_del_set_{sid}"):
+                                self.template_sets.remove(sid)
+                                continue
+                            if upd_col.button("Update", key=f"tmpl_upd_set_{sid}"):
+                                self.template_sets.update(
+                                    sid, int(reps_val), float(weight_val), int(rpe_val)
+                                )
+                    else:
+                        cols = st.columns(5)
+                        cols[0].write(f"Set {sid}")
+                        reps_val = cols[1].number_input(
+                            "Reps",
+                            min_value=1,
+                            step=1,
+                            value=int(reps),
+                            key=f"tmpl_reps_{sid}",
+                        )
+                        weight_val = cols[2].number_input(
+                            "Weight",
+                            min_value=0.0,
+                            step=0.5,
+                            value=float(weight),
+                            key=f"tmpl_w_{sid}",
+                        )
+                        rpe_val = cols[3].selectbox(
+                            "RPE",
+                            options=list(range(11)),
+                            index=int(rpe),
+                            key=f"tmpl_rpe_{sid}",
+                        )
+                        if cols[4].button("Delete", key=f"tmpl_del_set_{sid}"):
+                            self.template_sets.remove(sid)
+                            continue
+                        if cols[4].button("Update", key=f"tmpl_upd_set_{sid}"):
+                            self.template_sets.update(
+                                sid, int(reps_val), float(weight_val), int(rpe_val)
+                            )
             with st.expander("Add Set"):
                 reps = st.number_input(
                     "Reps", min_value=1, step=1, key=f"tmpl_new_reps_{exercise_id}"
