@@ -147,12 +147,27 @@ class GymApp:
                 height=0,
             )
             st.stop()
-        st.set_page_config(
-            page_title="Workout Logger",
-            layout="centered" if mode == "mobile" else "wide",
-        )
+        layout = "centered" if mode == "mobile" else "wide"
+        st.set_page_config(page_title="Workout Logger", layout=layout)
         st.session_state.layout_set = True
         st.session_state.is_mobile = mode == "mobile"
+        st.components.v1.html(
+            """
+            <script>
+            function setMode() {
+                const mode = window.innerWidth < 768 ? 'mobile' : 'desktop';
+                const params = new URLSearchParams(window.location.search);
+                const cur = params.get('mode');
+                if (mode !== cur) {
+                    params.set('mode', mode);
+                    window.location.search = params.toString();
+                }
+            }
+            window.addEventListener('resize', setMode);
+            </script>
+            """,
+            height=0,
+        )
 
     def _inject_responsive_css(self) -> None:
         st.markdown(
@@ -168,6 +183,10 @@ class GymApp:
                 }
                 div[data-testid="metric-container"] > label {
                     font-size: 0.9rem;
+                }
+                div[data-baseweb="input"] input,
+                div[data-baseweb="select"] {
+                    width: 100% !important;
                 }
             }
             </style>
