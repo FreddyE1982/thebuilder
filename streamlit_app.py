@@ -959,7 +959,9 @@ class GymApp:
                             st.experimental_rerun()
                 else:
                     st.write("No favorites.")
-                templates = {str(t[0]): t[1] for t in self.template_workouts.fetch_all()}
+                templates = {
+                    str(t[0]): t[1] for t in self.template_workouts.fetch_all()
+                }
                 add_choice = st.selectbox(
                     "Add Favorite",
                     [""] + list(templates.keys()),
@@ -1776,100 +1778,117 @@ class GymApp:
 
         with gen_tab:
             st.header("General Settings")
-            bw = st.number_input(
-                "Body Weight (kg)",
-                min_value=1.0,
-                value=self.settings_repo.get_float("body_weight", 80.0),
-                step=0.5,
-            )
-            height = st.number_input(
-                "Height (m)",
-                min_value=0.5,
-                value=self.settings_repo.get_float("height", 1.75),
-                step=0.01,
-            )
-            ma = st.number_input(
-                "Months Active",
-                min_value=0.0,
-                value=self.settings_repo.get_float("months_active", 1.0),
-                step=1.0,
-            )
-            theme_opt = st.selectbox(
-                "Theme",
-                ["light", "dark"],
-                index=["light", "dark"].index(self.theme),
-            )
-            game_enabled = st.checkbox(
-                "Enable Gamification",
-                value=self.gamification.is_enabled(),
-            )
-            ml_global = st.checkbox(
-                "Enable ML Models",
-                value=self.settings_repo.get_bool("ml_all_enabled", True),
-            )
-            ml_train = st.checkbox(
-                "Enable ML Training",
-                value=self.settings_repo.get_bool("ml_training_enabled", True),
-            )
-            ml_pred = st.checkbox(
-                "Enable ML Prediction",
-                value=self.settings_repo.get_bool("ml_prediction_enabled", True),
-            )
-            rpe_train = st.checkbox(
-                "RPE Model Training",
-                value=self.settings_repo.get_bool("ml_rpe_training_enabled", True),
-            )
-            rpe_pred = st.checkbox(
-                "RPE Model Prediction",
-                value=self.settings_repo.get_bool("ml_rpe_prediction_enabled", True),
-            )
-            vol_train = st.checkbox(
-                "Volume Model Training",
-                value=self.settings_repo.get_bool("ml_volume_training_enabled", True),
-            )
-            vol_pred = st.checkbox(
-                "Volume Model Prediction",
-                value=self.settings_repo.get_bool("ml_volume_prediction_enabled", True),
-            )
-            read_train = st.checkbox(
-                "Readiness Model Training",
-                value=self.settings_repo.get_bool(
-                    "ml_readiness_training_enabled", True
-                ),
-            )
-            read_pred = st.checkbox(
-                "Readiness Model Prediction",
-                value=self.settings_repo.get_bool(
-                    "ml_readiness_prediction_enabled", True
-                ),
-            )
-            prog_train = st.checkbox(
-                "Progress Model Training",
-                value=self.settings_repo.get_bool("ml_progress_training_enabled", True),
-            )
-            prog_pred = st.checkbox(
-                "Progress Model Prediction",
-                value=self.settings_repo.get_bool(
-                    "ml_progress_prediction_enabled", True
-                ),
-            )
-            goal_train = st.checkbox(
-                "Goal Model Training",
-                value=self.settings_repo.get_bool("ml_goal_training_enabled", True),
-            )
-            goal_pred = st.checkbox(
-                "Goal Model Prediction",
-                value=self.settings_repo.get_bool("ml_goal_prediction_enabled", True),
-            )
-            inj_train = st.checkbox(
-                "Injury Model Training",
-                value=self.settings_repo.get_bool("ml_injury_training_enabled", True),
-            )
-            inj_pred = st.checkbox(
-                "Injury Model Prediction",
-                value=self.settings_repo.get_bool("ml_injury_prediction_enabled", True),
-            )
-            st.metric("Total Points", self.gamification.total_points())
+            with st.expander("User Settings", expanded=True):
+                bw = st.number_input(
+                    "Body Weight (kg)",
+                    min_value=1.0,
+                    value=self.settings_repo.get_float("body_weight", 80.0),
+                    step=0.5,
+                )
+                height = st.number_input(
+                    "Height (m)",
+                    min_value=0.5,
+                    value=self.settings_repo.get_float("height", 1.75),
+                    step=0.01,
+                )
+                ma = st.number_input(
+                    "Months Active",
+                    min_value=0.0,
+                    value=self.settings_repo.get_float("months_active", 1.0),
+                    step=1.0,
+                )
+                theme_opt = st.selectbox(
+                    "Theme",
+                    ["light", "dark"],
+                    index=["light", "dark"].index(self.theme),
+                )
+            with st.expander("Gamification", expanded=True):
+                game_enabled = st.checkbox(
+                    "Enable Gamification",
+                    value=self.gamification.is_enabled(),
+                )
+                st.metric("Total Points", self.gamification.total_points())
+            with st.expander("Machine Learning", expanded=True):
+                ml_global = st.checkbox(
+                    "Enable ML Models",
+                    value=self.settings_repo.get_bool("ml_all_enabled", True),
+                )
+                ml_train = st.checkbox(
+                    "Enable ML Training",
+                    value=self.settings_repo.get_bool("ml_training_enabled", True),
+                )
+                ml_pred = st.checkbox(
+                    "Enable ML Prediction",
+                    value=self.settings_repo.get_bool("ml_prediction_enabled", True),
+                )
+                rpe_train = st.checkbox(
+                    "RPE Model Training",
+                    value=self.settings_repo.get_bool("ml_rpe_training_enabled", True),
+                )
+                rpe_pred = st.checkbox(
+                    "RPE Model Prediction",
+                    value=self.settings_repo.get_bool(
+                        "ml_rpe_prediction_enabled", True
+                    ),
+                )
+                vol_train = st.checkbox(
+                    "Volume Model Training",
+                    value=self.settings_repo.get_bool(
+                        "ml_volume_training_enabled", True
+                    ),
+                )
+                vol_pred = st.checkbox(
+                    "Volume Model Prediction",
+                    value=self.settings_repo.get_bool(
+                        "ml_volume_prediction_enabled", True
+                    ),
+                )
+                read_train = st.checkbox(
+                    "Readiness Model Training",
+                    value=self.settings_repo.get_bool(
+                        "ml_readiness_training_enabled", True
+                    ),
+                )
+                read_pred = st.checkbox(
+                    "Readiness Model Prediction",
+                    value=self.settings_repo.get_bool(
+                        "ml_readiness_prediction_enabled", True
+                    ),
+                )
+                prog_train = st.checkbox(
+                    "Progress Model Training",
+                    value=self.settings_repo.get_bool(
+                        "ml_progress_training_enabled", True
+                    ),
+                )
+                prog_pred = st.checkbox(
+                    "Progress Model Prediction",
+                    value=self.settings_repo.get_bool(
+                        "ml_progress_prediction_enabled", True
+                    ),
+                )
+                goal_train = st.checkbox(
+                    "Goal Model Training",
+                    value=self.settings_repo.get_bool("ml_goal_training_enabled", True),
+                )
+                goal_pred = st.checkbox(
+                    "Goal Model Prediction",
+                    value=self.settings_repo.get_bool(
+                        "ml_goal_prediction_enabled", True
+                    ),
+                )
+                inj_train = st.checkbox(
+                    "Injury Model Training",
+                    value=self.settings_repo.get_bool(
+                        "ml_injury_training_enabled", True
+                    ),
+                )
+                inj_pred = st.checkbox(
+                    "Injury Model Prediction",
+                    value=self.settings_repo.get_bool(
+                        "ml_injury_prediction_enabled", True
+                    ),
+                )
             if st.button("Save General Settings"):
                 self.settings_repo.set_float("body_weight", bw)
                 self.settings_repo.set_float("height", height)
