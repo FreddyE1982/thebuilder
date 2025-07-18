@@ -339,6 +339,7 @@ class GymApp:
                 dash_sub,
                 stats_sub,
                 insights_sub,
+                weight_sub,
                 rep_sub,
                 game_sub,
                 tests_sub,
@@ -348,6 +349,7 @@ class GymApp:
                     "Dashboard",
                     "Exercise Stats",
                     "Insights",
+                    "Body Weight",
                     "Reports",
                     "Gamification",
                     "Tests",
@@ -361,6 +363,8 @@ class GymApp:
                 self._stats_tab()
             with insights_sub:
                 self._insights_tab()
+            with weight_sub:
+                self._weight_tab()
             with rep_sub:
                 self._reports_tab()
             with game_sub:
@@ -1525,6 +1529,50 @@ class GymApp:
                     )
         else:
             st.info("Select an exercise to view insights.")
+
+    def _weight_tab(self) -> None:
+        st.header("Body Weight")
+        with st.expander("Date Range", expanded=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                start = st.date_input(
+                    "Start",
+                    datetime.date.today() - datetime.timedelta(days=30),
+                    key="bw_start",
+                )
+            with col2:
+                end = st.date_input("End", datetime.date.today(), key="bw_end")
+            start_str = start.isoformat()
+            end_str = end.isoformat()
+        stats = self.stats.weight_stats(start_str, end_str)
+        with st.expander("Statistics", expanded=True):
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Average", stats["avg"])
+            c2.metric("Min", stats["min"])
+            c3.metric("Max", stats["max"])
+        history = self.stats.body_weight_history(start_str, end_str)
+        if history:
+            with st.expander("Weight History", expanded=True):
+                st.line_chart(
+                    {"Weight": [h["weight"] for h in history]},
+                    x=[h["date"] for h in history],
+                )
+        bmi_hist = self.stats.bmi_history(start_str, end_str)
+        if bmi_hist:
+            with st.expander("BMI History", expanded=False):
+                st.line_chart(
+                    {"BMI": [b["bmi"] for b in bmi_hist]},
+                    x=[b["date"] for b in bmi_hist],
+                )
+        with st.expander("Forecast", expanded=False):
+            days = st.slider("Days", 1, 14, 7, key="bw_fc_days")
+            if st.button("Show Forecast", key="bw_fc_btn"):
+                forecast = self.stats.weight_forecast(days)
+                if forecast:
+                    st.line_chart(
+                        {"Weight": [f["weight"] for f in forecast]},
+                        x=[str(f["day"]) for f in forecast],
+                    )
 
     def _reports_tab(self) -> None:
         st.header("Reports")
