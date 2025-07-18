@@ -187,12 +187,13 @@ class GymApp:
                 button[kind="secondary"] {
                     width: 100%;
                 }
-                div[data-testid="metric-container"] > label {
-                    font-size: 0.9rem;
-                }
+                textarea,
                 div[data-baseweb="input"] input,
                 div[data-baseweb="select"] {
                     width: 100% !important;
+                }
+                div[data-testid="metric-container"] > label {
+                    font-size: 0.9rem;
                 }
                 div[data-testid="stTable"] table {
                     display: block;
@@ -229,6 +230,16 @@ class GymApp:
                 }
                 h3 {
                     font-size: 1.25rem;
+                }
+            }
+
+            @media screen and (max-width: 768px) and (orientation: landscape) {
+                section.main > div {
+                    padding: 0.5rem !important;
+                }
+                div[data-testid="column"] {
+                    flex-direction: row;
+                    flex-wrap: wrap;
                 }
             }
             </style>
