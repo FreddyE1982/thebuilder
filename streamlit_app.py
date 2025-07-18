@@ -313,42 +313,48 @@ class GymApp:
         self._create_sidebar()
         self._refresh()
         (
-            log_tab,
-            plan_tab,
+            workouts_tab,
             library_tab,
-            history_tab,
-            stats_tab,
-            tests_tab,
+            progress_tab,
             settings_tab,
         ) = st.tabs(
             [
-                "Log",
-                "Plan",
+                "Workouts",
                 "Library",
-                "History",
-                "Statistics",
-                "Tests",
+                "Progress",
                 "Settings",
             ]
         )
-        with log_tab:
-            self._log_tab()
-        with plan_tab:
-            self._plan_tab()
+        with workouts_tab:
+            log_sub, plan_sub = st.tabs(["Log", "Plan"])
+            with log_sub:
+                self._log_tab()
+            with plan_sub:
+                self._plan_tab()
         with library_tab:
             self._library_tab()
-        with history_tab:
-            self._history_tab()
-        with stats_tab:
-            dash_sub, stats_sub, insights_sub, rep_sub, game_sub = st.tabs(
+        with progress_tab:
+            (
+                history_sub,
+                dash_sub,
+                stats_sub,
+                insights_sub,
+                rep_sub,
+                game_sub,
+                tests_sub,
+            ) = st.tabs(
                 [
+                    "History",
                     "Dashboard",
                     "Exercise Stats",
                     "Insights",
                     "Reports",
                     "Gamification",
+                    "Tests",
                 ]
             )
+            with history_sub:
+                self._history_tab()
             with dash_sub:
                 self._dashboard_tab()
             with stats_sub:
@@ -359,8 +365,8 @@ class GymApp:
                 self._reports_tab()
             with game_sub:
                 self._gamification_tab()
-        with tests_tab:
-            self._tests_tab()
+            with tests_sub:
+                self._tests_tab()
         with settings_tab:
             self._settings_tab()
 
