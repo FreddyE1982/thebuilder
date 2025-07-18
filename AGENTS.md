@@ -422,3 +422,4 @@ keep the AGENTS.md updated by adding new sensible rules when they occur to you. 
 - Analytics endpoints should return results sorted by their key fields for consistent ordering.
 - Workouts may record an optional location which must be editable via REST endpoints and the Streamlit GUI.
 - Workouts can be labeled with user-defined tags managed via the settings tab. Tags must be assignable through REST endpoints and the Streamlit GUI.
+- All responsive layout and mobile-specific styling must be defined within the `_inject_responsive_css` method in `streamlit_app.py` and must preserve all desktop functionality.
