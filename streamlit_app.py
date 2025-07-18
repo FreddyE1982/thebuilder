@@ -211,6 +211,13 @@ class GymApp:
                     max-width: 100% !important;
                     height: auto !important;
                 }
+                div[data-testid="stTabs"] > div:first-child {
+                    overflow-x: auto;
+                    white-space: nowrap;
+                }
+                div[data-testid="stTabs"] button {
+                    flex-shrink: 0;
+                }
             }
             </style>
             """,
