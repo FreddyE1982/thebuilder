@@ -200,6 +200,17 @@ class GymApp:
                     white-space: nowrap;
                     width: 100%;
                 }
+                div[data-testid="metric-container"] > div {
+                    flex-direction: column;
+                    align-items: center;
+                }
+                body {
+                    overflow-x: hidden;
+                }
+                canvas {
+                    max-width: 100% !important;
+                    height: auto !important;
+                }
             }
             </style>
             """,
