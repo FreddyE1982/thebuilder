@@ -242,6 +242,31 @@ class GymApp:
                     flex-wrap: wrap;
                 }
             }
+
+            @media screen and (max-width: 480px) {
+                section.main > div {
+                    padding: 0.5rem !important;
+                }
+                h1 {
+                    font-size: 1.5rem;
+                }
+                h2 {
+                    font-size: 1.25rem;
+                }
+                h3 {
+                    font-size: 1rem;
+                }
+            }
+
+            @media screen and (max-width: 480px) and (orientation: landscape) {
+                section.main > div {
+                    padding: 0.25rem !important;
+                }
+                div[data-testid="column"] {
+                    flex-direction: row;
+                    flex-wrap: wrap;
+                }
+            }
             </style>
             """,
             unsafe_allow_html=True,
@@ -669,12 +694,16 @@ class GymApp:
                             if start_col.button("Start", key=f"start_set_{set_id}"):
                                 self.sets.set_start_time(
                                     set_id,
-                                    datetime.datetime.now().isoformat(timespec="seconds"),
+                                    datetime.datetime.now().isoformat(
+                                        timespec="seconds"
+                                    ),
                                 )
                             if finish_col.button("Finish", key=f"finish_set_{set_id}"):
                                 self.sets.set_end_time(
                                     set_id,
-                                    datetime.datetime.now().isoformat(timespec="seconds"),
+                                    datetime.datetime.now().isoformat(
+                                        timespec="seconds"
+                                    ),
                                 )
                             del_col, upd_col = st.columns(2)
                             if del_col.button("Delete", key=f"del_{set_id}"):
@@ -682,7 +711,10 @@ class GymApp:
                                 continue
                             if upd_col.button("Update", key=f"upd_{set_id}"):
                                 self.sets.update(
-                                    set_id, int(reps_val), float(weight_val), int(rpe_val)
+                                    set_id,
+                                    int(reps_val),
+                                    float(weight_val),
+                                    int(rpe_val),
                                 )
                                 self.sets.update_note(set_id, note_val or None)
                             if start_time:
@@ -1053,7 +1085,10 @@ class GymApp:
                                 continue
                             if upd_col.button("Update", key=f"upd_plan_set_{set_id}"):
                                 self.planned_sets.update(
-                                    set_id, int(reps_val), float(weight_val), int(rpe_val)
+                                    set_id,
+                                    int(reps_val),
+                                    float(weight_val),
+                                    int(rpe_val),
                                 )
                     else:
                         cols = st.columns(6)
