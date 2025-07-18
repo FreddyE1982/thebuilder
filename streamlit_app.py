@@ -218,6 +218,18 @@ class GymApp:
                 div[data-testid="stTabs"] button {
                     flex-shrink: 0;
                 }
+                div[data-testid="stSidebar"] {
+                    width: 100% !important;
+                }
+                h1 {
+                    font-size: 1.75rem;
+                }
+                h2 {
+                    font-size: 1.5rem;
+                }
+                h3 {
+                    font-size: 1.25rem;
+                }
             }
             </style>
             """,
