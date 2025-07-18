@@ -25,6 +25,7 @@ from db import (
     WellnessRepository,
     FavoriteExerciseRepository,
     FavoriteTemplateRepository,
+    FavoriteWorkoutRepository,
     TagRepository,
 )
 from planner_service import PlannerService
@@ -64,6 +65,7 @@ class GymApp:
         self.exercise_names_repo = ExerciseNameRepository()
         self.favorites_repo = FavoriteExerciseRepository()
         self.favorite_templates_repo = FavoriteTemplateRepository()
+        self.favorite_workouts_repo = FavoriteWorkoutRepository()
         self.tags_repo = TagRepository()
         self.pyramid_tests = PyramidTestRepository()
         self.pyramid_entries = PyramidEntryRepository()
@@ -1287,6 +1289,31 @@ class GymApp:
 
     def _history_tab(self) -> None:
         st.header("Workout History")
+        favs = self.favorite_workouts_repo.fetch_all()
+        with st.expander("Favorite Workouts", expanded=True):
+            if favs:
+                for fid in favs:
+                    try:
+                        _id, date, *_ = self.workouts.fetch_detail(fid)
+                    except ValueError:
+                        continue
+                    cols = st.columns(2)
+                    cols[0].write(date)
+                    if cols[1].button("Remove", key=f"fav_wk_rm_{fid}"):
+                        self.favorite_workouts_repo.remove(fid)
+                        st.experimental_rerun()
+            else:
+                st.write("No favorites.")
+            all_workouts = {str(w[0]): w[1] for w in self.workouts.fetch_all_workouts()}
+            add_choice = st.selectbox(
+                "Add Favorite",
+                [""] + list(all_workouts.keys()),
+                format_func=lambda x: "" if x == "" else all_workouts[x],
+                key="fav_wk_add_choice",
+            )
+            if st.button("Add Favorite", key="fav_wk_add_btn") and add_choice:
+                self.favorite_workouts_repo.add(int(add_choice))
+                st.experimental_rerun()
         with st.expander("Filters", expanded=True):
             col1, col2 = st.columns(2)
             with col1:
