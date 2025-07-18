@@ -4,7 +4,7 @@ The Builder is a full featured workout planner, logger and analytics platform bu
 
 ## Features
 
-- Responsive Streamlit interface for desktop and mobile devices.
+ - Fully responsive Streamlit interface with automatic layout detection for desktop and mobile devices.
 - REST API exposing every action used by the GUI.
 - Log workouts with training type, exercises and detailed sets. Each set stores reps, weight, RPE and timestamps.
 - Plan future workouts, duplicate plans and convert them to logged sessions.
