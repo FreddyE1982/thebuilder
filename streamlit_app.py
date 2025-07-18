@@ -138,7 +138,7 @@ class GymApp:
             st.components.v1.html(
                 """
                 <script>
-                const mode = window.innerWidth < 768 ? 'mobile' : 'desktop';
+                const mode = Math.min(window.innerWidth, window.innerHeight) < 768 ? 'mobile' : 'desktop';
                 const params = new URLSearchParams(window.location.search);
                 params.set('mode', mode);
                 window.location.search = params.toString();
@@ -159,7 +159,7 @@ class GymApp:
             """
             <script>
             function setMode() {
-                const mode = window.innerWidth < 768 ? 'mobile' : 'desktop';
+                const mode = Math.min(window.innerWidth, window.innerHeight) < 768 ? 'mobile' : 'desktop';
                 const params = new URLSearchParams(window.location.search);
                 const cur = params.get('mode');
                 if (mode !== cur) {
