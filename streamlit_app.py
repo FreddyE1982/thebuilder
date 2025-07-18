@@ -149,6 +149,10 @@ class GymApp:
             st.stop()
         layout = "centered" if mode == "mobile" else "wide"
         st.set_page_config(page_title="Workout Logger", layout=layout)
+        st.markdown(
+            "<meta name='viewport' content='width=device-width, initial-scale=1'>",
+            unsafe_allow_html=True,
+        )
         st.session_state.layout_set = True
         st.session_state.is_mobile = mode == "mobile"
         st.components.v1.html(
@@ -164,6 +168,7 @@ class GymApp:
                 }
             }
             window.addEventListener('resize', setMode);
+            window.addEventListener('orientationchange', setMode);
             </script>
             """,
             height=0,
@@ -178,7 +183,8 @@ class GymApp:
                     width: 100% !important;
                     flex: 1 1 100% !important;
                 }
-                button[kind="primary"] {
+                button[kind="primary"],
+                button[kind="secondary"] {
                     width: 100%;
                 }
                 div[data-testid="metric-container"] > label {
@@ -187,6 +193,12 @@ class GymApp:
                 div[data-baseweb="input"] input,
                 div[data-baseweb="select"] {
                     width: 100% !important;
+                }
+                div[data-testid="stTable"] table {
+                    display: block;
+                    overflow-x: auto;
+                    white-space: nowrap;
+                    width: 100%;
                 }
             }
             </style>
