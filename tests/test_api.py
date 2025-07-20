@@ -2096,3 +2096,38 @@ class APITestCase(unittest.TestCase):
 
         list_resp = self.client.get("/favorites/workouts")
         self.assertNotIn(1, list_resp.json())
+
+    def test_rating_history_and_stats(self) -> None:
+        d1 = "2023-01-01"
+        d2 = "2023-01-02"
+        self.client.post(
+            "/workouts",
+            params={"date": d1, "training_type": "strength", "rating": 4},
+        )
+        self.client.post(
+            "/workouts",
+            params={"date": d2, "training_type": "strength", "rating": 5},
+        )
+
+        hist_resp = self.client.get(
+            "/stats/rating_history",
+            params={"start_date": d1, "end_date": d2},
+        )
+        self.assertEqual(hist_resp.status_code, 200)
+        self.assertEqual(
+            hist_resp.json(),
+            [
+                {"date": d1, "rating": 4},
+                {"date": d2, "rating": 5},
+            ],
+        )
+
+        stats_resp = self.client.get(
+            "/stats/rating_stats",
+            params={"start_date": d1, "end_date": d2},
+        )
+        self.assertEqual(stats_resp.status_code, 200)
+        stats = stats_resp.json()
+        self.assertAlmostEqual(stats["avg"], 4.5)
+        self.assertEqual(stats["min"], 4)
+        self.assertEqual(stats["max"], 5)
