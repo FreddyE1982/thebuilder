@@ -71,5 +71,5 @@ After installing the requirements you can run the automated tests with:
 pytest -q
 ```
 
-The tests exercise the entire REST API including machine learning features and a long‑term usage simulation.
+The tests exercise the entire REST API including machine learning features and a long‑term usage simulation covering six months of activity.
 Machine learning predictions may vary slightly; tests only validate value ranges.
