@@ -233,6 +233,22 @@ class GymApp:
                 }
             }
 
+            @media screen and (max-width: 1024px) {
+                div[data-testid="metric-container"] > label {
+                    font-size: 1rem;
+                }
+            }
+
+            @media screen and (max-width: 1024px) and (orientation: landscape) {
+                section.main > div {
+                    padding: 0.75rem !important;
+                }
+                div[data-testid="column"] {
+                    flex-direction: row;
+                    flex-wrap: wrap;
+                }
+            }
+
             @media screen and (max-width: 768px) and (orientation: landscape) {
                 section.main > div {
                     padding: 0.5rem !important;
