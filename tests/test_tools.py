@@ -109,6 +109,11 @@ class MathToolsTestCase(unittest.TestCase):
         expected = MathTools.clamp(10.0 - math.sqrt(2.0**2 + 3.0**2), 0.0, 10.0)
         self.assertAlmostEqual(val, expected)
 
+    def test_weighted_fusion_with_reliability(self) -> None:
+        result = MathTools.weighted_fusion(5.0, 0.3, 8.0, algo_conf=0.7, algo_reliability=0.5)
+        expected = (0.3 / (0.3 + 0.7 * 0.5)) * 5.0 + ((0.7 * 0.5) / (0.3 + 0.7 * 0.5)) * 8.0
+        self.assertAlmostEqual(result, expected)
+
     def test_periodization_and_velocity_loss(self) -> None:
         factor = ExercisePrescription._adaptive_periodization_factor([1.0, 1.1, 1.2, 1.3], 2)
         self.assertAlmostEqual(factor, 0.9)
