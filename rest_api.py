@@ -969,6 +969,16 @@ class GymAPI:
         ):
             return self.statistics.muscle_group_usage(start_date, end_date)
 
+        @self.app.get("/stats/daily_muscle_group_volume")
+        def stats_daily_muscle_group_volume(
+            muscle_group: str,
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            return self.statistics.daily_muscle_group_volume(
+                muscle_group, start_date, end_date
+            )
+
         @self.app.get("/stats/rpe_distribution")
         def stats_rpe_distribution(
             exercise: str = None,

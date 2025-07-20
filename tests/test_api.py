@@ -674,6 +674,7 @@ class APITestCase(unittest.TestCase):
 
     def test_statistics_endpoints(self) -> None:
         self.client.post("/workouts")
+        today = datetime.date.today().isoformat()
         self.client.post(
             "/exercise_names/link",
             params={"name1": "Barbell Bench Press", "name2": "Bench Press"},
@@ -742,6 +743,17 @@ class APITestCase(unittest.TestCase):
         self.assertIsNotNone(chest)
         self.assertEqual(chest["sets"], 2)
         self.assertAlmostEqual(chest["volume"], 1880.0)
+
+        resp = self.client.get(
+            "/stats/daily_muscle_group_volume",
+            params={"muscle_group": "Chest"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        mg_daily = resp.json()
+        self.assertEqual(len(mg_daily), 1)
+        self.assertEqual(mg_daily[0]["date"], today)
+        self.assertAlmostEqual(mg_daily[0]["volume"], 1880.0)
+        self.assertEqual(mg_daily[0]["sets"], 2)
 
         resp = self.client.get(
             "/stats/rpe_distribution",

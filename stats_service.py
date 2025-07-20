@@ -188,6 +188,38 @@ class StatisticsService:
             )
         return result
 
+    def daily_muscle_group_volume(
+        self,
+        muscle_group: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> List[Dict[str, float]]:
+        """Return daily volume and set count for a muscle group."""
+        if self.catalog is None:
+            return []
+        names = self.catalog.fetch_names([muscle_group])
+        all_names: list[str] = []
+        for n in names:
+            all_names.extend(self.exercise_names.aliases(n))
+        uniq = sorted(dict.fromkeys(all_names))
+        rows = self.sets.fetch_history_by_names(
+            uniq,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        by_date: Dict[str, Dict[str, float]] = {}
+        for reps, weight, _rpe, date in rows:
+            entry = by_date.setdefault(date, {"volume": 0.0, "sets": 0})
+            entry["volume"] += int(reps) * float(weight)
+            entry["sets"] += 1
+        result: List[Dict[str, float]] = []
+        for d in sorted(by_date):
+            data = by_date[d]
+            result.append(
+                {"date": d, "volume": round(data["volume"], 2), "sets": data["sets"]}
+            )
+        return result
+
     def deload_recommendation(
         self,
         exercise: str,
