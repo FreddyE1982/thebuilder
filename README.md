@@ -23,6 +23,7 @@ The Builder is a full featured workout planner, logger and analytics platform bu
 - All settings can be changed in the UI or by editing `settings.yaml` and remain synchronized.
 - Log daily wellness metrics like calories, sleep and stress and view summary statistics.
 - Calculate average rest times between sets via `/stats/rest_times`.
+- Measure total session duration via `/stats/session_duration`.
 - Analyze training intensity zones with `/stats/intensity_distribution`.
 - Summarize volume by muscle group with `/stats/muscle_group_usage`.
 - Evaluate exercise frequency per week with `/stats/exercise_frequency`.
