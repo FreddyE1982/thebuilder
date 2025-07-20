@@ -953,6 +953,47 @@ class StatisticsService:
             result.append({"workout_id": wid, "avg_rest": round(avg, 2)})
         return result
 
+    def session_duration(
+        self,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> List[Dict[str, float]]:
+        """Return total duration between first set start and last set finish."""
+        names = self.exercise_names.fetch_all()
+        rows = self.sets.fetch_history_by_names(
+            names,
+            start_date=start_date,
+            end_date=end_date,
+            with_duration=True,
+            with_workout_id=True,
+        )
+        if not rows:
+            return []
+        by_workout: Dict[int, Dict[str, str]] = {}
+        for _r, _w, _rpe, date, start, end, wid in rows:
+            if not start or not end:
+                continue
+            entry = by_workout.setdefault(
+                wid, {"date": date, "start": start, "end": end}
+            )
+            if start < entry["start"]:
+                entry["start"] = start
+            if end > entry["end"]:
+                entry["end"] = end
+        result: List[Dict[str, float]] = []
+        for wid, data in sorted(by_workout.items()):
+            t0 = datetime.datetime.fromisoformat(data["start"])
+            t1 = datetime.datetime.fromisoformat(data["end"])
+            dur = (t1 - t0).total_seconds()
+            result.append(
+                {
+                    "workout_id": wid,
+                    "date": data["date"],
+                    "duration": round(dur, 2),
+                }
+            )
+        return result
+
     def location_summary(
         self,
         start_date: Optional[str] = None,

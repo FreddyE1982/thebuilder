@@ -1386,6 +1386,43 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(data[0]["workout_id"], 1)
         self.assertAlmostEqual(data[0]["avg_rest"], 60.0, places=2)
 
+    def test_session_duration_endpoint(self) -> None:
+        self.client.post("/workouts")
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        ids = []
+        for _ in range(2):
+            resp = self.client.post(
+                "/exercises/1/sets",
+                params={"reps": 5, "weight": 100.0, "rpe": 8},
+            )
+            ids.append(resp.json()["id"])
+        t0 = datetime.datetime(2023, 1, 1, 0, 0, 0)
+        self.client.post(
+            f"/sets/{ids[0]}/start",
+            params={"timestamp": t0.isoformat()},
+        )
+        self.client.post(
+            f"/sets/{ids[0]}/finish",
+            params={"timestamp": (t0 + datetime.timedelta(seconds=10)).isoformat()},
+        )
+        self.client.post(
+            f"/sets/{ids[1]}/start",
+            params={"timestamp": (t0 + datetime.timedelta(seconds=70)).isoformat()},
+        )
+        self.client.post(
+            f"/sets/{ids[1]}/finish",
+            params={"timestamp": (t0 + datetime.timedelta(seconds=80)).isoformat()},
+        )
+        resp = self.client.get("/stats/session_duration")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["workout_id"], 1)
+        self.assertAlmostEqual(data[0]["duration"], 80.0, places=2)
+
     def test_location_summary_endpoint(self) -> None:
         self.client.post(
             "/workouts",
