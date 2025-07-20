@@ -126,6 +126,7 @@ class GymAPI:
             self.equipment,
             self.wellness,
             self.exercise_catalog,
+            self.workouts,
         )
         self.app = FastAPI()
         self._setup_routes()
@@ -1474,6 +1475,14 @@ class GymAPI:
         @self.app.get("/stats/bmi_history")
         def stats_bmi_history(start_date: str = None, end_date: str = None):
             return self.statistics.bmi_history(start_date, end_date)
+
+        @self.app.get("/stats/rating_history")
+        def stats_rating_history(start_date: str = None, end_date: str = None):
+            return self.statistics.rating_history(start_date, end_date)
+
+        @self.app.get("/stats/rating_stats")
+        def stats_rating_stats(start_date: str = None, end_date: str = None):
+            return self.statistics.rating_stats(start_date, end_date)
 
         @self.app.get("/ml_logs/{model_name}")
         def get_ml_logs(model_name: str, start_date: str = None, end_date: str = None):

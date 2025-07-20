@@ -36,6 +36,7 @@ class StatisticsService:
         equipment_repo: "EquipmentRepository" | None = None,
         wellness_repo: "WellnessRepository" | None = None,
         catalog_repo: "ExerciseCatalogRepository" | None = None,
+        workout_repo: "WorkoutRepository" | None = None,
     ) -> None:
         self.sets = set_repo
         self.exercise_names = name_repo
@@ -49,6 +50,7 @@ class StatisticsService:
         self.equipment = equipment_repo
         self.wellness = wellness_repo
         self.catalog = catalog_repo
+        self.workouts = workout_repo
 
     def _current_body_weight(self) -> float:
         """Fetch the latest logged body weight or fallback to settings."""
@@ -1213,6 +1215,28 @@ class StatisticsService:
             "avg": round(sum(weights) / len(weights), 2),
             "min": min(weights),
             "max": max(weights),
+        }
+
+    def rating_history(
+        self, start_date: Optional[str] = None, end_date: Optional[str] = None
+    ) -> List[Dict[str, int]]:
+        """Return workout ratings sorted by date."""
+        if self.workouts is None:
+            return []
+        rows = self.workouts.fetch_ratings(start_date, end_date)
+        return [{"date": d, "rating": r} for d, r in rows]
+
+    def rating_stats(
+        self, start_date: Optional[str] = None, end_date: Optional[str] = None
+    ) -> Dict[str, float]:
+        history = self.rating_history(start_date, end_date)
+        if not history:
+            return {"avg": 0.0, "min": 0.0, "max": 0.0}
+        ratings = [h["rating"] for h in history]
+        return {
+            "avg": round(sum(ratings) / len(ratings), 2),
+            "min": min(ratings),
+            "max": max(ratings),
         }
 
     def bmi(self) -> float:

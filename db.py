@@ -611,6 +611,24 @@ class WorkoutRepository(BaseRepository):
             (rating, workout_id),
         )
 
+    def fetch_ratings(
+        self,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> List[Tuple[str, int]]:
+        """Return all workout ratings within optional date range."""
+        query = "SELECT date, rating FROM workouts WHERE rating IS NOT NULL"
+        params: list[str] = []
+        if start_date:
+            query += " AND date >= ?"
+            params.append(start_date)
+        if end_date:
+            query += " AND date <= ?"
+            params.append(end_date)
+        query += " ORDER BY date;"
+        rows = self.fetch_all(query, tuple(params))
+        return [(d, int(r)) for d, r in rows]
+
     def fetch_detail(self, workout_id: int) -> Tuple[
         int,
         str,
