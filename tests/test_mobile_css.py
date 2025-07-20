@@ -12,6 +12,11 @@ class MobileCSSTest(unittest.TestCase):
         self.assertIn("font-size: 1.75rem;", content)
         self.assertIn("font-size: 1.5rem;", content)
         self.assertIn("font-size: 1.25rem;", content)
+        self.assertIn("max-width: 1024px", content)
+        self.assertIn(
+            "@media screen and (max-width: 1024px) and (orientation: landscape)",
+            content,
+        )
         self.assertIn("orientation: landscape", content)
         self.assertIn("textarea,", content)
         self.assertIn("Math.min", content)
