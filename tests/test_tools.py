@@ -117,7 +117,9 @@ class MathToolsTestCase(unittest.TestCase):
 
     def test_weighted_fusion_with_reliability(self) -> None:
         result = MathTools.weighted_fusion(5.0, 0.3, 8.0, algo_conf=0.7, algo_reliability=0.5)
-        expected = (0.3 / (0.3 + 0.7 * 0.5)) * 5.0 + ((0.7 * 0.5) / (0.3 + 0.7 * 0.5)) * 8.0
+        mc = 0.3
+        ac = 0.7 * 0.5
+        expected = ((mc**2) / (mc**2 + ac**2)) * 5.0 + ((ac**2) / (mc**2 + ac**2)) * 8.0
         self.assertAlmostEqual(result, expected)
 
     def test_periodization_and_velocity_loss(self) -> None:
