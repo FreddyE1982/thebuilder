@@ -1068,11 +1068,15 @@ class ExercisePrescription(MathTools):
         reps: list[int],
         timestamps: list[float],
         target_reps: int,
+        rpe_scores: list[float] | None = None,
     ) -> float:
         """Three-component fatigue model."""
         if not weights:
             return 0.0
         volumes = np.array(weights) * np.array(reps)
+        if rpe_scores is not None and len(rpe_scores) == len(volumes):
+            rpe_arr = np.array(rpe_scores)
+            volumes = volumes * (1 + (rpe_arr - 7) * 0.1)
         t_current = timestamps[-1] if timestamps else 0
         t_arr = np.array(timestamps)
         neu = np.sum(volumes * (ExercisePrescription.NEUROMUSCULAR_DECAY ** (t_current - t_arr)))
@@ -1402,7 +1406,13 @@ class ExercisePrescription(MathTools):
             ts_list[-1] if ts_list else 0,
         )
         target_reps_est = int(round(np.mean(reps))) if reps else 8
-        enhanced_fatigue = cls._enhanced_fatigue(weights, reps, ts_list, target_reps_est)
+        enhanced_fatigue = cls._enhanced_fatigue(
+            weights,
+            reps,
+            ts_list,
+            target_reps_est,
+            rpe_scores,
+        )
         tss_fatigue = cls._tss_adjusted_fatigue(
             weights,
             reps,

@@ -97,8 +97,14 @@ class MathToolsTestCase(unittest.TestCase):
         self.assertGreater(anomaly, 0.5)
 
     def test_enhanced_algorithms(self) -> None:
-        fatigue = ExercisePrescription._enhanced_fatigue([100, 110], [5, 5], [0, 1], 5)
-        self.assertAlmostEqual(fatigue, 992.5, places=1)
+        fatigue = ExercisePrescription._enhanced_fatigue(
+            [100, 110],
+            [5, 5],
+            [0, 1],
+            5,
+            [8, 8],
+        )
+        self.assertAlmostEqual(fatigue, 1091.75, places=2)
         tss = ExercisePrescription._calculate_exercise_tss([100.0], [5], [60], 120.0)
         self.assertAlmostEqual(tss, 1.157, places=3)
         stress = ExercisePrescription._stress_level([100, 110], [5, 5], [8, 8], [0, 1], 120.0, 10)
