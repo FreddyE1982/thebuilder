@@ -267,7 +267,7 @@ class ExtendedUsageTestCase(unittest.TestCase):
             os.remove(self.yaml_path)
 
     def test_extended_long_term_usage(self) -> None:
-        n = 60
+        n = 90
         start = datetime.date.today() - datetime.timedelta(days=n * 2 - 1)
         end = start + datetime.timedelta(days=n * 2 - 1)
 
