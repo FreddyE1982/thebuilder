@@ -953,6 +953,40 @@ class StatisticsService:
             result.append({"workout_id": wid, "avg_rest": round(avg, 2)})
         return result
 
+    def location_summary(
+        self,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> List[Dict[str, float | int]]:
+        """Return workout counts and volume grouped by location."""
+        names = self.exercise_names.fetch_all()
+        rows = self.sets.fetch_history_by_names(
+            names,
+            start_date=start_date,
+            end_date=end_date,
+            with_workout_id=True,
+            with_location=True,
+        )
+        if not rows:
+            return []
+        stats: Dict[str, Dict[str, object]] = {}
+        for reps, weight, _rpe, _date, wid, location in rows:
+            loc = location or ""
+            entry = stats.setdefault(loc, {"volume": 0.0, "workouts": set()})
+            entry["volume"] += int(reps) * float(weight)
+            entry["workouts"].add(wid)
+        result: List[Dict[str, float | int]] = []
+        for loc in sorted(stats):
+            entry = stats[loc]
+            result.append(
+                {
+                    "location": loc,
+                    "workouts": len(entry["workouts"]),
+                    "volume": round(entry["volume"], 2),
+                }
+            )
+        return result
+
     def stress_overview(
         self,
         start_date: Optional[str] = None,

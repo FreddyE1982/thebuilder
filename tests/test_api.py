@@ -1386,6 +1386,42 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(data[0]["workout_id"], 1)
         self.assertAlmostEqual(data[0]["avg_rest"], 60.0, places=2)
 
+    def test_location_summary_endpoint(self) -> None:
+        self.client.post(
+            "/workouts",
+            params={"date": "2023-01-01", "location": "Home"},
+        )
+        self.client.post(
+            "/workouts",
+            params={"date": "2023-01-02", "location": "Gym"},
+        )
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/workouts/2/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8},
+        )
+        self.client.post(
+            "/exercises/2/sets",
+            params={"reps": 5, "weight": 110.0, "rpe": 8},
+        )
+        resp = self.client.get("/stats/location_summary")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(len(data), 2)
+        self.assertEqual(data[0]["location"], "Gym")
+        self.assertEqual(data[0]["workouts"], 1)
+        self.assertAlmostEqual(data[0]["volume"], 550.0)
+        self.assertEqual(data[1]["location"], "Home")
+        self.assertEqual(data[1]["workouts"], 1)
+        self.assertAlmostEqual(data[1]["volume"], 500.0)
+
     def test_set_velocity_and_history(self) -> None:
         self.client.post("/workouts")
         self.client.post(

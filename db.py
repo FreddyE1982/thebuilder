@@ -889,6 +889,7 @@ class SetRepository(BaseRepository):
         with_equipment: bool = False,
         with_duration: bool = False,
         with_workout_id: bool = False,
+        with_location: bool = False,
     ) -> List[Tuple]:
         placeholders = ", ".join(["?" for _ in names])
         select = "SELECT s.reps, s.weight, s.rpe, w.date"
@@ -898,6 +899,8 @@ class SetRepository(BaseRepository):
             select += ", s.start_time, s.end_time"
         if with_workout_id:
             select += ", w.id"
+        if with_location:
+            select += ", w.location"
         query = (
             f"{select} FROM sets s "
             "JOIN exercises e ON s.exercise_id = e.id "

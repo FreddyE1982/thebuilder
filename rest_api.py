@@ -1117,6 +1117,13 @@ class GymAPI:
         ):
             return self.statistics.rest_times(start_date, end_date)
 
+        @self.app.get("/stats/location_summary")
+        def stats_location_summary(
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            return self.statistics.location_summary(start_date, end_date)
+
         @self.app.get("/stats/volume_forecast")
         def stats_volume_forecast(
             days: int = 7,
