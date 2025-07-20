@@ -130,14 +130,14 @@ class MathTools:
         algo_conf: float = 1.0,
         algo_reliability: float = 1.0,
     ) -> float:
-        """Fuse model and algorithm predictions using confidence weights."""
+        """Fuse model and algorithm predictions using quadratic confidence."""
         adj_algo_conf = algo_conf * max(algo_reliability, 0.0)
-        total = model_conf + adj_algo_conf
+        model_w = model_conf**2
+        algo_w = adj_algo_conf**2
+        total = model_w + algo_w
         if total == 0:
             raise ValueError("total confidence cannot be zero")
-        w_model = model_conf / total
-        w_algo = adj_algo_conf / total
-        return w_model * model_pred + w_algo * algo_pred
+        return (model_w * model_pred + algo_w * algo_pred) / total
 
 
 class ExercisePrescription(MathTools):
