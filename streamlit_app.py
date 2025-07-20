@@ -1672,6 +1672,16 @@ class GymApp:
                     {"Count": [d["count"] for d in reps_dist]},
                     x=[str(d["reps"]) for d in reps_dist],
                 )
+            intensity = self.stats.intensity_distribution(
+                ex_choice if ex_choice else None,
+                start_str,
+                end_str,
+            )
+            if intensity:
+                st.bar_chart(
+                    {"Volume": [d["volume"] for d in intensity]},
+                    x=[d["zone"] for d in intensity],
+                )
         with prog_tab:
             if ex_choice:
                 prog = self.stats.progression(ex_choice, start_str, end_str)
@@ -1861,6 +1871,14 @@ class GymApp:
                     {"Strain": [s["strain"] for s in strain]},
                     x=[s["week"] for s in strain],
                 )
+        with st.expander("Session Duration", expanded=False):
+            duration = self.stats.session_duration(start_str, end_str)
+            if duration:
+                st.table(duration)
+        with st.expander("Location Summary", expanded=False):
+            loc_stats = self.stats.location_summary(start_str, end_str)
+            if loc_stats:
+                st.table(loc_stats)
 
     def _gamification_tab(self) -> None:
         st.header("Gamification Stats")
