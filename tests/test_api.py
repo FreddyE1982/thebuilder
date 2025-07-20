@@ -783,6 +783,7 @@ class APITestCase(unittest.TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         intensity = resp.json()
+        self.assertEqual(len(intensity), 11)
         zone = next((z for z in intensity if z["zone"] == "70-80"), None)
         self.assertIsNotNone(zone)
         self.assertEqual(zone["sets"], 2)

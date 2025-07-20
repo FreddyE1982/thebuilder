@@ -474,14 +474,8 @@ class StatisticsService:
             start_date=start_date,
             end_date=end_date,
         )
-        bins = [
-            (0.0, 0.5),
-            (0.5, 0.6),
-            (0.6, 0.7),
-            (0.7, 0.8),
-            (0.8, 0.9),
-            (0.9, 2.0),
-        ]
+        bins = [(i / 10.0, (i + 1) / 10.0) for i in range(10)]
+        bins.append((1.0, 2.0))
         stats = {
             f"{int(lo*100)}-{int(hi*100 if hi < 1.0 else 100)}": {
                 "sets": 0,
