@@ -332,6 +332,7 @@ class GymApp:
                     border-top: 1px solid #cccccc;
                     display: flex;
                     justify-content: space-around;
+                    grid-template-columns: repeat(4, 1fr);
                     padding: 0.25rem 0.5rem;
                     gap: 0.25rem;
                     z-index: 1000;
@@ -344,6 +345,14 @@ class GymApp:
                     align-items: center;
                     white-space: pre-line;
                     font-size: 0.85rem;
+                }
+            }
+            @media screen and (max-width: 360px) {
+                .bottom-nav {
+                    flex-wrap: wrap;
+                }
+                .bottom-nav button {
+                    flex: 1 0 50%;
                 }
             }
             @media screen and (max-width: 768px) and (orientation: landscape) {
@@ -369,6 +378,10 @@ class GymApp:
             .top-nav button {
                 flex: 1 1 auto;
                 margin: 0 0.25rem;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                white-space: pre-line;
             }
             @media screen and (min-width: 769px) {
                 .top-nav button {
@@ -460,9 +473,15 @@ class GymApp:
         st.markdown('<div class="top-nav">', unsafe_allow_html=True)
         cols = st.columns(4)
         labels = ["workouts", "library", "progress", "settings"]
+        icons = {
+            "workouts": "🏋️",
+            "library": "📚",
+            "progress": "📈",
+            "settings": "⚙️",
+        }
         for idx, label in enumerate(labels):
             selected = st.session_state.get("main_tab", 0) == idx
-            disp = label.title() + (" •" if selected else "")
+            disp = f"{icons[label]}\n{label.title()}" + (" •" if selected else "")
             if cols[idx].button(disp, key=f"top_nav_{label}"):
                 self._switch_tab(label)
         st.markdown("</div>", unsafe_allow_html=True)
