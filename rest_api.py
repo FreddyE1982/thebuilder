@@ -26,6 +26,7 @@ from db import (
     FavoriteTemplateRepository,
     FavoriteWorkoutRepository,
     TagRepository,
+    GoalRepository,
 )
 from planner_service import PlannerService
 from recommendation_service import RecommendationService
@@ -74,6 +75,7 @@ class GymAPI:
         self.ml_logs = MLLogRepository(db_path)
         self.body_weights = BodyWeightRepository(db_path)
         self.wellness = WellnessRepository(db_path)
+        self.goals = GoalRepository(db_path)
         self.gamification = GamificationService(
             self.game_repo,
             self.exercises,
@@ -1502,6 +1504,65 @@ class GymAPI:
         def delete_wellness(entry_id: int):
             try:
                 self.wellness.delete(entry_id)
+                return {"status": "deleted"}
+            except ValueError as e:
+                raise HTTPException(status_code=404, detail=str(e))
+
+        @self.app.get("/goals")
+        def list_goals():
+            rows = self.goals.fetch_all()
+            return [
+                {
+                    "id": gid,
+                    "name": name,
+                    "target_value": val,
+                    "unit": unit,
+                    "start_date": start,
+                    "target_date": target,
+                    "achieved": bool(ach),
+                }
+                for gid, name, val, unit, start, target, ach in rows
+            ]
+
+        @self.app.post("/goals")
+        def add_goal(
+            name: str,
+            target_value: float,
+            unit: str,
+            start_date: str,
+            target_date: str,
+        ):
+            gid = self.goals.add(name, target_value, unit, start_date, target_date)
+            return {"id": gid}
+
+        @self.app.put("/goals/{goal_id}")
+        def update_goal(
+            goal_id: int,
+            name: str | None = None,
+            target_value: float | None = None,
+            unit: str | None = None,
+            start_date: str | None = None,
+            target_date: str | None = None,
+            achieved: bool | None = None,
+        ):
+            try:
+                self.goals.update(
+                    goal_id,
+                    name,
+                    target_value,
+                    unit,
+                    start_date,
+                    target_date,
+                    achieved,
+                )
+                return {"status": "updated"}
+            except ValueError as e:
+                raise HTTPException(status_code=404, detail=str(e))
+
+        @self.app.delete("/goals/{goal_id}")
+        def delete_goal(goal_id: int):
+            try:
+                self.goals.delete(goal_id)
                 return {"status": "deleted"}
             except ValueError as e:
                 raise HTTPException(status_code=404, detail=str(e))

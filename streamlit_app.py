@@ -27,6 +27,7 @@ from db import (
     FavoriteTemplateRepository,
     FavoriteWorkoutRepository,
     TagRepository,
+    GoalRepository,
 )
 from planner_service import PlannerService
 from recommendation_service import RecommendationService
@@ -67,6 +68,7 @@ class GymApp:
         self.favorite_templates_repo = FavoriteTemplateRepository()
         self.favorite_workouts_repo = FavoriteWorkoutRepository()
         self.tags_repo = TagRepository()
+        self.goals_repo = GoalRepository()
         self.pyramid_tests = PyramidTestRepository()
         self.pyramid_entries = PyramidEntryRepository()
         self.game_repo = GamificationRepository()
@@ -508,6 +510,7 @@ class GymApp:
                 risk_sub,
                 game_sub,
                 tests_sub,
+                goals_sub,
             ) = st.tabs(
                 [
                     "Calendar",
@@ -520,6 +523,7 @@ class GymApp:
                     "Risk",
                     "Gamification",
                     "Tests",
+                    "Goals",
                 ]
             )
             with calendar_sub:
@@ -542,6 +546,8 @@ class GymApp:
                 self._gamification_tab()
             with tests_sub:
                 self._tests_tab()
+            with goals_sub:
+                self._goals_tab()
         with settings_tab:
             self._settings_tab()
 
@@ -2297,6 +2303,66 @@ class GymApp:
         rows.sort(key=lambda x: x["date"])
         if rows:
             st.table(rows)
+
+    def _goals_tab(self) -> None:
+        st.header("Goals")
+        with st.expander("Add Goal"):
+            name = st.text_input("Name", key="goal_name")
+            value = st.number_input("Target Value", min_value=0.0, step=0.1, key="goal_value")
+            unit = st.text_input("Unit", key="goal_unit")
+            start_d = st.date_input("Start Date", datetime.date.today(), key="goal_start")
+            target_d = st.date_input("Target Date", datetime.date.today(), key="goal_target")
+            if st.button("Create Goal", key="goal_add"):
+                if name and unit:
+                    self.goals_repo.add(
+                        name,
+                        float(value),
+                        unit,
+                        start_d.isoformat(),
+                        target_d.isoformat(),
+                    )
+                    st.success("Added")
+                else:
+                    st.warning("Name and unit required")
+        with st.expander("Existing Goals", expanded=True):
+            rows = self.goals_repo.fetch_all()
+            for gid, gname, gval, gunit, sdate, tdate, ach in rows:
+                exp = st.expander(f"{gname} - {gval}{gunit}")
+                with exp:
+                    name_e = st.text_input("Name", gname, key=f"goal_name_{gid}")
+                    val_e = st.number_input(
+                        "Target Value",
+                        value=float(gval),
+                        step=0.1,
+                        key=f"goal_value_{gid}",
+                    )
+                    unit_e = st.text_input("Unit", gunit, key=f"goal_unit_{gid}")
+                    sdate_e = st.date_input(
+                        "Start Date",
+                        datetime.date.fromisoformat(sdate),
+                        key=f"goal_start_{gid}",
+                    )
+                    tdate_e = st.date_input(
+                        "Target Date",
+                        datetime.date.fromisoformat(tdate),
+                        key=f"goal_target_{gid}",
+                    )
+                    ach_e = st.checkbox("Achieved", value=bool(ach), key=f"goal_ach_{gid}")
+                    cols = st.columns(2)
+                    if cols[0].button("Update", key=f"goal_upd_{gid}"):
+                        self.goals_repo.update(
+                            gid,
+                            name_e,
+                            float(val_e),
+                            unit_e,
+                            sdate_e.isoformat(),
+                            tdate_e.isoformat(),
+                            ach_e,
+                        )
+                        st.success("Updated")
+                    if cols[1].button("Delete", key=f"goal_del_{gid}"):
+                        self.goals_repo.delete(gid)
+                        st.success("Deleted")
     def _settings_tab(self) -> None:
         st.header("Settings")
         if "delete_target" not in st.session_state:
