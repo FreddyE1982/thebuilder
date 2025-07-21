@@ -987,10 +987,21 @@ class PlannedWorkoutRepository(BaseRepository):
             (date, training_type),
         )
 
-    def fetch_all(self) -> List[Tuple[int, str, str]]:
-        return super().fetch_all(
-            "SELECT id, date, training_type FROM planned_workouts ORDER BY id DESC;"
-        )
+    def fetch_all(
+        self,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> List[Tuple[int, str, str]]:
+        query = "SELECT id, date, training_type FROM planned_workouts WHERE 1=1"
+        params: list[str] = []
+        if start_date:
+            query += " AND date >= ?"
+            params.append(start_date)
+        if end_date:
+            query += " AND date <= ?"
+            params.append(end_date)
+        query += " ORDER BY id DESC;"
+        return super().fetch_all(query, tuple(params))
 
     def fetch_detail(self, plan_id: int) -> Tuple[int, str, str]:
         rows = super().fetch_all(

@@ -498,6 +498,7 @@ class GymApp:
             self._library_tab()
         with progress_tab:
             (
+                calendar_sub,
                 history_sub,
                 dash_sub,
                 stats_sub,
@@ -509,6 +510,7 @@ class GymApp:
                 tests_sub,
             ) = st.tabs(
                 [
+                    "Calendar",
                     "History",
                     "Dashboard",
                     "Exercise Stats",
@@ -520,6 +522,8 @@ class GymApp:
                     "Tests",
                 ]
             )
+            with calendar_sub:
+                self._calendar_tab()
             with history_sub:
                 self._history_tab()
             with dash_sub:
@@ -2205,6 +2209,56 @@ class GymApp:
                 except ValueError as e:
                     st.warning(str(e))
 
+    def _calendar_tab(self) -> None:
+        st.header("Calendar")
+        with st.expander("Date Range", expanded=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                start = st.date_input(
+                    "Start",
+                    datetime.date.today() - datetime.timedelta(days=7),
+                    key="cal_start",
+                )
+            with col2:
+                end = st.date_input(
+                    "End",
+                    datetime.date.today() + datetime.timedelta(days=7),
+                    key="cal_end",
+                )
+            if st.button("Reset", key="cal_reset"):
+                st.session_state.cal_start = (
+                    datetime.date.today() - datetime.timedelta(days=7)
+                )
+                st.session_state.cal_end = (
+                    datetime.date.today() + datetime.timedelta(days=7)
+                )
+                st.experimental_rerun()
+            start_str = start.isoformat()
+            end_str = end.isoformat()
+        logged = self.workouts.fetch_all_workouts(start_str, end_str)
+        planned = self.planned_workouts.fetch_all(start_str, end_str)
+        rows = []
+        for wid, date, _s, _e, t_type, _notes, _rating in logged:
+            rows.append(
+                {
+                    "date": date,
+                    "type": t_type,
+                    "planned": False,
+                    "id": wid,
+                }
+            )
+        for pid, date, t_type in planned:
+            rows.append(
+                {
+                    "date": date,
+                    "type": t_type,
+                    "planned": True,
+                    "id": pid,
+                }
+            )
+        rows.sort(key=lambda x: x["date"])
+        if rows:
+            st.table(rows)
     def _settings_tab(self) -> None:
         st.header("Settings")
         if "delete_target" not in st.session_state:

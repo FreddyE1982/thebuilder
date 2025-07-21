@@ -2217,3 +2217,23 @@ class APITestCase(unittest.TestCase):
         self.assertAlmostEqual(stats["avg"], 4.5)
         self.assertEqual(stats["min"], 4)
         self.assertEqual(stats["max"], 5)
+
+    def test_calendar_endpoint(self) -> None:
+        today = datetime.date.today().isoformat()
+        tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
+        self.client.post("/workouts", params={"date": today})
+        self.client.post(
+            "/planned_workouts",
+            params={"date": tomorrow, "training_type": "strength"},
+        )
+        resp = self.client.get(
+            "/calendar",
+            params={"start_date": today, "end_date": tomorrow},
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(len(data), 2)
+        self.assertEqual(data[0]["date"], today)
+        self.assertFalse(data[0]["planned"])
+        self.assertEqual(data[1]["date"], tomorrow)
+        self.assertTrue(data[1]["planned"])
