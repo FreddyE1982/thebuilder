@@ -2278,3 +2278,65 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(resp.json(), {"status": "deleted"})
 
         self.assertEqual(self.client.get("/goals").json(), [])
+
+    def test_goal_integration_with_recommendation(self) -> None:
+        start = datetime.date.today()
+        target = start + datetime.timedelta(days=30)
+
+        resp = self.client.post("/workouts")
+        self.assertEqual(resp.status_code, 200)
+        wid_hist = resp.json()["id"]
+
+        resp = self.client.post(
+            f"/workouts/{wid_hist}/exercises",
+            params={"name": "Squat", "equipment": "Olympic Barbell"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        ex_hist = resp.json()["id"]
+
+        self.client.post(
+            f"/exercises/{ex_hist}/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8},
+        )
+        self.client.post(
+            f"/exercises/{ex_hist}/sets",
+            params={"reps": 5, "weight": 105.0, "rpe": 8},
+        )
+        self.client.post(
+            f"/exercises/{ex_hist}/sets",
+            params={"reps": 5, "weight": 110.0, "rpe": 8},
+        )
+
+        resp = self.client.post("/workouts")
+        self.assertEqual(resp.status_code, 200)
+        wid = resp.json()["id"]
+
+        resp = self.client.post(
+            f"/workouts/{wid}/exercises",
+            params={"name": "Squat", "equipment": "Olympic Barbell"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        ex_id = resp.json()["id"]
+
+        goal_resp = self.client.post(
+            "/goals",
+            params={
+                "exercise_name": "Squat",
+                "name": "Squat Goal",
+                "target_value": 150.0,
+                "unit": "kg",
+                "start_date": start.isoformat(),
+                "target_date": target.isoformat(),
+            },
+        )
+        self.assertEqual(goal_resp.status_code, 200)
+
+        active = self.api.goals.fetch_active_by_exercise("Squat", today=start.isoformat())
+        self.assertEqual(len(active), 1)
+        self.assertAlmostEqual(active[0]["target_value"], 150.0)
+
+        rec = self.client.post(f"/exercises/{ex_id}/recommend_next")
+        self.assertEqual(rec.status_code, 200)
+        data = rec.json()
+        self.assertIn("weight", data)
+        self.assertIn("reps", data)

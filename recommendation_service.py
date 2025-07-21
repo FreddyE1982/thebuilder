@@ -7,6 +7,7 @@ from db import (
     ExerciseNameRepository,
     SettingsRepository,
     BodyWeightRepository,
+    GoalRepository,
 )
 from tools import ExercisePrescription
 from gamification_service import GamificationService
@@ -28,6 +29,7 @@ class RecommendationService:
         ml_service: PerformanceModelService | None = None,
         rl_goal: "RLGoalModelService" | None = None,
         body_weight_repo: BodyWeightRepository | None = None,
+        goal_repo: GoalRepository | None = None,
     ) -> None:
         self.workouts = workout_repo
         self.exercises = exercise_repo
@@ -38,6 +40,7 @@ class RecommendationService:
         self.ml = ml_service
         self.rl_goal = rl_goal
         self.body_weights = body_weight_repo
+        self.goals = goal_repo
         self._pending: dict[int, list[float]] = {}
 
     def _current_body_weight(self) -> float:
@@ -141,6 +144,20 @@ class RecommendationService:
         )
         frequency_factor = ExercisePrescription.clamp(72 / avg_recovery_time, 0.5, 2.0)
         session_volumes = [s["volume"] for s in sessions[:-1]]
+        goal_target = None
+        goal_days = None
+        if self.goals is not None:
+            active = self.goals.fetch_active_by_exercise(name)
+            if active:
+                g = active[0]
+                goal_target = float(g["target_value"])
+                try:
+                    today = datetime.date.today()
+                    target_date = datetime.date.fromisoformat(g["target_date"])
+                    diff = (target_date - today).days
+                    goal_days = max(diff, 1)
+                except Exception:
+                    goal_days = None
         prescription = ExercisePrescription.exercise_prescription(
             weight_list,
             reps_list,
@@ -157,6 +174,8 @@ class RecommendationService:
             months_active=months_active,
             workouts_per_month=workouts_per_month,
             exercise_name=name,
+            target_1rm=goal_target,
+            days_remaining=goal_days,
         )
         current_sets = self.sets.fetch_for_exercise(exercise_id)
         index = len(current_sets)
