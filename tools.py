@@ -136,6 +136,19 @@ class MathTools:
                 ent -= p * math.log(p, 2)
         return ent
 
+    @staticmethod
+    def coefficient_of_variation(values: Iterable[float]) -> float:
+        """Return the coefficient of variation for ``values``."""
+        data = list(values)
+        if len(data) < 2:
+            return 0.0
+        arr = np.array(data, dtype=float)
+        mean = float(np.mean(arr))
+        if mean == 0:
+            return 0.0
+        std = float(np.std(arr))
+        return std / mean
+
 
     @staticmethod
     def overtraining_index(stress: float, fatigue: float, variability: float) -> float:
