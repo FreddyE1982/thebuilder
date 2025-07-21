@@ -152,7 +152,7 @@ class GymApp:
         layout = "centered" if mode == "mobile" else "wide"
         st.set_page_config(page_title="Workout Logger", layout=layout)
         st.markdown(
-            "<meta name='viewport' content='width=device-width, initial-scale=1'>",
+            "<meta name='viewport' content='width=device-width, height=device-height, initial-scale=1'>",
             unsafe_allow_html=True,
         )
         st.session_state.layout_set = True
@@ -283,6 +283,12 @@ class GymApp:
                 div[data-testid="column"] {
                     flex-direction: row;
                     flex-wrap: wrap;
+                }
+                .bottom-nav {
+                    flex-wrap: wrap;
+                }
+                .bottom-nav button {
+                    flex: 1 0 25%;
                 }
             }
             @media screen and (max-width: 320px) and (orientation: landscape) {
@@ -420,21 +426,22 @@ class GymApp:
         """Render bottom navigation on mobile devices."""
         if not st.session_state.is_mobile:
             return
-        st.markdown('<div class="bottom-nav">', unsafe_allow_html=True)
-        cols = st.columns(4)
-        labels = ["workouts", "library", "progress", "settings"]
-        icons = {
-            "workouts": "🏋️",
-            "library": "📚",
-            "progress": "📈",
-            "settings": "⚙️",
-        }
-        for idx, label in enumerate(labels):
-            selected = st.session_state.get("main_tab", 0) == idx
-            disp = f"{icons[label]}\n{label.title()}" + (" •" if selected else "")
-            if cols[idx].button(disp, key=f"nav_{label}"):
-                self._switch_tab(label)
-        st.markdown("</div>", unsafe_allow_html=True)
+        with st.container():
+            st.markdown('<div class="bottom-nav">', unsafe_allow_html=True)
+            cols = st.columns(4)
+            labels = ["workouts", "library", "progress", "settings"]
+            icons = {
+                "workouts": "🏋️",
+                "library": "📚",
+                "progress": "📈",
+                "settings": "⚙️",
+            }
+            for idx, label in enumerate(labels):
+                selected = st.session_state.get("main_tab", 0) == idx
+                disp = f"{icons[label]}\n{label.title()}" + (" •" if selected else "")
+                if cols[idx].button(disp, key=f"nav_{label}"):
+                    self._switch_tab(label)
+            st.markdown("</div>", unsafe_allow_html=True)
 
     def _top_nav(self) -> None:
         """Render top navigation on desktop."""
