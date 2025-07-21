@@ -169,8 +169,16 @@ class GymApp:
                     window.location.search = params.toString();
                 }
             }
-            window.addEventListener('resize', setMode);
-            window.addEventListener('orientationchange', setMode);
+            function setVh() {
+                document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
+            }
+            function handleResize() {
+                setMode();
+                setVh();
+            }
+            window.addEventListener('resize', handleResize);
+            window.addEventListener('orientationchange', handleResize);
+            setVh();
             </script>
             """,
             height=0,
@@ -187,7 +195,7 @@ class GymApp:
                 padding: 0;
                 box-sizing: border-box;
                 scroll-behavior: smooth;
-                min-height: 100vh;
+                min-height: calc(var(--vh, 1vh) * 100);
                 display: flex;
                 flex-direction: column;
             }
@@ -506,6 +514,7 @@ class GymApp:
                 display: grid;
                 grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
                 gap: 0.5rem;
+                justify-items: center;
                 overflow-x: auto;
                 padding: 0.25rem;
             }
