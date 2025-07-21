@@ -283,6 +283,20 @@ class GymApp:
                     flex-wrap: wrap;
                 }
             }
+            @media screen and (max-width: 320px) and (orientation: landscape) {
+                section.main > div {
+                    padding: 0.2rem !important;
+                }
+                h1 {
+                    font-size: 1.25rem;
+                }
+                h2 {
+                    font-size: 1rem;
+                }
+                h3 {
+                    font-size: 0.875rem;
+                }
+            }
             </style>
             """,
             unsafe_allow_html=True,
@@ -385,6 +399,13 @@ class GymApp:
                 st.line_chart(
                     {"Volume": [d["volume"] for d in daily]},
                     x=[d["date"] for d in daily],
+                )
+            duration = self.stats.session_duration(start.isoformat(), end.isoformat())
+            st.subheader("Session Duration")
+            if duration:
+                st.line_chart(
+                    {"Duration": [d["duration"] for d in duration]},
+                    x=[d["date"] for d in duration],
                 )
             exercises = [""] + self.exercise_names_repo.fetch_all()
             ex_choice = st.selectbox("Exercise Progression", exercises, key="dash_ex")
@@ -1706,9 +1727,7 @@ class GymApp:
                         {"1RM": [p["est_1rm"] for p in prog]},
                         x=[p["date"] for p in prog],
                     )
-                vel_hist = self.stats.velocity_history(
-                    ex_choice, start_str, end_str
-                )
+                vel_hist = self.stats.velocity_history(ex_choice, start_str, end_str)
                 if vel_hist:
                     with st.expander("Velocity History", expanded=False):
                         st.line_chart(
