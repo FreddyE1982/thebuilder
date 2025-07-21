@@ -1654,23 +1654,37 @@ class GymApp:
                 )
                 st.session_state.hist_end = datetime.date.today()
                 st.session_state.hist_type = ""
+                st.session_state.hist_tags = []
                 st.experimental_rerun()
             ttype = st.selectbox(
                 "Training Type",
                 ["", "strength", "hypertrophy", "highintensity"],
                 key="hist_type",
             )
+            tag_names = [n for _, n in self.tags_repo.fetch_all()]
+            sel_tags = st.multiselect("Tags", tag_names, key="hist_tags")
             start_str = start.isoformat()
             end_str = end.isoformat()
         workouts = self.workouts.fetch_all_workouts(start_str, end_str)
         if ttype:
             workouts = [w for w in workouts if w[4] == ttype]
+        if sel_tags:
+            workouts = [
+                w
+                for w in workouts
+                if set(sel_tags).issubset(
+                    {n for _, n in self.tags_repo.fetch_for_workout(w[0])}
+                )
+            ]
         for wid, date, _s, _e, training_type, *_ in workouts:
             with st.expander(f"{date} ({training_type})", expanded=False):
                 summary = self.sets.workout_summary(wid)
                 st.markdown(
                     f"**Volume:** {summary['volume']} | **Sets:** {summary['sets']} | **Avg RPE:** {summary['avg_rpe']}"
                 )
+                tags = [n for _, n in self.tags_repo.fetch_for_workout(wid)]
+                if tags:
+                    st.markdown("**Tags:** " + ", ".join(tags))
                 if st.button("Details", key=f"hist_det_{wid}"):
                     self._workout_details_dialog(wid)
 
@@ -1742,6 +1756,10 @@ class GymApp:
             if eff_stats:
                 with st.expander("Session Efficiency", expanded=False):
                     st.table(eff_stats)
+                    st.line_chart(
+                        {"Efficiency": [e["efficiency"] for e in eff_stats]},
+                        x=[e["date"] for e in eff_stats],
+                    )
         with dist_tab:
             rpe_dist = self.stats.rpe_distribution(
                 ex_choice if ex_choice else None,
@@ -2011,14 +2029,34 @@ class GymApp:
             duration = self.stats.session_duration(start_str, end_str)
             if duration:
                 st.table(duration)
+                st.line_chart(
+                    {"Duration": [d["duration"] for d in duration]},
+                    x=[d["date"] for d in duration],
+                )
         with st.expander("Average Rest Times", expanded=False):
             rests = self.stats.rest_times(start_str, end_str)
             if rests:
                 st.table(rests)
+                st.bar_chart(
+                    {"Rest": [r["avg_rest"] for r in rests]},
+                    x=[str(r["workout_id"]) for r in rests],
+                )
         with st.expander("Location Summary", expanded=False):
             loc_stats = self.stats.location_summary(start_str, end_str)
             if loc_stats:
                 st.table(loc_stats)
+        with st.expander("Rating Analysis", expanded=False):
+            rating_hist = self.stats.rating_history(start_str, end_str)
+            if rating_hist:
+                st.line_chart(
+                    {"Rating": [r["rating"] for r in rating_hist]},
+                    x=[r["date"] for r in rating_hist],
+                )
+            stats = self.stats.rating_stats(start_str, end_str)
+            cols = st.columns(3)
+            cols[0].metric("Average", stats["avg"])
+            cols[1].metric("Min", stats["min"])
+            cols[2].metric("Max", stats["max"])
 
     def _risk_tab(self) -> None:
         st.header("Risk & Readiness")
