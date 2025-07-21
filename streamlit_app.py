@@ -172,13 +172,20 @@ class GymApp:
             function setVh() {
                 document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
             }
+            function setHeaderHeight() {
+                const nav = document.querySelector('nav.top-nav');
+                const h = nav ? nav.offsetHeight : 0;
+                document.documentElement.style.setProperty('--header-height', `${h}px`);
+            }
             function handleResize() {
                 setMode();
                 setVh();
+                setHeaderHeight();
             }
             window.addEventListener('resize', handleResize);
             window.addEventListener('orientationchange', handleResize);
             window.addEventListener('DOMContentLoaded', handleResize);
+            window.addEventListener('load', handleResize);
             </script>
             """,
             height=0,
@@ -579,10 +586,23 @@ class GymApp:
             nav.bottom-nav {
                 backdrop-filter: blur(10px);
                 box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+                overflow-x: auto;
+                white-space: nowrap;
+                grid-auto-flow: column;
+                grid-auto-columns: 1fr;
             }
             nav.top-nav {
                 backdrop-filter: blur(10px);
                 box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                overflow-x: auto;
+            }
+            @media screen and (max-width: 768px) {
+                body {
+                    padding-top: var(--header-height, 0);
+                }
+                .content-wrapper {
+                    padding-top: var(--header-height, 0);
+                }
             }
             </style>
             """,
@@ -688,6 +708,14 @@ class GymApp:
         cols = st.columns(col_num, gap="small")
         for idx, (label, val) in enumerate(metrics):
             cols[idx % col_num].metric(label, val)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    def _open_content(self) -> None:
+        """Begin main content container."""
+        st.markdown("<div class='content-wrapper'>", unsafe_allow_html=True)
+
+    def _close_content(self) -> None:
+        """End main content container."""
         st.markdown("</div>", unsafe_allow_html=True)
 
     def _help_dialog(self) -> None:
@@ -858,7 +886,7 @@ class GymApp:
         st.title("Workout Logger")
         self._top_nav()
         self._create_sidebar()
-        st.markdown("<div class='content-wrapper'>", unsafe_allow_html=True)
+        self._open_content()
         self._refresh()
         (
             workouts_tab,
@@ -934,7 +962,7 @@ class GymApp:
                 self._goals_tab()
         with settings_tab:
             self._settings_tab()
-        st.markdown("</div>", unsafe_allow_html=True)
+        self._close_content()
         self._bottom_nav()
 
     def _log_tab(self) -> None:
