@@ -178,7 +178,7 @@ class GymApp:
             }
             window.addEventListener('resize', handleResize);
             window.addEventListener('orientationchange', handleResize);
-            setVh();
+            window.addEventListener('DOMContentLoaded', handleResize);
             </script>
             """,
             height=0,
@@ -216,6 +216,7 @@ class GymApp:
                 }
                 .section-wrapper {
                     margin-bottom: 1rem;
+                    padding: 0.5rem 0;
                 }
                 div[data-testid="column"] {
                     width: 100% !important;
@@ -296,6 +297,7 @@ class GymApp:
                 }
                 .section-wrapper {
                     margin-bottom: 0.75rem;
+                    padding: 0.25rem 0;
                 }
                 div[data-testid="column"] {
                     flex-direction: row;
@@ -401,9 +403,9 @@ class GymApp:
                     right: 0;
                     background: #ffffff;
                     border-top: 1px solid #cccccc;
-                    display: flex;
-                    justify-content: space-around;
+                    display: grid;
                     grid-template-columns: repeat(4, 1fr);
+                    justify-items: center;
                     padding: 0.25rem 0.5rem env(safe-area-inset-bottom);
                     gap: 0.25rem;
                     z-index: 1000;
@@ -428,10 +430,7 @@ class GymApp:
             }
             @media screen and (max-width: 360px) {
                 nav.bottom-nav {
-                    flex-wrap: wrap;
-                }
-                nav.bottom-nav button {
-                    flex: 1 0 50%;
+                    grid-template-columns: repeat(2, 1fr);
                 }
             }
             @media screen and (max-width: 600px) {
@@ -982,21 +981,23 @@ class GymApp:
 
     def _create_workout_form(self, training_options: list[str]) -> None:
         with st.expander("Create New Workout"):
-            st.markdown("<div class='form-grid'>", unsafe_allow_html=True)
-            new_type = st.selectbox(
-                "Training Type", training_options, key="new_workout_type"
-            )
-            new_location = st.text_input("Location", key="new_workout_location")
-            st.markdown("</div>", unsafe_allow_html=True)
-            if st.button("New Workout"):
-                new_id = self.workouts.create(
-                    datetime.date.today().isoformat(),
-                    new_type,
-                    None,
-                    new_location or None,
-                    None,
+            with st.form("new_workout_form"):
+                st.markdown("<div class='form-grid'>", unsafe_allow_html=True)
+                new_type = st.selectbox(
+                    "Training Type", training_options, key="new_workout_type"
                 )
-                st.session_state.selected_workout = new_id
+                new_location = st.text_input("Location", key="new_workout_location")
+                st.markdown("</div>", unsafe_allow_html=True)
+                submitted = st.form_submit_button("New Workout")
+                if submitted:
+                    new_id = self.workouts.create(
+                        datetime.date.today().isoformat(),
+                        new_type,
+                        None,
+                        new_location or None,
+                        None,
+                    )
+                    st.session_state.selected_workout = new_id
 
     def _existing_workout_form(self, training_options: list[str]) -> None:
         with st.expander("Existing Workouts", expanded=True):
@@ -1129,20 +1130,22 @@ class GymApp:
 
     def _create_plan_form(self) -> None:
         with st.expander("Create New Plan"):
-            st.markdown("<div class='form-grid'>", unsafe_allow_html=True)
-            plan_date = st.date_input(
-                "Plan Date", datetime.date.today(), key="plan_date"
-            )
-            training_options = ["strength", "hypertrophy", "highintensity"]
-            plan_type = st.selectbox(
-                "Training Type",
-                training_options,
-                key="plan_type",
-            )
-            st.markdown("</div>", unsafe_allow_html=True)
-            if st.button("New Planned Workout"):
-                pid = self.planned_workouts.create(plan_date.isoformat(), plan_type)
-                st.session_state.selected_planned_workout = pid
+            with st.form("new_plan_form"):
+                st.markdown("<div class='form-grid'>", unsafe_allow_html=True)
+                plan_date = st.date_input(
+                    "Plan Date", datetime.date.today(), key="plan_date"
+                )
+                training_options = ["strength", "hypertrophy", "highintensity"]
+                plan_type = st.selectbox(
+                    "Training Type",
+                    training_options,
+                    key="plan_type",
+                )
+                st.markdown("</div>", unsafe_allow_html=True)
+                submitted = st.form_submit_button("New Planned Workout")
+                if submitted:
+                    pid = self.planned_workouts.create(plan_date.isoformat(), plan_type)
+                    st.session_state.selected_planned_workout = pid
 
     def _existing_plan_form(self) -> None:
         with st.expander("Existing Plans", expanded=True):
