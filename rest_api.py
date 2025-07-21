@@ -467,6 +467,32 @@ class GymAPI:
                 )
             return result
 
+        @self.app.get("/calendar")
+        def calendar(start_date: str, end_date: str):
+            logged = self.workouts.fetch_all_workouts(start_date, end_date)
+            planned = self.planned_workouts.fetch_all(start_date, end_date)
+            result = []
+            for wid, date, _s, _e, t_type, _notes, _rating in logged:
+                result.append(
+                    {
+                        "id": wid,
+                        "date": date,
+                        "training_type": t_type,
+                        "planned": False,
+                    }
+                )
+            for pid, date, t_type in planned:
+                result.append(
+                    {
+                        "id": pid,
+                        "date": date,
+                        "training_type": t_type,
+                        "planned": True,
+                    }
+                )
+            result.sort(key=lambda x: x["date"])
+            return result
+
         @self.app.get("/workouts/{workout_id}")
         def get_workout(workout_id: int):
             (
