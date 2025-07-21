@@ -228,6 +228,14 @@ class GymApp:
             .header-wrapper {
                 width: 100%;
             }
+            .header-inner {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+                padding: 0 0.5rem;
+            }
             .content-wrapper {
                 display: flex;
                 flex-direction: column;
@@ -247,7 +255,8 @@ class GymApp:
             }
             .title-section {
                 display: flex;
-                justify-content: center;
+                align-items: center;
+                flex: 1 1 auto;
                 margin: 0.5rem 0;
             }
             @media screen and (max-width: 768px) {
@@ -257,6 +266,10 @@ class GymApp:
                     background: #ffffff;
                     z-index: 1000;
                     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                }
+                .header-inner {
+                    flex-direction: column;
+                    align-items: stretch;
                 }
                 .content-wrapper {
                     padding: 0 0.5rem;
@@ -509,6 +522,9 @@ class GymApp:
                 .content-wrapper {
                     padding: 0.25rem;
                 }
+                .header-inner {
+                    flex-direction: row;
+                }
                 nav.bottom-nav {
                     grid-template-columns: repeat(4, 1fr);
                     padding: 0.1rem 0.25rem var(--safe-bottom);
@@ -596,6 +612,7 @@ class GymApp:
                 grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
                 gap: 0.5rem;
                 justify-items: center;
+                width: 100%;
                 overflow-x: auto;
                 padding: 0.25rem;
             }
@@ -803,11 +820,14 @@ class GymApp:
 
     def _open_header(self) -> None:
         """Open the header container."""
-        st.markdown("<header class='header-wrapper'>", unsafe_allow_html=True)
+        st.markdown(
+            "<header class='header-wrapper'><div class='header-inner'>",
+            unsafe_allow_html=True,
+        )
 
     def _close_header(self) -> None:
         """Close the header container."""
-        st.markdown("</header>", unsafe_allow_html=True)
+        st.markdown("</div></header>", unsafe_allow_html=True)
 
     def _end_page(self) -> None:
         """Close the page wrapper."""
