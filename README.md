@@ -25,6 +25,7 @@ The Builder is a full featured workout planner, logger and analytics platform bu
 - Calculate average rest times between sets via `/stats/rest_times`.
 - Measure total session duration via `/stats/session_duration` and view results in the Reports tab.
 - Analyze training intensity zones with `/stats/intensity_distribution` displayed under Exercise Stats.
+- View velocity history per exercise with `/stats/velocity_history` and charts in the Stats tab.
 - Summarize volume by muscle group with `/stats/muscle_group_usage`.
 - Summarize workouts by location with `/stats/location_summary` and view tables in the Reports tab.
 - Evaluate exercise frequency per week with `/stats/exercise_frequency`.
