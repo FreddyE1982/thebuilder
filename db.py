@@ -2414,3 +2414,31 @@ class GoalRepository(BaseRepository):
             "target_date": r[6],
             "achieved": bool(r[7]),
         }
+
+    def fetch_active_by_exercise(
+        self, exercise_name: str, today: str | None = None
+    ) -> list[dict[str, object]]:
+        """Return active goals for ``exercise_name`` ordered by target date."""
+        canonical = self.exercise_names.canonical(exercise_name)
+        current = today or datetime.date.today().isoformat()
+        rows = super().fetch_all(
+            "SELECT id, exercise_name, name, target_value, unit, start_date, target_date, achieved "
+            "FROM goals WHERE exercise_name = ? AND achieved = 0 AND start_date <= ? AND target_date >= ? "
+            "ORDER BY target_date;",
+            (canonical, current, current),
+        )
+        result = []
+        for r in rows:
+            result.append(
+                {
+                    "id": r[0],
+                    "exercise_name": r[1],
+                    "name": r[2],
+                    "target_value": float(r[3]),
+                    "unit": r[4],
+                    "start_date": r[5],
+                    "target_date": r[6],
+                    "achieved": bool(r[7]),
+                }
+            )
+        return result
