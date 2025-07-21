@@ -459,6 +459,21 @@ class GymApp:
             nav.bottom-nav button:focus, nav.top-nav button:focus {
                 outline: 2px solid #ff4b4b;
             }
+            .metric-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+                gap: 0.5rem;
+            }
+            @media screen and (max-width: 768px) {
+                .metric-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+            }
+            @media screen and (min-width: 1025px) {
+                .metric-grid {
+                    grid-template-columns: repeat(4, 1fr);
+                }
+            }
             </style>
             """,
             unsafe_allow_html=True,
@@ -555,6 +570,13 @@ class GymApp:
         st.experimental_set_query_params(mode=mode, tab=label)
         st.experimental_rerun()
 
+    def _metric_grid(self, metrics: list[tuple[str, str]]) -> None:
+        """Render metrics in a responsive grid."""
+        col_num = 2 if st.session_state.is_mobile else 4
+        cols = st.columns(col_num, gap="small")
+        for idx, (label, val) in enumerate(metrics):
+            cols[idx % col_num].metric(label, val)
+
     def _help_dialog(self) -> None:
         with st.dialog("Help"):
             st.markdown("## Workout Logger Help")
@@ -597,8 +619,6 @@ class GymApp:
                 st.experimental_rerun()
         stats = self.stats.overview(start.isoformat(), end.isoformat())
         with st.expander("Overview Metrics", expanded=True):
-            col_num = 2 if st.session_state.is_mobile else 4
-            cols = st.columns(col_num)
             metrics = [
                 ("Workouts", stats["workouts"]),
                 ("Volume", stats["volume"]),
@@ -607,8 +627,7 @@ class GymApp:
                 ("Avg Density", stats["avg_density"]),
                 ("BMI", self.stats.bmi()),
             ]
-            for idx, (label, val) in enumerate(metrics):
-                cols[idx % col_num].metric(label, val)
+            self._metric_grid(metrics)
         daily = self.stats.daily_volume(start.isoformat(), end.isoformat())
         with st.expander("Charts", expanded=True):
             if st.session_state.is_mobile:
