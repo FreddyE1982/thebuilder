@@ -218,6 +218,9 @@ class GymApp:
                 flex-direction: column;
                 min-height: calc(var(--vh, 1vh) * 100);
             }
+            .header-wrapper {
+                width: 100%;
+            }
             .content-wrapper {
                 display: flex;
                 flex-direction: column;
@@ -241,6 +244,13 @@ class GymApp:
                 margin: 0.5rem 0;
             }
             @media screen and (max-width: 768px) {
+                .header-wrapper {
+                    position: sticky;
+                    top: 0;
+                    background: #ffffff;
+                    z-index: 1000;
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                }
                 .content-wrapper {
                     padding: 0 0.5rem;
                 }
@@ -321,6 +331,11 @@ class GymApp:
             @media screen and (max-width: 768px) and (orientation: landscape) {
                 .content-wrapper {
                     padding: 0.25rem;
+                }
+                .header-wrapper {
+                    position: fixed;
+                    left: 0;
+                    right: 0;
                 }
                 section.main > div {
                     padding: 0.5rem !important;
@@ -608,6 +623,14 @@ class GymApp:
                     grid-template-columns: repeat(4, 1fr);
                 }
             }
+            @media screen and (min-width: 1200px) {
+                .content-wrapper {
+                    padding: 0 2rem;
+                }
+                .section-wrapper {
+                    padding: 1.25rem;
+                }
+            }
             button {
                 padding: 0.5rem 0.75rem;
             }
@@ -770,6 +793,14 @@ class GymApp:
     def _start_page(self) -> None:
         """Open the page wrapper."""
         st.markdown("<div class='page-wrapper'>", unsafe_allow_html=True)
+
+    def _open_header(self) -> None:
+        """Open the header container."""
+        st.markdown("<header class='header-wrapper'>", unsafe_allow_html=True)
+
+    def _close_header(self) -> None:
+        """Close the header container."""
+        st.markdown("</header>", unsafe_allow_html=True)
 
     def _end_page(self) -> None:
         """Close the page wrapper."""
@@ -947,10 +978,12 @@ class GymApp:
         if tab_param in tab_map:
             st.session_state["main_tab"] = tab_map[tab_param]
         self._start_page()
+        self._open_header()
         st.markdown("<div class='title-section'>", unsafe_allow_html=True)
         st.title("Workout Logger")
         st.markdown("</div>", unsafe_allow_html=True)
         self._top_nav()
+        self._close_header()
         self._create_sidebar()
         self._open_content()
         self._refresh()
