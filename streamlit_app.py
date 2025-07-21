@@ -191,7 +191,17 @@ class GymApp:
                 display: flex;
                 flex-direction: column;
             }
+            .content-wrapper {
+                width: 100%;
+                max-width: 1200px;
+                margin: 0 auto;
+                flex: 1 0 auto;
+                padding: 0 1rem;
+            }
             @media screen and (max-width: 768px) {
+                .content-wrapper {
+                    padding: 0 0.5rem;
+                }
                 div[data-testid="column"] {
                     width: 100% !important;
                     flex: 1 1 100% !important;
@@ -263,6 +273,9 @@ class GymApp:
             }
 
             @media screen and (max-width: 768px) and (orientation: landscape) {
+                .content-wrapper {
+                    padding: 0.25rem;
+                }
                 section.main > div {
                     padding: 0.5rem !important;
                 }
@@ -273,6 +286,9 @@ class GymApp:
             }
 
             @media screen and (max-width: 480px) {
+                .content-wrapper {
+                    padding: 0.5rem 0.25rem;
+                }
                 section.main > div {
                     padding: 0.5rem !important;
                 }
@@ -288,6 +304,9 @@ class GymApp:
             }
 
             @media screen and (max-width: 480px) and (orientation: landscape) {
+                .content-wrapper {
+                    padding: 0.25rem;
+                }
                 section.main > div {
                     padding: 0.25rem !important;
                 }
@@ -303,6 +322,9 @@ class GymApp:
                 }
             }
             @media screen and (max-width: 320px) and (orientation: landscape) {
+                .content-wrapper {
+                    padding: 0.2rem;
+                }
                 section.main > div {
                     padding: 0.2rem !important;
                 }
@@ -317,6 +339,9 @@ class GymApp:
                 }
             }
             @media screen and (max-width: 320px) {
+                .content-wrapper {
+                    padding: 0.3rem;
+                }
                 section.main > div {
                     padding: 0.3rem !important;
                 }
@@ -331,6 +356,9 @@ class GymApp:
                 }
             }
             @media screen and (max-width: 414px) and (orientation: landscape) {
+                .content-wrapper {
+                    padding: 0.3rem;
+                }
                 nav.bottom-nav button {
                     flex: 1 0 33%;
                 }
@@ -395,6 +423,9 @@ class GymApp:
                 }
             }
             @media screen and (max-width: 768px) and (orientation: landscape) {
+                .content-wrapper {
+                    padding: 0.25rem;
+                }
                 nav.bottom-nav {
                     padding: 0.1rem 0.25rem env(safe-area-inset-bottom);
                     gap: 0.1rem;
@@ -761,6 +792,7 @@ class GymApp:
         st.title("Workout Logger")
         self._top_nav()
         self._create_sidebar()
+        st.markdown("<div class='content-wrapper'>", unsafe_allow_html=True)
         self._refresh()
         (
             workouts_tab,
@@ -836,6 +868,7 @@ class GymApp:
                 self._goals_tab()
         with settings_tab:
             self._settings_tab()
+        st.markdown("</div>", unsafe_allow_html=True)
         self._bottom_nav()
 
     def _log_tab(self) -> None:
