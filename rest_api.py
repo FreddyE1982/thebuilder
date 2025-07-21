@@ -1514,6 +1514,7 @@ class GymAPI:
             return [
                 {
                     "id": gid,
+                    "exercise_name": ex,
                     "name": name,
                     "target_value": val,
                     "unit": unit,
@@ -1521,23 +1522,29 @@ class GymAPI:
                     "target_date": target,
                     "achieved": bool(ach),
                 }
-                for gid, name, val, unit, start, target, ach in rows
+                for gid, ex, name, val, unit, start, target, ach in rows
             ]
 
         @self.app.post("/goals")
         def add_goal(
+            exercise_name: str,
             name: str,
             target_value: float,
             unit: str,
             start_date: str,
             target_date: str,
         ):
-            gid = self.goals.add(name, target_value, unit, start_date, target_date)
+            if not exercise_name:
+                raise HTTPException(status_code=400, detail="exercise required")
+            gid = self.goals.add(
+                exercise_name, name, target_value, unit, start_date, target_date
+            )
             return {"id": gid}
 
         @self.app.put("/goals/{goal_id}")
         def update_goal(
             goal_id: int,
+            exercise_name: str | None = None,
             name: str | None = None,
             target_value: float | None = None,
             unit: str | None = None,
@@ -1548,6 +1555,7 @@ class GymAPI:
             try:
                 self.goals.update(
                     goal_id,
+                    exercise_name,
                     name,
                     target_value,
                     unit,

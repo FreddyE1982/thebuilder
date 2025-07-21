@@ -2245,6 +2245,7 @@ class APITestCase(unittest.TestCase):
         resp = self.client.post(
             "/goals",
             params={
+                "exercise_name": "Squat",
                 "name": "Squat PR",
                 "target_value": 200.0,
                 "unit": "kg",
@@ -2260,6 +2261,7 @@ class APITestCase(unittest.TestCase):
         data = resp.json()
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0]["name"], "Squat PR")
+        self.assertEqual(data[0]["exercise_name"], "Squat")
 
         resp = self.client.put(
             f"/goals/{gid}",

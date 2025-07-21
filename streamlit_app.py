@@ -2307,14 +2307,17 @@ class GymApp:
     def _goals_tab(self) -> None:
         st.header("Goals")
         with st.expander("Add Goal"):
+            ex_names = [""] + self.exercise_names_repo.fetch_all()
+            ex_choice = st.selectbox("Exercise", ex_names, key="goal_ex")
             name = st.text_input("Name", key="goal_name")
             value = st.number_input("Target Value", min_value=0.0, step=0.1, key="goal_value")
             unit = st.text_input("Unit", key="goal_unit")
             start_d = st.date_input("Start Date", datetime.date.today(), key="goal_start")
             target_d = st.date_input("Target Date", datetime.date.today(), key="goal_target")
             if st.button("Create Goal", key="goal_add"):
-                if name and unit:
+                if name and unit and ex_choice:
                     self.goals_repo.add(
+                        ex_choice,
                         name,
                         float(value),
                         unit,
@@ -2323,12 +2326,19 @@ class GymApp:
                     )
                     st.success("Added")
                 else:
-                    st.warning("Name and unit required")
+                    st.warning("Exercise, name and unit required")
         with st.expander("Existing Goals", expanded=True):
             rows = self.goals_repo.fetch_all()
-            for gid, gname, gval, gunit, sdate, tdate, ach in rows:
+            for gid, exn, gname, gval, gunit, sdate, tdate, ach in rows:
                 exp = st.expander(f"{gname} - {gval}{gunit}")
                 with exp:
+                    names = self.exercise_names_repo.fetch_all()
+                    ex_e = st.selectbox(
+                        "Exercise",
+                        names,
+                        index=names.index(exn),
+                        key=f"goal_ex_{gid}",
+                    )
                     name_e = st.text_input("Name", gname, key=f"goal_name_{gid}")
                     val_e = st.number_input(
                         "Target Value",
@@ -2352,6 +2362,7 @@ class GymApp:
                     if cols[0].button("Update", key=f"goal_upd_{gid}"):
                         self.goals_repo.update(
                             gid,
+                            ex_e,
                             name_e,
                             float(val_e),
                             unit_e,

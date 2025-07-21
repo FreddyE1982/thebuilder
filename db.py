@@ -331,6 +331,7 @@ class Database:
         "goals": (
             """CREATE TABLE goals (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    exercise_name TEXT NOT NULL,
                     name TEXT NOT NULL,
                     target_value REAL NOT NULL,
                     unit TEXT NOT NULL,
@@ -340,6 +341,7 @@ class Database:
                 );""",
             [
                 "id",
+                "exercise_name",
                 "name",
                 "target_value",
                 "unit",
@@ -2307,22 +2309,29 @@ class TagRepository(BaseRepository):
 class GoalRepository(BaseRepository):
     """Repository for goal management."""
 
+    def __init__(self, db_path: str = "workout.db") -> None:
+        super().__init__(db_path)
+        self.exercise_names = ExerciseNameRepository(db_path)
+
     def add(
         self,
+        exercise_name: str,
         name: str,
         target_value: float,
         unit: str,
         start_date: str,
         target_date: str,
     ) -> int:
+        canonical = self.exercise_names.canonical(exercise_name)
         return self.execute(
-            "INSERT INTO goals (name, target_value, unit, start_date, target_date) VALUES (?, ?, ?, ?, ?);",
-            (name, target_value, unit, start_date, target_date),
+            "INSERT INTO goals (exercise_name, name, target_value, unit, start_date, target_date) VALUES (?, ?, ?, ?, ?, ?);",
+            (canonical, name, target_value, unit, start_date, target_date),
         )
 
     def update(
         self,
         goal_id: int,
+        exercise_name: str | None = None,
         name: str | None = None,
         target_value: float | None = None,
         unit: str | None = None,
@@ -2335,6 +2344,9 @@ class GoalRepository(BaseRepository):
             raise ValueError("goal not found")
         fields = []
         params = []
+        if exercise_name is not None:
+            fields.append("exercise_name = ?")
+            params.append(self.exercise_names.canonical(exercise_name))
         if name is not None:
             fields.append("name = ?")
             params.append(name)
@@ -2366,26 +2378,27 @@ class GoalRepository(BaseRepository):
             raise ValueError("goal not found")
         self.execute("DELETE FROM goals WHERE id = ?;", (goal_id,))
 
-    def fetch_all(self) -> list[tuple[int, str, float, str, str, str, int]]:
+    def fetch_all(self) -> list[tuple[int, str, str, float, str, str, str, int]]:
         rows = super().fetch_all(
-            "SELECT id, name, target_value, unit, start_date, target_date, achieved FROM goals ORDER BY id;"
+            "SELECT id, exercise_name, name, target_value, unit, start_date, target_date, achieved FROM goals ORDER BY id;"
         )
         return [
             (
                 r[0],
                 r[1],
-                float(r[2]),
-                r[3],
+                r[2],
+                float(r[3]),
                 r[4],
                 r[5],
-                int(r[6]),
+                r[6],
+                int(r[7]),
             )
             for r in rows
         ]
 
     def fetch(self, goal_id: int) -> dict[str, object]:
         rows = super().fetch_all(
-            "SELECT id, name, target_value, unit, start_date, target_date, achieved FROM goals WHERE id = ?;",
+            "SELECT id, exercise_name, name, target_value, unit, start_date, target_date, achieved FROM goals WHERE id = ?;",
             (goal_id,),
         )
         if not rows:
@@ -2393,10 +2406,11 @@ class GoalRepository(BaseRepository):
         r = rows[0]
         return {
             "id": r[0],
-            "name": r[1],
-            "target_value": float(r[2]),
-            "unit": r[3],
-            "start_date": r[4],
-            "target_date": r[5],
-            "achieved": bool(r[6]),
+            "exercise_name": r[1],
+            "name": r[2],
+            "target_value": float(r[3]),
+            "unit": r[4],
+            "start_date": r[5],
+            "target_date": r[6],
+            "achieved": bool(r[7]),
         }
