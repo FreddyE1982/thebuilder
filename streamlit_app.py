@@ -224,6 +224,7 @@ class GymApp:
                 flex-direction: column;
                 min-height: 100dvh;
                 min-height: calc(var(--vh, 1vh) * 100);
+                padding-bottom: var(--safe-bottom);
             }
             .header-wrapper {
                 width: 100%;
@@ -461,6 +462,9 @@ class GymApp:
                 body {
                     padding-bottom: calc(var(--safe-bottom) + 3rem);
                 }
+                .content-wrapper {
+                    padding-bottom: 3rem;
+                }
                 .bottom-nav {
                     position: fixed;
                     bottom: 0;
@@ -646,6 +650,9 @@ class GymApp:
                 .metric-grid {
                     grid-template-columns: repeat(4, 1fr);
                 }
+                .content-wrapper {
+                    padding-bottom: 0;
+                }
             }
             @media screen and (min-width: 1200px) {
                 .content-wrapper {
@@ -768,6 +775,8 @@ class GymApp:
                 f'<button role="tab" title="{label.title()}" '
                 f'aria-label="{label.title()} Tab" '
                 f'aria-selected="{str(st.session_state.get("main_tab", 0) == idx).lower()}" '
+                f'{"aria-current=\"page\" " if st.session_state.get("main_tab", 0) == idx else ""}'
+                f'tabindex="0" '
                 f'onclick="const p=new URLSearchParams(window.location.search);'
                 f'p.set(\'mode\',\'{mode}\');p.set(\'tab\',\'{label}\');'
                 f'window.location.search=p.toString();"><span class="icon">{icons[label]}</span>'
