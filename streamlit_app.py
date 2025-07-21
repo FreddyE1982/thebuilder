@@ -313,6 +313,27 @@ class GymApp:
                     font-size: 0.8rem;
                 }
             }
+            @media screen and (max-width: 768px) {
+                body {
+                    padding-bottom: 3rem;
+                }
+                .bottom-nav {
+                    position: fixed;
+                    bottom: 0;
+                    left: 0;
+                    right: 0;
+                    background: #ffffff;
+                    border-top: 1px solid #cccccc;
+                    display: flex;
+                    justify-content: space-around;
+                    padding: 0.25rem 0.5rem;
+                    z-index: 1000;
+                }
+                .bottom-nav button {
+                    flex: 1 1 auto;
+                    margin: 0 0.25rem;
+                }
+            }
             button[aria-selected="true"] {
                 border-bottom: 2px solid #ff4b4b;
             }
@@ -369,6 +390,19 @@ class GymApp:
                 self._help_dialog()
             if st.button("Show About", key="about_btn"):
                 self._about_dialog()
+
+    def _bottom_nav(self) -> None:
+        """Render bottom navigation on mobile devices."""
+        if not st.session_state.is_mobile:
+            return
+        st.markdown('<div class="bottom-nav">', unsafe_allow_html=True)
+        cols = st.columns(4)
+        labels = ["workouts", "library", "progress", "settings"]
+        for idx, label in enumerate(labels):
+            if cols[idx].button(label.title(), key=f"nav_{label}"):
+                st.experimental_set_query_params(mode="mobile", tab=label)
+                st.experimental_rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
 
     def _help_dialog(self) -> None:
         with st.dialog("Help"):
@@ -474,6 +508,16 @@ class GymApp:
                     st.table(top_ex[:5])
 
     def run(self) -> None:
+        params = st.experimental_get_query_params()
+        tab_param = params.get("tab", [None])[0]
+        tab_map = {
+            "workouts": 0,
+            "library": 1,
+            "progress": 2,
+            "settings": 3,
+        }
+        if tab_param in tab_map:
+            st.session_state["main_tab"] = tab_map[tab_param]
         st.title("Workout Logger")
         self._create_sidebar()
         self._refresh()
@@ -488,7 +532,8 @@ class GymApp:
                 "Library",
                 "Progress",
                 "Settings",
-            ]
+            ],
+            key="main_tab",
         )
         with workouts_tab:
             log_sub, plan_sub = st.tabs(["Log", "Plan"])
@@ -550,6 +595,7 @@ class GymApp:
                 self._goals_tab()
         with settings_tab:
             self._settings_tab()
+        self._bottom_nav()
 
     def _log_tab(self) -> None:
         plans = self.planned_workouts.fetch_all()
