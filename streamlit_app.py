@@ -185,6 +185,8 @@ class GymApp:
                 overflow-x: hidden;
                 margin: 0;
                 padding: 0;
+                box-sizing: border-box;
+                scroll-behavior: smooth;
             }
             @media screen and (max-width: 768px) {
                 div[data-testid="column"] {
@@ -290,10 +292,10 @@ class GymApp:
                     flex-direction: row;
                     flex-wrap: wrap;
                 }
-                .bottom-nav {
+                nav.bottom-nav {
                     flex-wrap: wrap;
                 }
-                .bottom-nav button {
+                nav.bottom-nav button {
                     flex: 1 0 25%;
                 }
             }
@@ -352,44 +354,44 @@ class GymApp:
                     white-space: pre-line;
                     font-size: 0.85rem;
                 }
-                .bottom-nav .icon {
+                nav.bottom-nav .icon {
                     font-size: 1.25rem;
                     line-height: 1;
                 }
-                .bottom-nav .label {
+                nav.bottom-nav .label {
                     font-size: 0.75rem;
                 }
             }
             @media screen and (max-width: 360px) {
-                .bottom-nav {
+                nav.bottom-nav {
                     flex-wrap: wrap;
                 }
-                .bottom-nav button {
+                nav.bottom-nav button {
                     flex: 1 0 50%;
                 }
             }
             @media screen and (max-width: 768px) and (orientation: portrait) {
-                .bottom-nav {
+                nav.bottom-nav {
                     justify-content: space-evenly;
                 }
             }
             @media screen and (max-width: 768px) and (orientation: landscape) {
-                .bottom-nav {
+                nav.bottom-nav {
                     padding: 0.1rem 0.25rem;
                     gap: 0.1rem;
                     justify-content: space-between;
                 }
-                .bottom-nav button {
+                nav.bottom-nav button {
                     font-size: 0.75rem;
                     padding: 0.25rem;
                     flex-direction: row;
                     gap: 0.25rem;
                 }
-                .bottom-nav .label {
+                nav.bottom-nav .label {
                     font-size: 0.7rem;
                 }
             }
-            .top-nav {
+            nav.top-nav {
                 position: sticky;
                 top: 0;
                 background: #ffffff;
@@ -400,18 +402,18 @@ class GymApp:
                 z-index: 1000;
             }
             @media screen and (max-width: 768px) and (orientation: portrait) {
-                .top-nav {
+                nav.top-nav {
                     position: sticky;
                 }
             }
             @media screen and (max-width: 768px) and (orientation: landscape) {
-                .top-nav {
+                nav.top-nav {
                     position: fixed;
                     left: 0;
                     right: 0;
                 }
             }
-            .top-nav button {
+            nav.top-nav button {
                 flex: 1 1 auto;
                 margin: 0 0.25rem;
                 display: flex;
@@ -420,23 +422,23 @@ class GymApp:
                 white-space: pre-line;
                 font-size: 0.9rem;
             }
-            .top-nav .icon {
+            nav.top-nav .icon {
                 font-size: 1.1rem;
                 line-height: 1;
             }
-            .top-nav .label {
+            nav.top-nav .label {
                 font-size: 0.9rem;
             }
             @media screen and (min-width: 769px) {
-                .top-nav button {
+                nav.top-nav button {
                     font-size: 1rem;
                 }
-                .top-nav .icon {
+                nav.top-nav .icon {
                     font-size: 1.25rem;
                 }
             }
-            .bottom-nav button,
-            .top-nav button {
+            nav.bottom-nav button,
+            nav.top-nav button {
                 background: transparent;
                 border: none;
                 width: 100%;
@@ -509,16 +511,16 @@ class GymApp:
         }
         mode = "mobile" if st.session_state.is_mobile else "desktop"
         html = (
-            f'<div class="{container_class}">' +
-            "".join(
+            f'<nav class="{container_class}" role="navigation" aria-label="Main Navigation">'
+            + "".join(
                 f'<button aria-selected="{str(st.session_state.get("main_tab", 0) == idx).lower()}" '
                 f'onclick="const p=new URLSearchParams(window.location.search);'
                 f'p.set(\'mode\',\'{mode}\');p.set(\'tab\',\'{label}\');'
                 f'window.location.search=p.toString();"><span class="icon">{icons[label]}</span>'
                 f'<span class="label">{label.title()}</span></button>'
                 for idx, label in enumerate(labels)
-            ) +
-            "</div>"
+            )
+            + "</nav>"
         )
         st.markdown(html, unsafe_allow_html=True)
 
@@ -839,27 +841,50 @@ class GymApp:
                 notes_val = detail[5] or ""
                 loc_val = detail[6] or ""
                 rating_val = detail[7]
-                cols = st.columns(3)
-                if cols[0].button("Start Workout", key=f"start_workout_{selected}"):
-                    self.workouts.set_start_time(
-                        int(selected),
-                        datetime.datetime.now().isoformat(timespec="seconds"),
+                if st.session_state.is_mobile:
+                    c1, c2 = st.columns(2)
+                    if c1.button("Start Workout", key=f"start_workout_{selected}"):
+                        self.workouts.set_start_time(
+                            int(selected),
+                            datetime.datetime.now().isoformat(timespec="seconds"),
+                        )
+                    if c2.button(
+                        "Finish Workout", key=f"finish_workout_{selected}"
+                    ):
+                        self.workouts.set_end_time(
+                            int(selected),
+                            datetime.datetime.now().isoformat(timespec="seconds"),
+                        )
+                    type_choice = st.selectbox(
+                        "Type",
+                        training_options,
+                        index=training_options.index(current_type),
+                        key=f"type_select_{selected}",
                     )
-                if cols[1].button(
-                    "Finish Workout", key=f"finish_workout_{selected}"
-                ):
-                    self.workouts.set_end_time(
-                        int(selected),
-                        datetime.datetime.now().isoformat(timespec="seconds"),
+                    if st.button("Save", key=f"save_type_{selected}"):
+                        self.workouts.set_training_type(int(selected), type_choice)
+                else:
+                    cols = st.columns(3)
+                    if cols[0].button("Start Workout", key=f"start_workout_{selected}"):
+                        self.workouts.set_start_time(
+                            int(selected),
+                            datetime.datetime.now().isoformat(timespec="seconds"),
+                        )
+                    if cols[1].button(
+                        "Finish Workout", key=f"finish_workout_{selected}"
+                    ):
+                        self.workouts.set_end_time(
+                            int(selected),
+                            datetime.datetime.now().isoformat(timespec="seconds"),
+                        )
+                    type_choice = cols[2].selectbox(
+                        "Type",
+                        training_options,
+                        index=training_options.index(current_type),
+                        key=f"type_select_{selected}",
                     )
-                type_choice = cols[2].selectbox(
-                    "Type",
-                    training_options,
-                    index=training_options.index(current_type),
-                    key=f"type_select_{selected}",
-                )
-                if cols[2].button("Save", key=f"save_type_{selected}"):
-                    self.workouts.set_training_type(int(selected), type_choice)
+                    if cols[2].button("Save", key=f"save_type_{selected}"):
+                        self.workouts.set_training_type(int(selected), type_choice)
                 if start_time:
                     st.write(f"Start: {start_time}")
                 if end_time:
@@ -969,21 +994,41 @@ class GymApp:
                             datetime.date.fromisoformat(pdate),
                             key=f"plan_dup_{pid}",
                         )
-                        cols = st.columns(3)
-                        if cols[0].button("Save", key=f"save_plan_{pid}"):
-                            self.planned_workouts.update_date(
-                                pid, edit_date.isoformat()
-                            )
-                            self.planned_workouts.set_training_type(
-                                pid, type_choice
-                            )
-                            st.success("Updated")
-                        if cols[1].button("Duplicate", key=f"dup_plan_{pid}"):
-                            self.planner.duplicate_plan(pid, dup_date.isoformat())
-                            st.success("Duplicated")
-                        if cols[2].button("Delete", key=f"del_plan_{pid}"):
-                            self.planned_workouts.delete(pid)
-                            st.success("Deleted")
+                        if st.session_state.is_mobile:
+                            if st.button("Save", key=f"save_plan_{pid}"):
+                                self.planned_workouts.update_date(
+                                    pid, edit_date.isoformat()
+                                )
+                                self.planned_workouts.set_training_type(
+                                    pid, type_choice
+                                )
+                                st.success("Updated")
+                            if st.button("Duplicate", key=f"dup_plan_{pid}"):
+                                self.planner.duplicate_plan(
+                                    pid, dup_date.isoformat()
+                                )
+                                st.success("Duplicated")
+                            if st.button("Delete", key=f"del_plan_{pid}"):
+                                self.planned_workouts.delete(pid)
+                                st.success("Deleted")
+                        else:
+                            cols = st.columns(3)
+                            if cols[0].button("Save", key=f"save_plan_{pid}"):
+                                self.planned_workouts.update_date(
+                                    pid, edit_date.isoformat()
+                                )
+                                self.planned_workouts.set_training_type(
+                                    pid, type_choice
+                                )
+                                st.success("Updated")
+                            if cols[1].button("Duplicate", key=f"dup_plan_{pid}"):
+                                self.planner.duplicate_plan(
+                                    pid, dup_date.isoformat()
+                                )
+                                st.success("Duplicated")
+                            if cols[2].button("Delete", key=f"del_plan_{pid}"):
+                                self.planned_workouts.delete(pid)
+                                st.success("Deleted")
 
     def _exercise_section(self) -> None:
         st.header("Exercises")
