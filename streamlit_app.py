@@ -452,6 +452,8 @@ class GymApp:
                 background: transparent;
                 border: none;
                 width: 100%;
+                user-select: none;
+                touch-action: manipulation;
             }
             button[aria-selected="true"] {
                 border-bottom: 2px solid #ff4b4b;
@@ -463,10 +465,17 @@ class GymApp:
                 display: grid;
                 grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
                 gap: 0.5rem;
+                overflow-x: auto;
+                padding: 0.25rem;
             }
             @media screen and (max-width: 768px) {
                 .metric-grid {
                     grid-template-columns: repeat(2, 1fr);
+                }
+            }
+            @media screen and (max-width: 768px) and (orientation: landscape) {
+                .metric-grid {
+                    grid-template-columns: repeat(3, 1fr);
                 }
             }
             @media screen and (min-width: 1025px) {
@@ -558,6 +567,7 @@ class GymApp:
             f'<nav class="{container_class}" role="tablist" aria-label="Main Navigation">'
             + "".join(
                 f'<button role="tab" title="{label.title()}" '
+                f'aria-label="{label.title()} Tab" '
                 f'aria-selected="{str(st.session_state.get("main_tab", 0) == idx).lower()}" '
                 f'onclick="const p=new URLSearchParams(window.location.search);'
                 f'p.set(\'mode\',\'{mode}\');p.set(\'tab\',\'{label}\');'
@@ -589,9 +599,11 @@ class GymApp:
     def _metric_grid(self, metrics: list[tuple[str, str]]) -> None:
         """Render metrics in a responsive grid."""
         col_num = 2 if st.session_state.is_mobile else 4
+        st.markdown("<div class='metric-grid'>", unsafe_allow_html=True)
         cols = st.columns(col_num, gap="small")
         for idx, (label, val) in enumerate(metrics):
             cols[idx % col_num].metric(label, val)
+        st.markdown("</div>", unsafe_allow_html=True)
 
     def _help_dialog(self) -> None:
         with st.dialog("Help"):
