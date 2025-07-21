@@ -1706,6 +1706,15 @@ class GymApp:
                         {"1RM": [p["est_1rm"] for p in prog]},
                         x=[p["date"] for p in prog],
                     )
+                vel_hist = self.stats.velocity_history(
+                    ex_choice, start_str, end_str
+                )
+                if vel_hist:
+                    with st.expander("Velocity History", expanded=False):
+                        st.line_chart(
+                            {"Velocity": [v["velocity"] for v in vel_hist]},
+                            x=[v["date"] for v in vel_hist],
+                        )
                 self._progress_forecast_section(ex_choice)
             self._volume_forecast_section(start_str, end_str)
         with rec_tab:
@@ -1891,6 +1900,10 @@ class GymApp:
             duration = self.stats.session_duration(start_str, end_str)
             if duration:
                 st.table(duration)
+        with st.expander("Average Rest Times", expanded=False):
+            rests = self.stats.rest_times(start_str, end_str)
+            if rests:
+                st.table(rests)
         with st.expander("Location Summary", expanded=False):
             loc_stats = self.stats.location_summary(start_str, end_str)
             if loc_stats:
