@@ -474,6 +474,22 @@ class GymApp:
                     grid-template-columns: repeat(4, 1fr);
                 }
             }
+            button {
+                padding: 0.5rem 0.75rem;
+            }
+            @media screen and (max-width: 768px) {
+                button {
+                    font-size: 0.9rem;
+                }
+            }
+            nav.bottom-nav {
+                backdrop-filter: blur(10px);
+                box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+            }
+            nav.top-nav {
+                backdrop-filter: blur(10px);
+                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            }
             </style>
             """,
             unsafe_allow_html=True,
@@ -1757,26 +1773,49 @@ class GymApp:
     def _equipment_library(self) -> None:
         muscles = self.muscles_repo.fetch_all()
         types = [""] + self.equipment.fetch_types()
-        with st.expander("Filters", expanded=True):
-            sel_type = st.selectbox("Type", types, key="lib_eq_type")
-            prefix = st.text_input("Name Contains", key="lib_eq_prefix")
-            mus_filter = st.multiselect("Muscles", muscles, key="lib_eq_mus")
-        names = self.equipment.fetch_names(
-            sel_type or None,
-            prefix or None,
-            mus_filter or None,
-        )
-        with st.expander("Equipment List", expanded=True):
-            choice = st.selectbox("Equipment", [""] + names, key="lib_eq_name")
-            if choice and st.button("Details", key="lib_eq_btn"):
-                detail = self.equipment.fetch_detail(choice)
-                if detail:
-                    with st.dialog("Equipment Details"):
-                        eq_type, muscs, _ = detail
-                        st.markdown(f"**Type:** {eq_type}")
-                        st.markdown("**Muscles:**")
-                        for m in muscs:
-                            st.markdown(f"- {m}")
+        if st.session_state.is_mobile:
+            with st.expander("Filters", expanded=True):
+                sel_type = st.selectbox("Type", types, key="lib_eq_type")
+                prefix = st.text_input("Name Contains", key="lib_eq_prefix")
+                mus_filter = st.multiselect("Muscles", muscles, key="lib_eq_mus")
+            names = self.equipment.fetch_names(
+                sel_type or None,
+                prefix or None,
+                mus_filter or None,
+            )
+            with st.expander("Equipment List", expanded=True):
+                choice = st.selectbox("Equipment", [""] + names, key="lib_eq_name")
+                if choice and st.button("Details", key="lib_eq_btn"):
+                    detail = self.equipment.fetch_detail(choice)
+                    if detail:
+                        with st.dialog("Equipment Details"):
+                            eq_type, muscs, _ = detail
+                            st.markdown(f"**Type:** {eq_type}")
+                            st.markdown("**Muscles:**")
+                            for m in muscs:
+                                st.markdown(f"- {m}")
+        else:
+            f_col, l_col = st.columns([1, 2], gap="large")
+            with f_col.expander("Filters", expanded=True):
+                    sel_type = st.selectbox("Type", types, key="lib_eq_type")
+                    prefix = st.text_input("Name Contains", key="lib_eq_prefix")
+                    mus_filter = st.multiselect("Muscles", muscles, key="lib_eq_mus")
+            names = self.equipment.fetch_names(
+                sel_type or None,
+                prefix or None,
+                mus_filter or None,
+            )
+            with l_col.expander("Equipment List", expanded=True):
+                    choice = st.selectbox("Equipment", [""] + names, key="lib_eq_name")
+                    if choice and st.button("Details", key="lib_eq_btn"):
+                        detail = self.equipment.fetch_detail(choice)
+                        if detail:
+                            with st.dialog("Equipment Details"):
+                                eq_type, muscs, _ = detail
+                                st.markdown(f"**Type:** {eq_type}")
+                                st.markdown("**Muscles:**")
+                                for m in muscs:
+                                    st.markdown(f"- {m}")
 
     def _exercise_catalog_library(self) -> None:
         groups = self.exercise_catalog.fetch_muscle_groups()
@@ -1800,142 +1839,269 @@ class GymApp:
             if st.button("Add Favorite", key="fav_add_btn") and add_choice:
                 self.favorites_repo.add(add_choice)
                 st.experimental_rerun()
-        with st.expander("Filters", expanded=True):
+        if st.session_state.is_mobile:
             sel_groups = st.multiselect("Muscle Groups", groups, key="lib_ex_groups")
             sel_mus = st.multiselect("Muscles", muscles, key="lib_ex_mus")
             eq_names = self.equipment.fetch_names()
             sel_eq = st.selectbox("Equipment", [""] + eq_names, key="lib_ex_eq")
             name_filter = st.text_input("Name Contains", key="lib_ex_prefix")
-        names = self.exercise_catalog.fetch_names(
-            sel_groups or None,
-            sel_mus or None,
-            sel_eq or None,
-            name_filter or None,
-        )
-        with st.expander("Exercise List", expanded=True):
-            choice = st.selectbox("Exercise", [""] + names, key="lib_ex_name")
-            if choice and st.button("Show Details", key="lib_ex_btn"):
-                detail = self.exercise_catalog.fetch_detail(choice)
-                if detail:
-                    (
-                        group,
-                        variants,
-                        equipment_names,
-                        primary,
-                        secondary,
-                        tertiary,
-                        other,
-                        _,
-                    ) = detail
-                    with st.dialog("Exercise Details"):
-                        st.markdown(f"**Group:** {group}")
-                        st.markdown(f"**Primary:** {primary}")
-                        if secondary:
-                            st.markdown("**Secondary:**")
-                            for m in secondary.split("|"):
-                                st.markdown(f"- {m}")
-                        if tertiary:
-                            st.markdown("**Tertiary:**")
-                            for m in tertiary.split("|"):
-                                st.markdown(f"- {m}")
-                        if other:
-                            st.markdown("**Other:**")
-                            for m in other.split("|"):
-                                st.markdown(f"- {m}")
-                        if variants:
-                            st.markdown("**Variants:**")
-                            for v in variants.split("|"):
-                                st.markdown(f"- {v}")
+            names = self.exercise_catalog.fetch_names(
+                sel_groups or None,
+                sel_mus or None,
+                sel_eq or None,
+                name_filter or None,
+            )
+            with st.expander("Exercise List", expanded=True):
+                choice = st.selectbox("Exercise", [""] + names, key="lib_ex_name")
+                if choice and st.button("Show Details", key="lib_ex_btn"):
+                    detail = self.exercise_catalog.fetch_detail(choice)
+                    if detail:
+                        (
+                            group,
+                            variants,
+                            equipment_names,
+                            primary,
+                            secondary,
+                            tertiary,
+                            other,
+                            _,
+                        ) = detail
+                        with st.dialog("Exercise Details"):
+                            st.markdown(f"**Group:** {group}")
+                            st.markdown(f"**Primary:** {primary}")
+                            if secondary:
+                                st.markdown("**Secondary:**")
+                                for m in secondary.split("|"):
+                                    st.markdown(f"- {m}")
+                            if tertiary:
+                                st.markdown("**Tertiary:**")
+                                for m in tertiary.split("|"):
+                                    st.markdown(f"- {m}")
+                            if other:
+                                st.markdown("**Other:**")
+                                for m in other.split("|"):
+                                    st.markdown(f"- {m}")
+                            if variants:
+                                st.markdown("**Variants:**")
+                                for v in variants.split("|"):
+                                    st.markdown(f"- {v}")
+        else:
+            f_col, l_col = st.columns([1, 2], gap="large")
+            with f_col:
+                with st.expander("Filters", expanded=True):
+                    sel_groups = st.multiselect("Muscle Groups", groups, key="lib_ex_groups")
+                    sel_mus = st.multiselect("Muscles", muscles, key="lib_ex_mus")
+                    eq_names = self.equipment.fetch_names()
+                    sel_eq = st.selectbox("Equipment", [""] + eq_names, key="lib_ex_eq")
+                    name_filter = st.text_input("Name Contains", key="lib_ex_prefix")
+            names = self.exercise_catalog.fetch_names(
+                sel_groups or None,
+                sel_mus or None,
+                sel_eq or None,
+                name_filter or None,
+            )
+            with l_col:
+                with st.expander("Exercise List", expanded=True):
+                    choice = st.selectbox("Exercise", [""] + names, key="lib_ex_name")
+                    if choice and st.button("Show Details", key="lib_ex_btn"):
+                        detail = self.exercise_catalog.fetch_detail(choice)
+                        if detail:
+                            (
+                                group,
+                                variants,
+                                equipment_names,
+                                primary,
+                                secondary,
+                                tertiary,
+                                other,
+                                _,
+                            ) = detail
+                            with st.dialog("Exercise Details"):
+                                st.markdown(f"**Group:** {group}")
+                                st.markdown(f"**Primary:** {primary}")
+                                if secondary:
+                                    st.markdown("**Secondary:**")
+                                    for m in secondary.split("|"):
+                                        st.markdown(f"- {m}")
+                                if tertiary:
+                                    st.markdown("**Tertiary:**")
+                                    for m in tertiary.split("|"):
+                                        st.markdown(f"- {m}")
+                                if other:
+                                    st.markdown("**Other:**")
+                                    for m in other.split("|"):
+                                        st.markdown(f"- {m}")
+                                if variants:
+                                    st.markdown("**Variants:**")
+                                    for v in variants.split("|"):
+                                        st.markdown(f"- {v}")
 
     def _custom_exercise_management(self) -> None:
         muscles = self.muscles_repo.fetch_all()
         groups = self.exercise_catalog.fetch_muscle_groups()
         equipment_names = self.equipment.fetch_names()
 
-        with st.expander("Add Custom Exercise"):
-            group = st.selectbox("Muscle Group", groups, key="cust_ex_group")
-            name = st.text_input("Exercise Name", key="cust_ex_name")
-            variants = st.text_input("Variants", key="cust_ex_variants")
-            eq_sel = st.multiselect("Equipment", equipment_names, key="cust_ex_eq")
-            primary = st.selectbox("Primary Muscle", muscles, key="cust_ex_primary")
-            secondary = st.multiselect("Secondary", muscles, key="cust_ex_sec")
-            tertiary = st.multiselect("Tertiary", muscles, key="cust_ex_ter")
-            other = st.multiselect("Other", muscles, key="cust_ex_other")
-            if st.button("Add Exercise", key="cust_ex_add"):
-                if name:
-                    try:
-                        self.exercise_catalog.add(
-                            group,
-                            name,
-                            variants,
-                            "|".join(eq_sel),
-                            primary,
-                            "|".join(secondary),
-                            "|".join(tertiary),
-                            "|".join(other),
-                        )
-                        st.success("Exercise added")
-                    except ValueError as e:
-                        st.warning(str(e))
-                else:
-                    st.warning("Name required")
-
-        with st.expander("Custom Exercise List", expanded=True):
-            records = self.exercise_catalog.fetch_all_records(custom_only=True)
-            for (
-                name,
-                group,
-                variants,
-                eq_names,
-                primary,
-                secondary,
-                tertiary,
-                other,
-                _,
-            ) in records:
-                exp = st.expander(name)
-                with exp:
-                    edit_name = st.text_input("Name", name, key=f"cust_name_{name}")
-                    edit_group = st.text_input("Group", group, key=f"cust_group_{name}")
-                    edit_var = st.text_input(
-                        "Variants", variants, key=f"cust_var_{name}"
-                    )
-                    edit_eq = st.text_input(
-                        "Equipment", eq_names, key=f"cust_eq_{name}"
-                    )
-                    edit_primary = st.text_input(
-                        "Primary", primary, key=f"cust_pri_{name}"
-                    )
-                    edit_secondary = st.text_input(
-                        "Secondary", secondary, key=f"cust_sec_{name}"
-                    )
-                    edit_tertiary = st.text_input(
-                        "Tertiary", tertiary, key=f"cust_ter_{name}"
-                    )
-                    edit_other = st.text_input("Other", other, key=f"cust_oth_{name}")
-                    cols = st.columns(2)
-                    if cols[0].button("Update", key=f"upd_cust_{name}"):
+        if st.session_state.is_mobile:
+            with st.expander("Add Custom Exercise"):
+                group = st.selectbox("Muscle Group", groups, key="cust_ex_group")
+                name = st.text_input("Exercise Name", key="cust_ex_name")
+                variants = st.text_input("Variants", key="cust_ex_variants")
+                eq_sel = st.multiselect("Equipment", equipment_names, key="cust_ex_eq")
+                primary = st.selectbox("Primary Muscle", muscles, key="cust_ex_primary")
+                secondary = st.multiselect("Secondary", muscles, key="cust_ex_sec")
+                tertiary = st.multiselect("Tertiary", muscles, key="cust_ex_ter")
+                other = st.multiselect("Other", muscles, key="cust_ex_other")
+                if st.button("Add Exercise", key="cust_ex_add"):
+                    if name:
                         try:
-                            self.exercise_catalog.update(
+                            self.exercise_catalog.add(
+                                group,
                                 name,
-                                edit_group,
-                                edit_var,
-                                edit_eq,
-                                edit_primary,
-                                edit_secondary,
-                                edit_tertiary,
-                                edit_other,
-                                new_name=edit_name,
+                                variants,
+                                "|".join(eq_sel),
+                                primary,
+                                "|".join(secondary),
+                                "|".join(tertiary),
+                                "|".join(other),
                             )
-                            st.success("Updated")
+                            st.success("Exercise added")
                         except ValueError as e:
                             st.warning(str(e))
-                    if cols[1].button("Delete", key=f"del_cust_{name}"):
+                    else:
+                        st.warning("Name required")
+
+            with st.expander("Custom Exercise List", expanded=True):
+                records = self.exercise_catalog.fetch_all_records(custom_only=True)
+                for (
+                    name,
+                    group,
+                    variants,
+                    eq_names,
+                    primary,
+                    secondary,
+                    tertiary,
+                    other,
+                    _,
+                ) in records:
+                    exp = st.expander(name)
+                    with exp:
+                        edit_name = st.text_input("Name", name, key=f"cust_name_{name}")
+                        edit_group = st.text_input("Group", group, key=f"cust_group_{name}")
+                        edit_var = st.text_input("Variants", variants, key=f"cust_var_{name}")
+                        edit_eq = st.text_input("Equipment", eq_names, key=f"cust_eq_{name}")
+                        edit_primary = st.text_input("Primary", primary, key=f"cust_pri_{name}")
+                        edit_secondary = st.text_input("Secondary", secondary, key=f"cust_sec_{name}")
+                        edit_tertiary = st.text_input("Tertiary", tertiary, key=f"cust_ter_{name}")
+                        edit_other = st.text_input("Other", other, key=f"cust_oth_{name}")
+                        cols = st.columns(2)
+                        if cols[0].button("Update", key=f"upd_cust_{name}"):
+                            try:
+                                self.exercise_catalog.update(
+                                    name,
+                                    edit_group,
+                                    edit_var,
+                                    edit_eq,
+                                    edit_primary,
+                                    edit_secondary,
+                                    edit_tertiary,
+                                    edit_other,
+                                    new_name=edit_name,
+                                )
+                                st.success("Updated")
+                            except ValueError as e:
+                                st.warning(str(e))
+                        if cols[1].button("Delete", key=f"del_cust_{name}"):
+                            try:
+                                self.exercise_catalog.remove(name)
+                                st.success("Deleted")
+                            except ValueError as e:
+                                st.warning(str(e))
+        else:
+            left, right = st.columns([1, 2], gap="large")
+            with left.expander("Add Custom Exercise"):
+                group = st.selectbox("Muscle Group", groups, key="cust_ex_group")
+                name = st.text_input("Exercise Name", key="cust_ex_name")
+                variants = st.text_input("Variants", key="cust_ex_variants")
+                eq_sel = st.multiselect("Equipment", equipment_names, key="cust_ex_eq")
+                primary = st.selectbox("Primary Muscle", muscles, key="cust_ex_primary")
+                secondary = st.multiselect("Secondary", muscles, key="cust_ex_sec")
+                tertiary = st.multiselect("Tertiary", muscles, key="cust_ex_ter")
+                other = st.multiselect("Other", muscles, key="cust_ex_other")
+                if st.button("Add Exercise", key="cust_ex_add"):
+                    if name:
                         try:
-                            self.exercise_catalog.remove(name)
-                            st.success("Deleted")
+                            self.exercise_catalog.add(
+                                group,
+                                name,
+                                variants,
+                                "|".join(eq_sel),
+                                primary,
+                                "|".join(secondary),
+                                "|".join(tertiary),
+                                "|".join(other),
+                            )
+                            st.success("Exercise added")
                         except ValueError as e:
                             st.warning(str(e))
+                    else:
+                        st.warning("Name required")
+
+            with right.expander("Custom Exercise List", expanded=True):
+                records = self.exercise_catalog.fetch_all_records(custom_only=True)
+                for (
+                    name,
+                    group,
+                    variants,
+                    eq_names,
+                    primary,
+                    secondary,
+                    tertiary,
+                    other,
+                    _,
+                ) in records:
+                    exp = st.expander(name)
+                    with exp:
+                        edit_name = st.text_input("Name", name, key=f"cust_name_{name}")
+                        edit_group = st.text_input("Group", group, key=f"cust_group_{name}")
+                        edit_var = st.text_input(
+                            "Variants", variants, key=f"cust_var_{name}"
+                        )
+                        edit_eq = st.text_input(
+                            "Equipment", eq_names, key=f"cust_eq_{name}"
+                        )
+                        edit_primary = st.text_input(
+                            "Primary", primary, key=f"cust_pri_{name}"
+                        )
+                        edit_secondary = st.text_input(
+                            "Secondary", secondary, key=f"cust_sec_{name}"
+                        )
+                        edit_tertiary = st.text_input(
+                            "Tertiary", tertiary, key=f"cust_ter_{name}"
+                        )
+                        edit_other = st.text_input("Other", other, key=f"cust_oth_{name}")
+                        cols = st.columns(2)
+                        if cols[0].button("Update", key=f"upd_cust_{name}"):
+                            try:
+                                self.exercise_catalog.update(
+                                    name,
+                                    edit_group,
+                                    edit_var,
+                                    edit_eq,
+                                    edit_primary,
+                                    edit_secondary,
+                                    edit_tertiary,
+                                    edit_other,
+                                    new_name=edit_name,
+                                )
+                                st.success("Updated")
+                            except ValueError as e:
+                                st.warning(str(e))
+                        if cols[1].button("Delete", key=f"del_cust_{name}"):
+                            try:
+                                self.exercise_catalog.remove(name)
+                                st.success("Deleted")
+                            except ValueError as e:
+                                st.warning(str(e))
 
     def _history_tab(self) -> None:
         st.header("Workout History")
