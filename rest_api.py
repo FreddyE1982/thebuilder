@@ -1115,6 +1115,13 @@ class GymAPI:
         ):
             return self.statistics.training_strain(start_date, end_date)
 
+        @self.app.get("/stats/weekly_volume_change")
+        def stats_weekly_volume_change(
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            return self.statistics.weekly_volume_change(start_date, end_date)
+
         @self.app.get("/stats/stress_balance")
         def stats_stress_balance(
             start_date: str = None,
