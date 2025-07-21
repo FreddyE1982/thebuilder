@@ -180,6 +180,12 @@ class GymApp:
         st.markdown(
             """
             <style>
+            html, body {
+                max-width: 100%;
+                overflow-x: hidden;
+                margin: 0;
+                padding: 0;
+            }
             @media screen and (max-width: 768px) {
                 div[data-testid="column"] {
                     width: 100% !important;
@@ -362,14 +368,25 @@ class GymApp:
                     flex: 1 0 50%;
                 }
             }
+            @media screen and (max-width: 768px) and (orientation: portrait) {
+                .bottom-nav {
+                    justify-content: space-evenly;
+                }
+            }
             @media screen and (max-width: 768px) and (orientation: landscape) {
                 .bottom-nav {
                     padding: 0.1rem 0.25rem;
                     gap: 0.1rem;
+                    justify-content: space-between;
                 }
                 .bottom-nav button {
                     font-size: 0.75rem;
                     padding: 0.25rem;
+                    flex-direction: row;
+                    gap: 0.25rem;
+                }
+                .bottom-nav .label {
+                    font-size: 0.7rem;
                 }
             }
             .top-nav {
@@ -381,6 +398,18 @@ class GymApp:
                 justify-content: space-around;
                 padding: 0.25rem 0.5rem;
                 z-index: 1000;
+            }
+            @media screen and (max-width: 768px) and (orientation: portrait) {
+                .top-nav {
+                    position: sticky;
+                }
+            }
+            @media screen and (max-width: 768px) and (orientation: landscape) {
+                .top-nav {
+                    position: fixed;
+                    left: 0;
+                    right: 0;
+                }
             }
             .top-nav button {
                 flex: 1 1 auto;
