@@ -509,14 +509,30 @@ class GymApp:
                 overflow-x: auto;
                 padding: 0.25rem;
             }
+            .form-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.5rem;
+            }
             @media screen and (max-width: 768px) {
                 .metric-grid {
                     grid-template-columns: repeat(2, 1fr);
+                }
+                .form-grid {
+                    grid-template-columns: 1fr;
                 }
             }
             @media screen and (max-width: 768px) and (orientation: landscape) {
                 .metric-grid {
                     grid-template-columns: repeat(3, 1fr);
+                }
+                .form-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+            }
+            @media screen and (max-width: 480px) {
+                .form-grid {
+                    grid-template-columns: 1fr;
                 }
             }
             @media screen and (min-width: 1025px) {
@@ -913,10 +929,12 @@ class GymApp:
 
     def _create_workout_form(self, training_options: list[str]) -> None:
         with st.expander("Create New Workout"):
+            st.markdown("<div class='form-grid'>", unsafe_allow_html=True)
             new_type = st.selectbox(
                 "Training Type", training_options, key="new_workout_type"
             )
             new_location = st.text_input("Location", key="new_workout_location")
+            st.markdown("</div>", unsafe_allow_html=True)
             if st.button("New Workout"):
                 new_id = self.workouts.create(
                     datetime.date.today().isoformat(),
@@ -993,20 +1011,17 @@ class GymApp:
                     st.write(f"Start: {start_time}")
                 if end_time:
                     st.write(f"End: {end_time}")
+                st.markdown("<div class='form-grid'>", unsafe_allow_html=True)
                 notes_edit = st.text_area(
                     "Notes",
                     value=notes_val,
                     key=f"workout_notes_{selected}",
                 )
-                if st.button("Save Notes", key=f"save_notes_{selected}"):
-                    self.workouts.set_note(int(selected), notes_edit)
                 loc_edit = st.text_input(
                     "Location",
                     value=loc_val,
                     key=f"workout_location_{selected}",
                 )
-                if st.button("Save Location", key=f"save_location_{selected}"):
-                    self.workouts.set_location(int(selected), loc_edit or None)
                 rating_edit = st.slider(
                     "Rating",
                     0,
@@ -1014,6 +1029,11 @@ class GymApp:
                     value=rating_val if rating_val is not None else 0,
                     key=f"rating_{selected}",
                 )
+                st.markdown("</div>", unsafe_allow_html=True)
+                if st.button("Save Notes", key=f"save_notes_{selected}"):
+                    self.workouts.set_note(int(selected), notes_edit)
+                if st.button("Save Location", key=f"save_location_{selected}"):
+                    self.workouts.set_location(int(selected), loc_edit or None)
                 if st.button("Save Rating", key=f"save_rating_{selected}"):
                     self.workouts.set_rating(int(selected), int(rating_edit))
                 tags_all = self.tags_repo.fetch_all()
@@ -1054,6 +1074,7 @@ class GymApp:
 
     def _create_plan_form(self) -> None:
         with st.expander("Create New Plan"):
+            st.markdown("<div class='form-grid'>", unsafe_allow_html=True)
             plan_date = st.date_input(
                 "Plan Date", datetime.date.today(), key="plan_date"
             )
@@ -1063,6 +1084,7 @@ class GymApp:
                 training_options,
                 key="plan_type",
             )
+            st.markdown("</div>", unsafe_allow_html=True)
             if st.button("New Planned Workout"):
                 pid = self.planned_workouts.create(plan_date.isoformat(), plan_type)
                 st.session_state.selected_planned_workout = pid
@@ -1081,6 +1103,7 @@ class GymApp:
                 st.session_state.selected_planned_workout = int(selected)
                 for pid, pdate, ptype in plans:
                     with st.expander(f"{pdate} (ID {pid})", expanded=False):
+                        st.markdown("<div class='form-grid'>", unsafe_allow_html=True)
                         edit_date = st.date_input(
                             "New Date",
                             datetime.date.fromisoformat(pdate),
@@ -1098,6 +1121,7 @@ class GymApp:
                             datetime.date.fromisoformat(pdate),
                             key=f"plan_dup_{pid}",
                         )
+                        st.markdown("</div>", unsafe_allow_html=True)
                         if st.session_state.is_mobile:
                             if st.button("Save", key=f"save_plan_{pid}"):
                                 self.planned_workouts.update_date(
