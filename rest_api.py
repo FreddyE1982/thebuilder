@@ -1180,6 +1180,13 @@ class GymAPI:
         ):
             return self.statistics.time_under_tension(start_date, end_date)
 
+        @self.app.get("/stats/exercise_diversity")
+        def stats_exercise_diversity(
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            return self.statistics.exercise_diversity(start_date, end_date)
+
         @self.app.get("/stats/location_summary")
         def stats_location_summary(
             start_date: str = None,

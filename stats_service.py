@@ -1121,6 +1121,41 @@ class StatisticsService:
             )
         return result
 
+    def exercise_diversity(
+        self,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> List[Dict[str, float]]:
+        """Return exercise diversity score per workout."""
+        names = self.exercise_names.fetch_all()
+        rows = self.sets.fetch_history_by_names(
+            names,
+            start_date=start_date,
+            end_date=end_date,
+            with_equipment=True,
+            with_workout_id=True,
+        )
+        if not rows:
+            return []
+        by_workout: Dict[int, Dict[str, object]] = {}
+        for _r, _w, _rpe, date, ex_name, _eq, wid in rows:
+            entry = by_workout.setdefault(wid, {"date": date, "counts": {}})
+            counts = entry["counts"]
+            counts[ex_name] = counts.get(ex_name, 0) + 1
+        result: List[Dict[str, float]] = []
+        for wid in sorted(by_workout):
+            data = by_workout[wid]
+            counts = data["counts"].values()
+            div = MathTools.diversity_index(counts)
+            result.append(
+                {
+                    "workout_id": wid,
+                    "date": data["date"],
+                    "diversity": round(div, 2),
+                }
+            )
+        return result
+
     def location_summary(
         self,
         start_date: Optional[str] = None,
