@@ -2153,6 +2153,14 @@ class GymApp:
                     {"Rest": [r["avg_rest"] for r in rests]},
                     x=[str(r["workout_id"]) for r in rests],
                 )
+        with st.expander("Exercise Diversity", expanded=False):
+            div = self.stats.exercise_diversity(start_str, end_str)
+            if div:
+                st.table(div)
+                st.line_chart(
+                    {"Diversity": [d["diversity"] for d in div]},
+                    x=[d["date"] for d in div],
+                )
         with st.expander("Time Under Tension", expanded=False):
             tut = self.stats.time_under_tension(start_str, end_str)
             if tut:

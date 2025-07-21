@@ -123,6 +123,19 @@ class MathTools:
             return 0.0
         return sets / (duration_seconds / 60)
 
+    @staticmethod
+    def diversity_index(counts: Iterable[int]) -> float:
+        """Return Shannon diversity index for ``counts``."""
+        total = sum(counts)
+        if total <= 0:
+            return 0.0
+        ent = 0.0
+        for c in counts:
+            if c > 0:
+                p = c / total
+                ent -= p * math.log(p, 2)
+        return ent
+
 
     @staticmethod
     def overtraining_index(stress: float, fatigue: float, variability: float) -> float:

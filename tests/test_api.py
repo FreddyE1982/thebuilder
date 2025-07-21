@@ -1503,6 +1503,25 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(data[0]["workout_id"], 1)
         self.assertAlmostEqual(data[0]["tut"], 10.0, places=2)
 
+    def test_exercise_diversity_endpoint(self) -> None:
+        self.client.post("/workouts")
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Squat", "equipment": "Olympic Barbell"},
+        )
+        self.client.post("/exercises/1/sets", params={"reps": 5, "weight": 100.0, "rpe": 8})
+        self.client.post("/exercises/2/sets", params={"reps": 5, "weight": 100.0, "rpe": 8})
+        resp = self.client.get("/stats/exercise_diversity")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["workout_id"], 1)
+        self.assertAlmostEqual(data[0]["diversity"], 1.0, places=2)
+
     def test_location_summary_endpoint(self) -> None:
         self.client.post(
             "/workouts",
