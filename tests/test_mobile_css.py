@@ -22,6 +22,7 @@ class MobileCSSTest(unittest.TestCase):
         self.assertIn("Math.min", content)
         self.assertIn("@media screen and (max-width: 320px)", content)
         self.assertIn("font-size: 0.95rem;", content)
+        self.assertIn(".bottom-nav", content)
 
 if __name__ == "__main__":
     unittest.main()
