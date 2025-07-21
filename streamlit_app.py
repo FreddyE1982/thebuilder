@@ -218,6 +218,9 @@ class GymApp:
                 min-height: calc(var(--vh, 1vh) * 100);
             }
             .content-wrapper {
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
                 width: 100%;
                 max-width: 1200px;
                 margin: 0 auto;
@@ -229,6 +232,7 @@ class GymApp:
                 background: var(--section-bg);
                 border-radius: 0.5rem;
                 padding: 1rem;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             }
             .title-section {
                 display: flex;
@@ -471,7 +475,11 @@ class GymApp:
             }
             @media screen and (max-width: 768px) and (orientation: portrait) {
                 nav.bottom-nav {
+                    grid-template-columns: repeat(4, 1fr);
                     justify-content: space-evenly;
+                    overflow-x: auto;
+                    grid-auto-flow: column;
+                    grid-auto-columns: 1fr;
                 }
             }
             @media screen and (max-width: 768px) and (orientation: landscape) {
@@ -484,6 +492,9 @@ class GymApp:
                     gap: 0.1rem;
                     justify-content: space-between;
                     height: 2.5rem;
+                    overflow-x: auto;
+                    grid-auto-flow: column;
+                    grid-auto-columns: 1fr;
                 }
                 nav.bottom-nav button {
                     font-size: 0.75rem;
