@@ -2145,6 +2145,14 @@ class GymApp:
                     {"Rest": [r["avg_rest"] for r in rests]},
                     x=[str(r["workout_id"]) for r in rests],
                 )
+        with st.expander("Time Under Tension", expanded=False):
+            tut = self.stats.time_under_tension(start_str, end_str)
+            if tut:
+                st.table(tut)
+                st.line_chart(
+                    {"TUT": [t["tut"] for t in tut]},
+                    x=[t["date"] for t in tut],
+                )
         with st.expander("Location Summary", expanded=False):
             loc_stats = self.stats.location_summary(start_str, end_str)
             if loc_stats:

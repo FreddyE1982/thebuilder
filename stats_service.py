@@ -1053,6 +1053,42 @@ class StatisticsService:
             )
         return result
 
+    def time_under_tension(
+        self,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> List[Dict[str, float]]:
+        """Return total time under tension per workout."""
+        names = self.exercise_names.fetch_all()
+        rows = self.sets.fetch_history_by_names(
+            names,
+            start_date=start_date,
+            end_date=end_date,
+            with_duration=True,
+            with_workout_id=True,
+        )
+        if not rows:
+            return []
+        by_workout: Dict[int, Dict[str, float | str]] = {}
+        for _r, _w, _rpe, date, start, end, wid in rows:
+            if not start or not end:
+                continue
+            t0 = datetime.datetime.fromisoformat(start)
+            t1 = datetime.datetime.fromisoformat(end)
+            dur = (t1 - t0).total_seconds()
+            entry = by_workout.setdefault(wid, {"date": date, "tut": 0.0})
+            entry["tut"] += dur
+        result: List[Dict[str, float]] = []
+        for wid, data in sorted(by_workout.items()):
+            result.append(
+                {
+                    "workout_id": wid,
+                    "date": str(data["date"]),
+                    "tut": round(float(data["tut"]), 2),
+                }
+            )
+        return result
+
     def location_summary(
         self,
         start_date: Optional[str] = None,

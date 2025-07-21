@@ -1166,6 +1166,13 @@ class GymAPI:
         ):
             return self.statistics.session_duration(start_date, end_date)
 
+        @self.app.get("/stats/time_under_tension")
+        def stats_time_under_tension(
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            return self.statistics.time_under_tension(start_date, end_date)
+
         @self.app.get("/stats/location_summary")
         def stats_location_summary(
             start_date: str = None,
