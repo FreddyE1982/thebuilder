@@ -311,6 +311,9 @@ class GymApp:
                     font-size: 0.8rem;
                 }
             }
+            button[aria-selected="true"] {
+                border-bottom: 2px solid #ff4b4b;
+            }
             </style>
             """,
             unsafe_allow_html=True,
@@ -353,6 +356,12 @@ class GymApp:
             )
             st.session_state.selected_workout = wid
             st.sidebar.success(f"Created workout {wid}")
+        if st.sidebar.button("Toggle Theme", key="toggle_theme"):
+            new_theme = "dark" if self.theme == "light" else "light"
+            self.settings_repo.set_text("theme", new_theme)
+            self.theme = new_theme
+            self._apply_theme()
+            st.experimental_rerun()
         with st.sidebar.expander("Help & About"):
             if st.button("Show Help", key="help_btn"):
                 self._help_dialog()
@@ -393,6 +402,12 @@ class GymApp:
                 )
             with col2:
                 end = st.date_input("End", datetime.date.today(), key="dash_end")
+            if st.button("Reset", key="dash_reset"):
+                st.session_state.dash_start = (
+                    datetime.date.today() - datetime.timedelta(days=30)
+                )
+                st.session_state.dash_end = datetime.date.today()
+                st.experimental_rerun()
         stats = self.stats.overview(start.isoformat(), end.isoformat())
         with st.expander("Overview Metrics", expanded=True):
             col_num = 2 if st.session_state.is_mobile else 4
@@ -712,6 +727,9 @@ class GymApp:
             )
             if st.button("Update Note", key=f"upd_note_{exercise_id}"):
                 self.exercises.update_note(exercise_id, note_val or None)
+            if st.button("Clear Note", key=f"clear_note_{exercise_id}"):
+                self.exercises.update_note(exercise_id, None)
+                st.session_state[f"note_{exercise_id}"] = ""
             with st.expander("Sets", expanded=True):
                 for set_id, reps, weight, rpe, start_time, end_time in sets:
                     detail = self.sets.fetch_detail(set_id)
@@ -1626,6 +1644,13 @@ class GymApp:
                 )
             with col2:
                 end = st.date_input("End", datetime.date.today(), key="hist_end")
+            if st.button("Reset", key="hist_reset"):
+                st.session_state.hist_start = (
+                    datetime.date.today() - datetime.timedelta(days=30)
+                )
+                st.session_state.hist_end = datetime.date.today()
+                st.session_state.hist_type = ""
+                st.experimental_rerun()
             ttype = st.selectbox(
                 "Training Type",
                 ["", "strength", "hypertrophy", "highintensity"],
@@ -1676,6 +1701,13 @@ class GymApp:
                 )
             with col2:
                 end = st.date_input("End", datetime.date.today(), key="stats_end")
+            if st.button("Reset", key="stats_reset"):
+                st.session_state.stats_start = (
+                    datetime.date.today() - datetime.timedelta(days=30)
+                )
+                st.session_state.stats_end = datetime.date.today()
+                st.session_state.stats_ex = ""
+                st.experimental_rerun()
             start_str = start.isoformat()
             end_str = end.isoformat()
         summary = self.stats.exercise_summary(
@@ -1810,6 +1842,13 @@ class GymApp:
                 )
             with col2:
                 end = st.date_input("End", datetime.date.today(), key="insights_end")
+            if st.button("Reset", key="insights_reset"):
+                st.session_state.insights_start = (
+                    datetime.date.today() - datetime.timedelta(days=90)
+                )
+                st.session_state.insights_end = datetime.date.today()
+                st.session_state.insights_ex = ""
+                st.experimental_rerun()
         if ex_choice:
             insights = self.stats.progress_insights(
                 ex_choice, start.isoformat(), end.isoformat()
@@ -1849,6 +1888,12 @@ class GymApp:
                 )
             with col2:
                 end = st.date_input("End", datetime.date.today(), key="bw_end")
+            if st.button("Reset", key="bw_reset"):
+                st.session_state.bw_start = (
+                    datetime.date.today() - datetime.timedelta(days=30)
+                )
+                st.session_state.bw_end = datetime.date.today()
+                st.experimental_rerun()
             start_str = start.isoformat()
             end_str = end.isoformat()
         stats = self.stats.weight_stats(start_str, end_str)
@@ -1912,6 +1957,12 @@ class GymApp:
                 )
             with col2:
                 end = st.date_input("End", datetime.date.today(), key="rep_end")
+            if st.button("Reset", key="rep_reset"):
+                st.session_state.rep_start = (
+                    datetime.date.today() - datetime.timedelta(days=30)
+                )
+                st.session_state.rep_end = datetime.date.today()
+                st.experimental_rerun()
             start_str = start.isoformat()
             end_str = end.isoformat()
         with st.expander("Overall Summary", expanded=True):
@@ -1979,6 +2030,13 @@ class GymApp:
                 )
             with col2:
                 end = st.date_input("End", datetime.date.today(), key="risk_end")
+            if st.button("Reset", key="risk_reset"):
+                st.session_state.risk_start = (
+                    datetime.date.today() - datetime.timedelta(days=30)
+                )
+                st.session_state.risk_end = datetime.date.today()
+                st.session_state.risk_ex = ""
+                st.experimental_rerun()
             start_str = start.isoformat()
             end_str = end.isoformat()
         summary = self.stats.adaptation_index(start_str, end_str)
