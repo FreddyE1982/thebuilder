@@ -487,6 +487,7 @@ class GymApp:
                 ("Volume", stats["volume"]),
                 ("Avg RPE", stats["avg_rpe"]),
                 ("Exercises", stats["exercises"]),
+                ("Avg Density", stats["avg_density"]),
                 ("BMI", self.stats.bmi()),
             ]
             for idx, (label, val) in enumerate(metrics):
@@ -2119,6 +2120,14 @@ class GymApp:
                 st.line_chart(
                     {"Duration": [d["duration"] for d in duration]},
                     x=[d["date"] for d in duration],
+                )
+        with st.expander("Session Density", expanded=False):
+            density = self.stats.session_density(start_str, end_str)
+            if density:
+                st.table(density)
+                st.line_chart(
+                    {"Density": [d["density"] for d in density]},
+                    x=[d["date"] for d in density],
                 )
         with st.expander("Average Rest Times", expanded=False):
             rests = self.stats.rest_times(start_str, end_str)

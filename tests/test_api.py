@@ -818,6 +818,7 @@ class APITestCase(unittest.TestCase):
         self.assertAlmostEqual(overview["volume"], 1880.0)
         self.assertAlmostEqual(overview["avg_rpe"], 8.5)
         self.assertEqual(overview["exercises"], 1)
+        self.assertAlmostEqual(overview["avg_density"], 0.0)
 
         resp = self.client.get(
             "/stats/personal_records",
@@ -1348,6 +1349,31 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0]["workout_id"], 1)
         self.assertAlmostEqual(data[0]["efficiency"], round(expected, 2), places=2)
+    def test_session_density_endpoint(self) -> None:
+        self.client.post("/workouts")
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        resp = self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8},
+        )
+        set_id = resp.json()["id"]
+        self.client.post(f"/sets/{set_id}/start")
+        self.client.post(f"/sets/{set_id}/finish")
+        data = self.client.get(f"/sets/{set_id}").json()
+        t0 = datetime.datetime.fromisoformat(data["start_time"])
+        t1 = datetime.datetime.fromisoformat(data["end_time"])
+        duration = (t1 - t0).total_seconds()
+        expected = MathTools.session_density(500.0, duration)
+        resp = self.client.get("/stats/session_density")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["workout_id"], 1)
+        self.assertAlmostEqual(data[0]["density"], round(expected, 2), places=2)
+
 
     def test_rest_times_endpoint(self) -> None:
         self.client.post("/workouts")
