@@ -207,9 +207,15 @@ class GymApp:
                 flex: 1 0 auto;
                 padding: 0 1rem;
             }
+            .section-wrapper {
+                margin-bottom: 1.5rem;
+            }
             @media screen and (max-width: 768px) {
                 .content-wrapper {
                     padding: 0 0.5rem;
+                }
+                .section-wrapper {
+                    margin-bottom: 1rem;
                 }
                 div[data-testid="column"] {
                     width: 100% !important;
@@ -288,6 +294,9 @@ class GymApp:
                 section.main > div {
                     padding: 0.5rem !important;
                 }
+                .section-wrapper {
+                    margin-bottom: 0.75rem;
+                }
                 div[data-testid="column"] {
                     flex-direction: row;
                     flex-wrap: wrap;
@@ -319,6 +328,9 @@ class GymApp:
                 section.main > div {
                     padding: 0.25rem !important;
                 }
+                .section-wrapper {
+                    margin-bottom: 0.5rem;
+                }
                 div[data-testid="column"] {
                     flex-direction: row;
                     flex-wrap: wrap;
@@ -336,6 +348,9 @@ class GymApp:
                 }
                 section.main > div {
                     padding: 0.2rem !important;
+                }
+                .section-wrapper {
+                    margin-bottom: 0.3rem;
                 }
                 h1 {
                     font-size: 1.25rem;
@@ -367,6 +382,9 @@ class GymApp:
             @media screen and (max-width: 414px) and (orientation: landscape) {
                 .content-wrapper {
                     padding: 0.3rem;
+                }
+                .section-wrapper {
+                    margin-bottom: 0.5rem;
                 }
                 nav.bottom-nav button {
                     flex: 1 0 33%;
@@ -696,17 +714,31 @@ class GymApp:
             st.button("Close")
 
     def _dashboard_tab(self) -> None:
+        st.markdown("<div class='section-wrapper'>", unsafe_allow_html=True)
         st.header("Dashboard")
         with st.expander("Filters", expanded=True):
-            col1, col2 = st.columns(2)
-            with col1:
+            if st.session_state.is_mobile:
                 start = st.date_input(
                     "Start",
                     datetime.date.today() - datetime.timedelta(days=30),
                     key="dash_start",
                 )
-            with col2:
-                end = st.date_input("End", datetime.date.today(), key="dash_end")
+                end = st.date_input(
+                    "End", datetime.date.today(), key="dash_end"
+                )
+            else:
+                col1, col2 = st.columns(2)
+                with col1:
+                    start = st.date_input(
+                        "Start",
+                        datetime.date.today()
+                        - datetime.timedelta(days=30),
+                        key="dash_start",
+                    )
+                with col2:
+                    end = st.date_input(
+                        "End", datetime.date.today(), key="dash_end"
+                    )
             if st.button("Reset", key="dash_reset"):
                 st.session_state.dash_start = (
                     datetime.date.today() - datetime.timedelta(days=30)
@@ -811,6 +843,7 @@ class GymApp:
                 if top_ex:
                     with st.expander("Top Exercises", expanded=False):
                         st.table(top_ex[:5])
+        st.markdown("</div>", unsafe_allow_html=True)
 
     def run(self) -> None:
         params = st.experimental_get_query_params()
@@ -932,6 +965,7 @@ class GymApp:
             self._planned_exercise_section()
 
     def _workout_section(self) -> None:
+        st.markdown("<div class='section-wrapper'>", unsafe_allow_html=True)
         st.header("Workouts")
         training_options = ["strength", "hypertrophy", "highintensity"]
         with st.expander("Workout Management", expanded=True):
@@ -944,6 +978,7 @@ class GymApp:
                     self._create_workout_form(training_options)
                 with col2:
                     self._existing_workout_form(training_options)
+        st.markdown("</div>", unsafe_allow_html=True)
 
     def _create_workout_form(self, training_options: list[str]) -> None:
         with st.expander("Create New Workout"):
@@ -1078,6 +1113,7 @@ class GymApp:
                 )
 
     def _planned_workout_section(self) -> None:
+        st.markdown("<div class='section-wrapper'>", unsafe_allow_html=True)
         st.header("Planned Workouts")
         with st.expander("Plan Management", expanded=True):
             if st.session_state.is_mobile:
@@ -1089,6 +1125,7 @@ class GymApp:
                     self._create_plan_form()
                 with col2:
                     self._existing_plan_form()
+        st.markdown("</div>", unsafe_allow_html=True)
 
     def _create_plan_form(self) -> None:
         with st.expander("Create New Plan"):
@@ -1177,6 +1214,7 @@ class GymApp:
                                 st.success("Deleted")
 
     def _exercise_section(self) -> None:
+        st.markdown("<div class='section-wrapper'>", unsafe_allow_html=True)
         st.header("Exercises")
         workout_id = st.session_state.selected_workout
         with st.expander("Exercise Management", expanded=True):
@@ -1209,6 +1247,7 @@ class GymApp:
                     ("Avg RPE", summary["avg_rpe"]),
                 ]
                 self._metric_grid(metrics)
+        st.markdown("</div>", unsafe_allow_html=True)
 
     def _exercise_card(
         self, exercise_id: int, name: str, equipment: Optional[str], note: Optional[str]
@@ -1536,6 +1575,7 @@ class GymApp:
 
 
     def _planned_exercise_section(self) -> None:
+        st.markdown("<div class='section-wrapper'>", unsafe_allow_html=True)
         st.header("Planned Exercises")
         workout_id = st.session_state.selected_planned_workout
         with st.expander("Planned Exercise Management", expanded=True):
@@ -1559,6 +1599,7 @@ class GymApp:
                 exercises = self.planned_exercises.fetch_for_workout(workout_id)
                 for ex_id, name, eq_name in exercises:
                     self._planned_exercise_card(ex_id, name, eq_name)
+        st.markdown("</div>", unsafe_allow_html=True)
 
     def _planned_exercise_card(
         self, exercise_id: int, name: str, equipment: Optional[str]
@@ -1668,6 +1709,7 @@ class GymApp:
             st.session_state.pop(f"plan_new_rpe_{exercise_id}", None)
 
     def _template_section(self) -> None:
+        st.markdown("<div class='section-wrapper'>", unsafe_allow_html=True)
         st.header("Templates")
         training_options = ["strength", "hypertrophy", "highintensity"]
         with st.expander("Template Management", expanded=True):
@@ -1747,8 +1789,10 @@ class GymApp:
                                 st.success("Deleted")
                 else:
                     st.write("No templates.")
+        st.markdown("</div>", unsafe_allow_html=True)
 
     def _template_exercise_section(self) -> None:
+        st.markdown("<div class='section-wrapper'>", unsafe_allow_html=True)
         st.header("Template Exercises")
         template_id = st.session_state.selected_template
         with st.expander("Exercise Management", expanded=True):
@@ -1772,6 +1816,7 @@ class GymApp:
                 exercises = self.template_exercises.fetch_for_template(template_id)
                 for ex_id, name, eq in exercises:
                     self._template_exercise_card(ex_id, name, eq)
+        st.markdown("</div>", unsafe_allow_html=True)
 
     def _template_exercise_card(
         self, exercise_id: int, name: str, equipment: Optional[str]
