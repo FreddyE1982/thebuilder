@@ -673,6 +673,22 @@ class GymApp:
                     max-width: 1400px;
                 }
             }
+            @media screen and (min-width: 1500px) {
+                .metric-grid {
+                    grid-template-columns: repeat(5, 1fr);
+                }
+                .form-grid {
+                    grid-template-columns: repeat(3, 1fr);
+                }
+            }
+            @media screen and (min-width: 1800px) {
+                .metric-grid {
+                    grid-template-columns: repeat(6, 1fr);
+                }
+                .form-grid {
+                    grid-template-columns: repeat(4, 1fr);
+                }
+            }
             button {
                 padding: 0.5rem 0.75rem;
             }
