@@ -2173,6 +2173,10 @@ class GymApp:
             loc_stats = self.stats.location_summary(start_str, end_str)
             if loc_stats:
                 st.table(loc_stats)
+        with st.expander("Workout Consistency", expanded=False):
+            consistency = self.stats.workout_consistency(start_str, end_str)
+            st.metric("Consistency", consistency["consistency"])
+            st.metric("Avg Gap (days)", consistency["average_gap"])
         with st.expander("Rating Analysis", expanded=False):
             rating_hist = self.stats.rating_history(start_str, end_str)
             if rating_hist:

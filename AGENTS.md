@@ -428,3 +428,4 @@ keep the AGENTS.md updated by adding new sensible rules when they occur to you. 
 - Session duration analytics must calculate time between the first set start and last set finish per workout and be available via `/stats/session_duration`.
 - Bottom navigation markup must not include CSS; its styling belongs in `_inject_responsive_css` only.
 - Set pace analytics must compute sets per minute per workout and be available via `/stats/set_pace`.
+- Workout consistency analytics must compute the coefficient of variation of days between workouts and be available via `/stats/workout_consistency`.

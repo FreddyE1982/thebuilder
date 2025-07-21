@@ -2473,3 +2473,16 @@ class APITestCase(unittest.TestCase):
         data = rec.json()
         self.assertIn("weight", data)
         self.assertIn("reps", data)
+
+    def test_workout_consistency_endpoint(self) -> None:
+        d0 = datetime.date.today() - datetime.timedelta(days=14)
+        d1 = datetime.date.today() - datetime.timedelta(days=7)
+        d2 = datetime.date.today()
+        for d in [d0, d1, d2]:
+            self.client.post("/workouts", params={"date": d.isoformat()})
+
+        resp = self.client.get("/stats/workout_consistency")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertAlmostEqual(data["consistency"], 0.0)
+        self.assertAlmostEqual(data["average_gap"], 7.0)

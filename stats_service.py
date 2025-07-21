@@ -1624,3 +1624,21 @@ class StatisticsService:
             freq = len(by_name[name]) / weeks if weeks > 0 else 0.0
             result.append({"exercise": name, "frequency_per_week": round(freq, 2)})
         return result
+
+    def workout_consistency(
+        self,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> dict[str, float]:
+        """Return coefficient of variation of workout intervals."""
+        if self.workouts is None:
+            return {"consistency": 0.0, "average_gap": 0.0}
+        rows = self.workouts.fetch_all_workouts(start_date, end_date)
+        dates = [datetime.date.fromisoformat(d) for _id, d, *_ in rows]
+        if len(dates) < 2:
+            return {"consistency": 0.0, "average_gap": 0.0}
+        dates.sort()
+        gaps = [(b - a).days for a, b in zip(dates[:-1], dates[1:])]
+        avg_gap = sum(gaps) / len(gaps)
+        cv = MathTools.coefficient_of_variation(gaps)
+        return {"consistency": round(cv, 2), "average_gap": round(avg_gap, 2)}
