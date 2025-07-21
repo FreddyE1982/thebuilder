@@ -333,6 +333,7 @@ class GymApp:
                     display: flex;
                     justify-content: space-around;
                     padding: 0.25rem 0.5rem;
+                    gap: 0.25rem;
                     z-index: 1000;
                 }
                 .bottom-nav button {
@@ -346,6 +347,10 @@ class GymApp:
                 }
             }
             @media screen and (max-width: 768px) and (orientation: landscape) {
+                .bottom-nav {
+                    padding: 0.1rem 0.25rem;
+                    gap: 0.1rem;
+                }
                 .bottom-nav button {
                     font-size: 0.75rem;
                     padding: 0.25rem;
@@ -364,6 +369,11 @@ class GymApp:
             .top-nav button {
                 flex: 1 1 auto;
                 margin: 0 0.25rem;
+            }
+            @media screen and (min-width: 769px) {
+                .top-nav button {
+                    font-size: 1rem;
+                }
             }
             button[aria-selected="true"] {
                 border-bottom: 2px solid #ff4b4b;
@@ -687,107 +697,195 @@ class GymApp:
         st.header("Workouts")
         training_options = ["strength", "hypertrophy", "highintensity"]
         with st.expander("Workout Management", expanded=True):
-            with st.expander("Create New Workout"):
-                new_type = st.selectbox(
-                    "Training Type", training_options, key="new_workout_type"
+            if st.session_state.is_mobile:
+                self._create_workout_form(training_options)
+                self._existing_workout_form(training_options)
+            else:
+                col1, col2 = st.columns(2)
+                with col1:
+                    self._create_workout_form(training_options)
+                with col2:
+                    self._existing_workout_form(training_options)
+
+    def _create_workout_form(self, training_options: list[str]) -> None:
+        with st.expander("Create New Workout"):
+            new_type = st.selectbox(
+                "Training Type", training_options, key="new_workout_type"
+            )
+            new_location = st.text_input("Location", key="new_workout_location")
+            if st.button("New Workout"):
+                new_id = self.workouts.create(
+                    datetime.date.today().isoformat(),
+                    new_type,
+                    None,
+                    new_location or None,
+                    None,
                 )
-                new_location = st.text_input("Location", key="new_workout_location")
-                if st.button("New Workout"):
-                    new_id = self.workouts.create(
-                        datetime.date.today().isoformat(),
-                        new_type,
-                        None,
-                        new_location or None,
-                        None,
+                st.session_state.selected_workout = new_id
+
+    def _existing_workout_form(self, training_options: list[str]) -> None:
+        with st.expander("Existing Workouts", expanded=True):
+            workouts = self.workouts.fetch_all_workouts()
+            options = {str(w[0]): w for w in workouts}
+            if options:
+                selected = st.selectbox(
+                    "Select Workout",
+                    list(options.keys()),
+                    format_func=lambda x: options[x][1],
+                )
+                st.session_state.selected_workout = int(selected)
+                detail = self.workouts.fetch_detail(int(selected))
+                start_time = detail[2]
+                end_time = detail[3]
+                current_type = detail[4]
+                notes_val = detail[5] or ""
+                loc_val = detail[6] or ""
+                rating_val = detail[7]
+                cols = st.columns(3)
+                if cols[0].button("Start Workout", key=f"start_workout_{selected}"):
+                    self.workouts.set_start_time(
+                        int(selected),
+                        datetime.datetime.now().isoformat(timespec="seconds"),
                     )
-                    st.session_state.selected_workout = new_id
-            with st.expander("Existing Workouts", expanded=True):
-                workouts = self.workouts.fetch_all_workouts()
-                options = {str(w[0]): w for w in workouts}
-                if options:
-                    selected = st.selectbox(
-                        "Select Workout",
-                        list(options.keys()),
-                        format_func=lambda x: options[x][1],
+                if cols[1].button(
+                    "Finish Workout", key=f"finish_workout_{selected}"
+                ):
+                    self.workouts.set_end_time(
+                        int(selected),
+                        datetime.datetime.now().isoformat(timespec="seconds"),
                     )
-                    st.session_state.selected_workout = int(selected)
-                    detail = self.workouts.fetch_detail(int(selected))
-                    start_time = detail[2]
-                    end_time = detail[3]
-                    current_type = detail[4]
-                    notes_val = detail[5] or ""
-                    loc_val = detail[6] or ""
-                    rating_val = detail[7]
-                    cols = st.columns(3)
-                    if cols[0].button("Start Workout", key=f"start_workout_{selected}"):
-                        self.workouts.set_start_time(
-                            int(selected),
-                            datetime.datetime.now().isoformat(timespec="seconds"),
+                type_choice = cols[2].selectbox(
+                    "Type",
+                    training_options,
+                    index=training_options.index(current_type),
+                    key=f"type_select_{selected}",
+                )
+                if cols[2].button("Save", key=f"save_type_{selected}"):
+                    self.workouts.set_training_type(int(selected), type_choice)
+                if start_time:
+                    st.write(f"Start: {start_time}")
+                if end_time:
+                    st.write(f"End: {end_time}")
+                notes_edit = st.text_area(
+                    "Notes",
+                    value=notes_val,
+                    key=f"workout_notes_{selected}",
+                )
+                if st.button("Save Notes", key=f"save_notes_{selected}"):
+                    self.workouts.set_note(int(selected), notes_edit)
+                loc_edit = st.text_input(
+                    "Location",
+                    value=loc_val,
+                    key=f"workout_location_{selected}",
+                )
+                if st.button("Save Location", key=f"save_location_{selected}"):
+                    self.workouts.set_location(int(selected), loc_edit or None)
+                rating_edit = st.slider(
+                    "Rating",
+                    0,
+                    5,
+                    value=rating_val if rating_val is not None else 0,
+                    key=f"rating_{selected}",
+                )
+                if st.button("Save Rating", key=f"save_rating_{selected}"):
+                    self.workouts.set_rating(int(selected), int(rating_edit))
+                tags_all = self.tags_repo.fetch_all()
+                name_map = {n: tid for tid, n in tags_all}
+                current_tags = [
+                    n for _, n in self.tags_repo.fetch_for_workout(int(selected))
+                ]
+                tag_sel = st.multiselect(
+                    "Tags",
+                    [n for _, n in tags_all],
+                    current_tags,
+                    key=f"tags_sel_{selected}",
+                )
+                if st.button("Save Tags", key=f"save_tags_{selected}"):
+                    ids = [name_map[n] for n in tag_sel]
+                    self.tags_repo.set_tags(int(selected), ids)
+                csv_data = self.sets.export_workout_csv(int(selected))
+                st.download_button(
+                    label="Export CSV",
+                    data=csv_data,
+                    file_name=f"workout_{selected}.csv",
+                    mime="text/csv",
+                    key=f"export_{selected}",
+                )
+
+    def _planned_workout_section(self) -> None:
+        st.header("Planned Workouts")
+        with st.expander("Plan Management", expanded=True):
+            if st.session_state.is_mobile:
+                self._create_plan_form()
+                self._existing_plan_form()
+            else:
+                col1, col2 = st.columns(2)
+                with col1:
+                    self._create_plan_form()
+                with col2:
+                    self._existing_plan_form()
+
+    def _create_plan_form(self) -> None:
+        with st.expander("Create New Plan"):
+            plan_date = st.date_input(
+                "Plan Date", datetime.date.today(), key="plan_date"
+            )
+            training_options = ["strength", "hypertrophy", "highintensity"]
+            plan_type = st.selectbox(
+                "Training Type",
+                training_options,
+                key="plan_type",
+            )
+            if st.button("New Planned Workout"):
+                pid = self.planned_workouts.create(plan_date.isoformat(), plan_type)
+                st.session_state.selected_planned_workout = pid
+
+    def _existing_plan_form(self) -> None:
+        with st.expander("Existing Plans", expanded=True):
+            plans = self.planned_workouts.fetch_all()
+            options = {str(p[0]): p for p in plans}
+            if options:
+                selected = st.selectbox(
+                    "Select Planned Workout",
+                    list(options.keys()),
+                    format_func=lambda x: options[x][1],
+                    key="select_planned_workout",
+                )
+                st.session_state.selected_planned_workout = int(selected)
+                for pid, pdate, ptype in plans:
+                    with st.expander(f"{pdate} (ID {pid})", expanded=False):
+                        edit_date = st.date_input(
+                            "New Date",
+                            datetime.date.fromisoformat(pdate),
+                            key=f"plan_edit_{pid}",
                         )
-                    if cols[1].button(
-                        "Finish Workout", key=f"finish_workout_{selected}"
-                    ):
-                        self.workouts.set_end_time(
-                            int(selected),
-                            datetime.datetime.now().isoformat(timespec="seconds"),
+                        training_options = ["strength", "hypertrophy", "highintensity"]
+                        type_choice = st.selectbox(
+                            "Type",
+                            training_options,
+                            index=training_options.index(ptype),
+                            key=f"plan_type_{pid}",
                         )
-                    type_choice = cols[2].selectbox(
-                        "Type",
-                        training_options,
-                        index=training_options.index(current_type),
-                        key=f"type_select_{selected}",
-                    )
-                    if cols[2].button("Save", key=f"save_type_{selected}"):
-                        self.workouts.set_training_type(int(selected), type_choice)
-                    if start_time:
-                        st.write(f"Start: {start_time}")
-                    if end_time:
-                        st.write(f"End: {end_time}")
-                    notes_edit = st.text_area(
-                        "Notes",
-                        value=notes_val,
-                        key=f"workout_notes_{selected}",
-                    )
-                    if st.button("Save Notes", key=f"save_notes_{selected}"):
-                        self.workouts.set_note(int(selected), notes_edit)
-                    loc_edit = st.text_input(
-                        "Location",
-                        value=loc_val,
-                        key=f"workout_location_{selected}",
-                    )
-                    if st.button("Save Location", key=f"save_location_{selected}"):
-                        self.workouts.set_location(int(selected), loc_edit or None)
-                    rating_edit = st.slider(
-                        "Rating",
-                        0,
-                        5,
-                        value=rating_val if rating_val is not None else 0,
-                        key=f"rating_{selected}",
-                    )
-                    if st.button("Save Rating", key=f"save_rating_{selected}"):
-                        self.workouts.set_rating(int(selected), int(rating_edit))
-                    tags_all = self.tags_repo.fetch_all()
-                    name_map = {n: tid for tid, n in tags_all}
-                    current_tags = [
-                        n for _, n in self.tags_repo.fetch_for_workout(int(selected))
-                    ]
-                    tag_sel = st.multiselect(
-                        "Tags",
-                        [n for _, n in tags_all],
-                        current_tags,
-                        key=f"tags_sel_{selected}",
-                    )
-                    if st.button("Save Tags", key=f"save_tags_{selected}"):
-                        ids = [name_map[n] for n in tag_sel]
-                        self.tags_repo.set_tags(int(selected), ids)
-                    csv_data = self.sets.export_workout_csv(int(selected))
-                    st.download_button(
-                        label="Export CSV",
-                        data=csv_data,
-                        file_name=f"workout_{selected}.csv",
-                        mime="text/csv",
-                        key=f"export_{selected}",
-                    )
+                        dup_date = st.date_input(
+                            "Duplicate To",
+                            datetime.date.fromisoformat(pdate),
+                            key=f"plan_dup_{pid}",
+                        )
+                        cols = st.columns(3)
+                        if cols[0].button("Save", key=f"save_plan_{pid}"):
+                            self.planned_workouts.update_date(
+                                pid, edit_date.isoformat()
+                            )
+                            self.planned_workouts.set_training_type(
+                                pid, type_choice
+                            )
+                            st.success("Updated")
+                        if cols[1].button("Duplicate", key=f"dup_plan_{pid}"):
+                            self.planner.duplicate_plan(pid, dup_date.isoformat())
+                            st.success("Duplicated")
+                        if cols[2].button("Delete", key=f"del_plan_{pid}"):
+                            self.planned_workouts.delete(pid)
+                            st.success("Deleted")
 
     def _exercise_section(self) -> None:
         st.header("Exercises")
@@ -1143,66 +1241,6 @@ class GymApp:
                         st.markdown(f"- {v}")
         return ex_name or None
 
-    def _planned_workout_section(self) -> None:
-        st.header("Planned Workouts")
-        with st.expander("Plan Management", expanded=True):
-            with st.expander("Create New Plan"):
-                plan_date = st.date_input(
-                    "Plan Date", datetime.date.today(), key="plan_date"
-                )
-                training_options = ["strength", "hypertrophy", "highintensity"]
-                plan_type = st.selectbox(
-                    "Training Type",
-                    training_options,
-                    key="plan_type",
-                )
-                if st.button("New Planned Workout"):
-                    pid = self.planned_workouts.create(plan_date.isoformat(), plan_type)
-                    st.session_state.selected_planned_workout = pid
-            with st.expander("Existing Plans", expanded=True):
-                plans = self.planned_workouts.fetch_all()
-                options = {str(p[0]): p for p in plans}
-                if options:
-                    selected = st.selectbox(
-                        "Select Planned Workout",
-                        list(options.keys()),
-                        format_func=lambda x: options[x][1],
-                        key="select_planned_workout",
-                    )
-                    st.session_state.selected_planned_workout = int(selected)
-                    for pid, pdate, ptype in plans:
-                        with st.expander(f"{pdate} (ID {pid})", expanded=False):
-                            edit_date = st.date_input(
-                                "New Date",
-                                datetime.date.fromisoformat(pdate),
-                                key=f"plan_edit_{pid}",
-                            )
-                            type_choice = st.selectbox(
-                                "Type",
-                                training_options,
-                                index=training_options.index(ptype),
-                                key=f"plan_type_{pid}",
-                            )
-                            dup_date = st.date_input(
-                                "Duplicate To",
-                                datetime.date.fromisoformat(pdate),
-                                key=f"plan_dup_{pid}",
-                            )
-                            cols = st.columns(3)
-                            if cols[0].button("Save", key=f"save_plan_{pid}"):
-                                self.planned_workouts.update_date(
-                                    pid, edit_date.isoformat()
-                                )
-                                self.planned_workouts.set_training_type(
-                                    pid, type_choice
-                                )
-                                st.success("Updated")
-                            if cols[1].button("Duplicate", key=f"dup_plan_{pid}"):
-                                self.planner.duplicate_plan(pid, dup_date.isoformat())
-                                st.success("Duplicated")
-                            if cols[2].button("Delete", key=f"del_plan_{pid}"):
-                                self.planned_workouts.delete(pid)
-                                st.success("Deleted")
 
     def _planned_exercise_section(self) -> None:
         st.header("Planned Exercises")
