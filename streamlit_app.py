@@ -186,6 +186,7 @@ class GymApp:
             window.addEventListener('orientationchange', handleResize);
             window.addEventListener('DOMContentLoaded', handleResize);
             window.addEventListener('load', handleResize);
+            handleResize();
             </script>
             """,
             height=0,
@@ -195,6 +196,9 @@ class GymApp:
         st.markdown(
             """
             <style>
+            :root {
+                --section-bg: #fff;
+            }
             html, body {
                 max-width: 100%;
                 overflow-x: hidden;
@@ -208,6 +212,11 @@ class GymApp:
                 display: flex;
                 flex-direction: column;
             }
+            .page-wrapper {
+                display: flex;
+                flex-direction: column;
+                min-height: calc(var(--vh, 1vh) * 100);
+            }
             .content-wrapper {
                 width: 100%;
                 max-width: 1200px;
@@ -217,6 +226,9 @@ class GymApp:
             }
             .section-wrapper {
                 margin-bottom: 1.5rem;
+                background: var(--section-bg);
+                border-radius: 0.5rem;
+                padding: 1rem;
             }
             .title-section {
                 display: flex;
@@ -229,7 +241,7 @@ class GymApp:
                 }
                 .section-wrapper {
                     margin-bottom: 1rem;
-                    padding: 0.5rem 0;
+                    padding: 0.5rem;
                 }
                 div[data-testid="column"] {
                     width: 100% !important;
@@ -422,6 +434,7 @@ class GymApp:
                     padding: 0.25rem 0.5rem env(safe-area-inset-bottom);
                     gap: 0.25rem;
                     z-index: 1000;
+                    height: 3rem;
                 }
                 .bottom-nav button {
                     flex: 1 1 auto;
@@ -470,6 +483,7 @@ class GymApp:
                     padding: 0.1rem 0.25rem env(safe-area-inset-bottom);
                     gap: 0.1rem;
                     justify-content: space-between;
+                    height: 2.5rem;
                 }
                 nav.bottom-nav button {
                     font-size: 0.75rem;
@@ -625,6 +639,20 @@ class GymApp:
                     background-color: #111;
                     color: #eee;
                 }
+                :root {
+                    --section-bg: #222;
+                }
+                </style>
+                """,
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                """
+                <style>
+                :root {
+                    --section-bg: #fff;
+                }
                 </style>
                 """,
                 unsafe_allow_html=True,
@@ -715,6 +743,14 @@ class GymApp:
         cols = st.columns(col_num, gap="small")
         for idx, (label, val) in enumerate(metrics):
             cols[idx % col_num].metric(label, val)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    def _start_page(self) -> None:
+        """Open the page wrapper."""
+        st.markdown("<div class='page-wrapper'>", unsafe_allow_html=True)
+
+    def _end_page(self) -> None:
+        """Close the page wrapper."""
         st.markdown("</div>", unsafe_allow_html=True)
 
     def _open_content(self) -> None:
@@ -890,6 +926,7 @@ class GymApp:
         }
         if tab_param in tab_map:
             st.session_state["main_tab"] = tab_map[tab_param]
+        self._start_page()
         st.markdown("<div class='title-section'>", unsafe_allow_html=True)
         st.title("Workout Logger")
         st.markdown("</div>", unsafe_allow_html=True)
@@ -973,6 +1010,7 @@ class GymApp:
             self._settings_tab()
         self._close_content()
         self._bottom_nav()
+        self._end_page()
 
     def _log_tab(self) -> None:
         plans = self.planned_workouts.fetch_all()
