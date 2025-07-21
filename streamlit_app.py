@@ -409,6 +409,9 @@ class GymApp:
                 nav.bottom-nav button {
                     flex: 1 0 25%;
                 }
+                nav.bottom-nav .label {
+                    display: none;
+                }
             }
             @media screen and (max-width: 320px) and (orientation: landscape) {
                 .content-wrapper {
@@ -456,6 +459,9 @@ class GymApp:
                 }
                 nav.bottom-nav button {
                     flex: 1 0 33%;
+                }
+                .metric-grid {
+                    grid-template-columns: repeat(2, 1fr);
                 }
             }
             @media screen and (max-width: 768px) {
@@ -662,6 +668,11 @@ class GymApp:
                     padding: 1.25rem;
                 }
             }
+            @media screen and (min-width: 1500px) {
+                .content-wrapper {
+                    max-width: 1400px;
+                }
+            }
             button {
                 padding: 0.5rem 0.75rem;
             }
@@ -806,11 +817,9 @@ class GymApp:
 
     def _metric_grid(self, metrics: list[tuple[str, str]]) -> None:
         """Render metrics in a responsive grid."""
-        col_num = 2 if st.session_state.is_mobile else 4
         st.markdown("<div class='metric-grid'>", unsafe_allow_html=True)
-        cols = st.columns(col_num, gap="small")
-        for idx, (label, val) in enumerate(metrics):
-            cols[idx % col_num].metric(label, val)
+        for label, val in metrics:
+            st.metric(label, val)
         st.markdown("</div>", unsafe_allow_html=True)
 
     @contextmanager
