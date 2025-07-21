@@ -1857,6 +1857,25 @@ class GymApp:
                     {"BMI": [b["bmi"] for b in bmi_hist]},
                     x=[b["date"] for b in bmi_hist],
                 )
+        wellness = self.stats.wellness_summary(start_str, end_str)
+        with st.expander("Wellness Summary", expanded=False):
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Calories", wellness["avg_calories"])
+            c2.metric("Sleep Hours", wellness["avg_sleep"])
+            c3.metric("Sleep Quality", wellness["avg_quality"])
+            c4.metric("Stress Level", wellness["avg_stress"])
+        well_hist = self.stats.wellness_history(start_str, end_str)
+        if well_hist:
+            with st.expander("Wellness History", expanded=False):
+                st.line_chart(
+                    {
+                        "Calories": [w["calories"] for w in well_hist],
+                        "Sleep Hours": [w["sleep_hours"] for w in well_hist],
+                        "Sleep Quality": [w["sleep_quality"] for w in well_hist],
+                        "Stress": [w["stress_level"] for w in well_hist],
+                    },
+                    x=[w["date"] for w in well_hist],
+                )
         with st.expander("Forecast", expanded=False):
             days = st.slider("Days", 1, 14, 7, key="bw_fc_days")
             if st.button("Show Forecast", key="bw_fc_btn"):
