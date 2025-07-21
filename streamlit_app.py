@@ -334,6 +334,20 @@ class GymApp:
                     margin: 0 0.25rem;
                 }
             }
+            .top-nav {
+                position: sticky;
+                top: 0;
+                background: #ffffff;
+                border-bottom: 1px solid #cccccc;
+                display: flex;
+                justify-content: space-around;
+                padding: 0.25rem 0.5rem;
+                z-index: 1000;
+            }
+            .top-nav button {
+                flex: 1 1 auto;
+                margin: 0 0.25rem;
+            }
             button[aria-selected="true"] {
                 border-bottom: 2px solid #ff4b4b;
             }
@@ -399,10 +413,30 @@ class GymApp:
         cols = st.columns(4)
         labels = ["workouts", "library", "progress", "settings"]
         for idx, label in enumerate(labels):
-            if cols[idx].button(label.title(), key=f"nav_{label}"):
-                st.experimental_set_query_params(mode="mobile", tab=label)
-                st.experimental_rerun()
+            selected = st.session_state.get("main_tab", 0) == idx
+            disp = label.title() + (" •" if selected else "")
+            if cols[idx].button(disp, key=f"nav_{label}"):
+                self._switch_tab(label)
         st.markdown("</div>", unsafe_allow_html=True)
+
+    def _top_nav(self) -> None:
+        """Render top navigation on desktop."""
+        if st.session_state.is_mobile:
+            return
+        st.markdown('<div class="top-nav">', unsafe_allow_html=True)
+        cols = st.columns(4)
+        labels = ["workouts", "library", "progress", "settings"]
+        for idx, label in enumerate(labels):
+            selected = st.session_state.get("main_tab", 0) == idx
+            disp = label.title() + (" •" if selected else "")
+            if cols[idx].button(disp, key=f"top_nav_{label}"):
+                self._switch_tab(label)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    def _switch_tab(self, label: str) -> None:
+        mode = "mobile" if st.session_state.is_mobile else "desktop"
+        st.experimental_set_query_params(mode=mode, tab=label)
+        st.experimental_rerun()
 
     def _help_dialog(self) -> None:
         with st.dialog("Help"):
@@ -519,6 +553,7 @@ class GymApp:
         if tab_param in tab_map:
             st.session_state["main_tab"] = tab_map[tab_param]
         st.title("Workout Logger")
+        self._top_nav()
         self._create_sidebar()
         self._refresh()
         (
