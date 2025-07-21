@@ -152,7 +152,7 @@ class GymApp:
         layout = "centered" if mode == "mobile" else "wide"
         st.set_page_config(page_title="Workout Logger", layout=layout)
         st.markdown(
-            "<meta name='viewport' content='width=device-width, height=device-height, initial-scale=1, shrink-to-fit=no'>",
+            "<meta name='viewport' content='width=device-width, height=device-height, initial-scale=1, shrink-to-fit=no, viewport-fit=cover'>",
             unsafe_allow_html=True,
         )
         st.session_state.layout_set = True
@@ -191,6 +191,7 @@ class GymApp:
             html, body {
                 max-width: 100%;
                 overflow-x: hidden;
+                overflow-y: auto;
                 margin: 0;
                 padding: 0;
                 box-sizing: border-box;
@@ -506,6 +507,7 @@ class GymApp:
             }
             button[aria-selected="true"] {
                 border-bottom: 2px solid #ff4b4b;
+                background: #f0f0f0;
             }
             nav.bottom-nav button:focus, nav.top-nav button:focus {
                 outline: 2px solid #ff4b4b;
@@ -730,6 +732,7 @@ class GymApp:
                     st.line_chart(
                         {"Volume": [d["volume"] for d in daily]},
                         x=[d["date"] for d in daily],
+                        use_container_width=True,
                     )
                 duration = self.stats.session_duration(start.isoformat(), end.isoformat())
                 st.subheader("Session Duration")
@@ -737,6 +740,7 @@ class GymApp:
                     st.line_chart(
                         {"Duration": [d["duration"] for d in duration]},
                         x=[d["date"] for d in duration],
+                        use_container_width=True,
                     )
                 exercises = [""] + self.exercise_names_repo.fetch_all()
                 ex_choice = st.selectbox("Exercise Progression", exercises, key="dash_ex")
@@ -749,6 +753,7 @@ class GymApp:
                         st.line_chart(
                             {"1RM": [p["est_1rm"] for p in prog]},
                             x=[p["date"] for p in prog],
+                            use_container_width=True,
                         )
             else:
                 left, right = st.columns(2)
@@ -758,6 +763,7 @@ class GymApp:
                         st.line_chart(
                             {"Volume": [d["volume"] for d in daily]},
                             x=[d["date"] for d in daily],
+                            use_container_width=True,
                         )
                     exercises = [""] + self.exercise_names_repo.fetch_all()
                     ex_choice = st.selectbox("Exercise Progression", exercises, key="dash_ex")
@@ -770,6 +776,7 @@ class GymApp:
                             st.line_chart(
                                 {"1RM": [p["est_1rm"] for p in prog]},
                                 x=[p["date"] for p in prog],
+                                use_container_width=True,
                             )
                 with right:
                     duration = self.stats.session_duration(start.isoformat(), end.isoformat())
@@ -778,6 +785,7 @@ class GymApp:
                         st.line_chart(
                             {"Duration": [d["duration"] for d in duration]},
                             x=[d["date"] for d in duration],
+                            use_container_width=True,
                         )
                     eq_stats = self.stats.equipment_usage(start.isoformat(), end.isoformat())
                     if eq_stats:
@@ -785,6 +793,7 @@ class GymApp:
                         st.bar_chart(
                             {"Sets": [e["sets"] for e in eq_stats]},
                             x=[e["equipment"] for e in eq_stats],
+                            use_container_width=True,
                         )
             records = self.stats.personal_records(
                 ex_choice if ex_choice else None,
@@ -1352,6 +1361,7 @@ class GymApp:
                     st.line_chart(
                         {"Weight": [h["weight"] for h in hist]},
                         x=[h["date"] for h in hist],
+                        use_container_width=True,
                     )
                 prog = self.stats.progression(name)
                 if prog:
@@ -1359,6 +1369,7 @@ class GymApp:
                         st.line_chart(
                             {"Est 1RM": [p["est_1rm"] for p in prog]},
                             x=[p["date"] for p in prog],
+                            use_container_width=True,
                         )
             if self.recommender.has_history(name):
                 if st.button("Recommend Next Set", key=f"rec_next_{exercise_id}"):
@@ -2331,6 +2342,7 @@ class GymApp:
                 st.line_chart(
                     {"Volume": [d["volume"] for d in daily]},
                     x=[d["date"] for d in daily],
+                    use_container_width=True,
                 )
             equip_stats = self.stats.equipment_usage(start_str, end_str)
             st.table(equip_stats)
@@ -2341,6 +2353,7 @@ class GymApp:
                     st.line_chart(
                         {"Efficiency": [e["efficiency"] for e in eff_stats]},
                         x=[e["date"] for e in eff_stats],
+                        use_container_width=True,
                     )
         with dist_tab:
             rpe_dist = self.stats.rpe_distribution(
@@ -2380,6 +2393,7 @@ class GymApp:
                     st.line_chart(
                         {"1RM": [p["est_1rm"] for p in prog]},
                         x=[p["date"] for p in prog],
+                        use_container_width=True,
                     )
                 vel_hist = self.stats.velocity_history(ex_choice, start_str, end_str)
                 if vel_hist:
@@ -2387,6 +2401,7 @@ class GymApp:
                         st.line_chart(
                             {"Velocity": [v["velocity"] for v in vel_hist]},
                             x=[v["date"] for v in vel_hist],
+                            use_container_width=True,
                         )
                 self._progress_forecast_section(ex_choice)
             self._volume_forecast_section(start_str, end_str)
@@ -2402,7 +2417,9 @@ class GymApp:
             tsb = self.stats.stress_balance(start_str, end_str)
             if tsb:
                 st.line_chart(
-                    {"TSB": [d["tsb"] for d in tsb]}, x=[d["date"] for d in tsb]
+                    {"TSB": [d["tsb"] for d in tsb]},
+                    x=[d["date"] for d in tsb],
+                    use_container_width=True,
                 )
             overview = self.stats.stress_overview(start_str, end_str)
             if overview:
@@ -2422,6 +2439,7 @@ class GymApp:
                 st.line_chart(
                     {"Est 1RM": [f["est_1rm"] for f in forecast]},
                     x=[str(f["week"]) for f in forecast],
+                    use_container_width=True,
                 )
 
     def _volume_forecast_section(self, start: str, end: str) -> None:
@@ -2433,6 +2451,7 @@ class GymApp:
                 st.line_chart(
                     {"Volume": [d["volume"] for d in data]},
                     x=[d["date"] for d in data],
+                    use_container_width=True,
                 )
 
     def _insights_tab(self) -> None:
@@ -2521,6 +2540,7 @@ class GymApp:
                 st.line_chart(
                     {"Weight": [h["weight"] for h in history]},
                     x=[h["date"] for h in history],
+                    use_container_width=True,
                 )
         bmi_hist = self.stats.bmi_history(start_str, end_str)
         if bmi_hist:
@@ -2528,6 +2548,7 @@ class GymApp:
                 st.line_chart(
                     {"BMI": [b["bmi"] for b in bmi_hist]},
                     x=[b["date"] for b in bmi_hist],
+                    use_container_width=True,
                 )
         wellness = self.stats.wellness_summary(start_str, end_str)
         with st.expander("Wellness Summary", expanded=False):
@@ -2549,6 +2570,7 @@ class GymApp:
                         "Stress": [w["stress_level"] for w in well_hist],
                     },
                     x=[w["date"] for w in well_hist],
+                    use_container_width=True,
                 )
         with st.expander("Forecast", expanded=False):
             days = st.slider("Days", 1, 14, 7, key="bw_fc_days")
@@ -2558,6 +2580,7 @@ class GymApp:
                     st.line_chart(
                         {"Weight": [f["weight"] for f in forecast]},
                         x=[str(f["day"]) for f in forecast],
+                        use_container_width=True,
                     )
 
     def _reports_tab(self) -> None:
@@ -2605,6 +2628,7 @@ class GymApp:
                 st.bar_chart(
                     {"Volume": [e["volume"] for e in eq_stats]},
                     x=[e["equipment"] for e in eq_stats],
+                    use_container_width=True,
                 )
         with st.expander("Daily Volume", expanded=True):
             daily = self.stats.daily_volume(start_str, end_str)
@@ -2612,6 +2636,7 @@ class GymApp:
                 st.line_chart(
                     {"Volume": [d["volume"] for d in daily]},
                     x=[d["date"] for d in daily],
+                    use_container_width=True,
                 )
         with st.expander("Training Strain", expanded=True):
             strain = self.stats.training_strain(start_str, end_str)
@@ -2619,6 +2644,7 @@ class GymApp:
                 st.line_chart(
                     {"Strain": [s["strain"] for s in strain]},
                     x=[s["week"] for s in strain],
+                    use_container_width=True,
                 )
         with st.expander("Weekly Volume Change", expanded=False):
             wvc = self.stats.weekly_volume_change(start_str, end_str)
@@ -2627,6 +2653,7 @@ class GymApp:
                 st.line_chart(
                     {"Change": [v["change"] for v in wvc]},
                     x=[v["week"] for v in wvc],
+                    use_container_width=True,
                 )
         with st.expander("Session Duration", expanded=False):
             duration = self.stats.session_duration(start_str, end_str)
@@ -2635,6 +2662,7 @@ class GymApp:
                 st.line_chart(
                     {"Duration": [d["duration"] for d in duration]},
                     x=[d["date"] for d in duration],
+                    use_container_width=True,
                 )
         with st.expander("Session Density", expanded=False):
             density = self.stats.session_density(start_str, end_str)
@@ -2643,6 +2671,7 @@ class GymApp:
                 st.line_chart(
                     {"Density": [d["density"] for d in density]},
                     x=[d["date"] for d in density],
+                    use_container_width=True,
                 )
         with st.expander("Set Pace", expanded=False):
             pace = self.stats.set_pace(start_str, end_str)
@@ -2651,6 +2680,7 @@ class GymApp:
                 st.line_chart(
                     {"Pace": [p["pace"] for p in pace]},
                     x=[p["date"] for p in pace],
+                    use_container_width=True,
                 )
         with st.expander("Average Rest Times", expanded=False):
             rests = self.stats.rest_times(start_str, end_str)
@@ -2659,6 +2689,7 @@ class GymApp:
                 st.bar_chart(
                     {"Rest": [r["avg_rest"] for r in rests]},
                     x=[str(r["workout_id"]) for r in rests],
+                    use_container_width=True,
                 )
         with st.expander("Exercise Diversity", expanded=False):
             div = self.stats.exercise_diversity(start_str, end_str)
@@ -2667,6 +2698,7 @@ class GymApp:
                 st.line_chart(
                     {"Diversity": [d["diversity"] for d in div]},
                     x=[d["date"] for d in div],
+                    use_container_width=True,
                 )
         with st.expander("Time Under Tension", expanded=False):
             tut = self.stats.time_under_tension(start_str, end_str)
@@ -2675,6 +2707,7 @@ class GymApp:
                 st.line_chart(
                     {"TUT": [t["tut"] for t in tut]},
                     x=[t["date"] for t in tut],
+                    use_container_width=True,
                 )
         with st.expander("Location Summary", expanded=False):
             loc_stats = self.stats.location_summary(start_str, end_str)
@@ -2693,6 +2726,7 @@ class GymApp:
                 st.line_chart(
                     {"Rating": [r["rating"] for r in rating_hist]},
                     x=[r["date"] for r in rating_hist],
+                    use_container_width=True,
                 )
             stats = self.stats.rating_stats(start_str, end_str)
             metrics = [
@@ -2741,6 +2775,7 @@ class GymApp:
                 st.line_chart(
                     {"Readiness": [r["readiness"] for r in ready]},
                     x=[r["date"] for r in ready],
+                    use_container_width=True,
                 )
         if ex_choice:
             momentum = self.stats.performance_momentum(ex_choice, start_str, end_str)
@@ -2758,6 +2793,7 @@ class GymApp:
                 st.bar_chart(
                     {"Points": [p[1] for p in data]},
                     x=[str(p[0]) for p in data],
+                    use_container_width=True,
                 )
 
     def _tests_tab(self) -> None:
