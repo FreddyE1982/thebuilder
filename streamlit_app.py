@@ -388,6 +388,12 @@ class GymApp:
                     font-size: 1rem;
                 }
             }
+            .bottom-nav button,
+            .top-nav button {
+                background: transparent;
+                border: none;
+                width: 100%;
+            }
             button[aria-selected="true"] {
                 border-bottom: 2px solid #ff4b4b;
             }
@@ -445,33 +451,8 @@ class GymApp:
             if st.button("Show About", key="about_btn"):
                 self._about_dialog()
 
-    def _bottom_nav(self) -> None:
-        """Render bottom navigation on mobile devices."""
-        if not st.session_state.is_mobile:
-            return
-        with st.container():
-            st.markdown('<div class="bottom-nav">', unsafe_allow_html=True)
-            cols = st.columns(4)
-            labels = ["workouts", "library", "progress", "settings"]
-            icons = {
-                "workouts": "🏋️",
-                "library": "📚",
-                "progress": "📈",
-                "settings": "⚙️",
-            }
-            for idx, label in enumerate(labels):
-                selected = st.session_state.get("main_tab", 0) == idx
-                disp = f"{icons[label]}\n{label.title()}" + (" •" if selected else "")
-                if cols[idx].button(disp, key=f"nav_{label}"):
-                    self._switch_tab(label)
-            st.markdown("</div>", unsafe_allow_html=True)
-
-    def _top_nav(self) -> None:
-        """Render top navigation on desktop."""
-        if st.session_state.is_mobile:
-            return
-        st.markdown('<div class="top-nav">', unsafe_allow_html=True)
-        cols = st.columns(4)
+    def _render_nav(self, container_class: str) -> None:
+        """Render navigation bar."""
         labels = ["workouts", "library", "progress", "settings"]
         icons = {
             "workouts": "🏋️",
@@ -479,12 +460,31 @@ class GymApp:
             "progress": "📈",
             "settings": "⚙️",
         }
-        for idx, label in enumerate(labels):
-            selected = st.session_state.get("main_tab", 0) == idx
-            disp = f"{icons[label]}\n{label.title()}" + (" •" if selected else "")
-            if cols[idx].button(disp, key=f"top_nav_{label}"):
-                self._switch_tab(label)
-        st.markdown("</div>", unsafe_allow_html=True)
+        mode = "mobile" if st.session_state.is_mobile else "desktop"
+        html = (
+            f'<div class="{container_class}">' +
+            "".join(
+                f'<button aria-selected="{str(st.session_state.get("main_tab", 0) == idx).lower()}" '
+                f'onclick="const p=new URLSearchParams(window.location.search);'
+                f'p.set(\'mode\',\'{mode}\');p.set(\'tab\',\'{label}\');'
+                f'window.location.search=p.toString();">{icons[label]}<br>{label.title()}</button>'
+                for idx, label in enumerate(labels)
+            ) +
+            "</div>"
+        )
+        st.markdown(html, unsafe_allow_html=True)
+
+    def _bottom_nav(self) -> None:
+        """Render bottom navigation on mobile devices."""
+        if not st.session_state.is_mobile:
+            return
+        self._render_nav("bottom-nav")
+
+    def _top_nav(self) -> None:
+        """Render top navigation on desktop."""
+        if st.session_state.is_mobile:
+            return
+        self._render_nav("top-nav")
 
     def _switch_tab(self, label: str) -> None:
         mode = "mobile" if st.session_state.is_mobile else "desktop"
