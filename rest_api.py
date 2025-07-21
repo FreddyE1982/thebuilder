@@ -1138,6 +1138,12 @@ class GymAPI:
                 start_date,
                 end_date,
             )
+        @self.app.get("/stats/session_density")
+        def stats_session_density(
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            return self.statistics.session_density(start_date, end_date)
 
         @self.app.get("/stats/rest_times")
         def stats_rest_times(

@@ -60,6 +60,10 @@ class MathToolsTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             MathTools.warmup_weights(-1.0, 3)
 
+    def test_session_density(self) -> None:
+        val = MathTools.session_density(1000.0, 600)
+        self.assertAlmostEqual(val, 100.0)
+
     def test_sleep_recovery_index(self) -> None:
         sf = ExercisePrescription._sleep_factor(7)
         psqf = ExercisePrescription._perceived_sleep_quality_factor(4)

@@ -109,6 +109,13 @@ class MathTools:
         base = volume / (duration_seconds / 60)
         rpe_adj = math.log1p(avg_rpe) if avg_rpe is not None else 1.0
         return base * rpe_adj
+    @staticmethod
+    def session_density(volume: float, duration_seconds: float) -> float:
+        """Return training volume per minute."""
+        if duration_seconds <= 0:
+            return 0.0
+        return volume / (duration_seconds / 60)
+
 
     @staticmethod
     def overtraining_index(stress: float, fatigue: float, variability: float) -> float:

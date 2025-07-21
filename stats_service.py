@@ -577,6 +577,7 @@ class StatisticsService:
             start_date=start_date,
             end_date=end_date,
             with_equipment=True,
+            with_duration=True,
             with_workout_id=True,
         )
         if not rows:
@@ -585,17 +586,25 @@ class StatisticsService:
         exercises = set()
         volume = 0.0
         rpe_total = 0.0
-        for reps, weight, rpe, _date, ex_name, _eq, wid in rows:
+        durations: Dict[int, float] = {}
+        for reps, weight, rpe, _date, ex_name, _eq, start, end, wid in rows:
             workout_ids.add(wid)
             exercises.add(ex_name)
             volume += int(reps) * float(weight)
             rpe_total += int(rpe)
+            if start and end:
+                t0 = datetime.datetime.fromisoformat(start)
+                t1 = datetime.datetime.fromisoformat(end)
+                durations[wid] = durations.get(wid, 0.0) + (t1 - t0).total_seconds()
         avg_rpe = rpe_total / len(rows)
+        total_duration = sum(durations.values())
+        avg_density = MathTools.session_density(volume, total_duration)
         return {
             "workouts": len(workout_ids),
             "volume": round(volume, 2),
             "avg_rpe": round(avg_rpe, 2),
             "exercises": len(exercises),
+            "avg_density": round(avg_density, 2),
         }
 
     def personal_records(
@@ -918,6 +927,38 @@ class StatisticsService:
                 }
             )
         return result
+    def session_density(
+        self,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> List[Dict[str, float]]:
+        """Return volume per minute for each workout."""
+        names = self.exercise_names.fetch_all()
+        rows = self.sets.fetch_history_by_names(
+            names,
+            start_date=start_date,
+            end_date=end_date,
+            with_duration=True,
+            with_workout_id=True,
+        )
+        if not rows:
+            return []
+        by_workout: Dict[int, Dict[str, object]] = {}
+        for r, w, _rpe, date, start, end, wid in rows:
+            entry = by_workout.setdefault(
+                wid, {"date": date, "volume": 0.0, "dur": 0.0}
+            )
+            entry["volume"] += int(r) * float(w)
+            if start and end:
+                t0 = datetime.datetime.fromisoformat(start)
+                t1 = datetime.datetime.fromisoformat(end)
+                entry["dur"] += (t1 - t0).total_seconds()
+        result: List[Dict[str, float]] = []
+        for wid, data in sorted(by_workout.items()):
+            density = MathTools.session_density(data["volume"], float(data["dur"]))
+            result.append({"workout_id": wid, "date": data["date"], "density": round(density, 2)})
+        return result
+
 
     def rest_times(
         self,
