@@ -475,6 +475,7 @@ class GymApp:
                 insights_sub,
                 weight_sub,
                 rep_sub,
+                risk_sub,
                 game_sub,
                 tests_sub,
             ) = st.tabs(
@@ -485,6 +486,7 @@ class GymApp:
                     "Insights",
                     "Body Weight",
                     "Reports",
+                    "Risk",
                     "Gamification",
                     "Tests",
                 ]
@@ -501,6 +503,8 @@ class GymApp:
                 self._weight_tab()
             with rep_sub:
                 self._reports_tab()
+            with risk_sub:
+                self._risk_tab()
             with game_sub:
                 self._gamification_tab()
             with tests_sub:
@@ -1927,6 +1931,40 @@ class GymApp:
             loc_stats = self.stats.location_summary(start_str, end_str)
             if loc_stats:
                 st.table(loc_stats)
+
+    def _risk_tab(self) -> None:
+        st.header("Risk & Readiness")
+        exercises = [""] + self.exercise_names_repo.fetch_all()
+        with st.expander("Filters", expanded=True):
+            ex_choice = st.selectbox("Exercise for Momentum", exercises, key="risk_ex")
+            col1, col2 = st.columns(2)
+            with col1:
+                start = st.date_input(
+                    "Start",
+                    datetime.date.today() - datetime.timedelta(days=30),
+                    key="risk_start",
+                )
+            with col2:
+                end = st.date_input("End", datetime.date.today(), key="risk_end")
+            start_str = start.isoformat()
+            end_str = end.isoformat()
+        summary = self.stats.adaptation_index(start_str, end_str)
+        overtrain = self.stats.overtraining_risk(start_str, end_str)
+        injury = self.stats.injury_risk(start_str, end_str)
+        ready = self.stats.readiness(start_str, end_str)
+        with st.expander("Summary", expanded=True):
+            st.metric("Adaptation", summary["adaptation"])
+            st.metric("Overtraining Risk", overtrain["risk"])
+            st.metric("Injury Risk", injury["injury_risk"])
+        if ready:
+            with st.expander("Readiness Trend", expanded=False):
+                st.line_chart(
+                    {"Readiness": [r["readiness"] for r in ready]},
+                    x=[r["date"] for r in ready],
+                )
+        if ex_choice:
+            momentum = self.stats.performance_momentum(ex_choice, start_str, end_str)
+            st.metric("Momentum", momentum["momentum"])
 
     def _gamification_tab(self) -> None:
         st.header("Gamification Stats")
