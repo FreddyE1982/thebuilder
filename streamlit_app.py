@@ -297,6 +297,20 @@ class GymApp:
                     font-size: 0.875rem;
                 }
             }
+            @media screen and (max-width: 320px) {
+                section.main > div {
+                    padding: 0.3rem !important;
+                }
+                h1 {
+                    font-size: 1.2rem;
+                }
+                h2 {
+                    font-size: 0.95rem;
+                }
+                h3 {
+                    font-size: 0.8rem;
+                }
+            }
             </style>
             """,
             unsafe_allow_html=True,
