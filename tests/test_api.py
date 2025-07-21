@@ -1374,6 +1374,30 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(data[0]["workout_id"], 1)
         self.assertAlmostEqual(data[0]["density"], round(expected, 2), places=2)
 
+    def test_set_pace_endpoint(self) -> None:
+        self.client.post("/workouts")
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        sid = self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8},
+        ).json()["id"]
+        self.client.post(f"/sets/{sid}/start")
+        self.client.post(f"/sets/{sid}/finish")
+        data = self.client.get(f"/sets/{sid}").json()
+        t0 = datetime.datetime.fromisoformat(data["start_time"])
+        t1 = datetime.datetime.fromisoformat(data["end_time"])
+        duration = (t1 - t0).total_seconds()
+        expected = MathTools.set_pace(1, duration)
+        resp = self.client.get("/stats/set_pace")
+        self.assertEqual(resp.status_code, 200)
+        out = resp.json()
+        self.assertEqual(len(out), 1)
+        self.assertEqual(out[0]["workout_id"], 1)
+        self.assertAlmostEqual(out[0]["pace"], round(expected, 2), places=2)
+
 
     def test_rest_times_endpoint(self) -> None:
         self.client.post("/workouts")

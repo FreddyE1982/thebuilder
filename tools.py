@@ -116,6 +116,13 @@ class MathTools:
             return 0.0
         return volume / (duration_seconds / 60)
 
+    @staticmethod
+    def set_pace(sets: int, duration_seconds: float) -> float:
+        """Return sets completed per minute."""
+        if duration_seconds <= 0:
+            return 0.0
+        return sets / (duration_seconds / 60)
+
 
     @staticmethod
     def overtraining_index(stress: float, fatigue: float, variability: float) -> float:

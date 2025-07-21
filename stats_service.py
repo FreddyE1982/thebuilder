@@ -977,6 +977,38 @@ class StatisticsService:
             result.append({"workout_id": wid, "date": data["date"], "density": round(density, 2)})
         return result
 
+    def set_pace(
+        self,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> List[Dict[str, float]]:
+        """Return sets per minute for each workout."""
+        names = self.exercise_names.fetch_all()
+        rows = self.sets.fetch_history_by_names(
+            names,
+            start_date=start_date,
+            end_date=end_date,
+            with_duration=True,
+            with_workout_id=True,
+        )
+        if not rows:
+            return []
+        by_workout: Dict[int, Dict[str, object]] = {}
+        for _r, _w, _rpe, date, start, end, wid in rows:
+            entry = by_workout.setdefault(
+                wid, {"date": date, "sets": 0, "dur": 0.0}
+            )
+            entry["sets"] += 1
+            if start and end:
+                t0 = datetime.datetime.fromisoformat(start)
+                t1 = datetime.datetime.fromisoformat(end)
+                entry["dur"] += (t1 - t0).total_seconds()
+        result: List[Dict[str, float]] = []
+        for wid, data in sorted(by_workout.items()):
+            pace = MathTools.set_pace(int(data["sets"]), float(data["dur"]))
+            result.append({"workout_id": wid, "date": data["date"], "pace": round(pace, 2)})
+        return result
+
 
     def rest_times(
         self,

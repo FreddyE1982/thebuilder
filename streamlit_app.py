@@ -2137,6 +2137,14 @@ class GymApp:
                     {"Density": [d["density"] for d in density]},
                     x=[d["date"] for d in density],
                 )
+        with st.expander("Set Pace", expanded=False):
+            pace = self.stats.set_pace(start_str, end_str)
+            if pace:
+                st.table(pace)
+                st.line_chart(
+                    {"Pace": [p["pace"] for p in pace]},
+                    x=[p["date"] for p in pace],
+                )
         with st.expander("Average Rest Times", expanded=False):
             rests = self.stats.rest_times(start_str, end_str)
             if rests:
