@@ -2237,3 +2237,42 @@ class APITestCase(unittest.TestCase):
         self.assertFalse(data[0]["planned"])
         self.assertEqual(data[1]["date"], tomorrow)
         self.assertTrue(data[1]["planned"])
+
+    def test_goal_endpoints(self) -> None:
+        start = datetime.date.today().isoformat()
+        target = (datetime.date.today() + datetime.timedelta(days=30)).isoformat()
+
+        resp = self.client.post(
+            "/goals",
+            params={
+                "name": "Squat PR",
+                "target_value": 200.0,
+                "unit": "kg",
+                "start_date": start,
+                "target_date": target,
+            },
+        )
+        self.assertEqual(resp.status_code, 200)
+        gid = resp.json()["id"]
+
+        resp = self.client.get("/goals")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["name"], "Squat PR")
+
+        resp = self.client.put(
+            f"/goals/{gid}",
+            params={"achieved": True},
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), {"status": "updated"})
+
+        resp = self.client.get("/goals")
+        self.assertTrue(resp.json()[0]["achieved"])
+
+        resp = self.client.delete(f"/goals/{gid}")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), {"status": "deleted"})
+
+        self.assertEqual(self.client.get("/goals").json(), [])

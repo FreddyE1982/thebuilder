@@ -328,6 +328,26 @@ class Database:
                 );""",
             ["workout_id", "tag_id"],
         ),
+        "goals": (
+            """CREATE TABLE goals (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    target_value REAL NOT NULL,
+                    unit TEXT NOT NULL,
+                    start_date TEXT NOT NULL,
+                    target_date TEXT NOT NULL,
+                    achieved INTEGER NOT NULL DEFAULT 0
+                );""",
+            [
+                "id",
+                "name",
+                "target_value",
+                "unit",
+                "start_date",
+                "target_date",
+                "achieved",
+            ],
+        ),
     }
 
     def __init__(self, db_path: str = "workout.db") -> None:
@@ -2282,3 +2302,101 @@ class TagRepository(BaseRepository):
                     "INSERT INTO workout_tags (workout_id, tag_id) VALUES (?, ?);",
                     (workout_id, tid),
                 )
+
+
+class GoalRepository(BaseRepository):
+    """Repository for goal management."""
+
+    def add(
+        self,
+        name: str,
+        target_value: float,
+        unit: str,
+        start_date: str,
+        target_date: str,
+    ) -> int:
+        return self.execute(
+            "INSERT INTO goals (name, target_value, unit, start_date, target_date) VALUES (?, ?, ?, ?, ?);",
+            (name, target_value, unit, start_date, target_date),
+        )
+
+    def update(
+        self,
+        goal_id: int,
+        name: str | None = None,
+        target_value: float | None = None,
+        unit: str | None = None,
+        start_date: str | None = None,
+        target_date: str | None = None,
+        achieved: bool | None = None,
+    ) -> None:
+        rows = super().fetch_all("SELECT id FROM goals WHERE id = ?;", (goal_id,))
+        if not rows:
+            raise ValueError("goal not found")
+        fields = []
+        params = []
+        if name is not None:
+            fields.append("name = ?")
+            params.append(name)
+        if target_value is not None:
+            fields.append("target_value = ?")
+            params.append(target_value)
+        if unit is not None:
+            fields.append("unit = ?")
+            params.append(unit)
+        if start_date is not None:
+            fields.append("start_date = ?")
+            params.append(start_date)
+        if target_date is not None:
+            fields.append("target_date = ?")
+            params.append(target_date)
+        if achieved is not None:
+            fields.append("achieved = ?")
+            params.append(int(achieved))
+        if fields:
+            params.append(goal_id)
+            self.execute(
+                f"UPDATE goals SET {', '.join(fields)} WHERE id = ?;",
+                tuple(params),
+            )
+
+    def delete(self, goal_id: int) -> None:
+        rows = super().fetch_all("SELECT id FROM goals WHERE id = ?;", (goal_id,))
+        if not rows:
+            raise ValueError("goal not found")
+        self.execute("DELETE FROM goals WHERE id = ?;", (goal_id,))
+
+    def fetch_all(self) -> list[tuple[int, str, float, str, str, str, int]]:
+        rows = super().fetch_all(
+            "SELECT id, name, target_value, unit, start_date, target_date, achieved FROM goals ORDER BY id;"
+        )
+        return [
+            (
+                r[0],
+                r[1],
+                float(r[2]),
+                r[3],
+                r[4],
+                r[5],
+                int(r[6]),
+            )
+            for r in rows
+        ]
+
+    def fetch(self, goal_id: int) -> dict[str, object]:
+        rows = super().fetch_all(
+            "SELECT id, name, target_value, unit, start_date, target_date, achieved FROM goals WHERE id = ?;",
+            (goal_id,),
+        )
+        if not rows:
+            raise ValueError("goal not found")
+        r = rows[0]
+        return {
+            "id": r[0],
+            "name": r[1],
+            "target_value": float(r[2]),
+            "unit": r[3],
+            "start_date": r[4],
+            "target_date": r[5],
+            "achieved": bool(r[6]),
+        }
