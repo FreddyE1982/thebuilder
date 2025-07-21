@@ -1,5 +1,6 @@
 import datetime
-from typing import Optional
+from contextlib import contextmanager
+from typing import Optional, Generator
 import streamlit as st
 from db import (
     WorkoutRepository,
@@ -756,6 +757,16 @@ class GymApp:
             cols[idx % col_num].metric(label, val)
         st.markdown("</div>", unsafe_allow_html=True)
 
+    @contextmanager
+    def _section(self, title: str) -> Generator[None, None, None]:
+        """Context manager for a styled section."""
+        st.markdown("<div class='section-wrapper'>", unsafe_allow_html=True)
+        st.header(title)
+        try:
+            yield
+        finally:
+            st.markdown("</div>", unsafe_allow_html=True)
+
     def _start_page(self) -> None:
         """Open the page wrapper."""
         st.markdown("<div class='page-wrapper'>", unsafe_allow_html=True)
@@ -795,8 +806,7 @@ class GymApp:
             st.button("Close")
 
     def _dashboard_tab(self) -> None:
-        st.markdown("<div class='section-wrapper'>", unsafe_allow_html=True)
-        st.header("Dashboard")
+        with self._section("Dashboard"):
         with st.expander("Filters", expanded=True):
             if st.session_state.is_mobile:
                 start = st.date_input(
@@ -924,7 +934,6 @@ class GymApp:
                 if top_ex:
                     with st.expander("Top Exercises", expanded=False):
                         st.table(top_ex[:5])
-        st.markdown("</div>", unsafe_allow_html=True)
 
     def run(self) -> None:
         params = st.experimental_get_query_params()
@@ -1050,8 +1059,7 @@ class GymApp:
             self._planned_exercise_section()
 
     def _workout_section(self) -> None:
-        st.markdown("<div class='section-wrapper'>", unsafe_allow_html=True)
-        st.header("Workouts")
+        with self._section("Workouts"):
         training_options = ["strength", "hypertrophy", "highintensity"]
         with st.expander("Workout Management", expanded=True):
             if st.session_state.is_mobile:
@@ -1063,7 +1071,6 @@ class GymApp:
                     self._create_workout_form(training_options)
                 with col2:
                     self._existing_workout_form(training_options)
-        st.markdown("</div>", unsafe_allow_html=True)
 
     def _create_workout_form(self, training_options: list[str]) -> None:
         with st.expander("Create New Workout"):
@@ -1200,19 +1207,17 @@ class GymApp:
                 )
 
     def _planned_workout_section(self) -> None:
-        st.markdown("<div class='section-wrapper'>", unsafe_allow_html=True)
-        st.header("Planned Workouts")
-        with st.expander("Plan Management", expanded=True):
-            if st.session_state.is_mobile:
-                self._create_plan_form()
-                self._existing_plan_form()
-            else:
-                col1, col2 = st.columns(2)
-                with col1:
+        with self._section("Planned Workouts"):
+            with st.expander("Plan Management", expanded=True):
+                if st.session_state.is_mobile:
                     self._create_plan_form()
-                with col2:
                     self._existing_plan_form()
-        st.markdown("</div>", unsafe_allow_html=True)
+                else:
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        self._create_plan_form()
+                    with col2:
+                        self._existing_plan_form()
 
     def _create_plan_form(self) -> None:
         with st.expander("Create New Plan"):
@@ -1303,40 +1308,38 @@ class GymApp:
                                 st.success("Deleted")
 
     def _exercise_section(self) -> None:
-        st.markdown("<div class='section-wrapper'>", unsafe_allow_html=True)
-        st.header("Exercises")
-        workout_id = st.session_state.selected_workout
-        with st.expander("Exercise Management", expanded=True):
-            with st.expander("Add New Exercise"):
-                ex_name = self._exercise_selector(
-                    "log_new",
-                    None,
-                    st.session_state.get("log_new_groups", []),
-                    st.session_state.get("log_new_muscles", []),
-                )
-                eq = self._equipment_selector(
-                    "log_new",
-                    st.session_state.get("log_new_muscles", []),
-                )
-                note_val = st.text_input("Note", key="new_exercise_note")
-                if st.button("Add Exercise"):
-                    if ex_name and eq:
-                        self.exercises.add(workout_id, ex_name, eq, note_val or None)
-                    else:
-                        st.warning("Exercise and equipment required")
-            with st.expander("Logged Exercises", expanded=True):
-                exercises = self.exercises.fetch_for_workout(workout_id)
-                for ex_id, name, eq_name, note in exercises:
-                    self._exercise_card(ex_id, name, eq_name, note)
-            summary = self.sets.workout_summary(workout_id)
-            with st.expander("Workout Summary", expanded=True):
-                metrics = [
-                    ("Volume", summary["volume"]),
-                    ("Sets", summary["sets"]),
-                    ("Avg RPE", summary["avg_rpe"]),
-                ]
-                self._metric_grid(metrics)
-        st.markdown("</div>", unsafe_allow_html=True)
+        with self._section("Exercises"):
+            workout_id = st.session_state.selected_workout
+            with st.expander("Exercise Management", expanded=True):
+                with st.expander("Add New Exercise"):
+                    ex_name = self._exercise_selector(
+                        "log_new",
+                        None,
+                        st.session_state.get("log_new_groups", []),
+                        st.session_state.get("log_new_muscles", []),
+                    )
+                    eq = self._equipment_selector(
+                        "log_new",
+                        st.session_state.get("log_new_muscles", []),
+                    )
+                    note_val = st.text_input("Note", key="new_exercise_note")
+                    if st.button("Add Exercise"):
+                        if ex_name and eq:
+                            self.exercises.add(workout_id, ex_name, eq, note_val or None)
+                        else:
+                            st.warning("Exercise and equipment required")
+                with st.expander("Logged Exercises", expanded=True):
+                    exercises = self.exercises.fetch_for_workout(workout_id)
+                    for ex_id, name, eq_name, note in exercises:
+                        self._exercise_card(ex_id, name, eq_name, note)
+                summary = self.sets.workout_summary(workout_id)
+                with st.expander("Workout Summary", expanded=True):
+                    metrics = [
+                        ("Volume", summary["volume"]),
+                        ("Sets", summary["sets"]),
+                        ("Avg RPE", summary["avg_rpe"]),
+                    ]
+                    self._metric_grid(metrics)
 
     def _exercise_card(
         self, exercise_id: int, name: str, equipment: Optional[str], note: Optional[str]
@@ -1664,31 +1667,29 @@ class GymApp:
 
 
     def _planned_exercise_section(self) -> None:
-        st.markdown("<div class='section-wrapper'>", unsafe_allow_html=True)
-        st.header("Planned Exercises")
-        workout_id = st.session_state.selected_planned_workout
-        with st.expander("Planned Exercise Management", expanded=True):
-            with st.expander("Add Planned Exercise"):
-                ex_name = self._exercise_selector(
-                    "plan_new",
-                    None,
-                    st.session_state.get("plan_new_groups", []),
-                    st.session_state.get("plan_new_muscles", []),
-                )
-                plan_eq = self._equipment_selector(
-                    "plan_new",
-                    st.session_state.get("plan_new_muscles", []),
-                )
-                if st.button("Add Planned Exercise"):
-                    if ex_name and plan_eq:
-                        self.planned_exercises.add(workout_id, ex_name, plan_eq)
-                    else:
-                        st.warning("Exercise and equipment required")
-            with st.expander("Planned Exercise List", expanded=True):
-                exercises = self.planned_exercises.fetch_for_workout(workout_id)
-                for ex_id, name, eq_name in exercises:
-                    self._planned_exercise_card(ex_id, name, eq_name)
-        st.markdown("</div>", unsafe_allow_html=True)
+        with self._section("Planned Exercises"):
+            workout_id = st.session_state.selected_planned_workout
+            with st.expander("Planned Exercise Management", expanded=True):
+                with st.expander("Add Planned Exercise"):
+                    ex_name = self._exercise_selector(
+                        "plan_new",
+                        None,
+                        st.session_state.get("plan_new_groups", []),
+                        st.session_state.get("plan_new_muscles", []),
+                    )
+                    plan_eq = self._equipment_selector(
+                        "plan_new",
+                        st.session_state.get("plan_new_muscles", []),
+                    )
+                    if st.button("Add Planned Exercise"):
+                        if ex_name and plan_eq:
+                            self.planned_exercises.add(workout_id, ex_name, plan_eq)
+                        else:
+                            st.warning("Exercise and equipment required")
+                with st.expander("Planned Exercise List", expanded=True):
+                    exercises = self.planned_exercises.fetch_for_workout(workout_id)
+                    for ex_id, name, eq_name in exercises:
+                        self._planned_exercise_card(ex_id, name, eq_name)
 
     def _planned_exercise_card(
         self, exercise_id: int, name: str, equipment: Optional[str]
@@ -1798,25 +1799,24 @@ class GymApp:
             st.session_state.pop(f"plan_new_rpe_{exercise_id}", None)
 
     def _template_section(self) -> None:
-        st.markdown("<div class='section-wrapper'>", unsafe_allow_html=True)
-        st.header("Templates")
-        training_options = ["strength", "hypertrophy", "highintensity"]
-        with st.expander("Template Management", expanded=True):
-            favs = self.favorite_templates_repo.fetch_all()
-            with st.expander("Favorite Templates", expanded=True):
-                if favs:
-                    for fid in favs:
-                        try:
-                            _id, name, _type = self.template_workouts.fetch_detail(fid)
-                        except ValueError:
-                            continue
-                        cols = st.columns(2)
-                        cols[0].write(name)
-                        if cols[1].button("Remove", key=f"fav_tpl_rm_{fid}"):
-                            self.favorite_templates_repo.remove(fid)
-                            st.experimental_rerun()
-                else:
-                    st.write("No favorites.")
+        with self._section("Templates"):
+            training_options = ["strength", "hypertrophy", "highintensity"]
+            with st.expander("Template Management", expanded=True):
+                favs = self.favorite_templates_repo.fetch_all()
+                with st.expander("Favorite Templates", expanded=True):
+                    if favs:
+                        for fid in favs:
+                            try:
+                                _id, name, _type = self.template_workouts.fetch_detail(fid)
+                            except ValueError:
+                                continue
+                            cols = st.columns(2)
+                            cols[0].write(name)
+                            if cols[1].button("Remove", key=f"fav_tpl_rm_{fid}"):
+                                self.favorite_templates_repo.remove(fid)
+                                st.experimental_rerun()
+                    else:
+                        st.write("No favorites.")
                 templates = {
                     str(t[0]): t[1] for t in self.template_workouts.fetch_all()
                 }
@@ -1878,34 +1878,31 @@ class GymApp:
                                 st.success("Deleted")
                 else:
                     st.write("No templates.")
-        st.markdown("</div>", unsafe_allow_html=True)
 
     def _template_exercise_section(self) -> None:
-        st.markdown("<div class='section-wrapper'>", unsafe_allow_html=True)
-        st.header("Template Exercises")
-        template_id = st.session_state.selected_template
-        with st.expander("Exercise Management", expanded=True):
-            with st.expander("Add Exercise"):
-                ex_name = self._exercise_selector(
-                    "tmpl_new",
-                    None,
-                    st.session_state.get("tmpl_new_groups", []),
-                    st.session_state.get("tmpl_new_muscles", []),
-                )
-                eq = self._equipment_selector(
-                    "tmpl_new",
-                    st.session_state.get("tmpl_new_muscles", []),
-                )
-                if st.button("Add Template Exercise"):
-                    if ex_name and eq:
-                        self.template_exercises.add(template_id, ex_name, eq)
-                    else:
-                        st.warning("Exercise and equipment required")
-            with st.expander("Exercise List", expanded=True):
-                exercises = self.template_exercises.fetch_for_template(template_id)
-                for ex_id, name, eq in exercises:
-                    self._template_exercise_card(ex_id, name, eq)
-        st.markdown("</div>", unsafe_allow_html=True)
+        with self._section("Template Exercises"):
+            template_id = st.session_state.selected_template
+            with st.expander("Exercise Management", expanded=True):
+                with st.expander("Add Exercise"):
+                    ex_name = self._exercise_selector(
+                        "tmpl_new",
+                        None,
+                        st.session_state.get("tmpl_new_groups", []),
+                        st.session_state.get("tmpl_new_muscles", []),
+                    )
+                    eq = self._equipment_selector(
+                        "tmpl_new",
+                        st.session_state.get("tmpl_new_muscles", []),
+                    )
+                    if st.button("Add Template Exercise"):
+                        if ex_name and eq:
+                            self.template_exercises.add(template_id, ex_name, eq)
+                        else:
+                            st.warning("Exercise and equipment required")
+                with st.expander("Exercise List", expanded=True):
+                    exercises = self.template_exercises.fetch_for_template(template_id)
+                    for ex_id, name, eq in exercises:
+                        self._template_exercise_card(ex_id, name, eq)
 
     def _template_exercise_card(
         self, exercise_id: int, name: str, equipment: Optional[str]
