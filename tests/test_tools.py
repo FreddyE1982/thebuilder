@@ -64,6 +64,10 @@ class MathToolsTestCase(unittest.TestCase):
         val = MathTools.session_density(1000.0, 600)
         self.assertAlmostEqual(val, 100.0)
 
+    def test_set_pace(self) -> None:
+        pace = MathTools.set_pace(30, 900)
+        self.assertAlmostEqual(pace, 2.0)
+
     def test_sleep_recovery_index(self) -> None:
         sf = ExercisePrescription._sleep_factor(7)
         psqf = ExercisePrescription._perceived_sleep_quality_factor(4)

@@ -427,3 +427,4 @@ keep the AGENTS.md updated by adding new sensible rules when they occur to you. 
 - The extended long term usage test must simulate at least six months (90 workouts) to verify long term stability.
 - Session duration analytics must calculate time between the first set start and last set finish per workout and be available via `/stats/session_duration`.
 - Bottom navigation markup must not include CSS; its styling belongs in `_inject_responsive_css` only.
+- Set pace analytics must compute sets per minute per workout and be available via `/stats/set_pace`.
