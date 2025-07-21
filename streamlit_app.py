@@ -332,6 +332,17 @@ class GymApp:
                 .bottom-nav button {
                     flex: 1 1 auto;
                     margin: 0 0.25rem;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    white-space: pre-line;
+                    font-size: 0.85rem;
+                }
+            }
+            @media screen and (max-width: 768px) and (orientation: landscape) {
+                .bottom-nav button {
+                    font-size: 0.75rem;
+                    padding: 0.25rem;
                 }
             }
             .top-nav {
@@ -412,9 +423,15 @@ class GymApp:
         st.markdown('<div class="bottom-nav">', unsafe_allow_html=True)
         cols = st.columns(4)
         labels = ["workouts", "library", "progress", "settings"]
+        icons = {
+            "workouts": "🏋️",
+            "library": "📚",
+            "progress": "📈",
+            "settings": "⚙️",
+        }
         for idx, label in enumerate(labels):
             selected = st.session_state.get("main_tab", 0) == idx
-            disp = label.title() + (" •" if selected else "")
+            disp = f"{icons[label]}\n{label.title()}" + (" •" if selected else "")
             if cols[idx].button(disp, key=f"nav_{label}"):
                 self._switch_tab(label)
         st.markdown("</div>", unsafe_allow_html=True)
