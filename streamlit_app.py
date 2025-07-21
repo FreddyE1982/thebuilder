@@ -2113,6 +2113,14 @@ class GymApp:
                     {"Strain": [s["strain"] for s in strain]},
                     x=[s["week"] for s in strain],
                 )
+        with st.expander("Weekly Volume Change", expanded=False):
+            wvc = self.stats.weekly_volume_change(start_str, end_str)
+            if wvc:
+                st.table(wvc)
+                st.line_chart(
+                    {"Change": [v["change"] for v in wvc]},
+                    x=[v["week"] for v in wvc],
+                )
         with st.expander("Session Duration", expanded=False):
             duration = self.stats.session_duration(start_str, end_str)
             if duration:

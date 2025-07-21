@@ -837,6 +837,24 @@ class StatisticsService:
             strain.append({"week": week, "strain": round(score, 2)})
         return strain
 
+    def weekly_volume_change(
+        self,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> List[Dict[str, float]]:
+        """Return week-over-week volume percentage change."""
+        variability = self.weekly_load_variability(start_date, end_date)
+        weeks = variability["weeks"]
+        volumes = variability["volumes"]
+        if len(volumes) < 2:
+            return []
+        result: List[Dict[str, float]] = []
+        for idx in range(1, len(volumes)):
+            prev = volumes[idx - 1]
+            change = 0.0 if prev == 0 else (volumes[idx] - prev) / prev * 100.0
+            result.append({"week": weeks[idx], "change": round(change, 2)})
+        return result
+
     def stress_balance(
         self,
         start_date: Optional[str] = None,

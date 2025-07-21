@@ -1485,6 +1485,40 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(data[1]["workouts"], 1)
         self.assertAlmostEqual(data[1]["volume"], 500.0)
 
+    def test_weekly_volume_change_endpoint(self) -> None:
+        d1 = (datetime.date.today() - datetime.timedelta(days=14)).isoformat()
+        d2 = (datetime.date.today() - datetime.timedelta(days=7)).isoformat()
+
+        self.client.post("/workouts", params={"date": d1})
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 10, "weight": 100.0, "rpe": 8},
+        )
+
+        self.client.post("/workouts", params={"date": d2})
+        self.client.post(
+            "/workouts/2/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/exercises/2/sets",
+            params={"reps": 20, "weight": 100.0, "rpe": 8},
+        )
+
+        resp = self.client.get(
+            "/stats/weekly_volume_change",
+            params={"start_date": d1, "end_date": d2},
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["week"], d2)
+        self.assertAlmostEqual(data[0]["change"], 100.0, places=2)
+
     def test_set_velocity_and_history(self) -> None:
         self.client.post("/workouts")
         self.client.post(

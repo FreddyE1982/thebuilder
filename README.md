@@ -30,6 +30,7 @@ The Builder is a full featured workout planner, logger and analytics platform bu
 - Summarize volume by muscle group with `/stats/muscle_group_usage`.
 - Summarize workouts by location with `/stats/location_summary` and view tables in the Reports tab.
 - Evaluate exercise frequency per week with `/stats/exercise_frequency`.
+- Analyze week-over-week volume change with `/stats/weekly_volume_change` displayed in the Reports tab.
 - Track body weight over time using `/body_weight` endpoints and `/stats/weight_stats`.
 - Forecast future body weight trends with `/stats/weight_forecast`.
 - View weight history, BMI charts and forecasts in the Progress tab's new "Body Weight" section.
