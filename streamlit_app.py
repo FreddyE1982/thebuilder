@@ -337,7 +337,7 @@ class GymApp:
             }
             @media screen and (max-width: 768px) {
                 body {
-                    padding-bottom: 3rem;
+                    padding-bottom: calc(env(safe-area-inset-bottom) + 3rem);
                 }
                 .bottom-nav {
                     position: fixed;
@@ -349,7 +349,7 @@ class GymApp:
                     display: flex;
                     justify-content: space-around;
                     grid-template-columns: repeat(4, 1fr);
-                    padding: 0.25rem 0.5rem;
+                    padding: 0.25rem 0.5rem env(safe-area-inset-bottom);
                     gap: 0.25rem;
                     z-index: 1000;
                 }
@@ -386,7 +386,7 @@ class GymApp:
             }
             @media screen and (max-width: 768px) and (orientation: landscape) {
                 nav.bottom-nav {
-                    padding: 0.1rem 0.25rem;
+                    padding: 0.1rem 0.25rem env(safe-area-inset-bottom);
                     gap: 0.1rem;
                     justify-content: space-between;
                 }
