@@ -173,6 +173,9 @@ class GymApp:
             function setVh() {
                 document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
             }
+            function setSafeArea() {
+                document.documentElement.style.setProperty('--safe-bottom', 'env(safe-area-inset-bottom)');
+            }
             function setHeaderHeight() {
                 const nav = document.querySelector('nav.top-nav');
                 const h = nav ? nav.offsetHeight : 0;
@@ -181,6 +184,7 @@ class GymApp:
             function handleResize() {
                 setMode();
                 setVh();
+                setSafeArea();
                 setHeaderHeight();
             }
             window.addEventListener('resize', handleResize);
@@ -199,6 +203,7 @@ class GymApp:
             <style>
             :root {
                 --section-bg: #fff;
+                --safe-bottom: 0px;
             }
             html, body {
                 max-width: 100%;
@@ -209,6 +214,7 @@ class GymApp:
                 box-sizing: border-box;
                 scroll-behavior: smooth;
                 scroll-padding-top: var(--header-height, 0);
+                min-height: 100dvh;
                 min-height: calc(var(--vh, 1vh) * 100);
                 display: flex;
                 flex-direction: column;
@@ -216,6 +222,7 @@ class GymApp:
             .page-wrapper {
                 display: flex;
                 flex-direction: column;
+                min-height: 100dvh;
                 min-height: calc(var(--vh, 1vh) * 100);
             }
             .header-wrapper {
@@ -439,7 +446,7 @@ class GymApp:
             }
             @media screen and (max-width: 768px) {
                 body {
-                    padding-bottom: calc(env(safe-area-inset-bottom) + 3rem);
+                    padding-bottom: calc(var(--safe-bottom) + 3rem);
                 }
                 .bottom-nav {
                     position: fixed;
@@ -451,7 +458,7 @@ class GymApp:
                     display: grid;
                     grid-template-columns: repeat(4, 1fr);
                     justify-items: center;
-                    padding: 0.25rem 0.5rem env(safe-area-inset-bottom);
+                    padding: 0.25rem 0.5rem var(--safe-bottom);
                     gap: 0.25rem;
                     z-index: 1000;
                     height: 3rem;
@@ -504,7 +511,7 @@ class GymApp:
                 }
                 nav.bottom-nav {
                     grid-template-columns: repeat(4, 1fr);
-                    padding: 0.1rem 0.25rem env(safe-area-inset-bottom);
+                    padding: 0.1rem 0.25rem var(--safe-bottom);
                     gap: 0.1rem;
                     justify-content: space-between;
                     height: 2.5rem;
