@@ -379,6 +379,16 @@ class GymApp:
                     flex: 1 0 50%;
                 }
             }
+            @media screen and (max-width: 600px) {
+                nav.bottom-nav button {
+                    font-size: 0.8rem;
+                }
+            }
+            @media screen and (max-width: 600px) and (orientation: landscape) {
+                nav.bottom-nav button {
+                    font-size: 0.7rem;
+                }
+            }
             @media screen and (max-width: 768px) and (orientation: portrait) {
                 nav.bottom-nav {
                     justify-content: space-evenly;
@@ -1118,10 +1128,12 @@ class GymApp:
                     self._exercise_card(ex_id, name, eq_name, note)
             summary = self.sets.workout_summary(workout_id)
             with st.expander("Workout Summary", expanded=True):
-                col1, col2, col3 = st.columns(3)
-                col1.metric("Volume", summary["volume"])
-                col2.metric("Sets", summary["sets"])
-                col3.metric("Avg RPE", summary["avg_rpe"])
+                metrics = [
+                    ("Volume", summary["volume"]),
+                    ("Sets", summary["sets"]),
+                    ("Avg RPE", summary["avg_rpe"]),
+                ]
+                self._metric_grid(metrics)
 
     def _exercise_card(
         self, exercise_id: int, name: str, equipment: Optional[str], note: Optional[str]
@@ -2328,8 +2340,11 @@ class GymApp:
                 )
             overview = self.stats.stress_overview(start_str, end_str)
             if overview:
-                st.metric("Stress", overview["stress"])
-                st.metric("Fatigue", overview["fatigue"])
+                metrics = [
+                    ("Stress", overview["stress"]),
+                    ("Fatigue", overview["fatigue"]),
+                ]
+                self._metric_grid(metrics)
 
     def _progress_forecast_section(self, exercise: str) -> None:
         st.subheader("Progress Forecast")
@@ -2383,16 +2398,20 @@ class GymApp:
             if insights:
                 with st.expander("Trend Analysis", expanded=True):
                     st.write(f"Trend: {insights.get('trend', '')}")
+                    metrics = []
                     if "slope" in insights:
-                        st.metric("Slope", round(insights["slope"], 2))
+                        metrics.append(("Slope", round(insights["slope"], 2)))
                     if "r_squared" in insights:
-                        st.metric("R\xb2", round(insights["r_squared"], 2))
+                        metrics.append(("R\xb2", round(insights["r_squared"], 2)))
                     if "strength_seasonality" in insights:
-                        st.metric(
-                            "Seasonality Strength",
-                            round(insights["strength_seasonality"], 2),
+                        metrics.append(
+                            (
+                                "Seasonality Strength",
+                                round(insights["strength_seasonality"], 2),
+                            )
                         )
-                    st.metric("Plateau Score", insights["plateau_score"])
+                    metrics.append(("Plateau Score", insights["plateau_score"]))
+                    self._metric_grid(metrics)
             if prog:
                 with st.expander("1RM Progression", expanded=True):
                     st.line_chart(
@@ -2424,10 +2443,12 @@ class GymApp:
             end_str = end.isoformat()
         stats = self.stats.weight_stats(start_str, end_str)
         with st.expander("Statistics", expanded=True):
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Average", stats["avg"])
-            c2.metric("Min", stats["min"])
-            c3.metric("Max", stats["max"])
+            metrics = [
+                ("Average", stats["avg"]),
+                ("Min", stats["min"]),
+                ("Max", stats["max"]),
+            ]
+            self._metric_grid(metrics)
         history = self.stats.body_weight_history(start_str, end_str)
         if history:
             with st.expander("Weight History", expanded=True):
@@ -2444,11 +2465,13 @@ class GymApp:
                 )
         wellness = self.stats.wellness_summary(start_str, end_str)
         with st.expander("Wellness Summary", expanded=False):
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Calories", wellness["avg_calories"])
-            c2.metric("Sleep Hours", wellness["avg_sleep"])
-            c3.metric("Sleep Quality", wellness["avg_quality"])
-            c4.metric("Stress Level", wellness["avg_stress"])
+            metrics = [
+                ("Calories", wellness["avg_calories"]),
+                ("Sleep Hours", wellness["avg_sleep"]),
+                ("Sleep Quality", wellness["avg_quality"]),
+                ("Stress Level", wellness["avg_stress"]),
+            ]
+            self._metric_grid(metrics)
         well_hist = self.stats.wellness_history(start_str, end_str)
         if well_hist:
             with st.expander("Wellness History", expanded=False):
@@ -2493,11 +2516,13 @@ class GymApp:
             end_str = end.isoformat()
         with st.expander("Overall Summary", expanded=True):
             summary = self.stats.overview(start_str, end_str)
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Workouts", summary["workouts"])
-            c2.metric("Volume", summary["volume"])
-            c3.metric("Avg RPE", summary["avg_rpe"])
-            c4.metric("Exercises", summary["exercises"])
+            metrics = [
+                ("Workouts", summary["workouts"]),
+                ("Volume", summary["volume"]),
+                ("Avg RPE", summary["avg_rpe"]),
+                ("Exercises", summary["exercises"]),
+            ]
+            self._metric_grid(metrics)
         with st.expander("Top Exercises", expanded=True):
             data = self.stats.exercise_summary(None, start_str, end_str)
             data.sort(key=lambda x: x["volume"], reverse=True)
@@ -2591,8 +2616,11 @@ class GymApp:
                 st.table(loc_stats)
         with st.expander("Workout Consistency", expanded=False):
             consistency = self.stats.workout_consistency(start_str, end_str)
-            st.metric("Consistency", consistency["consistency"])
-            st.metric("Avg Gap (days)", consistency["average_gap"])
+            metrics = [
+                ("Consistency", consistency["consistency"]),
+                ("Avg Gap (days)", consistency["average_gap"]),
+            ]
+            self._metric_grid(metrics)
         with st.expander("Rating Analysis", expanded=False):
             rating_hist = self.stats.rating_history(start_str, end_str)
             if rating_hist:
@@ -2601,10 +2629,12 @@ class GymApp:
                     x=[r["date"] for r in rating_hist],
                 )
             stats = self.stats.rating_stats(start_str, end_str)
-            cols = st.columns(3)
-            cols[0].metric("Average", stats["avg"])
-            cols[1].metric("Min", stats["min"])
-            cols[2].metric("Max", stats["max"])
+            metrics = [
+                ("Average", stats["avg"]),
+                ("Min", stats["min"]),
+                ("Max", stats["max"]),
+            ]
+            self._metric_grid(metrics)
 
     def _risk_tab(self) -> None:
         st.header("Risk & Readiness")
@@ -2634,9 +2664,12 @@ class GymApp:
         injury = self.stats.injury_risk(start_str, end_str)
         ready = self.stats.readiness(start_str, end_str)
         with st.expander("Summary", expanded=True):
-            st.metric("Adaptation", summary["adaptation"])
-            st.metric("Overtraining Risk", overtrain["risk"])
-            st.metric("Injury Risk", injury["injury_risk"])
+            metrics = [
+                ("Adaptation", summary["adaptation"]),
+                ("Overtraining Risk", overtrain["risk"]),
+                ("Injury Risk", injury["injury_risk"]),
+            ]
+            self._metric_grid(metrics)
         if ready:
             with st.expander("Readiness Trend", expanded=False):
                 st.line_chart(
@@ -2645,12 +2678,14 @@ class GymApp:
                 )
         if ex_choice:
             momentum = self.stats.performance_momentum(ex_choice, start_str, end_str)
-            st.metric("Momentum", momentum["momentum"])
+            self._metric_grid([("Momentum", momentum["momentum"] )])
 
     def _gamification_tab(self) -> None:
         st.header("Gamification Stats")
         with st.expander("Summary", expanded=True):
-            st.metric("Total Points", self.gamification.total_points())
+            self._metric_grid([
+                ("Total Points", self.gamification.total_points())
+            ])
         with st.expander("Points by Workout", expanded=True):
             data = self.gamification.points_by_workout()
             if data:
@@ -3002,7 +3037,9 @@ class GymApp:
                     "Enable Gamification",
                     value=self.gamification.is_enabled(),
                 )
-                st.metric("Total Points", self.gamification.total_points())
+                self._metric_grid(
+                    [("Total Points", self.gamification.total_points())]
+                )
             with st.expander("Machine Learning", expanded=True):
                 ml_global = st.checkbox(
                     "Enable ML Models",
