@@ -152,7 +152,7 @@ class GymApp:
         layout = "centered" if mode == "mobile" else "wide"
         st.set_page_config(page_title="Workout Logger", layout=layout)
         st.markdown(
-            "<meta name='viewport' content='width=device-width, height=device-height, initial-scale=1'>",
+            "<meta name='viewport' content='width=device-width, height=device-height, initial-scale=1, shrink-to-fit=no'>",
             unsafe_allow_html=True,
         )
         st.session_state.layout_set = True
@@ -187,6 +187,9 @@ class GymApp:
                 padding: 0;
                 box-sizing: border-box;
                 scroll-behavior: smooth;
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
             }
             @media screen and (max-width: 768px) {
                 div[data-testid="column"] {
@@ -327,6 +330,11 @@ class GymApp:
                     font-size: 0.8rem;
                 }
             }
+            @media screen and (max-width: 414px) and (orientation: landscape) {
+                nav.bottom-nav button {
+                    flex: 1 0 33%;
+                }
+            }
             @media screen and (max-width: 768px) {
                 body {
                     padding-bottom: 3rem;
@@ -353,6 +361,7 @@ class GymApp:
                     align-items: center;
                     white-space: pre-line;
                     font-size: 0.85rem;
+                    touch-action: manipulation;
                 }
                 nav.bottom-nav .icon {
                     font-size: 1.25rem;
@@ -386,6 +395,7 @@ class GymApp:
                     padding: 0.25rem;
                     flex-direction: row;
                     gap: 0.25rem;
+                    touch-action: manipulation;
                 }
                 nav.bottom-nav .label {
                     font-size: 0.7rem;
@@ -445,6 +455,9 @@ class GymApp:
             }
             button[aria-selected="true"] {
                 border-bottom: 2px solid #ff4b4b;
+            }
+            nav.bottom-nav button:focus, nav.top-nav button:focus {
+                outline: 2px solid #ff4b4b;
             }
             </style>
             """,
@@ -511,9 +524,10 @@ class GymApp:
         }
         mode = "mobile" if st.session_state.is_mobile else "desktop"
         html = (
-            f'<nav class="{container_class}" role="navigation" aria-label="Main Navigation">'
+            f'<nav class="{container_class}" role="tablist" aria-label="Main Navigation">'
             + "".join(
-                f'<button aria-selected="{str(st.session_state.get("main_tab", 0) == idx).lower()}" '
+                f'<button role="tab" title="{label.title()}" '
+                f'aria-selected="{str(st.session_state.get("main_tab", 0) == idx).lower()}" '
                 f'onclick="const p=new URLSearchParams(window.location.search);'
                 f'p.set(\'mode\',\'{mode}\');p.set(\'tab\',\'{label}\');'
                 f'window.location.search=p.toString();"><span class="icon">{icons[label]}</span>'
