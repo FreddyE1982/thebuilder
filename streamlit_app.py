@@ -346,6 +346,13 @@ class GymApp:
                     white-space: pre-line;
                     font-size: 0.85rem;
                 }
+                .bottom-nav .icon {
+                    font-size: 1.25rem;
+                    line-height: 1;
+                }
+                .bottom-nav .label {
+                    font-size: 0.75rem;
+                }
             }
             @media screen and (max-width: 360px) {
                 .bottom-nav {
@@ -382,10 +389,21 @@ class GymApp:
                 flex-direction: column;
                 align-items: center;
                 white-space: pre-line;
+                font-size: 0.9rem;
+            }
+            .top-nav .icon {
+                font-size: 1.1rem;
+                line-height: 1;
+            }
+            .top-nav .label {
+                font-size: 0.9rem;
             }
             @media screen and (min-width: 769px) {
                 .top-nav button {
                     font-size: 1rem;
+                }
+                .top-nav .icon {
+                    font-size: 1.25rem;
                 }
             }
             .bottom-nav button,
@@ -467,7 +485,8 @@ class GymApp:
                 f'<button aria-selected="{str(st.session_state.get("main_tab", 0) == idx).lower()}" '
                 f'onclick="const p=new URLSearchParams(window.location.search);'
                 f'p.set(\'mode\',\'{mode}\');p.set(\'tab\',\'{label}\');'
-                f'window.location.search=p.toString();">{icons[label]}<br>{label.title()}</button>'
+                f'window.location.search=p.toString();"><span class="icon">{icons[label]}</span>'
+                f'<span class="label">{label.title()}</span></button>'
                 for idx, label in enumerate(labels)
             ) +
             "</div>"
@@ -547,31 +566,68 @@ class GymApp:
                 cols[idx % col_num].metric(label, val)
         daily = self.stats.daily_volume(start.isoformat(), end.isoformat())
         with st.expander("Charts", expanded=True):
-            st.subheader("Daily Volume")
-            if daily:
-                st.line_chart(
-                    {"Volume": [d["volume"] for d in daily]},
-                    x=[d["date"] for d in daily],
-                )
-            duration = self.stats.session_duration(start.isoformat(), end.isoformat())
-            st.subheader("Session Duration")
-            if duration:
-                st.line_chart(
-                    {"Duration": [d["duration"] for d in duration]},
-                    x=[d["date"] for d in duration],
-                )
-            exercises = [""] + self.exercise_names_repo.fetch_all()
-            ex_choice = st.selectbox("Exercise Progression", exercises, key="dash_ex")
-            if ex_choice:
-                prog = self.stats.progression(
-                    ex_choice, start.isoformat(), end.isoformat()
-                )
-                st.subheader("1RM Progression")
-                if prog:
+            if st.session_state.is_mobile:
+                st.subheader("Daily Volume")
+                if daily:
                     st.line_chart(
-                        {"1RM": [p["est_1rm"] for p in prog]},
-                        x=[p["date"] for p in prog],
+                        {"Volume": [d["volume"] for d in daily]},
+                        x=[d["date"] for d in daily],
                     )
+                duration = self.stats.session_duration(start.isoformat(), end.isoformat())
+                st.subheader("Session Duration")
+                if duration:
+                    st.line_chart(
+                        {"Duration": [d["duration"] for d in duration]},
+                        x=[d["date"] for d in duration],
+                    )
+                exercises = [""] + self.exercise_names_repo.fetch_all()
+                ex_choice = st.selectbox("Exercise Progression", exercises, key="dash_ex")
+                if ex_choice:
+                    prog = self.stats.progression(
+                        ex_choice, start.isoformat(), end.isoformat()
+                    )
+                    st.subheader("1RM Progression")
+                    if prog:
+                        st.line_chart(
+                            {"1RM": [p["est_1rm"] for p in prog]},
+                            x=[p["date"] for p in prog],
+                        )
+            else:
+                left, right = st.columns(2)
+                with left:
+                    st.subheader("Daily Volume")
+                    if daily:
+                        st.line_chart(
+                            {"Volume": [d["volume"] for d in daily]},
+                            x=[d["date"] for d in daily],
+                        )
+                    exercises = [""] + self.exercise_names_repo.fetch_all()
+                    ex_choice = st.selectbox("Exercise Progression", exercises, key="dash_ex")
+                    if ex_choice:
+                        prog = self.stats.progression(
+                            ex_choice, start.isoformat(), end.isoformat()
+                        )
+                        st.subheader("1RM Progression")
+                        if prog:
+                            st.line_chart(
+                                {"1RM": [p["est_1rm"] for p in prog]},
+                                x=[p["date"] for p in prog],
+                            )
+                with right:
+                    duration = self.stats.session_duration(start.isoformat(), end.isoformat())
+                    st.subheader("Session Duration")
+                    if duration:
+                        st.line_chart(
+                            {"Duration": [d["duration"] for d in duration]},
+                            x=[d["date"] for d in duration],
+                        )
+                    eq_stats = self.stats.equipment_usage(start.isoformat(), end.isoformat())
+                    if eq_stats:
+                        st.subheader("Equipment Usage")
+                        st.bar_chart(
+                            {"Sets": [e["sets"] for e in eq_stats]},
+                            x=[e["equipment"] for e in eq_stats],
+                        )
             records = self.stats.personal_records(
                 ex_choice if ex_choice else None,
                 start.isoformat(),
@@ -580,20 +636,14 @@ class GymApp:
             if records:
                 with st.expander("Personal Records", expanded=False):
                     st.table(records[:5])
-            eq_stats = self.stats.equipment_usage(start.isoformat(), end.isoformat())
-            if eq_stats:
-                st.subheader("Equipment Usage")
-                st.bar_chart(
-                    {"Sets": [e["sets"] for e in eq_stats]},
-                    x=[e["equipment"] for e in eq_stats],
+            if not st.session_state.is_mobile:
+                top_ex = self.stats.exercise_summary(
+                    None, start.isoformat(), end.isoformat()
                 )
-            top_ex = self.stats.exercise_summary(
-                None, start.isoformat(), end.isoformat()
-            )
-            top_ex.sort(key=lambda x: x["volume"], reverse=True)
-            if top_ex:
-                with st.expander("Top Exercises", expanded=False):
-                    st.table(top_ex[:5])
+                top_ex.sort(key=lambda x: x["volume"], reverse=True)
+                if top_ex:
+                    with st.expander("Top Exercises", expanded=False):
+                        st.table(top_ex[:5])
 
     def run(self) -> None:
         params = st.experimental_get_query_params()
