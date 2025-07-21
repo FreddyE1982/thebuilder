@@ -203,6 +203,7 @@ class GymApp:
                 padding: 0;
                 box-sizing: border-box;
                 scroll-behavior: smooth;
+                scroll-padding-top: var(--header-height, 0);
                 min-height: calc(var(--vh, 1vh) * 100);
                 display: flex;
                 flex-direction: column;
@@ -216,6 +217,11 @@ class GymApp:
             }
             .section-wrapper {
                 margin-bottom: 1.5rem;
+            }
+            .title-section {
+                display: flex;
+                justify-content: center;
+                margin: 0.5rem 0;
             }
             @media screen and (max-width: 768px) {
                 .content-wrapper {
@@ -460,6 +466,7 @@ class GymApp:
                     padding: 0.25rem;
                 }
                 nav.bottom-nav {
+                    grid-template-columns: repeat(4, 1fr);
                     padding: 0.1rem 0.25rem env(safe-area-inset-bottom);
                     gap: 0.1rem;
                     justify-content: space-between;
@@ -712,11 +719,11 @@ class GymApp:
 
     def _open_content(self) -> None:
         """Begin main content container."""
-        st.markdown("<div class='content-wrapper'>", unsafe_allow_html=True)
+        st.markdown("<main class='content-wrapper'>", unsafe_allow_html=True)
 
     def _close_content(self) -> None:
         """End main content container."""
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("</main>", unsafe_allow_html=True)
 
     def _help_dialog(self) -> None:
         with st.dialog("Help"):
@@ -883,7 +890,9 @@ class GymApp:
         }
         if tab_param in tab_map:
             st.session_state["main_tab"] = tab_map[tab_param]
+        st.markdown("<div class='title-section'>", unsafe_allow_html=True)
         st.title("Workout Logger")
+        st.markdown("</div>", unsafe_allow_html=True)
         self._top_nav()
         self._create_sidebar()
         self._open_content()
