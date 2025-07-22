@@ -4,6 +4,7 @@ import sqlite3
 import unittest
 import warnings
 from altair.utils.deprecation import AltairDeprecationWarning
+import yaml
 
 warnings.simplefilter("ignore", AltairDeprecationWarning)
 
@@ -175,6 +176,15 @@ class StreamlitAppTest(unittest.TestCase):
         cur.execute("SELECT name FROM tags;")
         self.assertEqual(cur.fetchone()[0], "morning")
         conn.close()
+
+    def test_toggle_theme_button(self) -> None:
+        for btn in self.at.button:
+            if btn.label == "Toggle Theme":
+                btn.click().run()
+                break
+        with open(self.yaml_path, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+        self.assertEqual(data["theme"], "dark")
 
 
 if __name__ == "__main__":
