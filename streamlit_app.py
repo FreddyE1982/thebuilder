@@ -545,6 +545,14 @@ class GymApp:
                     font-size: 0.8rem;
                 }
             }
+            @media screen and (max-width: 375px) and (orientation: portrait) {
+                nav.bottom-nav button {
+                    font-size: 0.65rem;
+                }
+                nav.bottom-nav .icon {
+                    font-size: 1.1rem;
+                }
+            }
             @media screen and (max-width: 600px) and (orientation: landscape) {
                 nav.bottom-nav button {
                     font-size: 0.7rem;
@@ -630,6 +638,11 @@ class GymApp:
             }
             nav.top-nav .label {
                 font-size: 0.9rem;
+            }
+            @media screen and (max-width: 375px) {
+                nav.top-nav .label {
+                    font-size: 0.75rem;
+                }
             }
             @media screen and (min-width: 769px) {
                 nav.top-nav button {
