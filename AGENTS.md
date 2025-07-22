@@ -16,6 +16,7 @@ The agent is to always follow there rules:
 10. ALL functionality that is available via the streamlit interface must also be available via REST endpoints. The REST endpoints need to be used for testing because the streamlit interface can not be tested directly.
 11. Fix ALL warnings that occur during any tests by correcting app code
 12. if the user asks the agent to roll back the last merged PR then the agent is allowed to do so...even if the rollback violates ANY rules.
+13. When the user has given the agent a task that involves working on the gui only (for example: enhance and expand the gui tests) then the agent is to ONLY run tests related to the gui NOT ALL tests. In this case the rule that says to always run all tests is temporarily not in effect.
 
 ## Muscle linking
 
