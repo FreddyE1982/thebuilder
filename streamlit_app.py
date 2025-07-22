@@ -610,6 +610,12 @@ class GymApp:
                 user-select: none;
                 touch-action: manipulation;
             }
+            nav.bottom-nav {
+                scroll-snap-type: x mandatory;
+            }
+            nav.bottom-nav button {
+                scroll-snap-align: start;
+            }
             button[aria-selected="true"] {
                 border-bottom: 2px solid #ff4b4b;
                 background: #f0f0f0;
@@ -625,6 +631,7 @@ class GymApp:
                 width: 100%;
                 overflow-x: auto;
                 padding: 0.25rem;
+                scroll-snap-type: x mandatory;
             }
             .form-grid {
                 display: grid;
