@@ -40,7 +40,7 @@ The agent is to always follow there rules:
 6. group things where it makes sense logically together using expandables. you are allowed to create expendables inside expandables if it makes sense logically
 7. If the agent is asked by the user to "refurbish", "refresh", "rework", "redo", or "redesign" the GUI then the agent ensures that ALL above rules (1. - 6.) about the streamlit gui are strictly adhered to but 
    those rules ALSO apply WHENEVER the agent works on the application in any way.
-8. The agent is to unittest the streamlit gui. How this can be done is explained here: https://medium.com/@shingurding/automated-testing-for-streamlit-apps-with-pytest-a0dd6e56c86d
+8. The agent is to unittest the streamlit gui. How this can be done is explained in the file "streamlittestinghowto.md" found in the repo.
 
 
 ## longterm usage test
