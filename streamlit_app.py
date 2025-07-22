@@ -171,7 +171,8 @@ class GymApp:
                 }
             }
             function setVh() {
-                document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
+                const vh = (window.visualViewport ? window.visualViewport.height : window.innerHeight) * 0.01;
+                document.documentElement.style.setProperty('--vh', `${vh}px`);
             }
             function setSafeArea() {
                 document.documentElement.style.setProperty('--safe-bottom', 'env(safe-area-inset-bottom)');
@@ -555,6 +556,12 @@ class GymApp:
                 nav.bottom-nav .label {
                     font-size: 0.7rem;
                 }
+                nav.bottom-nav {
+                    height: 2.25rem;
+                }
+                nav.bottom-nav .icon {
+                    font-size: 1rem;
+                }
             }
             nav.top-nav {
                 position: sticky;
@@ -632,6 +639,10 @@ class GymApp:
                 overflow-x: auto;
                 padding: 0.25rem;
                 scroll-snap-type: x mandatory;
+                scrollbar-width: none;
+            }
+            .metric-grid::-webkit-scrollbar {
+                display: none;
             }
             .form-grid {
                 display: grid;
