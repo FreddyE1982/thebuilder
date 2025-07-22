@@ -177,6 +177,96 @@ class StreamlitAppTest(unittest.TestCase):
         self.assertEqual(cur.fetchone()[0], "morning")
         conn.close()
 
+    def test_muscle_alias_and_link(self) -> None:
+        self.at.query_params["tab"] = "settings"
+        self.at.run()
+        mus_tab = self.at.tabs[10]
+        mus_tab.selectbox[0].select("Biceps Brachii").run()
+        mus_tab.selectbox[1].select("Brachialis").run()
+        mus_tab.button[0].click().run()
+        self.at.run()
+        conn = self._connect()
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT canonical_name FROM muscles WHERE name = ?;",
+            ("Brachialis",),
+        )
+        self.assertEqual(cur.fetchone()[0], "Biceps Brachii")
+        mus_tab = self.at.tabs[10]
+        mus_tab.text_input[0].input("Lats").run()
+        mus_tab.selectbox[2].select("Latissimus Dorsi").run()
+        mus_tab.button[1].click().run()
+        self.at.run()
+        cur.execute(
+            "SELECT canonical_name FROM muscles WHERE name = ?;",
+            ("Lats",),
+        )
+        self.assertEqual(cur.fetchone()[0], "Latissimus Dorsi")
+        conn.close()
+
+    def test_equipment_add_update_delete(self) -> None:
+        self.at.query_params["tab"] = "settings"
+        self.at.run()
+        eq_tab = self.at.tabs[9]
+        eq_tab.selectbox[0].select("Free Weights").run()
+        eq_tab.text_input[0].input("TestEq").run()
+        eq_tab.multiselect[0].select("Biceps Brachii").run()
+        eq_tab.button[0].click().run()
+        self.at.run()
+        eq_tab = self.at.tabs[9]
+        target = None
+        for exp in eq_tab.expander:
+            if exp.label == "TestEq":
+                target = exp
+                break
+        self.assertIsNotNone(target)
+        target.text_input[0].input("TestEq2").run()
+        target.text_input[1].input("Free Weights").run()
+        target.multiselect[0].select("Brachialis").run()
+        target.button[0].click().run()
+        self.at.run()
+        eq_tab = self.at.tabs[9]
+        found = None
+        for exp in eq_tab.expander:
+            if exp.label == "TestEq2":
+                exp.button[1].click().run()
+                found = exp
+                break
+        self.assertIsNotNone(found)
+        self.at.run()
+        conn = self._connect()
+        cur = conn.cursor()
+        cur.execute("SELECT name FROM equipment WHERE name = ?;", ("TestEq2",))
+        self.assertIsNone(cur.fetchone())
+        conn.close()
+
+    def test_exercise_alias_linking(self) -> None:
+        self.at.query_params["tab"] = "settings"
+        self.at.run()
+        ex_tab = self.at.tabs[11]
+        ex_tab.selectbox[0].select("Barbell Bench Press").run()
+        ex_tab.selectbox[1].select("Dumbbell Bench Press").run()
+        ex_tab.button[0].click().run()
+        self.at.run()
+        conn = self._connect()
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT canonical_name FROM exercise_names WHERE name = ?;",
+            ("Dumbbell Bench Press",),
+        )
+        self.assertEqual(cur.fetchone()[0], "Barbell Bench Press")
+        ex_tab = self.at.tabs[11]
+        ex_tab.text_input[0].input("DB Press").run()
+        ex_tab.selectbox[2].select("Barbell Bench Press").run()
+        ex_tab.button[1].click().run()
+        self.at.run()
+        cur.execute(
+            "SELECT canonical_name FROM exercise_names WHERE name = ?;",
+            ("DB Press",),
+        )
+        self.assertEqual(cur.fetchone()[0], "Barbell Bench Press")
+        conn.close()
+
     def test_toggle_theme_button(self) -> None:
         for btn in self.at.button:
             if btn.label == "Toggle Theme":
