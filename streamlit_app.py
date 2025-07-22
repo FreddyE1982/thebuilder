@@ -59,11 +59,10 @@ class GymApp:
             ) -> Generator[None, None, None]:
                 yield
 
-            if hasattr(alt, "theme"):
-                alt.theme.enable = _noop_theme
-                setattr(alt, "themes", alt.theme)
-            else:
+            if hasattr(alt, "themes") and hasattr(alt.themes, "enable"):
                 alt.themes.enable = _noop_theme
+            elif hasattr(alt, "theme") and hasattr(alt.theme, "enable"):
+                alt.theme.enable = _noop_theme
         self.settings_repo = SettingsRepository(db_path, yaml_path)
         self.theme = self.settings_repo.get_text("theme", "light")
         self._configure_page()
@@ -751,6 +750,22 @@ class GymApp:
                 }
                 .form-grid {
                     grid-template-columns: repeat(4, 1fr);
+                }
+            }
+            @media screen and (min-width: 2100px) {
+                .metric-grid {
+                    grid-template-columns: repeat(7, 1fr);
+                }
+                .form-grid {
+                    grid-template-columns: repeat(5, 1fr);
+                }
+            }
+            @media screen and (min-width: 2400px) {
+                .metric-grid {
+                    grid-template-columns: repeat(8, 1fr);
+                }
+                .form-grid {
+                    grid-template-columns: repeat(6, 1fr);
                 }
             }
             button {
