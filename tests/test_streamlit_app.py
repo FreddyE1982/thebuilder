@@ -308,14 +308,17 @@ class StreamlitFullGUITest(unittest.TestCase):
     def test_calendar_tab(self) -> None:
         tab = self._get_tab("Calendar")
         self.assertEqual(tab.header[0].value, "Calendar")
+        self.assertGreater(len(tab.expander), 0)
 
     def test_history_tab(self) -> None:
         tab = self._get_tab("History")
         self.assertEqual(tab.header[0].value, "Workout History")
+        self.assertGreater(len(tab.expander), 1)
 
     def test_dashboard_tab(self) -> None:
         tab = self._get_tab("Dashboard")
         self.assertEqual(tab.header[0].value, "Dashboard")
+        self.assertGreaterEqual(len(tab.metric), 6)
 
     def test_stats_tab_subtabs(self) -> None:
         tab = self._get_tab("Exercise Stats")
@@ -323,34 +326,42 @@ class StreamlitFullGUITest(unittest.TestCase):
         labels = [t.label for t in tab.tabs]
         for name in ["Overview", "Distributions", "Progress", "Records", "Stress Balance"]:
             self.assertIn(name, labels)
+        self.assertGreater(len(tab.tabs[0].table), 0)
 
     def test_insights_tab(self) -> None:
         tab = self._get_tab("Insights")
         self.assertEqual(tab.header[0].value, "Insights")
+        self.assertGreater(len(tab.expander), 0)
 
     def test_weight_tab(self) -> None:
         tab = self._get_tab("Body Weight")
         self.assertEqual(tab.header[0].value, "Body Weight")
+        self.assertGreater(len(tab.metric), 3)
 
     def test_reports_tab(self) -> None:
         tab = self._get_tab("Reports")
         self.assertEqual(tab.header[0].value, "Reports")
+        self.assertGreater(len(tab.metric), 4)
 
     def test_risk_tab(self) -> None:
         tab = self._get_tab("Risk")
         self.assertEqual(tab.header[0].value, "Risk & Readiness")
+        self.assertGreater(len(tab.metric), 2)
 
     def test_gamification_tab(self) -> None:
         tab = self._get_tab("Gamification")
         self.assertEqual(tab.header[0].value, "Gamification Stats")
+        self.assertGreater(len(tab.metric), 0)
 
     def test_tests_tab(self) -> None:
         tab = self._get_tab("Tests")
         self.assertEqual(tab.header[0].value, "Pyramid Test")
+        self.assertGreater(len(tab.expander), 1)
 
     def test_goals_tab(self) -> None:
         tab = self._get_tab("Goals")
         self.assertEqual(tab.header[0].value, "Goals")
+        self.assertGreater(len(tab.expander), 1)
 
     def test_main_tabs_present(self) -> None:
         labels = [t.label for t in self.at.tabs]
