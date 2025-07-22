@@ -67,6 +67,23 @@ class StreamlitAppTest(unittest.TestCase):
         self.assertIsNotNone(end_time)
         conn.close()
 
+    def test_plan_to_workout(self) -> None:
+        self.at.date_input[0].set_value("2024-01-02").run()
+        self.at.selectbox[0].select("strength").run()
+        self.at.button[4].click().run()
+        self.at.run()
+        self.at.selectbox[0].select("1").run()
+        self.at.button[1].click().run()
+
+        conn = self._connect()
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM planned_workouts;")
+        self.assertEqual(cur.fetchone()[0], 1)
+        cur.execute("SELECT date, training_type FROM workouts;")
+        row = cur.fetchone()
+        self.assertEqual(row, ("2024-01-02", "strength"))
+        conn.close()
+
 
 if __name__ == "__main__":
     unittest.main()
