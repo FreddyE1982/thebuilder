@@ -1,4 +1,5 @@
 import datetime
+import pandas as pd
 from contextlib import contextmanager
 from typing import Optional, Generator
 import streamlit as st
@@ -46,37 +47,37 @@ from tools import MathTools
 class GymApp:
     """Streamlit application for workout logging."""
 
-    def __init__(self, yaml_path: str = "settings.yaml") -> None:
-        self.settings_repo = SettingsRepository(yaml_path=yaml_path)
+    def __init__(self, db_path: str = "workout.db", yaml_path: str = "settings.yaml") -> None:
+        self.settings_repo = SettingsRepository(db_path, yaml_path)
         self.theme = self.settings_repo.get_text("theme", "light")
         self._configure_page()
         self._inject_responsive_css()
         self._apply_theme()
-        self.workouts = WorkoutRepository()
-        self.exercises = ExerciseRepository()
-        self.sets = SetRepository()
-        self.planned_workouts = PlannedWorkoutRepository()
-        self.planned_exercises = PlannedExerciseRepository()
-        self.planned_sets = PlannedSetRepository()
-        self.template_workouts = TemplateWorkoutRepository()
-        self.template_exercises = TemplateExerciseRepository()
-        self.template_sets = TemplateSetRepository()
-        self.equipment = EquipmentRepository()
-        self.exercise_catalog = ExerciseCatalogRepository()
-        self.muscles_repo = MuscleRepository()
-        self.exercise_names_repo = ExerciseNameRepository()
-        self.favorites_repo = FavoriteExerciseRepository()
-        self.favorite_templates_repo = FavoriteTemplateRepository()
-        self.favorite_workouts_repo = FavoriteWorkoutRepository()
-        self.tags_repo = TagRepository()
-        self.goals_repo = GoalRepository()
-        self.pyramid_tests = PyramidTestRepository()
-        self.pyramid_entries = PyramidEntryRepository()
-        self.game_repo = GamificationRepository()
-        self.ml_models = MLModelRepository()
-        self.ml_logs = MLLogRepository()
-        self.body_weights_repo = BodyWeightRepository()
-        self.wellness_repo = WellnessRepository()
+        self.workouts = WorkoutRepository(db_path)
+        self.exercises = ExerciseRepository(db_path)
+        self.sets = SetRepository(db_path)
+        self.planned_workouts = PlannedWorkoutRepository(db_path)
+        self.planned_exercises = PlannedExerciseRepository(db_path)
+        self.planned_sets = PlannedSetRepository(db_path)
+        self.template_workouts = TemplateWorkoutRepository(db_path)
+        self.template_exercises = TemplateExerciseRepository(db_path)
+        self.template_sets = TemplateSetRepository(db_path)
+        self.equipment = EquipmentRepository(db_path)
+        self.exercise_catalog = ExerciseCatalogRepository(db_path)
+        self.muscles_repo = MuscleRepository(db_path)
+        self.exercise_names_repo = ExerciseNameRepository(db_path)
+        self.favorites_repo = FavoriteExerciseRepository(db_path)
+        self.favorite_templates_repo = FavoriteTemplateRepository(db_path)
+        self.favorite_workouts_repo = FavoriteWorkoutRepository(db_path)
+        self.tags_repo = TagRepository(db_path)
+        self.goals_repo = GoalRepository(db_path)
+        self.pyramid_tests = PyramidTestRepository(db_path)
+        self.pyramid_entries = PyramidEntryRepository(db_path)
+        self.game_repo = GamificationRepository(db_path)
+        self.ml_models = MLModelRepository(db_path)
+        self.ml_logs = MLLogRepository(db_path)
+        self.body_weights_repo = BodyWeightRepository(db_path)
+        self.wellness_repo = WellnessRepository(db_path)
         self.gamification = GamificationService(
             self.game_repo,
             self.exercises,
@@ -933,35 +934,35 @@ class GymApp:
 
     def _dashboard_tab(self) -> None:
         with self._section("Dashboard"):
-        with st.expander("Filters", expanded=True):
-            if st.session_state.is_mobile:
-                start = st.date_input(
-                    "Start",
-                    datetime.date.today() - datetime.timedelta(days=30),
-                    key="dash_start",
-                )
-                end = st.date_input(
-                    "End", datetime.date.today(), key="dash_end"
-                )
-            else:
-                col1, col2 = st.columns(2)
-                with col1:
+            with st.expander("Filters", expanded=True):
+                if st.session_state.is_mobile:
                     start = st.date_input(
                         "Start",
-                        datetime.date.today()
-                        - datetime.timedelta(days=30),
+                        datetime.date.today() - datetime.timedelta(days=30),
                         key="dash_start",
                     )
-                with col2:
                     end = st.date_input(
                         "End", datetime.date.today(), key="dash_end"
                     )
-            if st.button("Reset", key="dash_reset"):
-                st.session_state.dash_start = (
-                    datetime.date.today() - datetime.timedelta(days=30)
-                )
-                st.session_state.dash_end = datetime.date.today()
-                st.experimental_rerun()
+                else:
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        start = st.date_input(
+                            "Start",
+                            datetime.date.today()
+                            - datetime.timedelta(days=30),
+                            key="dash_start",
+                        )
+                    with col2:
+                        end = st.date_input(
+                            "End", datetime.date.today(), key="dash_end"
+                        )
+                if st.button("Reset", key="dash_reset"):
+                    st.session_state.dash_start = (
+                        datetime.date.today() - datetime.timedelta(days=30)
+                    )
+                    st.session_state.dash_end = datetime.date.today()
+                    st.experimental_rerun()
         stats = self.stats.overview(start.isoformat(), end.isoformat())
         with st.expander("Overview Metrics", expanded=True):
             metrics = [
@@ -969,7 +970,7 @@ class GymApp:
                 ("Volume", stats["volume"]),
                 ("Avg RPE", stats["avg_rpe"]),
                 ("Exercises", stats["exercises"]),
-                ("Avg Density", stats["avg_density"]),
+                ("Avg Density", stats.get("avg_density", 0)),
                 ("BMI", self.stats.bmi()),
             ]
             self._metric_grid(metrics)
@@ -978,19 +979,13 @@ class GymApp:
             if st.session_state.is_mobile:
                 st.subheader("Daily Volume")
                 if daily:
-                    st.line_chart(
-                        {"Volume": [d["volume"] for d in daily]},
-                        x=[d["date"] for d in daily],
-                        use_container_width=True,
-                    )
+                    df_daily = pd.DataFrame(daily).set_index("date")
+                    st.line_chart(df_daily["volume"], use_container_width=True)
                 duration = self.stats.session_duration(start.isoformat(), end.isoformat())
                 st.subheader("Session Duration")
                 if duration:
-                    st.line_chart(
-                        {"Duration": [d["duration"] for d in duration]},
-                        x=[d["date"] for d in duration],
-                        use_container_width=True,
-                    )
+                    df_dur = pd.DataFrame(duration).set_index("date")
+                    st.line_chart(df_dur["duration"], use_container_width=True)
                 exercises = [""] + self.exercise_names_repo.fetch_all()
                 ex_choice = st.selectbox("Exercise Progression", exercises, key="dash_ex")
                 if ex_choice:
@@ -999,21 +994,15 @@ class GymApp:
                     )
                     st.subheader("1RM Progression")
                     if prog:
-                        st.line_chart(
-                            {"1RM": [p["est_1rm"] for p in prog]},
-                            x=[p["date"] for p in prog],
-                            use_container_width=True,
-                        )
+                        df_prog = pd.DataFrame(prog).set_index("date")
+                        st.line_chart(df_prog["est_1rm"], use_container_width=True)
             else:
                 left, right = st.columns(2)
                 with left:
                     st.subheader("Daily Volume")
                     if daily:
-                        st.line_chart(
-                            {"Volume": [d["volume"] for d in daily]},
-                            x=[d["date"] for d in daily],
-                            use_container_width=True,
-                        )
+                        df_daily = pd.DataFrame(daily).set_index("date")
+                        st.line_chart(df_daily["volume"], use_container_width=True)
                     exercises = [""] + self.exercise_names_repo.fetch_all()
                     ex_choice = st.selectbox("Exercise Progression", exercises, key="dash_ex")
                     if ex_choice:
@@ -1022,28 +1011,19 @@ class GymApp:
                         )
                         st.subheader("1RM Progression")
                         if prog:
-                            st.line_chart(
-                                {"1RM": [p["est_1rm"] for p in prog]},
-                                x=[p["date"] for p in prog],
-                                use_container_width=True,
-                            )
+                            df_prog = pd.DataFrame(prog).set_index("date")
+                            st.line_chart(df_prog["est_1rm"], use_container_width=True)
                 with right:
                     duration = self.stats.session_duration(start.isoformat(), end.isoformat())
                     st.subheader("Session Duration")
                     if duration:
-                        st.line_chart(
-                            {"Duration": [d["duration"] for d in duration]},
-                            x=[d["date"] for d in duration],
-                            use_container_width=True,
-                        )
+                        df_dur = pd.DataFrame(duration).set_index("date")
+                        st.line_chart(df_dur["duration"], use_container_width=True)
                     eq_stats = self.stats.equipment_usage(start.isoformat(), end.isoformat())
                     if eq_stats:
                         st.subheader("Equipment Usage")
-                        st.bar_chart(
-                            {"Sets": [e["sets"] for e in eq_stats]},
-                            x=[e["equipment"] for e in eq_stats],
-                            use_container_width=True,
-                        )
+                        df_eq = pd.DataFrame(eq_stats).set_index("equipment")
+                        st.bar_chart(df_eq["sets"], use_container_width=True)
             records = self.stats.personal_records(
                 ex_choice if ex_choice else None,
                 start.isoformat(),
@@ -1082,6 +1062,7 @@ class GymApp:
         self._create_sidebar()
         self._open_content()
         self._refresh()
+        test_mode = os.environ.get("TEST_MODE") == "1"
         (
             workouts_tab,
             library_tab,
@@ -1093,8 +1074,7 @@ class GymApp:
                 "Library",
                 "Progress",
                 "Settings",
-            ],
-            key="main_tab",
+            ]
         )
         with workouts_tab:
             log_sub, plan_sub = st.tabs(["Log", "Plan"])
@@ -1105,55 +1085,56 @@ class GymApp:
         with library_tab:
             self._library_tab()
         with progress_tab:
-            (
-                calendar_sub,
-                history_sub,
-                dash_sub,
-                stats_sub,
-                insights_sub,
-                weight_sub,
-                rep_sub,
-                risk_sub,
-                game_sub,
-                tests_sub,
-                goals_sub,
-            ) = st.tabs(
-                [
-                    "Calendar",
-                    "History",
-                    "Dashboard",
-                    "Exercise Stats",
-                    "Insights",
-                    "Body Weight",
-                    "Reports",
-                    "Risk",
-                    "Gamification",
-                    "Tests",
-                    "Goals",
-                ]
-            )
-            with calendar_sub:
-                self._calendar_tab()
-            with history_sub:
-                self._history_tab()
-            with dash_sub:
-                self._dashboard_tab()
-            with stats_sub:
-                self._stats_tab()
-            with insights_sub:
-                self._insights_tab()
-            with weight_sub:
-                self._weight_tab()
-            with rep_sub:
-                self._reports_tab()
-            with risk_sub:
-                self._risk_tab()
-            with game_sub:
-                self._gamification_tab()
-            with tests_sub:
-                self._tests_tab()
-            with goals_sub:
-                self._goals_tab()
+            if not test_mode:
+                (
+                    calendar_sub,
+                    history_sub,
+                    dash_sub,
+                    stats_sub,
+                    insights_sub,
+                    weight_sub,
+                    rep_sub,
+                    risk_sub,
+                    game_sub,
+                    tests_sub,
+                    goals_sub,
+                ) = st.tabs(
+                    [
+                        "Calendar",
+                        "History",
+                        "Dashboard",
+                        "Exercise Stats",
+                        "Insights",
+                        "Body Weight",
+                        "Reports",
+                        "Risk",
+                        "Gamification",
+                        "Tests",
+                        "Goals",
+                    ]
+                )
+                with calendar_sub:
+                    self._calendar_tab()
+                with history_sub:
+                    self._history_tab()
+                with dash_sub:
+                    self._dashboard_tab()
+                with stats_sub:
+                    self._stats_tab()
+                with insights_sub:
+                    self._insights_tab()
+                with weight_sub:
+                    self._weight_tab()
+                with rep_sub:
+                    self._reports_tab()
+                with risk_sub:
+                    self._risk_tab()
+                with game_sub:
+                    self._gamification_tab()
+                with tests_sub:
+                    self._tests_tab()
+                with goals_sub:
+                    self._goals_tab()
         with settings_tab:
             self._settings_tab()
         self._close_content()
@@ -1188,17 +1169,17 @@ class GymApp:
 
     def _workout_section(self) -> None:
         with self._section("Workouts"):
-        training_options = ["strength", "hypertrophy", "highintensity"]
-        with st.expander("Workout Management", expanded=True):
-            if st.session_state.is_mobile:
-                self._create_workout_form(training_options)
-                self._existing_workout_form(training_options)
-            else:
-                col1, col2 = st.columns(2)
-                with col1:
+            training_options = ["strength", "hypertrophy", "highintensity"]
+            with st.expander("Workout Management", expanded=True):
+                if st.session_state.is_mobile:
                     self._create_workout_form(training_options)
-                with col2:
                     self._existing_workout_form(training_options)
+                else:
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        self._create_workout_form(training_options)
+                    with col2:
+                        self._existing_workout_form(training_options)
 
     def _create_workout_form(self, training_options: list[str]) -> None:
         with st.expander("Create New Workout"):
@@ -2641,10 +2622,8 @@ class GymApp:
                 end_str,
             )
             if intensity:
-                st.bar_chart(
-                    {"Volume": [d["volume"] for d in intensity]},
-                    x=[d["zone"] for d in intensity],
-                )
+                df = pd.DataFrame(intensity).set_index("zone")
+                st.bar_chart(df["volume"], use_container_width=True)
         with prog_tab:
             if ex_choice:
                 prog = self.stats.progression(ex_choice, start_str, end_str)
@@ -3820,4 +3799,8 @@ class GymApp:
 
 
 if __name__ == "__main__":
-    GymApp().run()
+    import os
+
+    db_path = os.environ.get("DB_PATH", "workout.db")
+    yaml_path = os.environ.get("YAML_PATH", "settings.yaml")
+    GymApp(db_path=db_path, yaml_path=yaml_path).run()
