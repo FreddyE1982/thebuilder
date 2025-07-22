@@ -40,7 +40,11 @@ The agent is to always follow there rules:
 6. group things where it makes sense logically together using expandables. you are allowed to create expendables inside expandables if it makes sense logically
 7. If the agent is asked by the user to "refurbish", "refresh", "rework", "redo", or "redesign" the GUI then the agent ensures that ALL above rules (1. - 6.) about the streamlit gui are strictly adhered to but 
    those rules ALSO apply WHENEVER the agent works on the application in any way.
-8. The agent is to unittest the streamlit gui. How this can be done is explained in the file "streamlittestinghowto.md" found in the repo.
+8. The agent is to unittest the streamlit gui. How this can be done is explained in the file "streamlittestinghowto.md" found in the repo. The streamlit gui is big but that is not to discourage the agent. 
+It is to work iteratively using as much as possible of its available time during each agent turn. 
+The goal is that the ENTIRE streamlit gui is thoroughly tested. 
+NO parts of the gui may be skipped during testing. NO tab and no other element must remain untested
+9. if the agent changes the gui in any way, it needs to modify / extend the gui testing appropriatly
 
 
 ## longterm usage test
