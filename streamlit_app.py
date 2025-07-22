@@ -136,8 +136,8 @@ class GymApp:
     def _configure_page(self) -> None:
         if st.session_state.get("layout_set"):
             return
-        params = st.experimental_get_query_params()
-        mode = params.get("mode", [None])[0]
+        params = st.query_params
+        mode = params.get("mode")
         if mode is None:
             st.components.v1.html(
                 """
@@ -863,7 +863,7 @@ class GymApp:
 
     def _switch_tab(self, label: str) -> None:
         mode = "mobile" if st.session_state.is_mobile else "desktop"
-        st.experimental_set_query_params(mode=mode, tab=label)
+        st.query_params.update({"mode": mode, "tab": label})
         st.experimental_rerun()
 
     def _metric_grid(self, metrics: list[tuple[str, str]]) -> None:
@@ -1042,8 +1042,8 @@ class GymApp:
                         st.table(top_ex[:5])
 
     def run(self) -> None:
-        params = st.experimental_get_query_params()
-        tab_param = params.get("tab", [None])[0]
+        params = st.query_params
+        tab_param = params.get("tab")
         tab_map = {
             "workouts": 0,
             "library": 1,
