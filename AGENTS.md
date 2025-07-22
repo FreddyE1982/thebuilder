@@ -44,8 +44,9 @@ The agent is to always follow there rules:
 8. The agent is to unittest the streamlit gui. How this can be done is explained in the file "streamlittestinghowto.md" found in the repo. The streamlit gui is big but that is not to discourage the agent. 
 It is to work iteratively using as much as possible of its available time during each agent turn. 
 The goal is that the ENTIRE streamlit gui is thoroughly tested. 
-NO parts of the gui may be skipped during testing. NO tab and no other element must remain untested
-9. if the agent changes the gui in any way, it needs to modify / extend the gui testing appropriatly
+NO parts of the gui may be skipped during testing. NO tab and no other element must remain untested.
+If the agent is extending / enhancing / working on the gui tests it is FORBIDDEN to only work on a few parts of the gui, instead it is to work on creating tests for a significant part of the GUI..for example a whole tab or at least half of a tab.
+10. if the agent changes the gui in any way, it needs to modify / extend the gui testing appropriatly
 
 
 ## longterm usage test
