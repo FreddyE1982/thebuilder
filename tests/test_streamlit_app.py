@@ -301,5 +301,57 @@ class StreamlitFullGUITest(unittest.TestCase):
             self.assertIn(name, labels)
 
 
+class StreamlitAdditionalGUITest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.db_path = "test_gui_add.db"
+        self.yaml_path = "test_gui_add.yaml"
+        for path in [self.db_path, self.yaml_path]:
+            if os.path.exists(path):
+                os.remove(path)
+        os.environ["DB_PATH"] = self.db_path
+        os.environ["YAML_PATH"] = self.yaml_path
+        os.environ["TEST_MODE"] = "0"
+        self.at = AppTest.from_file("streamlit_app.py", default_timeout=20)
+        self.at.query_params["mode"] = "desktop"
+        self.at.query_params["tab"] = "workouts"
+        self.at.run(timeout=20)
+
+    def tearDown(self) -> None:
+        for path in [self.db_path, self.yaml_path]:
+            if os.path.exists(path):
+                os.remove(path)
+
+    def _connect(self) -> sqlite3.Connection:
+        return sqlite3.connect(self.db_path)
+
+    def test_sidebar_new_workout(self) -> None:
+        self.at.sidebar.button[0].click().run()
+        conn = self._connect()
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM workouts;")
+        self.assertEqual(cur.fetchone()[0], 1)
+        conn.close()
+
+    def test_help_and_about_dialogs(self) -> None:
+        self.at.sidebar.button[2].click().run()
+        help_text = any(
+            "Workout Logger Help" in m.body for m in self.at.markdown
+        )
+        self.assertTrue(help_text)
+        self.at.sidebar.button[3].click().run()
+        about_text = any(
+            "About The Builder" in m.body for m in self.at.markdown
+        )
+        self.assertTrue(about_text)
+
+    def test_mobile_bottom_nav(self) -> None:
+        self.at.query_params["mode"] = "mobile"
+        self.at.run()
+        nav_present = any(
+            "bottom-nav" in m.body for m in self.at.markdown
+        )
+        self.assertTrue(nav_present)
+
+
 if __name__ == "__main__":
     unittest.main()
