@@ -262,6 +262,44 @@ class StreamlitFullGUITest(unittest.TestCase):
         tab = self._get_tab("Goals")
         self.assertEqual(tab.header[0].value, "Goals")
 
+    def test_main_tabs_present(self) -> None:
+        labels = [t.label for t in self.at.tabs]
+        for name in ["Workouts", "Library", "Progress", "Settings"]:
+            self.assertIn(name, labels)
+
+    def test_workouts_subtabs(self) -> None:
+        self.at.query_params["tab"] = "workouts"
+        self.at.run()
+        tab = self._get_tab("Workouts")
+        labels = [t.label for t in tab.tabs]
+        self.assertIn("Log", labels)
+        self.assertIn("Plan", labels)
+
+    def test_library_subtabs(self) -> None:
+        self.at.query_params["tab"] = "library"
+        self.at.run()
+        tab = self._get_tab("Library")
+        labels = [t.label for t in tab.tabs]
+        self.assertIn("Equipment", labels)
+        self.assertIn("Exercises", labels)
+
+    def test_settings_subtabs(self) -> None:
+        self.at.query_params["tab"] = "settings"
+        self.at.run()
+        tab = self._get_tab("Settings")
+        labels = [t.label for t in tab.tabs]
+        for name in [
+            "General",
+            "Equipment",
+            "Muscles",
+            "Exercise Aliases",
+            "Custom Exercises",
+            "Body Weight Logs",
+            "Wellness Logs",
+            "Workout Tags",
+        ]:
+            self.assertIn(name, labels)
+
 
 if __name__ == "__main__":
     unittest.main()
