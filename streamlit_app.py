@@ -3,6 +3,7 @@ import pandas as pd
 from contextlib import contextmanager
 from typing import Optional, Generator
 import streamlit as st
+import altair as alt
 from db import (
     WorkoutRepository,
     ExerciseRepository,
@@ -48,6 +49,12 @@ class GymApp:
     """Streamlit application for workout logging."""
 
     def __init__(self, db_path: str = "workout.db", yaml_path: str = "settings.yaml") -> None:
+        if hasattr(alt, "themes"):
+            @contextmanager
+            def _noop_theme(name: str | None = None, **_: str) -> Generator[None, None, None]:
+                yield
+
+            alt.themes.enable = _noop_theme
         self.settings_repo = SettingsRepository(db_path, yaml_path)
         self.theme = self.settings_repo.get_text("theme", "light")
         self._configure_page()
@@ -3664,10 +3671,8 @@ class GymApp:
             with st.expander("BMI History", expanded=False):
                 bmi_hist = self.stats.bmi_history()
                 if bmi_hist:
-                    st.line_chart(
-                        {"BMI": [b["bmi"] for b in bmi_hist]},
-                        x=[b["date"] for b in bmi_hist],
-                    )
+                    df_bmi = pd.DataFrame(bmi_hist).set_index("date")
+                    st.line_chart(df_bmi["bmi"])
 
         with well_tab:
             st.header("Wellness Logs")

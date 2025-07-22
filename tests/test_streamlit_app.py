@@ -2,6 +2,11 @@ import os
 import sys
 import sqlite3
 import unittest
+import warnings
+from altair.utils.deprecation import AltairDeprecationWarning
+
+warnings.simplefilter("ignore", AltairDeprecationWarning)
+
 from streamlit.testing.v1 import AppTest
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
@@ -82,6 +87,73 @@ class StreamlitAppTest(unittest.TestCase):
         cur.execute("SELECT date, training_type FROM workouts;")
         row = cur.fetchone()
         self.assertEqual(row, ("2024-01-02", "strength"))
+        conn.close()
+
+    def test_add_favorite_exercise(self) -> None:
+        self.at.query_params["tab"] = "library"
+        self.at.run()
+        self.at.selectbox[6].select("Barbell Bench Press").run()
+        self.at.button[5].click().run()
+
+        conn = self._connect()
+        cur = conn.cursor()
+        cur.execute("SELECT name FROM favorite_exercises;")
+        self.assertEqual(cur.fetchone()[0], "Barbell Bench Press")
+        conn.close()
+
+    def test_custom_exercise_and_logs(self) -> None:
+        self.at.query_params["tab"] = "settings"
+        self.at.run()
+        # Custom exercise
+        cust_tab = self.at.tabs[12]
+        cust_tab.selectbox[0].select("Back").run()
+        cust_tab.text_input[0].input("CustomEx").run()
+        cust_tab.text_input[1].input("Var1").run()
+        cust_tab.multiselect[0].select("Cable Crossover Machine").run()
+        cust_tab.selectbox[1].select("Latissimus Dorsi").run()
+        cust_tab.button[0].click().run()
+        self.at.run()
+        cust_tab = self.at.tabs[12]
+
+        conn = self._connect()
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT muscle_group, name FROM exercise_catalog WHERE name = ?;",
+            ("CustomEx",),
+        )
+        self.assertEqual(cur.fetchone(), ("Back", "CustomEx"))
+
+        # Body weight log
+        bw_tab = self.at.tabs[13]
+        bw_tab.date_input[0].set_value("2024-01-02").run()
+        bw_tab.number_input[0].set_value(80.5).run()
+        bw_tab.button[0].click().run()
+        self.at.run()
+        bw_tab = self.at.tabs[13]
+        cur.execute("SELECT weight FROM body_weight_logs;")
+        self.assertAlmostEqual(cur.fetchone()[0], 80.5)
+
+        # Wellness log
+        well_tab = self.at.tabs[14]
+        well_tab.date_input[0].set_value("2024-01-03").run()
+        well_tab.number_input[0].set_value(2500.0).run()
+        well_tab.number_input[1].set_value(8.0).run()
+        well_tab.number_input[2].set_value(5.0).run()
+        well_tab.number_input[3].set_value(3).run()
+        well_tab.button[0].click().run()
+        self.at.run()
+        well_tab = self.at.tabs[14]
+        cur.execute("SELECT calories, sleep_hours, sleep_quality, stress_level FROM wellness_logs;")
+        self.assertEqual(cur.fetchone(), (2500.0, 8.0, 5.0, 3))
+
+        # Tag
+        tag_tab = self.at.tabs[15]
+        tag_tab.text_input[0].input("morning").run()
+        tag_tab.button[0].click().run()
+        self.at.run()
+        tag_tab = self.at.tabs[15]
+        cur.execute("SELECT name FROM tags;")
+        self.assertEqual(cur.fetchone()[0], "morning")
         conn.close()
 
 
