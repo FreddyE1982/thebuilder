@@ -187,5 +187,81 @@ class StreamlitAppTest(unittest.TestCase):
         self.assertEqual(data["theme"], "dark")
 
 
+class StreamlitFullGUITest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.db_path = "test_gui_full.db"
+        self.yaml_path = "test_gui_full.yaml"
+        if os.path.exists(self.db_path):
+            os.remove(self.db_path)
+        if os.path.exists(self.yaml_path):
+            os.remove(self.yaml_path)
+        os.environ["DB_PATH"] = self.db_path
+        os.environ["YAML_PATH"] = self.yaml_path
+        os.environ["TEST_MODE"] = "0"
+        self.at = AppTest.from_file("streamlit_app.py", default_timeout=20)
+        self.at.query_params["mode"] = "desktop"
+        self.at.query_params["tab"] = "progress"
+        self.at.run(timeout=20)
+
+    def tearDown(self) -> None:
+        if os.path.exists(self.db_path):
+            os.remove(self.db_path)
+        if os.path.exists(self.yaml_path):
+            os.remove(self.yaml_path)
+
+    def _get_tab(self, label: str):
+        for tab in self.at.tabs:
+            if tab.label == label:
+                return tab
+        self.fail(f"Tab {label} not found")
+
+    def test_calendar_tab(self) -> None:
+        tab = self._get_tab("Calendar")
+        self.assertEqual(tab.header[0].value, "Calendar")
+
+    def test_history_tab(self) -> None:
+        tab = self._get_tab("History")
+        self.assertEqual(tab.header[0].value, "Workout History")
+
+    def test_dashboard_tab(self) -> None:
+        tab = self._get_tab("Dashboard")
+        self.assertEqual(tab.header[0].value, "Dashboard")
+
+    def test_stats_tab_subtabs(self) -> None:
+        tab = self._get_tab("Exercise Stats")
+        self.assertEqual(tab.header[0].value, "Statistics")
+        labels = [t.label for t in tab.tabs]
+        for name in ["Overview", "Distributions", "Progress", "Records", "Stress Balance"]:
+            self.assertIn(name, labels)
+
+    def test_insights_tab(self) -> None:
+        tab = self._get_tab("Insights")
+        self.assertEqual(tab.header[0].value, "Insights")
+
+    def test_weight_tab(self) -> None:
+        tab = self._get_tab("Body Weight")
+        self.assertEqual(tab.header[0].value, "Body Weight")
+
+    def test_reports_tab(self) -> None:
+        tab = self._get_tab("Reports")
+        self.assertEqual(tab.header[0].value, "Reports")
+
+    def test_risk_tab(self) -> None:
+        tab = self._get_tab("Risk")
+        self.assertEqual(tab.header[0].value, "Risk & Readiness")
+
+    def test_gamification_tab(self) -> None:
+        tab = self._get_tab("Gamification")
+        self.assertEqual(tab.header[0].value, "Gamification Stats")
+
+    def test_tests_tab(self) -> None:
+        tab = self._get_tab("Tests")
+        self.assertEqual(tab.header[0].value, "Pyramid Test")
+
+    def test_goals_tab(self) -> None:
+        tab = self._get_tab("Goals")
+        self.assertEqual(tab.header[0].value, "Goals")
+
+
 if __name__ == "__main__":
     unittest.main()
