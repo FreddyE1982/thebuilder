@@ -454,5 +454,54 @@ class StreamlitAdditionalGUITest(unittest.TestCase):
         self.assertTrue(nav_present)
 
 
+class StreamlitTemplateWorkflowTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.db_path = "test_gui_tpl.db"
+        self.yaml_path = "test_gui_tpl.yaml"
+        for path in [self.db_path, self.yaml_path]:
+            if os.path.exists(path):
+                os.remove(path)
+        os.environ["DB_PATH"] = self.db_path
+        os.environ["YAML_PATH"] = self.yaml_path
+        os.environ["TEST_MODE"] = "0"
+        self.at = AppTest.from_file("streamlit_app.py", default_timeout=20)
+        self.at.query_params["mode"] = "desktop"
+        self.at.query_params["tab"] = "workouts"
+        self.at.run(timeout=20)
+
+    def tearDown(self) -> None:
+        for path in [self.db_path, self.yaml_path]:
+            if os.path.exists(path):
+                os.remove(path)
+
+    def _connect(self) -> sqlite3.Connection:
+        return sqlite3.connect(self.db_path)
+
+    def test_template_plan_to_workout(self) -> None:
+        plan_tab = self.at.tabs[2]
+        plan_tab.text_input[0].input("Tpl1").run()
+        plan_tab.selectbox[1].select("strength").run()
+        plan_tab.button[1].click().run()
+        self.at.run()
+        plan_tab = self.at.tabs[2]
+        for exp in plan_tab.expander:
+            if exp.label.startswith("Tpl1"):
+                exp.button[1].click().run()
+                break
+        self.at.run()
+        self.at.selectbox[0].select("1").run()
+        self.at.button[1].click().run()
+
+        conn = self._connect()
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM workout_templates;")
+        self.assertEqual(cur.fetchone()[0], 1)
+        cur.execute("SELECT COUNT(*) FROM planned_workouts;")
+        self.assertEqual(cur.fetchone()[0], 1)
+        cur.execute("SELECT COUNT(*) FROM workouts;")
+        self.assertEqual(cur.fetchone()[0], 1)
+        conn.close()
+
+
 if __name__ == "__main__":
     unittest.main()
