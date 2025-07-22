@@ -10,3 +10,4 @@ pywavelets
 scikit-learn
 torch
 pyyaml
+altair
