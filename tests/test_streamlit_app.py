@@ -453,6 +453,14 @@ class StreamlitAdditionalGUITest(unittest.TestCase):
         )
         self.assertTrue(nav_present)
 
+    def test_scroll_top_button(self) -> None:
+        self.at.query_params["mode"] = "mobile"
+        self.at.run()
+        btn_present = any(
+            "scroll-top" in m.body for m in self.at.markdown
+        )
+        self.assertTrue(btn_present)
+
 
 class StreamlitTemplateWorkflowTest(unittest.TestCase):
     def setUp(self) -> None:

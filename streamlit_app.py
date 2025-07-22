@@ -4,6 +4,9 @@ from contextlib import contextmanager
 from typing import Optional, Generator, Callable
 import streamlit as st
 import altair as alt
+from altair.utils.deprecation import AltairDeprecationWarning
+import warnings
+warnings.filterwarnings("ignore", category=AltairDeprecationWarning)
 from db import (
     WorkoutRepository,
     ExerciseRepository,
@@ -59,10 +62,12 @@ class GymApp:
             ) -> Generator[None, None, None]:
                 yield
 
-            if hasattr(alt, "themes") and hasattr(alt.themes, "enable"):
-                alt.themes.enable = _noop_theme
-            elif hasattr(alt, "theme") and hasattr(alt.theme, "enable"):
+            if hasattr(alt, "theme") and hasattr(alt.theme, "enable"):
                 alt.theme.enable = _noop_theme
+            if hasattr(alt, "themes") and hasattr(alt.themes, "enable"):
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", AltairDeprecationWarning)
+                    alt.themes.enable = _noop_theme
         self.settings_repo = SettingsRepository(db_path, yaml_path)
         self.theme = self.settings_repo.get_text("theme", "light")
         self._configure_page()
@@ -198,17 +203,25 @@ class GymApp:
                 const h = nav ? nav.offsetHeight : 0;
                 document.documentElement.style.setProperty('--header-height', `${h}px`);
             }
+            function toggleScrollTopButton() {
+                const btn = document.querySelector('.scroll-top');
+                if (btn) {
+                    btn.style.display = window.pageYOffset > window.innerHeight * 0.2 ? 'flex' : 'none';
+                }
+            }
             function handleResize() {
                 setMode();
                 setVh();
                 setSafeArea();
                 setHeaderHeight();
+                toggleScrollTopButton();
             }
             window.addEventListener('resize', handleResize);
             window.addEventListener('orientationchange', handleResize);
             if (window.visualViewport) {
                 window.visualViewport.addEventListener('resize', handleResize);
             }
+            window.addEventListener('scroll', toggleScrollTopButton);
             window.addEventListener('DOMContentLoaded', handleResize);
             window.addEventListener('load', handleResize);
             handleResize();
@@ -797,6 +810,28 @@ class GymApp:
                     padding-top: var(--header-height, 0);
                 }
             }
+            .scroll-top {
+                position: fixed;
+                right: 0.75rem;
+                bottom: calc(var(--safe-bottom) + 3.5rem);
+                width: 2.25rem;
+                height: 2.25rem;
+                border: none;
+                border-radius: 50%;
+                background: #ff4b4b;
+                color: #ffffff;
+                font-size: 1.25rem;
+                display: none;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                z-index: 1000;
+            }
+            @media screen and (min-width: 769px) {
+                .scroll-top {
+                    bottom: 1rem;
+                }
+            }
             </style>
             """,
             unsafe_allow_html=True,
@@ -898,6 +933,16 @@ class GymApp:
         if not st.session_state.is_mobile:
             return
         self._render_nav("bottom-nav")
+        self._scroll_top_button()
+
+    def _scroll_top_button(self) -> None:
+        """Render a button to quickly scroll back to the top."""
+        st.markdown(
+            """
+            <button class='scroll-top' aria-label='Back to top' onclick="window.scrollTo({top:0,behavior:'smooth'});">⬆</button>
+            """,
+            unsafe_allow_html=True,
+        )
 
     def _top_nav(self) -> None:
         """Render top navigation on desktop."""
