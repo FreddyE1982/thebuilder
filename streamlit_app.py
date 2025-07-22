@@ -1,7 +1,7 @@
 import datetime
 import pandas as pd
 from contextlib import contextmanager
-from typing import Optional, Generator
+from typing import Optional, Generator, Callable
 import streamlit as st
 import altair as alt
 from db import (
@@ -48,13 +48,22 @@ from tools import MathTools
 class GymApp:
     """Streamlit application for workout logging."""
 
-    def __init__(self, db_path: str = "workout.db", yaml_path: str = "settings.yaml") -> None:
-        if hasattr(alt, "themes"):
+    def __init__(
+        self, db_path: str = "workout.db", yaml_path: str = "settings.yaml"
+    ) -> None:
+        if hasattr(alt, "theme") or hasattr(alt, "themes"):
+
             @contextmanager
-            def _noop_theme(name: str | None = None, **_: str) -> Generator[None, None, None]:
+            def _noop_theme(
+                name: str | None = None, **_: str
+            ) -> Generator[None, None, None]:
                 yield
 
-            alt.themes.enable = _noop_theme
+            if hasattr(alt, "theme"):
+                alt.theme.enable = _noop_theme
+                setattr(alt, "themes", alt.theme)
+            else:
+                alt.themes.enable = _noop_theme
         self.settings_repo = SettingsRepository(db_path, yaml_path)
         self.theme = self.settings_repo.get_text("theme", "light")
         self._configure_page()
@@ -847,7 +856,7 @@ class GymApp:
                 f'{"aria-current=\"page\" " if st.session_state.get("main_tab", 0) == idx else ""}'
                 f'tabindex="0" '
                 f'onclick="const p=new URLSearchParams(window.location.search);'
-                f'p.set(\'mode\',\'{mode}\');p.set(\'tab\',\'{label}\');'
+                f"p.set('mode','{mode}');p.set('tab','{label}');"
                 f'window.location.search=p.toString();"><span class="icon">{icons[label]}</span>'
                 f'<span class="label">{label.title()}</span></button>'
                 for idx, label in enumerate(labels)
@@ -879,6 +888,15 @@ class GymApp:
         for label, val in metrics:
             st.metric(label, val)
         st.markdown("</div>", unsafe_allow_html=True)
+
+    def _show_dialog(self, title: str, content_fn: Callable[[], None]) -> None:
+        """Display a modal dialog using the decorator API."""
+
+        @st.dialog(title)
+        def _dlg() -> None:
+            content_fn()
+
+        _dlg()
 
     @contextmanager
     def _section(self, title: str) -> Generator[None, None, None]:
@@ -918,7 +936,7 @@ class GymApp:
         st.markdown("</main>", unsafe_allow_html=True)
 
     def _help_dialog(self) -> None:
-        with st.dialog("Help"):
+        def _content() -> None:
             st.markdown("## Workout Logger Help")
             st.markdown(
                 "Use the tabs to log workouts, plan sessions, and analyze your training data."
@@ -928,8 +946,10 @@ class GymApp:
             )
             st.button("Close")
 
+        self._show_dialog("Help", _content)
+
     def _about_dialog(self) -> None:
-        with st.dialog("About"):
+        def _content() -> None:
             st.markdown("## About The Builder")
             st.markdown(
                 "This application is a comprehensive workout planner and logger built with Streamlit and FastAPI."
@@ -938,6 +958,8 @@ class GymApp:
                 "It offers a responsive interface and a complete REST API for advanced tracking, planning and analytics."
             )
             st.button("Close")
+
+        self._show_dialog("About", _content)
 
     def _dashboard_tab(self) -> None:
         with self._section("Dashboard"):
@@ -948,16 +970,13 @@ class GymApp:
                         datetime.date.today() - datetime.timedelta(days=30),
                         key="dash_start",
                     )
-                    end = st.date_input(
-                        "End", datetime.date.today(), key="dash_end"
-                    )
+                    end = st.date_input("End", datetime.date.today(), key="dash_end")
                 else:
                     col1, col2 = st.columns(2)
                     with col1:
                         start = st.date_input(
                             "Start",
-                            datetime.date.today()
-                            - datetime.timedelta(days=30),
+                            datetime.date.today() - datetime.timedelta(days=30),
                             key="dash_start",
                         )
                     with col2:
@@ -988,13 +1007,17 @@ class GymApp:
                 if daily:
                     df_daily = pd.DataFrame(daily).set_index("date")
                     st.line_chart(df_daily["volume"], use_container_width=True)
-                duration = self.stats.session_duration(start.isoformat(), end.isoformat())
+                duration = self.stats.session_duration(
+                    start.isoformat(), end.isoformat()
+                )
                 st.subheader("Session Duration")
                 if duration:
                     df_dur = pd.DataFrame(duration).set_index("date")
                     st.line_chart(df_dur["duration"], use_container_width=True)
                 exercises = [""] + self.exercise_names_repo.fetch_all()
-                ex_choice = st.selectbox("Exercise Progression", exercises, key="dash_ex")
+                ex_choice = st.selectbox(
+                    "Exercise Progression", exercises, key="dash_ex"
+                )
                 if ex_choice:
                     prog = self.stats.progression(
                         ex_choice, start.isoformat(), end.isoformat()
@@ -1011,7 +1034,9 @@ class GymApp:
                         df_daily = pd.DataFrame(daily).set_index("date")
                         st.line_chart(df_daily["volume"], use_container_width=True)
                     exercises = [""] + self.exercise_names_repo.fetch_all()
-                    ex_choice = st.selectbox("Exercise Progression", exercises, key="dash_ex")
+                    ex_choice = st.selectbox(
+                        "Exercise Progression", exercises, key="dash_ex"
+                    )
                     if ex_choice:
                         prog = self.stats.progression(
                             ex_choice, start.isoformat(), end.isoformat()
@@ -1021,12 +1046,16 @@ class GymApp:
                             df_prog = pd.DataFrame(prog).set_index("date")
                             st.line_chart(df_prog["est_1rm"], use_container_width=True)
                 with right:
-                    duration = self.stats.session_duration(start.isoformat(), end.isoformat())
+                    duration = self.stats.session_duration(
+                        start.isoformat(), end.isoformat()
+                    )
                     st.subheader("Session Duration")
                     if duration:
                         df_dur = pd.DataFrame(duration).set_index("date")
                         st.line_chart(df_dur["duration"], use_container_width=True)
-                    eq_stats = self.stats.equipment_usage(start.isoformat(), end.isoformat())
+                    eq_stats = self.stats.equipment_usage(
+                        start.isoformat(), end.isoformat()
+                    )
                     if eq_stats:
                         st.subheader("Equipment Usage")
                         df_eq = pd.DataFrame(eq_stats).set_index("equipment")
@@ -1233,9 +1262,7 @@ class GymApp:
                             int(selected),
                             datetime.datetime.now().isoformat(timespec="seconds"),
                         )
-                    if c2.button(
-                        "Finish Workout", key=f"finish_workout_{selected}"
-                    ):
+                    if c2.button("Finish Workout", key=f"finish_workout_{selected}"):
                         self.workouts.set_end_time(
                             int(selected),
                             datetime.datetime.now().isoformat(timespec="seconds"),
@@ -1397,9 +1424,7 @@ class GymApp:
                                 )
                                 st.success("Updated")
                             if st.button("Duplicate", key=f"dup_plan_{pid}"):
-                                self.planner.duplicate_plan(
-                                    pid, dup_date.isoformat()
-                                )
+                                self.planner.duplicate_plan(pid, dup_date.isoformat())
                                 st.success("Duplicated")
                             if st.button("Delete", key=f"del_plan_{pid}"):
                                 self.planned_workouts.delete(pid)
@@ -1415,9 +1440,7 @@ class GymApp:
                                 )
                                 st.success("Updated")
                             if cols[1].button("Duplicate", key=f"dup_plan_{pid}"):
-                                self.planner.duplicate_plan(
-                                    pid, dup_date.isoformat()
-                                )
+                                self.planner.duplicate_plan(pid, dup_date.isoformat())
                                 st.success("Duplicated")
                             if cols[2].button("Delete", key=f"del_plan_{pid}"):
                                 self.planned_workouts.delete(pid)
@@ -1441,7 +1464,9 @@ class GymApp:
                     note_val = st.text_input("Note", key="new_exercise_note")
                     if st.button("Add Exercise"):
                         if ex_name and eq:
-                            self.exercises.add(workout_id, ex_name, eq, note_val or None)
+                            self.exercises.add(
+                                workout_id, ex_name, eq, note_val or None
+                            )
                         else:
                             st.warning("Exercise and equipment required")
                 with st.expander("Logged Exercises", expanded=True):
@@ -1665,7 +1690,7 @@ class GymApp:
             st.session_state.pop(f"new_rpe_{exercise_id}", None)
 
     def _bulk_add_sets_dialog(self, exercise_id: int) -> None:
-        with st.dialog("Bulk Add Sets"):
+        def _content() -> None:
             st.markdown("Enter one set per line as `reps,weight,rpe`")
             text = st.text_area("Sets", key=f"bulk_text_{exercise_id}")
             if st.button("Add", key=f"bulk_add_{exercise_id}"):
@@ -1688,8 +1713,10 @@ class GymApp:
                 st.session_state.pop(f"bulk_text_{exercise_id}", None)
             st.button("Close", key=f"bulk_close_{exercise_id}")
 
+        self._show_dialog("Bulk Add Sets", _content)
+
     def _confirm_delete_set(self, set_id: int) -> None:
-        with st.dialog("Confirm Delete"):
+        def _content() -> None:
             st.write(f"Delete set {set_id}?")
             cols = st.columns(2)
             if cols[0].button("Yes", key=f"yes_{set_id}"):
@@ -1697,6 +1724,8 @@ class GymApp:
                 st.experimental_rerun()
             if cols[1].button("No", key=f"no_{set_id}"):
                 st.experimental_rerun()
+
+        self._show_dialog("Confirm Delete", _content)
 
     def _equipment_selector(
         self, prefix: str, muscles: Optional[list] = None
@@ -1780,7 +1809,6 @@ class GymApp:
                     for v in variants.split("|"):
                         st.markdown(f"- {v}")
         return ex_name or None
-
 
     def _planned_exercise_section(self) -> None:
         with self._section("Planned Exercises"):
@@ -1923,7 +1951,9 @@ class GymApp:
                     if favs:
                         for fid in favs:
                             try:
-                                _id, name, _type = self.template_workouts.fetch_detail(fid)
+                                _id, name, _type = self.template_workouts.fetch_detail(
+                                    fid
+                                )
                             except ValueError:
                                 continue
                             cols = st.columns(2)
@@ -2136,34 +2166,40 @@ class GymApp:
                 if choice and st.button("Details", key="lib_eq_btn"):
                     detail = self.equipment.fetch_detail(choice)
                     if detail:
-                        with st.dialog("Equipment Details"):
+
+                        def _content() -> None:
                             eq_type, muscs, _ = detail
                             st.markdown(f"**Type:** {eq_type}")
                             st.markdown("**Muscles:**")
                             for m in muscs:
                                 st.markdown(f"- {m}")
+
+                        self._show_dialog("Equipment Details", _content)
         else:
             f_col, l_col = st.columns([1, 2], gap="large")
             with f_col.expander("Filters", expanded=True):
-                    sel_type = st.selectbox("Type", types, key="lib_eq_type")
-                    prefix = st.text_input("Name Contains", key="lib_eq_prefix")
-                    mus_filter = st.multiselect("Muscles", muscles, key="lib_eq_mus")
+                sel_type = st.selectbox("Type", types, key="lib_eq_type")
+                prefix = st.text_input("Name Contains", key="lib_eq_prefix")
+                mus_filter = st.multiselect("Muscles", muscles, key="lib_eq_mus")
             names = self.equipment.fetch_names(
                 sel_type or None,
                 prefix or None,
                 mus_filter or None,
             )
             with l_col.expander("Equipment List", expanded=True):
-                    choice = st.selectbox("Equipment", [""] + names, key="lib_eq_name")
-                    if choice and st.button("Details", key="lib_eq_btn"):
-                        detail = self.equipment.fetch_detail(choice)
-                        if detail:
-                            with st.dialog("Equipment Details"):
-                                eq_type, muscs, _ = detail
-                                st.markdown(f"**Type:** {eq_type}")
-                                st.markdown("**Muscles:**")
-                                for m in muscs:
-                                    st.markdown(f"- {m}")
+                choice = st.selectbox("Equipment", [""] + names, key="lib_eq_name")
+                if choice and st.button("Details", key="lib_eq_btn"):
+                    detail = self.equipment.fetch_detail(choice)
+                    if detail:
+
+                        def _content() -> None:
+                            eq_type, muscs, _ = detail
+                            st.markdown(f"**Type:** {eq_type}")
+                            st.markdown("**Muscles:**")
+                            for m in muscs:
+                                st.markdown(f"- {m}")
+
+                        self._show_dialog("Equipment Details", _content)
 
     def _exercise_catalog_library(self) -> None:
         groups = self.exercise_catalog.fetch_muscle_groups()
@@ -2214,7 +2250,8 @@ class GymApp:
                             other,
                             _,
                         ) = detail
-                        with st.dialog("Exercise Details"):
+
+                        def _content() -> None:
                             st.markdown(f"**Group:** {group}")
                             st.markdown(f"**Primary:** {primary}")
                             if secondary:
@@ -2233,11 +2270,15 @@ class GymApp:
                                 st.markdown("**Variants:**")
                                 for v in variants.split("|"):
                                     st.markdown(f"- {v}")
+
+                        self._show_dialog("Exercise Details", _content)
         else:
             f_col, l_col = st.columns([1, 2], gap="large")
             with f_col:
                 with st.expander("Filters", expanded=True):
-                    sel_groups = st.multiselect("Muscle Groups", groups, key="lib_ex_groups")
+                    sel_groups = st.multiselect(
+                        "Muscle Groups", groups, key="lib_ex_groups"
+                    )
                     sel_mus = st.multiselect("Muscles", muscles, key="lib_ex_mus")
                     eq_names = self.equipment.fetch_names()
                     sel_eq = st.selectbox("Equipment", [""] + eq_names, key="lib_ex_eq")
@@ -2264,7 +2305,8 @@ class GymApp:
                                 other,
                                 _,
                             ) = detail
-                            with st.dialog("Exercise Details"):
+
+                            def _content() -> None:
                                 st.markdown(f"**Group:** {group}")
                                 st.markdown(f"**Primary:** {primary}")
                                 if secondary:
@@ -2283,6 +2325,8 @@ class GymApp:
                                     st.markdown("**Variants:**")
                                     for v in variants.split("|"):
                                         st.markdown(f"- {v}")
+
+                            self._show_dialog("Exercise Details", _content)
 
     def _custom_exercise_management(self) -> None:
         muscles = self.muscles_repo.fetch_all()
@@ -2334,13 +2378,27 @@ class GymApp:
                     exp = st.expander(name)
                     with exp:
                         edit_name = st.text_input("Name", name, key=f"cust_name_{name}")
-                        edit_group = st.text_input("Group", group, key=f"cust_group_{name}")
-                        edit_var = st.text_input("Variants", variants, key=f"cust_var_{name}")
-                        edit_eq = st.text_input("Equipment", eq_names, key=f"cust_eq_{name}")
-                        edit_primary = st.text_input("Primary", primary, key=f"cust_pri_{name}")
-                        edit_secondary = st.text_input("Secondary", secondary, key=f"cust_sec_{name}")
-                        edit_tertiary = st.text_input("Tertiary", tertiary, key=f"cust_ter_{name}")
-                        edit_other = st.text_input("Other", other, key=f"cust_oth_{name}")
+                        edit_group = st.text_input(
+                            "Group", group, key=f"cust_group_{name}"
+                        )
+                        edit_var = st.text_input(
+                            "Variants", variants, key=f"cust_var_{name}"
+                        )
+                        edit_eq = st.text_input(
+                            "Equipment", eq_names, key=f"cust_eq_{name}"
+                        )
+                        edit_primary = st.text_input(
+                            "Primary", primary, key=f"cust_pri_{name}"
+                        )
+                        edit_secondary = st.text_input(
+                            "Secondary", secondary, key=f"cust_sec_{name}"
+                        )
+                        edit_tertiary = st.text_input(
+                            "Tertiary", tertiary, key=f"cust_ter_{name}"
+                        )
+                        edit_other = st.text_input(
+                            "Other", other, key=f"cust_oth_{name}"
+                        )
                         cols = st.columns(2)
                         if cols[0].button("Update", key=f"upd_cust_{name}"):
                             try:
@@ -2410,7 +2468,9 @@ class GymApp:
                     exp = st.expander(name)
                     with exp:
                         edit_name = st.text_input("Name", name, key=f"cust_name_{name}")
-                        edit_group = st.text_input("Group", group, key=f"cust_group_{name}")
+                        edit_group = st.text_input(
+                            "Group", group, key=f"cust_group_{name}"
+                        )
                         edit_var = st.text_input(
                             "Variants", variants, key=f"cust_var_{name}"
                         )
@@ -2426,7 +2486,9 @@ class GymApp:
                         edit_tertiary = st.text_input(
                             "Tertiary", tertiary, key=f"cust_ter_{name}"
                         )
-                        edit_other = st.text_input("Other", other, key=f"cust_oth_{name}")
+                        edit_other = st.text_input(
+                            "Other", other, key=f"cust_oth_{name}"
+                        )
                         cols = st.columns(2)
                         if cols[0].button("Update", key=f"upd_cust_{name}"):
                             try:
@@ -2530,7 +2592,8 @@ class GymApp:
 
     def _workout_details_dialog(self, workout_id: int) -> None:
         exercises = self.exercises.fetch_for_workout(workout_id)
-        with st.dialog("Workout Details"):
+
+        def _content() -> None:
             for ex_id, name, eq, note in exercises:
                 sets = self.sets.fetch_for_exercise(ex_id)
                 header = name if not eq else f"{name} ({eq})"
@@ -2544,6 +2607,8 @@ class GymApp:
                         if etime:
                             line += f" end: {etime}"
                         st.write(line)
+
+        self._show_dialog("Workout Details", _content)
 
     def _stats_tab(self) -> None:
         st.header("Statistics")
@@ -2764,8 +2829,8 @@ class GymApp:
             with col2:
                 end = st.date_input("End", datetime.date.today(), key="bw_end")
             if st.button("Reset", key="bw_reset"):
-                st.session_state.bw_start = (
-                    datetime.date.today() - datetime.timedelta(days=30)
+                st.session_state.bw_start = datetime.date.today() - datetime.timedelta(
+                    days=30
                 )
                 st.session_state.bw_end = datetime.date.today()
                 st.experimental_rerun()
@@ -2841,8 +2906,8 @@ class GymApp:
             with col2:
                 end = st.date_input("End", datetime.date.today(), key="rep_end")
             if st.button("Reset", key="rep_reset"):
-                st.session_state.rep_start = (
-                    datetime.date.today() - datetime.timedelta(days=30)
+                st.session_state.rep_start = datetime.date.today() - datetime.timedelta(
+                    days=30
                 )
                 st.session_state.rep_end = datetime.date.today()
                 st.experimental_rerun()
@@ -3024,14 +3089,12 @@ class GymApp:
                 )
         if ex_choice:
             momentum = self.stats.performance_momentum(ex_choice, start_str, end_str)
-            self._metric_grid([("Momentum", momentum["momentum"] )])
+            self._metric_grid([("Momentum", momentum["momentum"])])
 
     def _gamification_tab(self) -> None:
         st.header("Gamification Stats")
         with st.expander("Summary", expanded=True):
-            self._metric_grid([
-                ("Total Points", self.gamification.total_points())
-            ])
+            self._metric_grid([("Total Points", self.gamification.total_points())])
         with st.expander("Points by Workout", expanded=True):
             data = self.gamification.points_by_workout()
             if data:
@@ -3194,11 +3257,11 @@ class GymApp:
                     key="cal_end",
                 )
             if st.button("Reset", key="cal_reset"):
-                st.session_state.cal_start = (
-                    datetime.date.today() - datetime.timedelta(days=7)
+                st.session_state.cal_start = datetime.date.today() - datetime.timedelta(
+                    days=7
                 )
-                st.session_state.cal_end = (
-                    datetime.date.today() + datetime.timedelta(days=7)
+                st.session_state.cal_end = datetime.date.today() + datetime.timedelta(
+                    days=7
                 )
                 st.experimental_rerun()
             start_str = start.isoformat()
@@ -3234,10 +3297,16 @@ class GymApp:
             ex_names = [""] + self.exercise_names_repo.fetch_all()
             ex_choice = st.selectbox("Exercise", ex_names, key="goal_ex")
             name = st.text_input("Name", key="goal_name")
-            value = st.number_input("Target Value", min_value=0.0, step=0.1, key="goal_value")
+            value = st.number_input(
+                "Target Value", min_value=0.0, step=0.1, key="goal_value"
+            )
             unit = st.text_input("Unit", key="goal_unit")
-            start_d = st.date_input("Start Date", datetime.date.today(), key="goal_start")
-            target_d = st.date_input("Target Date", datetime.date.today(), key="goal_target")
+            start_d = st.date_input(
+                "Start Date", datetime.date.today(), key="goal_start"
+            )
+            target_d = st.date_input(
+                "Target Date", datetime.date.today(), key="goal_target"
+            )
             if st.button("Create Goal", key="goal_add"):
                 if name and unit and ex_choice:
                     self.goals_repo.add(
@@ -3281,7 +3350,9 @@ class GymApp:
                         datetime.date.fromisoformat(tdate),
                         key=f"goal_target_{gid}",
                     )
-                    ach_e = st.checkbox("Achieved", value=bool(ach), key=f"goal_ach_{gid}")
+                    ach_e = st.checkbox(
+                        "Achieved", value=bool(ach), key=f"goal_ach_{gid}"
+                    )
                     cols = st.columns(2)
                     if cols[0].button("Update", key=f"goal_upd_{gid}"):
                         self.goals_repo.update(
@@ -3298,6 +3369,7 @@ class GymApp:
                     if cols[1].button("Delete", key=f"goal_del_{gid}"):
                         self.goals_repo.delete(gid)
                         st.success("Deleted")
+
     def _settings_tab(self) -> None:
         st.header("Settings")
         if "delete_target" not in st.session_state:
@@ -3313,7 +3385,8 @@ class GymApp:
 
         target = st.session_state.get("delete_target")
         if target:
-            with st.dialog("Confirm Deletion"):
+
+            def _content() -> None:
                 text = st.text_input("Type 'Yes, I confirm' to delete")
                 if st.button("Confirm"):
                     if text == "Yes, I confirm":
@@ -3330,6 +3403,8 @@ class GymApp:
                         st.warning("Confirmation failed")
                 if st.button("Cancel"):
                     st.session_state.delete_target = None
+
+            self._show_dialog("Confirm Deletion", _content)
 
         (
             gen_tab,
@@ -3384,9 +3459,7 @@ class GymApp:
                     "Enable Gamification",
                     value=self.gamification.is_enabled(),
                 )
-                self._metric_grid(
-                    [("Total Points", self.gamification.total_points())]
-                )
+                self._metric_grid([("Total Points", self.gamification.total_points())])
             with st.expander("Machine Learning", expanded=True):
                 ml_global = st.checkbox(
                     "Enable ML Models",

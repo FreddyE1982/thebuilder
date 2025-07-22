@@ -101,6 +101,24 @@ class StreamlitAppTest(unittest.TestCase):
         self.assertEqual(cur.fetchone()[0], "Barbell Bench Press")
         conn.close()
 
+    def test_equipment_filtering(self) -> None:
+        self.at.query_params["tab"] = "library"
+        self.at.run()
+        eq_tab = self.at.tabs[4]
+        eq_tab.selectbox[0].select("Free Weights").run()
+        self.at.run()
+        eq_tab = self.at.tabs[4]
+        self.assertIn("Olympic Barbell", eq_tab.selectbox[1].options)
+
+    def test_exercise_filtering(self) -> None:
+        self.at.query_params["tab"] = "library"
+        self.at.run()
+        ex_tab = self.at.tabs[5]
+        ex_tab.multiselect[0].select("Chest").run()
+        self.at.run()
+        ex_tab = self.at.tabs[5]
+        self.assertIn("Barbell Bench Press", ex_tab.selectbox[2].options)
+
     def test_custom_exercise_and_logs(self) -> None:
         self.at.query_params["tab"] = "settings"
         self.at.run()
@@ -143,7 +161,9 @@ class StreamlitAppTest(unittest.TestCase):
         well_tab.button[0].click().run()
         self.at.run()
         well_tab = self.at.tabs[14]
-        cur.execute("SELECT calories, sleep_hours, sleep_quality, stress_level FROM wellness_logs;")
+        cur.execute(
+            "SELECT calories, sleep_hours, sleep_quality, stress_level FROM wellness_logs;"
+        )
         self.assertEqual(cur.fetchone(), (2500.0, 8.0, 5.0, 3))
 
         # Tag
