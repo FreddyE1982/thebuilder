@@ -574,6 +574,7 @@ class GymApp:
                 nav.bottom-nav {
                     grid-template-columns: repeat(4, 1fr);
                     justify-content: space-evenly;
+                    gap: 0.5rem;
                     overflow-x: auto;
                     grid-auto-flow: column;
                     grid-auto-columns: 1fr;
@@ -779,6 +780,14 @@ class GymApp:
                 }
                 .form-grid {
                     grid-template-columns: repeat(6, 1fr);
+                }
+            }
+            @media screen and (min-width: 2700px) {
+                .metric-grid {
+                    grid-template-columns: repeat(9, 1fr);
+                }
+                .form-grid {
+                    grid-template-columns: repeat(7, 1fr);
                 }
             }
             button {
