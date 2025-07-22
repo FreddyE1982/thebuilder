@@ -1,3 +1,7 @@
+NOTE: The streamlit gui is big but that is not to discourage the agent. It is to work iteratively using as much as possible of its available time during each agent turn. The goal is that the ENTIRE streamlit gui is thoroughly tested. NO parts of the gui may be skipped during testing. NO tab and no other element
+must remain untested
+
+
 Introduction
 Streamlit is a popular open-source Python framework among data scientists and AI/ML engineers for its ability to quickly build interactive web applications with just a few lines of code. Streamlit’s simplicity and rapid prototyping features make it ideal for visualizing data and building proof-of-concept models.
 
