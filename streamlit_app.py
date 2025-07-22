@@ -166,7 +166,7 @@ class GymApp:
                 """,
                 height=0,
             )
-            st.stop()
+            mode = "desktop"
         layout = "centered" if mode == "mobile" else "wide"
         st.set_page_config(page_title="Workout Logger", layout=layout)
         st.markdown(
