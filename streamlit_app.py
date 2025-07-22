@@ -190,6 +190,9 @@ class GymApp:
             }
             window.addEventListener('resize', handleResize);
             window.addEventListener('orientationchange', handleResize);
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', handleResize);
+            }
             window.addEventListener('DOMContentLoaded', handleResize);
             window.addEventListener('load', handleResize);
             handleResize();
@@ -219,6 +222,7 @@ class GymApp:
                 min-height: calc(var(--vh, 1vh) * 100);
                 display: flex;
                 flex-direction: column;
+                overscroll-behavior-y: contain;
             }
             .page-wrapper {
                 display: flex;
@@ -412,6 +416,15 @@ class GymApp:
                 }
                 nav.bottom-nav .label {
                     display: none;
+                }
+            }
+            @media screen and (max-width: 480px) and (orientation: portrait) {
+                nav.bottom-nav {
+                    grid-template-columns: repeat(4, 1fr);
+                    height: 2.75rem;
+                }
+                nav.bottom-nav .label {
+                    font-size: 0.75rem;
                 }
             }
             @media screen and (max-width: 320px) and (orientation: landscape) {
@@ -640,6 +653,9 @@ class GymApp:
                 padding: 0.25rem;
                 scroll-snap-type: x mandatory;
                 scrollbar-width: none;
+            }
+            .metric-grid > div[data-testid="metric-container"] {
+                width: 100%;
             }
             .metric-grid::-webkit-scrollbar {
                 display: none;
