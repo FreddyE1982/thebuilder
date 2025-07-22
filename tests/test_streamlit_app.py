@@ -503,5 +503,49 @@ class StreamlitTemplateWorkflowTest(unittest.TestCase):
         conn.close()
 
 
+class StreamlitAllInteractionsTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.db_path = "test_gui_all.db"
+        self.yaml_path = "test_gui_all.yaml"
+        for path in [self.db_path, self.yaml_path]:
+            if os.path.exists(path):
+                os.remove(path)
+        os.environ["DB_PATH"] = self.db_path
+        os.environ["YAML_PATH"] = self.yaml_path
+        os.environ["TEST_MODE"] = "1"
+        self.at = AppTest.from_file("streamlit_app.py", default_timeout=20)
+        self.at.query_params["mode"] = "desktop"
+        self.at.query_params["tab"] = "workouts"
+        self.at.run(timeout=20)
+
+    def tearDown(self) -> None:
+        for path in [self.db_path, self.yaml_path]:
+            if os.path.exists(path):
+                os.remove(path)
+
+    def test_all_visible_widgets(self) -> None:
+        # Interact with all currently visible widgets to ensure
+        # that every user interaction works without errors.
+        for sel in self.at.selectbox:
+            if sel.options:
+                sel.select(sel.options[0]).run()
+        for multi in self.at.multiselect:
+            if multi.options:
+                multi.select(multi.options[:1]).run()
+        for num in self.at.number_input:
+            num.set_value(num.value if num.value is not None else 0).run()
+        for txt in self.at.text_input:
+            txt.input("test").run()
+        for txta in getattr(self.at, "text_area", []):
+            txta.input("test").run()
+        for date in self.at.date_input:
+            date.set_value(date.value).run()
+        for chk in self.at.checkbox:
+            chk.toggle().run()
+        for btn in self.at.button:
+            btn.click().run()
+        self.at.run()
+
+
 if __name__ == "__main__":
     unittest.main()
