@@ -1,3 +1,4 @@
+from __future__ import annotations
 from db import (
     WorkoutRepository,
     ExerciseRepository,
@@ -27,6 +28,7 @@ class PlannerService:
         template_workout_repo: TemplateWorkoutRepository | None = None,
         template_exercise_repo: TemplateExerciseRepository | None = None,
         template_set_repo: TemplateSetRepository | None = None,
+        recommender: RecommendationService | None = None,
     ) -> None:
         self.workouts = workout_repo
         self.exercises = exercise_repo
@@ -38,6 +40,7 @@ class PlannerService:
         self.templates = template_workout_repo or TemplateWorkoutRepository()
         self.template_exercises = template_exercise_repo or TemplateExerciseRepository()
         self.template_sets = template_set_repo or TemplateSetRepository()
+        self.recommender = recommender
 
     def create_workout_from_plan(self, plan_id: int) -> int:
         _pid, date, t_type = self.planned_workouts.fetch_detail(plan_id)
@@ -84,4 +87,25 @@ class PlannerService:
             sets = self.template_sets.fetch_for_exercise(ex_id)
             for _sid, reps, weight, rpe in sets:
                 self.planned_sets.add(new_ex_id, reps, weight, rpe)
+        return plan_id
+
+    def create_ai_plan(
+        self,
+        date: str,
+        exercises: list[tuple[str, str | None]],
+        training_type: str = "strength",
+    ) -> int:
+        if not self.recommender:
+            raise ValueError("recommender not configured")
+        plan_id = self.planned_workouts.create(date, training_type)
+        for name, equipment in exercises:
+            ex_id = self.planned_exercises.add(plan_id, name, equipment)
+            presc = self.recommender.generate_prescription(name)
+            for item in presc["prescription"]:
+                self.planned_sets.add(
+                    ex_id,
+                    int(item["reps"]),
+                    float(item["weight"]),
+                    int(round(item["target_rpe"])),
+                )
         return plan_id

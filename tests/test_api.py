@@ -2577,3 +2577,44 @@ class APITestCase(unittest.TestCase):
         data = resp.json()
         self.assertAlmostEqual(data["consistency"], 0.0)
         self.assertAlmostEqual(data["average_gap"], 7.0)
+
+    def test_ai_plan_endpoint(self) -> None:
+        weights = [100.0, 105.0, 110.0, 112.5, 115.0]
+        for w in weights:
+            res = self.client.post("/workouts")
+            wid = res.json()["id"]
+            ex_res = self.client.post(
+                f"/workouts/{wid}/exercises",
+                params={"name": "Bench", "equipment": "Olympic Barbell"},
+            )
+            ex_id = ex_res.json()["id"]
+            self.client.post(
+                f"/exercises/{ex_id}/sets",
+                params={"reps": 5, "weight": w, "rpe": 8},
+            )
+        plan_date = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
+        resp = self.client.post(
+            "/planned_workouts/auto_plan",
+            params={"date": plan_date, "exercises": "Bench@Olympic Barbell"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        pid = resp.json()["id"]
+        ex_resp = self.client.get(f"/planned_workouts/{pid}/exercises")
+        self.assertEqual(len(ex_resp.json()), 1)
+        planned_ex_id = ex_resp.json()[0]["id"]
+        sets_resp = self.client.get(f"/planned_exercises/{planned_ex_id}/sets")
+        self.assertEqual(sets_resp.status_code, 200)
+        sets_data = sets_resp.json()
+        self.assertEqual(len(sets_data), 1)
+        presc = ExercisePrescription.exercise_prescription(
+            weights,
+            [5] * len(weights),
+            list(range(len(weights))),
+            [8] * len(weights),
+            body_weight=80.0,
+            months_active=1.0,
+            workouts_per_month=len(weights),
+        )
+        expected = presc["prescription"][0]
+        self.assertAlmostEqual(sets_data[0]["weight"], expected["weight"], places=1)
+        self.assertEqual(sets_data[0]["reps"], expected["reps"])

@@ -93,8 +93,8 @@ class StreamlitAppTest(unittest.TestCase):
     def test_add_favorite_exercise(self) -> None:
         self.at.query_params["tab"] = "library"
         self.at.run()
-        self.at.selectbox[6].select("Barbell Bench Press").run()
-        self.at.button[5].click().run()
+        self.at.selectbox[14].select("Barbell Bench Press").run()
+        self.at.button[13].click().run()
 
         conn = self._connect()
         cur = conn.cursor()
