@@ -1188,6 +1188,21 @@ class MuscleRepository(BaseRepository):
                 (new_name, canonical),
             )
 
+    def add(self, name: str) -> None:
+        rows = super().fetch_all(
+            "SELECT canonical_name FROM muscles WHERE name = ?;",
+            (name,),
+        )
+        if rows:
+            if rows[0][0] == name:
+                raise ValueError("muscle exists")
+            raise ValueError("name is alias")
+        with self._connection() as conn:
+            conn.execute(
+                "INSERT INTO muscles (name, canonical_name) VALUES (?, ?);",
+                (name, name),
+            )
+
 
 class ExerciseNameRepository(BaseRepository):
     """Repository for exercise alias management."""
