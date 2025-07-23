@@ -292,7 +292,16 @@ class GymApp:
                 display: flex;
                 align-items: center;
                 flex: 1 1 auto;
-                margin: 0.5rem 0;
+                margin: 0.25rem 0;
+            }
+            .title-section h1 {
+                margin: 0;
+            }
+            h1, h2, h3 {
+                margin: 0;
+            }
+            section.main > div {
+                padding-top: 0.5rem !important;
             }
             @media screen and (max-width: 768px) {
                 .header-wrapper {
