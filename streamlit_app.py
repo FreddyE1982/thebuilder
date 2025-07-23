@@ -45,6 +45,7 @@ from ml_service import (
     VolumeModelService,
     ReadinessModelService,
     ProgressModelService,
+    RLGoalModelService,
 )
 from tools import MathTools
 
@@ -118,6 +119,7 @@ class GymApp:
         self.volume_model = VolumeModelService(self.ml_models)
         self.readiness_model = ReadinessModelService(self.ml_models)
         self.progress_model = ProgressModelService(self.ml_models)
+        self.goal_model = RLGoalModelService(self.ml_models)
         self.recommender = RecommendationService(
             self.workouts,
             self.exercises,
@@ -126,7 +128,9 @@ class GymApp:
             self.settings_repo,
             self.gamification,
             self.ml_service,
-            body_weight_repo=self.body_weights_repo,
+            self.goal_model,
+            self.body_weights_repo,
+            self.goals_repo,
         )
         self.planner = PlannerService(
             self.workouts,
