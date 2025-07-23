@@ -13,6 +13,15 @@ from streamlit.testing.v1 import AppTest
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 
+def _find_by_label(elements, label, option=None, key=None):
+    for idx, elem in enumerate(elements):
+        if getattr(elem, "label", None) == label:
+            if option is None or option in getattr(elem, "options", []):
+                if key is None or getattr(elem, "key", None) == key:
+                    return idx
+    raise AssertionError(f"Element with label '{label}' not found")
+
+
 class StreamlitAppTest(unittest.TestCase):
     def setUp(self) -> None:
         self.db_path = "test_gui.db"
@@ -74,12 +83,21 @@ class StreamlitAppTest(unittest.TestCase):
         conn.close()
 
     def test_plan_to_workout(self) -> None:
-        self.at.date_input[0].set_value("2024-01-02").run()
+        idx_date = _find_by_label(self.at.date_input, "Plan Date", key="plan_date")
+        self.at.date_input[idx_date].set_value("2024-01-02").run()
         self.at.selectbox[0].select("strength").run()
-        self.at.button[4].click().run()
+        idx = _find_by_label(
+            self.at.button,
+            "New Planned Workout",
+            key="FormSubmitter:new_plan_form-New Planned Workout",
+        )
+        self.at.button[idx].click().run()
         self.at.run()
-        self.at.selectbox[0].select("1").run()
-        self.at.button[1].click().run()
+        exp_idx = _find_by_label(self.at.expander, "Use Planned Workout")
+        self.at.expander[exp_idx].selectbox[0].select("1").run()
+        self.at.run()
+        b_idx = _find_by_label(self.at.button, "Use Plan")
+        self.at.button[b_idx].click().run()
 
         conn = self._connect()
         cur = conn.cursor()
@@ -93,8 +111,10 @@ class StreamlitAppTest(unittest.TestCase):
     def test_add_favorite_exercise(self) -> None:
         self.at.query_params["tab"] = "library"
         self.at.run()
-        self.at.selectbox[14].select("Barbell Bench Press").run()
-        self.at.button[13].click().run()
+        idx = _find_by_label(self.at.selectbox, "Add Favorite", "Barbell Bench Press", key="fav_add_name")
+        self.at.selectbox[idx].select("Barbell Bench Press").run()
+        b_idx = _find_by_label(self.at.button, "Add Favorite", key="fav_add_btn")
+        self.at.button[b_idx].click().run()
 
         conn = self._connect()
         cur = conn.cursor()
@@ -533,8 +553,10 @@ class StreamlitTemplateWorkflowTest(unittest.TestCase):
     def test_template_plan_to_workout(self) -> None:
         plan_tab = self.at.tabs[2]
         plan_tab.text_input[0].input("Tpl1").run()
-        plan_tab.selectbox[1].select("strength").run()
-        plan_tab.button[1].click().run()
+        idx = _find_by_label(plan_tab.selectbox, "Training Type")
+        plan_tab.selectbox[idx].select("strength").run()
+        b_idx = _find_by_label(plan_tab.button, "Create Template")
+        plan_tab.button[b_idx].click().run()
         self.at.run()
         plan_tab = self.at.tabs[2]
         for exp in plan_tab.expander:
@@ -542,8 +564,10 @@ class StreamlitTemplateWorkflowTest(unittest.TestCase):
                 exp.button[1].click().run()
                 break
         self.at.run()
-        self.at.selectbox[0].select("1").run()
-        self.at.button[1].click().run()
+        idx = _find_by_label(self.at.selectbox, "Planned Workout")
+        self.at.selectbox[idx].select("1").run()
+        b_idx = _find_by_label(self.at.button, "Use Plan")
+        self.at.button[b_idx].click().run()
 
         conn = self._connect()
         cur = conn.cursor()

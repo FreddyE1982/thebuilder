@@ -1547,10 +1547,11 @@ class EquipmentTypeRepository(BaseRepository):
         return self.settings.get_bool("hide_preconfigured_equipment", False)
 
     def fetch_all(self) -> List[str]:
-        query = "SELECT name FROM equipment_types WHERE 1=1"
-        if self._hide_preconfigured():
-            query += " AND is_custom = 1"
-        query += " ORDER BY name;"
+        # Equipment types should always be available regardless of the
+        # ``hide_preconfigured_equipment`` setting. Filtering by ``is_custom``
+        # would prevent selecting predefined types when adding new equipment.
+        # Therefore we no longer apply the hide-preconfigured flag here.
+        query = "SELECT name FROM equipment_types ORDER BY name;"
         rows = super().fetch_all(query)
         return [r[0] for r in rows]
 
