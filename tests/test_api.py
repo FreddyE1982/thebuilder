@@ -244,7 +244,9 @@ class APITestCase(unittest.TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         resp = self.client.get("/equipment/types")
-        self.assertNotIn("Free Weights", resp.json())
+        # Equipment types must remain visible even when preconfigured equipment
+        # is hidden. The toggle should only affect individual equipment items.
+        self.assertIn("Free Weights", resp.json())
         resp = self.client.get("/equipment")
         self.assertNotIn("Olympic Barbell", resp.json())
 
