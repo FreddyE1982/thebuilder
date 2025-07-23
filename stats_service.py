@@ -62,9 +62,33 @@ class StatisticsService:
             return self.settings.get_float("body_weight", 80.0)
         return 80.0
 
+    def _all_names(self) -> List[str]:
+        names = self.exercise_names.fetch_all()
+        if (
+            self.settings is not None
+            and self.settings.get_bool("hide_preconfigured_exercises", False)
+            and self.catalog is not None
+        ):
+            filtered: list[str] = []
+            for n in names:
+                detail = self.catalog.fetch_detail(n)
+                if detail is not None and detail[-1] == 0:
+                    continue
+                filtered.append(n)
+            return filtered
+        return names
+
     def _alias_names(self, exercise: Optional[str]) -> List[str]:
         if not exercise:
-            return self.exercise_names.fetch_all()
+            return self._all_names()
+        if (
+            self.settings is not None
+            and self.settings.get_bool("hide_preconfigured_exercises", False)
+            and self.catalog is not None
+        ):
+            detail = self.catalog.fetch_detail(exercise)
+            if detail is not None and detail[-1] == 0:
+                return []
         return self.exercise_names.aliases(exercise)
 
     def exercise_history(
@@ -165,7 +189,7 @@ class StatisticsService:
         end_date: Optional[str] = None,
     ) -> List[Dict[str, float]]:
         """Return total volume and set count per day."""
-        names = self.exercise_names.fetch_all()
+        names = self._all_names()
         rows = self.sets.fetch_history_by_names(
             names,
             start_date=start_date,
@@ -350,7 +374,7 @@ class StatisticsService:
         end_date: Optional[str] = None,
     ) -> List[Dict[str, float]]:
         """Return volume and set count per equipment."""
-        names = self.exercise_names.fetch_all()
+        names = self._all_names()
         rows = self.sets.fetch_history_by_names(
             names,
             start_date=start_date,
@@ -392,7 +416,7 @@ class StatisticsService:
         """Return volume and set count per muscle based on equipment."""
         if self.equipment is None:
             return []
-        names = self.exercise_names.fetch_all()
+        names = self._all_names()
         rows = self.sets.fetch_history_by_names(
             names,
             start_date=start_date,
@@ -436,7 +460,7 @@ class StatisticsService:
         """Return volume and set count per muscle group."""
         if self.catalog is None:
             return []
-        names = self.exercise_names.fetch_all()
+        names = self._all_names()
         rows = self.sets.fetch_history_by_names(
             names,
             start_date=start_date,
@@ -587,7 +611,7 @@ class StatisticsService:
         end_date: Optional[str] = None,
     ) -> Dict[str, float]:
         """Return aggregated workout statistics."""
-        names = self.exercise_names.fetch_all()
+        names = self._all_names()
         rows = self.sets.fetch_history_by_names(
             names,
             start_date=start_date,
@@ -706,7 +730,7 @@ class StatisticsService:
         end_date: Optional[str] = None,
     ) -> List[Dict[str, float]]:
         """Return daily training stress and cumulative fatigue values."""
-        names = self.exercise_names.fetch_all()
+        names = self._all_names()
         rows = self.sets.fetch_history_by_names(
             names,
             start_date=start_date,
@@ -779,7 +803,7 @@ class StatisticsService:
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
     ) -> Dict[str, object]:
-        names = self.exercise_names.fetch_all()
+        names = self._all_names()
         rows = self.sets.fetch_history_by_names(
             names,
             start_date=start_date,
@@ -822,7 +846,7 @@ class StatisticsService:
         end_date: Optional[str] = None,
     ) -> Dict[str, float]:
         """Return training monotony value across the specified dates."""
-        names = self.exercise_names.fetch_all()
+        names = self._all_names()
         rows = self.sets.fetch_history_by_names(
             names,
             start_date=start_date,
@@ -877,7 +901,7 @@ class StatisticsService:
         end_date: Optional[str] = None,
     ) -> List[Dict[str, float]]:
         """Return Training Stress Balance across dates."""
-        names = self.exercise_names.fetch_all()
+        names = self._all_names()
         rows = self.sets.fetch_history_by_names(
             names,
             start_date=start_date,
@@ -926,7 +950,7 @@ class StatisticsService:
         end_date: Optional[str] = None,
     ) -> List[Dict[str, float]]:
         """Return efficiency score per workout."""
-        names = self.exercise_names.fetch_all()
+        names = self._all_names()
         rows = self.sets.fetch_history_by_names(
             names,
             start_date=start_date,
@@ -967,7 +991,7 @@ class StatisticsService:
         end_date: Optional[str] = None,
     ) -> List[Dict[str, float]]:
         """Return volume per minute for each workout."""
-        names = self.exercise_names.fetch_all()
+        names = self._all_names()
         rows = self.sets.fetch_history_by_names(
             names,
             start_date=start_date,
@@ -999,7 +1023,7 @@ class StatisticsService:
         end_date: Optional[str] = None,
     ) -> List[Dict[str, float]]:
         """Return sets per minute for each workout."""
-        names = self.exercise_names.fetch_all()
+        names = self._all_names()
         rows = self.sets.fetch_history_by_names(
             names,
             start_date=start_date,
@@ -1032,7 +1056,7 @@ class StatisticsService:
         end_date: Optional[str] = None,
     ) -> List[Dict[str, float]]:
         """Return average rest duration between sets per workout."""
-        names = self.exercise_names.fetch_all()
+        names = self._all_names()
         rows = self.sets.fetch_history_by_names(
             names,
             start_date=start_date,
@@ -1066,7 +1090,7 @@ class StatisticsService:
         end_date: Optional[str] = None,
     ) -> List[Dict[str, float]]:
         """Return total duration between first set start and last set finish."""
-        names = self.exercise_names.fetch_all()
+        names = self._all_names()
         rows = self.sets.fetch_history_by_names(
             names,
             start_date=start_date,
@@ -1107,7 +1131,7 @@ class StatisticsService:
         end_date: Optional[str] = None,
     ) -> List[Dict[str, float]]:
         """Return total time under tension per workout."""
-        names = self.exercise_names.fetch_all()
+        names = self._all_names()
         rows = self.sets.fetch_history_by_names(
             names,
             start_date=start_date,
@@ -1143,7 +1167,7 @@ class StatisticsService:
         end_date: Optional[str] = None,
     ) -> List[Dict[str, float]]:
         """Return exercise diversity score per workout."""
-        names = self.exercise_names.fetch_all()
+        names = self._all_names()
         rows = self.sets.fetch_history_by_names(
             names,
             start_date=start_date,
@@ -1178,7 +1202,7 @@ class StatisticsService:
         end_date: Optional[str] = None,
     ) -> List[Dict[str, float | int]]:
         """Return workout counts and volume grouped by location."""
-        names = self.exercise_names.fetch_all()
+        names = self._all_names()
         rows = self.sets.fetch_history_by_names(
             names,
             start_date=start_date,
@@ -1212,7 +1236,7 @@ class StatisticsService:
         end_date: Optional[str] = None,
     ) -> Dict[str, float]:
         """Return overall stress and fatigue for the period."""
-        names = self.exercise_names.fetch_all()
+        names = self._all_names()
         rows = self.sets.fetch_history_by_names(
             names,
             start_date=start_date,
@@ -1265,7 +1289,7 @@ class StatisticsService:
         end_date: Optional[str] = None,
     ) -> List[Dict[str, float]]:
         """Forecast daily training volume for upcoming days."""
-        names = self.exercise_names.fetch_all()
+        names = self._all_names()
         rows = self.sets.fetch_history_by_names(
             names,
             start_date=start_date,
@@ -1354,7 +1378,7 @@ class StatisticsService:
         end_date: Optional[str] = None,
     ) -> List[Dict[str, float]]:
         """Return daily readiness scores."""
-        names = self.exercise_names.fetch_all()
+        names = self._all_names()
         rows = self.sets.fetch_history_by_names(
             names,
             start_date=start_date,

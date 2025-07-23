@@ -61,7 +61,7 @@ class GymAPI:
         self.template_sets = TemplateSetRepository(db_path)
         self.settings = SettingsRepository(db_path, yaml_path)
         self.equipment = EquipmentRepository(db_path, self.settings)
-        self.exercise_catalog = ExerciseCatalogRepository(db_path)
+        self.exercise_catalog = ExerciseCatalogRepository(db_path, self.settings)
         self.muscles = MuscleRepository(db_path)
         self.exercise_names = ExerciseNameRepository(db_path)
         self.favorites = FavoriteExerciseRepository(db_path)
@@ -1683,6 +1683,7 @@ class GymAPI:
             ml_injury_training_enabled: bool = None,
             ml_injury_prediction_enabled: bool = None,
             hide_preconfigured_equipment: bool = None,
+            hide_preconfigured_exercises: bool = None,
         ):
             if body_weight is not None:
                 self.settings.set_float("body_weight", body_weight)
@@ -1749,6 +1750,10 @@ class GymAPI:
             if hide_preconfigured_equipment is not None:
                 self.settings.set_bool(
                     "hide_preconfigured_equipment", hide_preconfigured_equipment
+                )
+            if hide_preconfigured_exercises is not None:
+                self.settings.set_bool(
+                    "hide_preconfigured_exercises", hide_preconfigured_exercises
                 )
             return {"status": "updated"}
 

@@ -1273,6 +1273,7 @@ class SettingsRepository(BaseRepository):
             "ml_injury_training_enabled",
             "ml_injury_prediction_enabled",
             "hide_preconfigured_equipment",
+            "hide_preconfigured_exercises",
         }
         for k, v in rows:
             if k in bool_keys:
@@ -1307,6 +1308,7 @@ class SettingsRepository(BaseRepository):
                 "ml_injury_training_enabled",
                 "ml_injury_prediction_enabled",
                 "hide_preconfigured_equipment",
+                "hide_preconfigured_exercises",
             }
             for key, value in data.items():
                 val = str(value)
@@ -1382,6 +1384,7 @@ class SettingsRepository(BaseRepository):
             "ml_injury_training_enabled",
             "ml_injury_prediction_enabled",
             "hide_preconfigured_equipment",
+            "hide_preconfigured_exercises",
         }
         for k in bool_keys:
             if k in data:
@@ -1545,15 +1548,27 @@ class EquipmentRepository(BaseRepository):
 class ExerciseCatalogRepository(BaseRepository):
     """Repository for exercise catalog data."""
 
-    def __init__(self, db_path: str = "workout.db") -> None:
+    def __init__(
+        self,
+        db_path: str = "workout.db",
+        settings_repo: Optional[SettingsRepository] = None,
+    ) -> None:
         super().__init__(db_path)
         self.muscles = MuscleRepository(db_path)
         self.exercise_names = ExerciseNameRepository(db_path)
+        self.settings = settings_repo
+
+    def _hide_preconfigured(self) -> bool:
+        if self.settings is None:
+            return False
+        return self.settings.get_bool("hide_preconfigured_exercises", False)
 
     def fetch_muscle_groups(self) -> List[str]:
-        rows = self.fetch_all(
-            "SELECT DISTINCT muscle_group FROM exercise_catalog ORDER BY muscle_group;"
-        )
+        query = "SELECT DISTINCT muscle_group FROM exercise_catalog WHERE 1=1"
+        if self._hide_preconfigured():
+            query += " AND is_custom = 1"
+        query += " ORDER BY muscle_group;"
+        rows = self.fetch_all(query)
         return [r[0] for r in rows]
 
     def fetch_names(
@@ -1592,6 +1607,8 @@ class ExerciseCatalogRepository(BaseRepository):
                     params.extend([pattern] * len(cols))
                 muscle_clauses.append("(" + " OR ".join(alias_clauses) + ")")
             query += " AND (" + " OR ".join(muscle_clauses) + ")"
+        if self._hide_preconfigured():
+            query += " AND is_custom = 1"
         query += " ORDER BY name;"
         rows = self.fetch_all(query, tuple(params))
         result: List[str] = []
@@ -1641,10 +1658,10 @@ class ExerciseCatalogRepository(BaseRepository):
         query = (
             "SELECT name, muscle_group, variants, equipment_names, primary_muscle, "
             "secondary_muscle, tertiary_muscle, other_muscles, is_custom FROM "
-            "exercise_catalog"
+            "exercise_catalog WHERE 1=1"
         )
-        if custom_only:
-            query += " WHERE is_custom = 1"
+        if custom_only or self._hide_preconfigured():
+            query += " AND is_custom = 1"
         query += " ORDER BY name;"
         rows = self.fetch_all(query)
         result = []
@@ -1680,9 +1697,13 @@ class ExerciseCatalogRepository(BaseRepository):
         return result
 
     def fetch_all_muscles(self) -> List[str]:
-        rows = self.fetch_all(
-            "SELECT primary_muscle, secondary_muscle, tertiary_muscle, other_muscles FROM exercise_catalog;"
+        query = (
+            "SELECT primary_muscle, secondary_muscle, tertiary_muscle, other_muscles FROM exercise_catalog"
         )
+        if self._hide_preconfigured():
+            query += " WHERE is_custom = 1"
+        query += ";"
+        rows = self.fetch_all(query)
         muscles: Set[str] = set()
         for pm, sm, tm, om in rows:
             for field in [pm, sm, tm, om]:
