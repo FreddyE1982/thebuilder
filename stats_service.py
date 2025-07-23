@@ -361,6 +361,14 @@ class StatisticsService:
         for reps, weight, _rpe, _date, _ex_name, eq_name in rows:
             if not eq_name:
                 continue
+            if (
+                self.settings is not None
+                and self.settings.get_bool("hide_preconfigured_equipment", False)
+                and self.equipment is not None
+            ):
+                detail = self.equipment.fetch_detail(eq_name)
+                if detail is not None and detail[2] == 0:
+                    continue
             item = stats.setdefault(eq_name, {"volume": 0.0, "sets": 0})
             item["volume"] += int(reps) * float(weight)
             item["sets"] += 1
@@ -395,6 +403,14 @@ class StatisticsService:
         for reps, weight, _rpe, _date, _ex_name, eq_name in rows:
             if not eq_name:
                 continue
+            if (
+                self.settings is not None
+                and self.settings.get_bool("hide_preconfigured_equipment", False)
+                and self.equipment is not None
+            ):
+                detail = self.equipment.fetch_detail(eq_name)
+                if detail is not None and detail[2] == 0:
+                    continue
             muscles = self.equipment.fetch_muscles(eq_name)
             for m in muscles:
                 item = stats.setdefault(m, {"volume": 0.0, "sets": 0})

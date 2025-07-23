@@ -82,7 +82,7 @@ class GymApp:
         self.template_workouts = TemplateWorkoutRepository(db_path)
         self.template_exercises = TemplateExerciseRepository(db_path)
         self.template_sets = TemplateSetRepository(db_path)
-        self.equipment = EquipmentRepository(db_path)
+        self.equipment = EquipmentRepository(db_path, self.settings_repo)
         self.exercise_catalog = ExerciseCatalogRepository(db_path)
         self.muscles_repo = MuscleRepository(db_path)
         self.exercise_names_repo = ExerciseNameRepository(db_path)
@@ -3655,6 +3655,13 @@ class GymApp:
 
         with eq_tab:
             st.header("Equipment Management")
+            hide_pre = st.checkbox(
+                "Hide Preconfigured Equipment",
+                value=self.settings_repo.get_bool(
+                    "hide_preconfigured_equipment", False
+                ),
+            )
+            self.settings_repo.set_bool("hide_preconfigured_equipment", hide_pre)
             with st.expander("Add Equipment"):
                 muscles_list = self.muscles_repo.fetch_all()
                 new_name = st.text_input("Equipment Name", key="equip_new_name")
