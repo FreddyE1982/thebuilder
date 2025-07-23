@@ -20,6 +20,7 @@ from db import (
     EquipmentRepository,
     ExerciseCatalogRepository,
     MuscleRepository,
+    MuscleGroupRepository,
     ExerciseNameRepository,
     SettingsRepository,
     PyramidTestRepository,
@@ -85,6 +86,7 @@ class GymApp:
         self.equipment = EquipmentRepository(db_path, self.settings_repo)
         self.exercise_catalog = ExerciseCatalogRepository(db_path, self.settings_repo)
         self.muscles_repo = MuscleRepository(db_path)
+        self.muscle_groups_repo = MuscleGroupRepository(db_path, self.muscles_repo)
         self.exercise_names_repo = ExerciseNameRepository(db_path)
         self.favorites_repo = FavoriteExerciseRepository(db_path)
         self.favorite_templates_repo = FavoriteTemplateRepository(db_path)
@@ -3778,6 +3780,40 @@ class GymApp:
                             st.warning(str(e))
                     else:
                         st.warning("Name required")
+
+            with st.expander("Muscle Groups", expanded=True):
+                groups = self.muscle_groups_repo.fetch_all()
+                new_group = st.text_input("New Group", key="new_group")
+                if st.button("Add Group"):
+                    if new_group:
+                        try:
+                            self.muscle_groups_repo.add(new_group)
+                            st.success("Group added")
+                        except ValueError as e:
+                            st.warning(str(e))
+                    else:
+                        st.warning("Name required")
+                for g in groups:
+                    gexp = st.expander(g)
+                    with gexp:
+                        new_name = st.text_input("Name", g, key=f"grp_name_{g}")
+                        sel = st.multiselect(
+                            "Muscles", muscles, self.muscle_groups_repo.fetch_muscles(g),
+                            key=f"grp_mus_{g}"
+                        )
+                        if st.button("Update", key=f"grp_up_{g}"):
+                            try:
+                                self.muscle_groups_repo.rename(g, new_name)
+                                self.muscle_groups_repo.set_members(new_name, sel)
+                                st.success("Updated")
+                            except ValueError as e:
+                                st.warning(str(e))
+                        if st.button("Delete", key=f"grp_del_{g}"):
+                            try:
+                                self.muscle_groups_repo.delete(g)
+                                st.success("Deleted")
+                            except ValueError as e:
+                                st.warning(str(e))
 
         with ex_tab:
             st.header("Exercise Aliases")

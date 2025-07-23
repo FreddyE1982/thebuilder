@@ -60,6 +60,21 @@ class Database:
                 );""",
             ["name", "canonical_name"],
         ),
+        "muscle_groups": (
+            """CREATE TABLE muscle_groups (
+                    name TEXT PRIMARY KEY
+                );""",
+            ["name"],
+        ),
+        "muscle_group_members": (
+            """CREATE TABLE muscle_group_members (
+                    muscle_name TEXT PRIMARY KEY,
+                    group_name TEXT NOT NULL,
+                    FOREIGN KEY(muscle_name) REFERENCES muscles(name) ON DELETE CASCADE,
+                    FOREIGN KEY(group_name) REFERENCES muscle_groups(name) ON DELETE CASCADE
+                );""",
+            ["muscle_name", "group_name"],
+        ),
         "exercise_names": (
             """CREATE TABLE exercise_names (
                     name TEXT PRIMARY KEY,
@@ -1214,6 +1229,102 @@ class MuscleRepository(BaseRepository):
                 "INSERT INTO muscles (name, canonical_name) VALUES (?, ?);",
                 (name, name),
             )
+
+
+class MuscleGroupRepository(BaseRepository):
+    """Repository for muscle group management."""
+
+    def __init__(self, db_path: str = "workout.db", muscles: Optional[MuscleRepository] = None) -> None:
+        super().__init__(db_path)
+        self.muscles = muscles or MuscleRepository(db_path)
+
+    def add(self, name: str) -> None:
+        rows = super().fetch_all("SELECT name FROM muscle_groups WHERE name = ?;", (name,))
+        if rows:
+            raise ValueError("group exists")
+        self.execute("INSERT INTO muscle_groups (name) VALUES (?);", (name,))
+
+    def rename(self, name: str, new_name: str) -> None:
+        rows = super().fetch_all("SELECT name FROM muscle_groups WHERE name = ?;", (name,))
+        if not rows:
+            raise ValueError("group not found")
+        if new_name != name and super().fetch_all(
+            "SELECT name FROM muscle_groups WHERE name = ?;", (new_name,)
+        ):
+            raise ValueError("target exists")
+        with self._connection() as conn:
+            if new_name != name:
+                conn.execute(
+                    "UPDATE muscle_groups SET name = ? WHERE name = ?;",
+                    (new_name, name),
+                )
+                conn.execute(
+                    "UPDATE muscle_group_members SET group_name = ? WHERE group_name = ?;",
+                    (new_name, name),
+                )
+
+    def delete(self, name: str) -> None:
+        rows = super().fetch_all("SELECT name FROM muscle_groups WHERE name = ?;", (name,))
+        if not rows:
+            raise ValueError("group not found")
+        with self._connection() as conn:
+            conn.execute("DELETE FROM muscle_groups WHERE name = ?;", (name,))
+            conn.execute("DELETE FROM muscle_group_members WHERE group_name = ?;", (name,))
+
+    def fetch_all(self) -> List[str]:
+        rows = super().fetch_all("SELECT name FROM muscle_groups ORDER BY name;")
+        return [r[0] for r in rows]
+
+    def assign(self, group: str, muscle: str) -> None:
+        if not super().fetch_all("SELECT name FROM muscle_groups WHERE name = ?;", (group,)):
+            raise ValueError("group not found")
+        self.muscles.ensure([muscle])
+        canon = self.muscles.canonical(muscle)
+        with self._connection() as conn:
+            conn.execute(
+                "DELETE FROM muscle_group_members WHERE muscle_name = ?;", (canon,)
+            )
+            conn.execute(
+                "INSERT INTO muscle_group_members (muscle_name, group_name) VALUES (?, ?);",
+                (canon, group),
+            )
+
+    def remove_assignment(self, muscle: str) -> None:
+        canon = self.muscles.canonical(muscle)
+        self.execute("DELETE FROM muscle_group_members WHERE muscle_name = ?;", (canon,))
+
+    def set_members(self, group: str, muscles: List[str]) -> None:
+        self.fetch_all()  # Ensure table exists
+        for m in muscles:
+            self.muscles.ensure([m])
+        with self._connection() as conn:
+            conn.execute(
+                "DELETE FROM muscle_group_members WHERE group_name = ?;", (group,)
+            )
+            for m in muscles:
+                canon = self.muscles.canonical(m)
+                conn.execute(
+                    "DELETE FROM muscle_group_members WHERE muscle_name = ?;", (canon,)
+                )
+                conn.execute(
+                    "INSERT INTO muscle_group_members (muscle_name, group_name) VALUES (?, ?);",
+                    (canon, group),
+                )
+
+    def fetch_muscles(self, group: str) -> List[str]:
+        rows = super().fetch_all(
+            "SELECT muscle_name FROM muscle_group_members WHERE group_name = ? ORDER BY muscle_name;",
+            (group,),
+        )
+        return [r[0] for r in rows]
+
+    def fetch_group(self, muscle: str) -> Optional[str]:
+        canon = self.muscles.canonical(muscle)
+        rows = super().fetch_all(
+            "SELECT group_name FROM muscle_group_members WHERE muscle_name = ?;",
+            (canon,),
+        )
+        return rows[0][0] if rows else None
 
 
 class ExerciseNameRepository(BaseRepository):
