@@ -11,6 +11,7 @@ warnings.simplefilter("ignore", AltairDeprecationWarning)
 from streamlit.testing.v1 import AppTest
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from streamlit_app import GymApp
 
 
 def _find_by_label(elements, label, option=None, key=None):
@@ -641,6 +642,27 @@ class StreamlitAllInteractionsTest(unittest.TestCase):
         for btn in self.at.button:
             btn.click().run()
         self.at.run()
+
+
+class RecommendationIntegrationTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.db_path = "test_goal_integration.db"
+        self.yaml_path = "test_goal_settings.yaml"
+        for path in [self.db_path, self.yaml_path]:
+            if os.path.exists(path):
+                os.remove(path)
+
+    def tearDown(self) -> None:
+        for path in [self.db_path, self.yaml_path]:
+            if os.path.exists(path):
+                os.remove(path)
+
+    def test_goals_passed_to_recommender(self) -> None:
+        os.environ["DB_PATH"] = self.db_path
+        os.environ["YAML_PATH"] = self.yaml_path
+        os.environ["TEST_MODE"] = "0"
+        app = GymApp(self.db_path, self.yaml_path)
+        self.assertIsNotNone(app.recommender.goals)
 
 
 if __name__ == "__main__":
