@@ -700,6 +700,12 @@ class GymApp:
             .metric-grid > div[data-testid="metric-container"] {
                 width: 100%;
             }
+            .metric-card {
+                background: var(--section-bg);
+                border-radius: 0.5rem;
+                padding: 0.5rem;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            }
             .metric-grid::-webkit-scrollbar {
                 display: none;
             }
@@ -968,7 +974,9 @@ class GymApp:
         """Render metrics in a responsive grid."""
         st.markdown("<div class='metric-grid'>", unsafe_allow_html=True)
         for label, val in metrics:
+            st.markdown("<div class='metric-card'>", unsafe_allow_html=True)
             st.metric(label, val)
+            st.markdown("</div>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
     def _line_chart(self, data: dict[str, list], x: list[str]) -> None:

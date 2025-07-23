@@ -31,6 +31,7 @@ class MobileCSSTest(unittest.TestCase):
         )
         self.assertIn("font-size: 0.65rem;", content)
         self.assertIn(".scroll-top", content)
+        self.assertIn(".metric-card", content)
 
 if __name__ == "__main__":
     unittest.main()
