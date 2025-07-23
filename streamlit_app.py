@@ -83,7 +83,7 @@ class GymApp:
         self.template_exercises = TemplateExerciseRepository(db_path)
         self.template_sets = TemplateSetRepository(db_path)
         self.equipment = EquipmentRepository(db_path, self.settings_repo)
-        self.exercise_catalog = ExerciseCatalogRepository(db_path)
+        self.exercise_catalog = ExerciseCatalogRepository(db_path, self.settings_repo)
         self.muscles_repo = MuscleRepository(db_path)
         self.exercise_names_repo = ExerciseNameRepository(db_path)
         self.favorites_repo = FavoriteExerciseRepository(db_path)
@@ -2317,6 +2317,13 @@ class GymApp:
     def _exercise_catalog_library(self) -> None:
         groups = self.exercise_catalog.fetch_muscle_groups()
         muscles = self.muscles_repo.fetch_all()
+        hide_pre = st.checkbox(
+            "Hide Preconfigured Exercises",
+            value=self.settings_repo.get_bool(
+                "hide_preconfigured_exercises", False
+            ),
+        )
+        self.settings_repo.set_bool("hide_preconfigured_exercises", hide_pre)
         favs = self.favorites_repo.fetch_all()
         with st.expander("Favorite Exercises", expanded=True):
             if favs:

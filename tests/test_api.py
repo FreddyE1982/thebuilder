@@ -255,6 +255,33 @@ class APITestCase(unittest.TestCase):
         resp = self.client.get("/equipment")
         self.assertIn("Olympic Barbell", resp.json())
 
+    def test_hide_preconfigured_exercises(self) -> None:
+        resp = self.client.get(
+            "/exercise_catalog",
+            params={"muscle_groups": "Chest"},
+        )
+        self.assertIn("Barbell Bench Press", resp.json())
+
+        resp = self.client.post(
+            "/settings/general", params={"hide_preconfigured_exercises": True}
+        )
+        self.assertEqual(resp.status_code, 200)
+        resp = self.client.get(
+            "/exercise_catalog",
+            params={"muscle_groups": "Chest"},
+        )
+        self.assertNotIn("Barbell Bench Press", resp.json())
+
+        resp = self.client.post(
+            "/settings/general", params={"hide_preconfigured_exercises": False}
+        )
+        self.assertEqual(resp.status_code, 200)
+        resp = self.client.get(
+            "/exercise_catalog",
+            params={"muscle_groups": "Chest"},
+        )
+        self.assertIn("Barbell Bench Press", resp.json())
+
     def test_plan_workflow(self) -> None:
         plan_date = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
 
