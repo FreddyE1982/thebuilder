@@ -145,22 +145,29 @@ class StreamlitAppTest(unittest.TestCase):
         self.at.run()
         # Custom exercise
         cust_tab = self.at.tabs[12]
-        cust_tab.selectbox[0].select("Back").run()
+        idx_group = _find_by_label(cust_tab.selectbox, "Muscle Group", key="cust_ex_group")
+        cust_tab.selectbox[idx_group].select("Chest").run()
         cust_tab.text_input[0].input("CustomEx").run()
         cust_tab.text_input[1].input("Var1").run()
-        cust_tab.multiselect[0].select("Cable Crossover Machine").run()
-        cust_tab.selectbox[1].select("Latissimus Dorsi").run()
-        cust_tab.button[0].click().run()
+        idx_eq = _find_by_label(cust_tab.multiselect, "Equipment", key="cust_ex_eq")
+        cust_tab.multiselect[idx_eq].select("Chest Press Machine").run()
+        idx_chk = _find_by_label(cust_tab.checkbox, "Muscles Like Equipment", key="cust_ex_match")
+        cust_tab.checkbox[idx_chk].check().run()
+        idx_btn = _find_by_label(cust_tab.button, "Add Exercise", key="cust_ex_add")
+        cust_tab.button[idx_btn].click().run()
         self.at.run()
         cust_tab = self.at.tabs[12]
 
         conn = self._connect()
         cur = conn.cursor()
         cur.execute(
-            "SELECT muscle_group, name FROM exercise_catalog WHERE name = ?;",
+            "SELECT muscle_group, primary_muscle, secondary_muscle FROM exercise_catalog WHERE name = ?;",
             ("CustomEx",),
         )
-        self.assertEqual(cur.fetchone(), ("Back", "CustomEx"))
+        self.assertEqual(
+            cur.fetchone(),
+            ("Chest", "Pectoralis Major", "Anterior Deltoid|Triceps Brachii"),
+        )
 
         # Body weight log
         bw_tab = self.at.tabs[13]

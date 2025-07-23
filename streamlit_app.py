@@ -2501,23 +2501,48 @@ class GymApp:
                 group = st.selectbox("Muscle Group", groups, key="cust_ex_group")
                 name = st.text_input("Exercise Name", key="cust_ex_name")
                 variants = st.text_input("Variants", key="cust_ex_variants")
-                eq_sel = st.multiselect("Equipment", equipment_names, key="cust_ex_eq")
-                primary = st.selectbox("Primary Muscle", muscles, key="cust_ex_primary")
-                secondary = st.multiselect("Secondary", muscles, key="cust_ex_sec")
-                tertiary = st.multiselect("Tertiary", muscles, key="cust_ex_ter")
-                other = st.multiselect("Other", muscles, key="cust_ex_other")
+                eq_sel = st.multiselect(
+                    "Equipment", equipment_names, key="cust_ex_eq"
+                )
+                match_muscles = st.checkbox(
+                    "Muscles Like Equipment", key="cust_ex_match"
+                )
+                primary_sel = st.selectbox(
+                    "Primary Muscle", muscles, key="cust_ex_primary"
+                )
+                secondary_sel = st.multiselect(
+                    "Secondary", muscles, key="cust_ex_sec"
+                )
+                tertiary_sel = st.multiselect(
+                    "Tertiary", muscles, key="cust_ex_ter"
+                )
+                other_sel = st.multiselect("Other", muscles, key="cust_ex_other")
                 if st.button("Add Exercise", key="cust_ex_add"):
                     if name:
                         try:
+                            if match_muscles and eq_sel:
+                                muscs: list[str] = []
+                                for eq in eq_sel:
+                                    muscs.extend(self.equipment.fetch_muscles(eq))
+                                uniq = list(dict.fromkeys(muscs))
+                                primary = uniq[0]
+                                secondary = "|".join(uniq[1:])
+                                tertiary = ""
+                                other = ""
+                            else:
+                                primary = primary_sel
+                                secondary = "|".join(secondary_sel)
+                                tertiary = "|".join(tertiary_sel)
+                                other = "|".join(other_sel)
                             self.exercise_catalog.add(
                                 group,
                                 name,
                                 variants,
                                 "|".join(eq_sel),
                                 primary,
-                                "|".join(secondary),
-                                "|".join(tertiary),
-                                "|".join(other),
+                                secondary,
+                                tertiary,
+                                other,
                             )
                             st.success("Exercise added")
                         except ValueError as e:
@@ -2591,23 +2616,48 @@ class GymApp:
                 group = st.selectbox("Muscle Group", groups, key="cust_ex_group")
                 name = st.text_input("Exercise Name", key="cust_ex_name")
                 variants = st.text_input("Variants", key="cust_ex_variants")
-                eq_sel = st.multiselect("Equipment", equipment_names, key="cust_ex_eq")
-                primary = st.selectbox("Primary Muscle", muscles, key="cust_ex_primary")
-                secondary = st.multiselect("Secondary", muscles, key="cust_ex_sec")
-                tertiary = st.multiselect("Tertiary", muscles, key="cust_ex_ter")
-                other = st.multiselect("Other", muscles, key="cust_ex_other")
+                eq_sel = st.multiselect(
+                    "Equipment", equipment_names, key="cust_ex_eq"
+                )
+                match_muscles = st.checkbox(
+                    "Muscles Like Equipment", key="cust_ex_match"
+                )
+                primary_sel = st.selectbox(
+                    "Primary Muscle", muscles, key="cust_ex_primary"
+                )
+                secondary_sel = st.multiselect(
+                    "Secondary", muscles, key="cust_ex_sec"
+                )
+                tertiary_sel = st.multiselect(
+                    "Tertiary", muscles, key="cust_ex_ter"
+                )
+                other_sel = st.multiselect("Other", muscles, key="cust_ex_other")
                 if st.button("Add Exercise", key="cust_ex_add"):
                     if name:
                         try:
+                            if match_muscles and eq_sel:
+                                muscs: list[str] = []
+                                for eq in eq_sel:
+                                    muscs.extend(self.equipment.fetch_muscles(eq))
+                                uniq = list(dict.fromkeys(muscs))
+                                primary = uniq[0]
+                                secondary = "|".join(uniq[1:])
+                                tertiary = ""
+                                other = ""
+                            else:
+                                primary = primary_sel
+                                secondary = "|".join(secondary_sel)
+                                tertiary = "|".join(tertiary_sel)
+                                other = "|".join(other_sel)
                             self.exercise_catalog.add(
                                 group,
                                 name,
                                 variants,
                                 "|".join(eq_sel),
                                 primary,
-                                "|".join(secondary),
-                                "|".join(tertiary),
-                                "|".join(other),
+                                secondary,
+                                tertiary,
+                                other,
                             )
                             st.success("Exercise added")
                         except ValueError as e:
