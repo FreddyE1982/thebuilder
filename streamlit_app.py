@@ -3346,12 +3346,8 @@ class GymApp:
                     key="cal_end",
                 )
             if st.button("Reset", key="cal_reset"):
-                st.session_state.cal_start = datetime.date.today() - datetime.timedelta(
-                    days=7
-                )
-                st.session_state.cal_end = datetime.date.today() + datetime.timedelta(
-                    days=7
-                )
+                st.session_state.pop("cal_start", None)
+                st.session_state.pop("cal_end", None)
                 st.rerun()
             start_str = start.isoformat()
             end_str = end.isoformat()
