@@ -237,6 +237,18 @@ class StreamlitAppTest(unittest.TestCase):
         self.assertEqual(cur.fetchone()[0], "Obliques")
         conn.close()
 
+    def test_muscle_dropdown_sorted(self) -> None:
+        self.at.query_params["tab"] = "settings"
+        self.at.run()
+        mus_tab = self.at.tabs[10]
+        mus_tab.text_input[1].input("Aardvark").run()
+        mus_tab.button[2].click().run()
+        self.at.run()
+        mus_tab = self.at.tabs[10]
+        idx = _find_by_label(mus_tab.selectbox, "Muscle 1")
+        options = mus_tab.selectbox[idx].options
+        self.assertEqual(options, sorted(options))
+
     def test_muscle_group_management(self) -> None:
         self.at.query_params["tab"] = "settings"
         self.at.run()
