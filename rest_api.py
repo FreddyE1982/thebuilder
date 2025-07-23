@@ -96,18 +96,6 @@ class GymAPI:
         self.goal_model = RLGoalModelService(self.ml_models)
         self.injury_model = InjuryRiskModelService(self.ml_models)
         self.adaptation_model = AdaptationModelService(self.ml_models)
-        self.planner = PlannerService(
-            self.workouts,
-            self.exercises,
-            self.sets,
-            self.planned_workouts,
-            self.planned_exercises,
-            self.planned_sets,
-            self.gamification,
-            self.template_workouts,
-            self.template_exercises,
-            self.template_sets,
-        )
         self.recommender = RecommendationService(
             self.workouts,
             self.exercises,
@@ -119,6 +107,19 @@ class GymAPI:
             self.goal_model,
             self.body_weights,
             self.goals,
+        )
+        self.planner = PlannerService(
+            self.workouts,
+            self.exercises,
+            self.sets,
+            self.planned_workouts,
+            self.planned_exercises,
+            self.planned_sets,
+            self.gamification,
+            self.template_workouts,
+            self.template_exercises,
+            self.template_sets,
+            recommender=self.recommender,
         )
         self.statistics = StatisticsService(
             self.sets,
@@ -735,6 +736,22 @@ class GymAPI:
             try:
                 new_id = self.planner.duplicate_plan(plan_id, date)
                 return {"id": new_id}
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
+        @self.app.post("/planned_workouts/auto_plan")
+        def auto_plan(date: str, exercises: str, training_type: str = "strength"):
+            items = [i for i in exercises.split("|") if i]
+            pairs: list[tuple[str, str | None]] = []
+            for it in items:
+                if "@" in it:
+                    n, eq = it.split("@", 1)
+                    pairs.append((n, eq or None))
+                else:
+                    pairs.append((it, None))
+            try:
+                pid = self.planner.create_ai_plan(date, pairs, training_type)
+                return {"id": pid}
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
 

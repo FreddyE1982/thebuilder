@@ -55,9 +55,9 @@ class RecommendationService:
         history = self.sets.fetch_history_by_names(names)
         return len(history) > 0
 
-    def recommend_next_set(self, exercise_id: int) -> dict:
-        workout_id, name, _, _ = self.exercises.fetch_detail(exercise_id)
-        alias_names = self.exercise_names.aliases(name)
+    def generate_prescription(self, exercise_name: str) -> dict:
+        """Return a full prescription for the given exercise."""
+        alias_names = self.exercise_names.aliases(exercise_name)
         history = self.sets.fetch_history_by_names(
             alias_names, with_duration=True, with_workout_id=True
         )
@@ -147,7 +147,7 @@ class RecommendationService:
         goal_target = None
         goal_days = None
         if self.goals is not None:
-            active = self.goals.fetch_active_by_exercise(name)
+            active = self.goals.fetch_active_by_exercise(exercise_name)
             if active:
                 g = active[0]
                 goal_target = float(g["target_value"])
@@ -173,15 +173,30 @@ class RecommendationService:
             body_weight=self._current_body_weight(),
             months_active=months_active,
             workouts_per_month=workouts_per_month,
-            exercise_name=name,
+            exercise_name=exercise_name,
             target_1rm=goal_target,
             days_remaining=goal_days,
         )
+        return {
+            "prescription": prescription["prescription"],
+            "weights": weight_list,
+            "reps": reps_list,
+            "rpe": rpe_list,
+        }
+
+    def recommend_next_set(self, exercise_id: int) -> dict:
+        """Add the next recommended set for the exercise."""
+        workout_id, name, _, _ = self.exercises.fetch_detail(exercise_id)
+        data = self.generate_prescription(name)
+        prescription = data["prescription"]
+        weight_list = data["weights"]
+        reps_list = data["reps"]
+        rpe_list = data["rpe"]
         current_sets = self.sets.fetch_for_exercise(exercise_id)
         index = len(current_sets)
-        if index >= len(prescription["prescription"]):
+        if index >= len(prescription):
             raise ValueError("no more sets recommended")
-        data = prescription["prescription"][index]
+        set_data = prescription[index]
         if (
             self.ml
             and self.settings.get_bool("ml_all_enabled", True)
@@ -190,12 +205,12 @@ class RecommendationService:
         ):
             ml_rpe, conf = self.ml.predict(
                 name,
-                int(data["reps"]),
-                float(data["weight"]),
+                int(set_data["reps"]),
+                float(set_data["weight"]),
                 rpe_list[-1],
             )
-            data["target_rpe"] = float(
-                MathTools.weighted_fusion(ml_rpe, conf, float(data["target_rpe"]))
+            set_data["target_rpe"] = float(
+                MathTools.weighted_fusion(ml_rpe, conf, float(set_data["target_rpe"]))
             )
         action = 1
         state: list[float] | None = None
@@ -211,27 +226,27 @@ class RecommendationService:
                 rpe_list[-1] / 10.0,
             ]
             action = self.rl_goal.predict(state)
-            data["weight"] = float(data["weight"] + self.rl_goal.ACTIONS[action])
+            set_data["weight"] = float(set_data["weight"] + self.rl_goal.ACTIONS[action])
         set_id = self.sets.add(
             exercise_id,
-            int(data["reps"]),
-            float(data["weight"]),
-            int(round(data["target_rpe"])),
+            int(set_data["reps"]),
+            float(set_data["weight"]),
+            int(round(set_data["target_rpe"])),
         )
         if state is not None:
             self.rl_goal.register(set_id, state, action)
         if self.gamification:
             self.gamification.record_set(
                 exercise_id,
-                int(data["reps"]),
-                float(data["weight"]),
-                int(round(data["target_rpe"])),
+                int(set_data["reps"]),
+                float(set_data["weight"]),
+                int(round(set_data["target_rpe"])),
             )
         return {
             "id": set_id,
-            "reps": int(data["reps"]),
-            "weight": float(data["weight"]),
-            "rpe": int(round(data["target_rpe"])),
+            "reps": int(set_data["reps"]),
+            "weight": float(set_data["weight"]),
+            "rpe": int(round(set_data["target_rpe"])),
         }
 
     def record_result(self, set_id: int, reps: int, weight: float, rpe: int) -> None:
