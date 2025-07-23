@@ -3756,6 +3756,18 @@ class GymApp:
                     else:
                         st.warning("Name required")
 
+            with st.expander("Add Muscle"):
+                base_name = st.text_input("Muscle Name", key="base_muscle")
+                if st.button("Add Muscle"):
+                    if base_name:
+                        try:
+                            self.muscles_repo.add(base_name)
+                            st.success("Muscle added")
+                        except ValueError as e:
+                            st.warning(str(e))
+                    else:
+                        st.warning("Name required")
+
         with ex_tab:
             st.header("Exercise Aliases")
             names = self.exercise_names_repo.fetch_all()

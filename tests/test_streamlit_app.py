@@ -204,6 +204,19 @@ class StreamlitAppTest(unittest.TestCase):
         self.assertEqual(cur.fetchone()[0], "Latissimus Dorsi")
         conn.close()
 
+    def test_add_muscle(self) -> None:
+        self.at.query_params["tab"] = "settings"
+        self.at.run()
+        mus_tab = self.at.tabs[10]
+        mus_tab.text_input[1].input("Obliques").run()
+        mus_tab.button[2].click().run()
+        self.at.run()
+        conn = self._connect()
+        cur = conn.cursor()
+        cur.execute("SELECT name FROM muscles WHERE name = ?;", ("Obliques",))
+        self.assertEqual(cur.fetchone()[0], "Obliques")
+        conn.close()
+
     def test_equipment_add_update_delete(self) -> None:
         self.at.query_params["tab"] = "settings"
         self.at.run()

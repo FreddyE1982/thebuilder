@@ -670,6 +670,17 @@ class APITestCase(unittest.TestCase):
         resp = self.client.delete("/exercise_catalog/Barbell Bench Press")
         self.assertEqual(resp.status_code, 400)
 
+    def test_add_muscle(self) -> None:
+        resp = self.client.post("/muscles", params={"name": "Obliques"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), {"status": "added"})
+
+        resp = self.client.get("/muscles")
+        self.assertIn("Obliques", resp.json())
+
+        resp_dup = self.client.post("/muscles", params={"name": "Obliques"})
+        self.assertEqual(resp_dup.status_code, 400)
+
     def test_muscle_alias(self) -> None:
         resp = self.client.get("/muscles")
         self.assertEqual(resp.status_code, 200)

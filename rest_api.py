@@ -169,6 +169,14 @@ class GymAPI:
         def list_muscles():
             return self.muscles.fetch_all()
 
+        @self.app.post("/muscles")
+        def add_muscle(name: str):
+            try:
+                self.muscles.add(name)
+                return {"status": "added"}
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
         @self.app.post("/muscles/link")
         def link_muscles(name1: str, name2: str):
             self.muscles.link(name1, name2)
