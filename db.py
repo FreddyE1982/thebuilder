@@ -45,6 +45,14 @@ class Database:
                 );""",
             ["id", "equipment_type", "name", "muscles", "is_custom"],
         ),
+        "equipment_types": (
+            """CREATE TABLE equipment_types (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL UNIQUE,
+                    is_custom INTEGER NOT NULL DEFAULT 0
+                );""",
+            ["id", "name", "is_custom"],
+        ),
         "muscles": (
             """CREATE TABLE muscles (
                     name TEXT PRIMARY KEY,
@@ -421,6 +429,10 @@ class Database:
             ]
         with self._connection() as conn:
             for equipment_type, name, muscles in records:
+                conn.execute(
+                    "INSERT OR IGNORE INTO equipment_types (name, is_custom) VALUES (?, 0);",
+                    (equipment_type,),
+                )
                 conn.execute(
                     "INSERT INTO equipment (equipment_type, name, muscles, is_custom) VALUES (?, ?, ?, 0) "
                     "ON CONFLICT(name) DO UPDATE SET equipment_type=excluded.equipment_type, muscles=excluded.muscles;",
@@ -1407,8 +1419,8 @@ class SettingsRepository(BaseRepository):
         return data
 
 
-class EquipmentRepository(BaseRepository):
-    """Repository for equipment data."""
+class EquipmentTypeRepository(BaseRepository):
+    """Repository for equipment type management."""
 
     def __init__(
         self,
@@ -1416,8 +1428,75 @@ class EquipmentRepository(BaseRepository):
         settings_repo: Optional[SettingsRepository] = None,
     ) -> None:
         super().__init__(db_path)
+        self.settings = settings_repo
+
+    def _hide_preconfigured(self) -> bool:
+        if self.settings is None:
+            return False
+        return self.settings.get_bool("hide_preconfigured_equipment", False)
+
+    def fetch_all(self) -> List[str]:
+        query = "SELECT name FROM equipment_types WHERE 1=1"
+        if self._hide_preconfigured():
+            query += " AND is_custom = 1"
+        query += " ORDER BY name;"
+        rows = super().fetch_all(query)
+        return [r[0] for r in rows]
+
+    def exists(self, name: str) -> bool:
+        rows = super().fetch_all(
+            "SELECT id FROM equipment_types WHERE name = ?;",
+            (name,),
+        )
+        return bool(rows)
+
+    def add(self, name: str) -> int:
+        if self.exists(name):
+            raise ValueError("type exists")
+        return self.execute(
+            "INSERT INTO equipment_types (name, is_custom) VALUES (?, 1);",
+            (name,),
+        )
+
+    def update(self, name: str, new_name: str) -> None:
+        rows = super().fetch_all(
+            "SELECT is_custom FROM equipment_types WHERE name = ?;",
+            (name,),
+        )
+        if not rows:
+            raise ValueError("type not found")
+        if rows[0][0] == 0:
+            raise ValueError("cannot modify imported type")
+        self.execute(
+            "UPDATE equipment_types SET name = ? WHERE name = ?;",
+            (new_name, name),
+        )
+
+    def remove(self, name: str) -> None:
+        rows = super().fetch_all(
+            "SELECT is_custom FROM equipment_types WHERE name = ?;",
+            (name,),
+        )
+        if not rows:
+            raise ValueError("type not found")
+        if rows[0][0] == 0:
+            raise ValueError("cannot delete imported type")
+        self.execute("DELETE FROM equipment_types WHERE name = ?;", (name,))
+
+
+class EquipmentRepository(BaseRepository):
+    """Repository for equipment data."""
+
+    def __init__(
+        self,
+        db_path: str = "workout.db",
+        settings_repo: Optional[SettingsRepository] = None,
+        type_repo: Optional[EquipmentTypeRepository] = None,
+    ) -> None:
+        super().__init__(db_path)
         self.muscles = MuscleRepository(db_path)
         self.settings = settings_repo
+        self.types = type_repo or EquipmentTypeRepository(db_path, settings_repo)
 
     def _hide_preconfigured(self) -> bool:
         if self.settings is None:
@@ -1426,6 +1505,11 @@ class EquipmentRepository(BaseRepository):
 
     def upsert_many(self, records: Iterable[Tuple[str, str, str]]) -> None:
         for equipment_type, name, muscles in records:
+            if not self.types.exists(equipment_type):
+                self.types.execute(
+                    "INSERT INTO equipment_types (name, is_custom) VALUES (?, 0);",
+                    (equipment_type,),
+                )
             self.muscles.ensure(muscles.split("|"))
             self.execute(
                 "INSERT INTO equipment (equipment_type, name, muscles, is_custom) VALUES (?, ?, ?, 0) "
@@ -1434,13 +1518,7 @@ class EquipmentRepository(BaseRepository):
             )
 
     def fetch_types(self) -> List[str]:
-        query = "SELECT DISTINCT equipment_type FROM equipment WHERE 1=1"
-        params: List[str] = []
-        if self._hide_preconfigured():
-            query += " AND is_custom = 1"
-        query += " ORDER BY equipment_type;"
-        rows = self.fetch_all(query, tuple(params))
-        return [r[0] for r in rows]
+        return self.types.fetch_all()
 
     def fetch_names(
         self,
@@ -1518,6 +1596,8 @@ class EquipmentRepository(BaseRepository):
         )
         if existing:
             raise ValueError("equipment exists")
+        if not self.types.exists(equipment_type):
+            raise ValueError("type not found")
         self.muscles.ensure(muscles)
         muscles_str = "|".join([self.muscles.canonical(m) for m in muscles])
         return self.execute(
@@ -1540,6 +1620,8 @@ class EquipmentRepository(BaseRepository):
             raise ValueError("equipment not found")
         if rows[0][0] == 0:
             raise ValueError("cannot modify imported equipment")
+        if not self.types.exists(equipment_type):
+            raise ValueError("type not found")
         target = new_name or name
         self.muscles.ensure(muscles)
         muscles_str = "|".join([self.muscles.canonical(m) for m in muscles])

@@ -221,10 +221,14 @@ class StreamlitAppTest(unittest.TestCase):
         self.at.query_params["tab"] = "settings"
         self.at.run()
         eq_tab = self.at.tabs[9]
-        eq_tab.selectbox[0].select("Free Weights").run()
-        eq_tab.text_input[0].input("TestEq").run()
-        eq_tab.multiselect[0].select("Biceps Brachii").run()
+        eq_tab.text_input[0].input("MyType").run()
         eq_tab.button[0].click().run()
+        self.at.run()
+        eq_tab = self.at.tabs[9]
+        eq_tab.selectbox[0].select("MyType").run()
+        eq_tab.text_input[1].input("TestEq").run()
+        eq_tab.multiselect[0].select("Biceps Brachii").run()
+        eq_tab.button[1].click().run()
         self.at.run()
         eq_tab = self.at.tabs[9]
         target = None
@@ -234,7 +238,7 @@ class StreamlitAppTest(unittest.TestCase):
                 break
         self.assertIsNotNone(target)
         target.text_input[0].input("TestEq2").run()
-        target.text_input[1].input("Free Weights").run()
+        target.text_input[1].input("MyType").run()
         target.multiselect[0].select("Brachialis").run()
         target.button[0].click().run()
         self.at.run()
