@@ -394,7 +394,7 @@ class StreamlitFullGUITest(unittest.TestCase):
             "Equipment",
             "Muscles",
             "Exercise Aliases",
-            "Custom Exercises",
+            "Exercise Management",
             "Body Weight Logs",
             "Wellness Logs",
             "Workout Tags",
