@@ -14,6 +14,7 @@ from db import (
     EquipmentTypeRepository,
     ExerciseCatalogRepository,
     MuscleRepository,
+    MuscleGroupRepository,
     ExerciseNameRepository,
     SettingsRepository,
     PyramidTestRepository,
@@ -65,6 +66,7 @@ class GymAPI:
         self.equipment = EquipmentRepository(db_path, self.settings, self.equipment_types)
         self.exercise_catalog = ExerciseCatalogRepository(db_path, self.settings)
         self.muscles = MuscleRepository(db_path)
+        self.muscle_groups = MuscleGroupRepository(db_path, self.muscles)
         self.exercise_names = ExerciseNameRepository(db_path)
         self.favorites = FavoriteExerciseRepository(db_path)
         self.favorite_templates = FavoriteTemplateRepository(db_path)
@@ -196,6 +198,51 @@ class GymAPI:
         def add_alias(new_name: str, existing: str):
             self.muscles.add_alias(new_name, existing)
             return {"status": "added"}
+
+        @self.app.get("/muscle_groups")
+        def list_muscle_groups():
+            return self.muscle_groups.fetch_all()
+
+        @self.app.post("/muscle_groups")
+        def add_muscle_group(name: str):
+            try:
+                self.muscle_groups.add(name)
+                return {"status": "added"}
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
+        @self.app.put("/muscle_groups/{group}")
+        def rename_muscle_group(group: str, new_name: str):
+            try:
+                self.muscle_groups.rename(group, new_name)
+                return {"status": "updated"}
+            except ValueError as e:
+                raise HTTPException(status_code=404, detail=str(e))
+
+        @self.app.delete("/muscle_groups/{group}")
+        def delete_muscle_group(group: str):
+            try:
+                self.muscle_groups.delete(group)
+                return {"status": "deleted"}
+            except ValueError as e:
+                raise HTTPException(status_code=404, detail=str(e))
+
+        @self.app.get("/muscle_groups/{group}/muscles")
+        def list_group_muscles(group: str):
+            return self.muscle_groups.fetch_muscles(group)
+
+        @self.app.post("/muscle_groups/{group}/muscles")
+        def assign_muscle_group(group: str, muscle: str):
+            try:
+                self.muscle_groups.assign(group, muscle)
+                return {"status": "assigned"}
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
+        @self.app.delete("/muscles/{muscle}/group")
+        def remove_muscle_group(muscle: str):
+            self.muscle_groups.remove_assignment(muscle)
+            return {"status": "removed"}
 
         @self.app.get("/exercise_names")
         def list_exercise_names():

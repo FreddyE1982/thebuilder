@@ -217,6 +217,34 @@ class StreamlitAppTest(unittest.TestCase):
         self.assertEqual(cur.fetchone()[0], "Obliques")
         conn.close()
 
+    def test_muscle_group_management(self) -> None:
+        self.at.query_params["tab"] = "settings"
+        self.at.run()
+        mus_tab = self.at.tabs[10]
+        group_exp = mus_tab.expander[3]
+        group_exp.text_input[0].input("Arms").run()
+        group_exp.button[0].click().run()
+        self.at.run()
+        mus_tab = self.at.tabs[10]
+        group_exp = mus_tab.expander[3]
+        target = None
+        for exp in group_exp.expander:
+            if exp.label == "Arms":
+                target = exp
+                break
+        self.assertIsNotNone(target)
+        target.multiselect[0].select("Biceps Brachii").run()
+        target.button[0].click().run()
+        self.at.run()
+        conn = self._connect()
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT group_name FROM muscle_group_members WHERE muscle_name = ?;",
+            ("Biceps Brachii",),
+        )
+        self.assertEqual(cur.fetchone()[0], "Arms")
+        conn.close()
+
     def test_equipment_add_update_delete(self) -> None:
         self.at.query_params["tab"] = "settings"
         self.at.run()

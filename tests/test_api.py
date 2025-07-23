@@ -2298,6 +2298,34 @@ class APITestCase(unittest.TestCase):
         self.client.delete(f"/tags/{tid}")
         self.assertEqual(self.client.get("/tags").json(), [])
 
+    def test_muscle_group_management(self) -> None:
+        resp = self.client.post("/muscle_groups", params={"name": "Arms"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), {"status": "added"})
+
+        groups = self.client.get("/muscle_groups").json()
+        self.assertIn("Arms", groups)
+
+        assign = self.client.post(
+            "/muscle_groups/Arms/muscles", params={"muscle": "Biceps Brachii"}
+        )
+        self.assertEqual(assign.status_code, 200)
+        self.assertEqual(assign.json(), {"status": "assigned"})
+
+        mus = self.client.get("/muscle_groups/Arms/muscles").json()
+        self.assertEqual(mus, ["Biceps Brachii"])
+
+        upd = self.client.put("/muscle_groups/Arms", params={"new_name": "Upper Arms"})
+        self.assertEqual(upd.status_code, 200)
+
+        groups = self.client.get("/muscle_groups").json()
+        self.assertIn("Upper Arms", groups)
+
+        delete = self.client.delete("/muscle_groups/Upper Arms")
+        self.assertEqual(delete.status_code, 200)
+        self.assertEqual(delete.json(), {"status": "deleted"})
+        self.assertNotIn("Upper Arms", self.client.get("/muscle_groups").json())
+
     def test_template_workflow(self) -> None:
         resp = self.client.post(
             "/templates",
