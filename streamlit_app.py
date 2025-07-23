@@ -3513,7 +3513,7 @@ class GymApp:
                 "Equipment",
                 "Muscles",
                 "Exercise Aliases",
-                "Custom Exercises",
+                "Exercise Management",
                 "Body Weight Logs",
                 "Wellness Logs",
                 "Workout Tags",
@@ -3781,7 +3781,7 @@ class GymApp:
                         st.warning("Name required")
 
         with cust_tab:
-            st.header("Custom Exercises")
+            st.header("Exercise Management")
             self._custom_exercise_management()
 
         with bw_tab:
