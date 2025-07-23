@@ -3669,6 +3669,17 @@ class GymApp:
                 ),
             )
             self.settings_repo.set_bool("hide_preconfigured_equipment", hide_pre)
+            with st.expander("Add Equipment Type"):
+                new_type = st.text_input("Type Name", key="new_eq_type")
+                if st.button("Add Type"):
+                    if new_type:
+                        try:
+                            self.equipment.types.add(new_type)
+                            st.success("Type added")
+                        except ValueError as e:
+                            st.warning(str(e))
+                    else:
+                        st.warning("Name required")
             with st.expander("Add Equipment"):
                 muscles_list = self.muscles_repo.fetch_all()
                 new_name = st.text_input("Equipment Name", key="equip_new_name")

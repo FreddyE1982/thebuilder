@@ -449,6 +449,11 @@ class APITestCase(unittest.TestCase):
         types = response.json()
         self.assertIn("Free Weights", types)
 
+        add_type = self.client.post("/equipment/types", params={"name": "MyType"})
+        self.assertEqual(add_type.status_code, 200)
+        self.assertIsInstance(add_type.json()["id"], int)
+        self.assertIn("MyType", self.client.get("/equipment/types").json())
+
         response = self.client.get(
             "/equipment", params={"equipment_type": "Free Weights", "prefix": "Olympic"}
         )
@@ -483,7 +488,7 @@ class APITestCase(unittest.TestCase):
         resp = self.client.post(
             "/equipment",
             params={
-                "equipment_type": "Custom",
+                "equipment_type": "MyType",
                 "name": "My Eq",
                 "muscles": "Foo|Bar",
             },
@@ -495,7 +500,7 @@ class APITestCase(unittest.TestCase):
         resp = self.client.put(
             "/equipment/My Eq",
             params={
-                "equipment_type": "Custom",
+                "equipment_type": "MyType",
                 "muscles": "Foo|Baz",
                 "new_name": "My Eq2",
             },

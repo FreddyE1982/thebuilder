@@ -11,6 +11,7 @@ from db import (
     TemplateExerciseRepository,
     TemplateSetRepository,
     EquipmentRepository,
+    EquipmentTypeRepository,
     ExerciseCatalogRepository,
     MuscleRepository,
     ExerciseNameRepository,
@@ -60,7 +61,8 @@ class GymAPI:
         self.template_exercises = TemplateExerciseRepository(db_path)
         self.template_sets = TemplateSetRepository(db_path)
         self.settings = SettingsRepository(db_path, yaml_path)
-        self.equipment = EquipmentRepository(db_path, self.settings)
+        self.equipment_types = EquipmentTypeRepository(db_path, self.settings)
+        self.equipment = EquipmentRepository(db_path, self.settings, self.equipment_types)
         self.exercise_catalog = ExerciseCatalogRepository(db_path, self.settings)
         self.muscles = MuscleRepository(db_path)
         self.exercise_names = ExerciseNameRepository(db_path)
@@ -138,6 +140,14 @@ class GymAPI:
         @self.app.get("/equipment/types")
         def list_equipment_types():
             return self.equipment.fetch_types()
+
+        @self.app.post("/equipment/types")
+        def add_equipment_type(name: str):
+            try:
+                tid = self.equipment_types.add(name)
+                return {"id": tid}
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
 
         @self.app.get("/equipment")
         def list_equipment(
