@@ -71,6 +71,11 @@ class GymApp:
                     alt.themes.enable = _noop_theme
         self.settings_repo = SettingsRepository(db_path, yaml_path)
         self.theme = self.settings_repo.get_text("theme", "light")
+        self.training_options = sorted([
+            "strength",
+            "hypertrophy",
+            "highintensity",
+        ])
         self._configure_page()
         self._inject_responsive_css()
         self._apply_theme()
@@ -1296,7 +1301,9 @@ class GymApp:
         self._end_page()
 
     def _log_tab(self) -> None:
-        plans = self.planned_workouts.fetch_all()
+        plans = sorted(
+            self.planned_workouts.fetch_all(), key=lambda p: p[1]
+        )
         options = {str(p[0]): p for p in plans}
         if options:
             with st.expander("Use Planned Workout", expanded=False):
@@ -1318,8 +1325,12 @@ class GymApp:
             ai_date = st.date_input("Plan Date", datetime.date.today(), key="ai_plan_date")
             names = self.exercise_catalog.fetch_names(None, None, None, None)
             ex_sel = st.multiselect("Exercises", names, key="ai_plan_exercises")
-            training_options = ["strength", "hypertrophy", "highintensity"]
-            ai_type = st.selectbox("Training Type", training_options, key="ai_plan_type")
+            ai_type = st.selectbox(
+                "Training Type",
+                self.training_options,
+                index=self.training_options.index("strength"),
+                key="ai_plan_type",
+            )
             if st.button("Generate AI Plan", key="ai_plan_btn"):
                 if ex_sel:
                     pairs = [(n, None) for n in ex_sel]
@@ -1340,24 +1351,26 @@ class GymApp:
 
     def _workout_section(self) -> None:
         with self._section("Workouts"):
-            training_options = ["strength", "hypertrophy", "highintensity"]
             with st.expander("Workout Management", expanded=True):
                 if st.session_state.is_mobile:
-                    self._create_workout_form(training_options)
-                    self._existing_workout_form(training_options)
+                    self._create_workout_form(self.training_options)
+                    self._existing_workout_form(self.training_options)
                 else:
                     col1, col2 = st.columns(2)
                     with col1:
-                        self._create_workout_form(training_options)
+                        self._create_workout_form(self.training_options)
                     with col2:
-                        self._existing_workout_form(training_options)
+                        self._existing_workout_form(self.training_options)
 
     def _create_workout_form(self, training_options: list[str]) -> None:
         with st.expander("Create New Workout"):
             with st.form("new_workout_form"):
                 st.markdown("<div class='form-grid'>", unsafe_allow_html=True)
                 new_type = st.selectbox(
-                    "Training Type", training_options, key="new_workout_type"
+                    "Training Type",
+                    training_options,
+                    index=training_options.index("strength"),
+                    key="new_workout_type",
                 )
                 new_location = st.text_input("Location", key="new_workout_location")
                 st.markdown("</div>", unsafe_allow_html=True)
@@ -1374,7 +1387,9 @@ class GymApp:
 
     def _existing_workout_form(self, training_options: list[str]) -> None:
         with st.expander("Existing Workouts", expanded=True):
-            workouts = self.workouts.fetch_all_workouts()
+            workouts = sorted(
+                self.workouts.fetch_all_workouts(), key=lambda w: w[1]
+            )
             options = {str(w[0]): w for w in workouts}
             if options:
                 selected = st.selectbox(
@@ -1504,10 +1519,10 @@ class GymApp:
                 plan_date = st.date_input(
                     "Plan Date", datetime.date.today(), key="plan_date"
                 )
-                training_options = ["strength", "hypertrophy", "highintensity"]
                 plan_type = st.selectbox(
                     "Training Type",
-                    training_options,
+                    self.training_options,
+                    index=self.training_options.index("strength"),
                     key="plan_type",
                 )
                 st.markdown("</div>", unsafe_allow_html=True)
@@ -1518,7 +1533,9 @@ class GymApp:
 
     def _existing_plan_form(self) -> None:
         with st.expander("Existing Plans", expanded=True):
-            plans = self.planned_workouts.fetch_all()
+            plans = sorted(
+                self.planned_workouts.fetch_all(), key=lambda x: x[1]
+            )
             options = {str(p[0]): p for p in plans}
             if options:
                 selected = st.selectbox(
@@ -1536,11 +1553,10 @@ class GymApp:
                             datetime.date.fromisoformat(pdate),
                             key=f"plan_edit_{pid}",
                         )
-                        training_options = ["strength", "hypertrophy", "highintensity"]
                         type_choice = st.selectbox(
                             "Type",
-                            training_options,
-                            index=training_options.index(ptype),
+                            self.training_options,
+                            index=self.training_options.index(ptype),
                             key=f"plan_type_{pid}",
                         )
                         dup_date = st.date_input(
@@ -2077,7 +2093,6 @@ class GymApp:
 
     def _template_section(self) -> None:
         with self._section("Templates"):
-            training_options = ["strength", "hypertrophy", "highintensity"]
             with st.expander("Template Management", expanded=True):
                 favs = self.favorite_templates_repo.fetch_all()
                 with st.expander("Favorite Templates", expanded=True):
@@ -2097,7 +2112,10 @@ class GymApp:
                     else:
                         st.write("No favorites.")
                 templates = {
-                    str(t[0]): t[1] for t in self.template_workouts.fetch_all()
+                    str(t[0]): t[1]
+                    for t in sorted(
+                        self.template_workouts.fetch_all(), key=lambda r: r[1]
+                    )
                 }
                 add_choice = st.selectbox(
                     "Add Favorite",
@@ -2111,13 +2129,18 @@ class GymApp:
             with st.expander("Create New Template"):
                 name = st.text_input("Name", key="tmpl_name")
                 t_type = st.selectbox(
-                    "Training Type", training_options, key="tmpl_type"
+                    "Training Type",
+                    self.training_options,
+                    index=self.training_options.index("strength"),
+                    key="tmpl_type",
                 )
                 if st.button("Create Template") and name:
                     tid = self.template_workouts.create(name, t_type)
                     st.session_state.selected_template = tid
             with st.expander("Existing Templates", expanded=True):
-                templates = self.template_workouts.fetch_all()
+                templates = sorted(
+                    self.template_workouts.fetch_all(), key=lambda r: r[1]
+                )
                 options = {str(t[0]): t for t in templates}
                 if options:
                     selected = st.selectbox(
@@ -2134,8 +2157,8 @@ class GymApp:
                             )
                             edit_type = st.selectbox(
                                 "Type",
-                                training_options,
-                                index=training_options.index(t_type),
+                                self.training_options,
+                                index=self.training_options.index(t_type),
                                 key=f"tmpl_edit_type_{tid}",
                             )
                             plan_date = st.date_input(
@@ -2670,7 +2693,12 @@ class GymApp:
                         st.rerun()
             else:
                 st.write("No favorites.")
-            all_workouts = {str(w[0]): w[1] for w in self.workouts.fetch_all_workouts()}
+            all_workouts = {
+                str(w[0]): w[1]
+                for w in sorted(
+                    self.workouts.fetch_all_workouts(), key=lambda r: r[1]
+                )
+            }
             add_choice = st.selectbox(
                 "Add Favorite",
                 [""] + list(all_workouts.keys()),
@@ -2698,9 +2726,10 @@ class GymApp:
                 st.session_state.hist_type = ""
                 st.session_state.hist_tags = []
                 st.rerun()
+            hist_types = ["" ] + self.training_options
             ttype = st.selectbox(
                 "Training Type",
-                ["", "strength", "hypertrophy", "highintensity"],
+                hist_types,
                 key="hist_type",
             )
             tag_names = [n for _, n in self.tags_repo.fetch_all()]
@@ -3561,10 +3590,11 @@ class GymApp:
                     value=self.settings_repo.get_float("months_active", 1.0),
                     step=1.0,
                 )
+                themes = sorted(["light", "dark"])
                 theme_opt = st.selectbox(
                     "Theme",
-                    ["light", "dark"],
-                    index=["light", "dark"].index(self.theme),
+                    themes,
+                    index=themes.index(self.theme),
                 )
             with st.expander("Gamification", expanded=True):
                 game_enabled = st.checkbox(
