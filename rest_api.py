@@ -59,7 +59,8 @@ class GymAPI:
         self.template_workouts = TemplateWorkoutRepository(db_path)
         self.template_exercises = TemplateExerciseRepository(db_path)
         self.template_sets = TemplateSetRepository(db_path)
-        self.equipment = EquipmentRepository(db_path)
+        self.settings = SettingsRepository(db_path, yaml_path)
+        self.equipment = EquipmentRepository(db_path, self.settings)
         self.exercise_catalog = ExerciseCatalogRepository(db_path)
         self.muscles = MuscleRepository(db_path)
         self.exercise_names = ExerciseNameRepository(db_path)
@@ -67,7 +68,6 @@ class GymAPI:
         self.favorite_templates = FavoriteTemplateRepository(db_path)
         self.favorite_workouts = FavoriteWorkoutRepository(db_path)
         self.tags = TagRepository(db_path)
-        self.settings = SettingsRepository(db_path, yaml_path)
         self.pyramid_tests = PyramidTestRepository(db_path)
         self.pyramid_entries = PyramidEntryRepository(db_path)
         self.game_repo = GamificationRepository(db_path)
@@ -1682,6 +1682,7 @@ class GymAPI:
             ml_goal_prediction_enabled: bool = None,
             ml_injury_training_enabled: bool = None,
             ml_injury_prediction_enabled: bool = None,
+            hide_preconfigured_equipment: bool = None,
         ):
             if body_weight is not None:
                 self.settings.set_float("body_weight", body_weight)
@@ -1744,6 +1745,10 @@ class GymAPI:
             if ml_injury_prediction_enabled is not None:
                 self.settings.set_bool(
                     "ml_injury_prediction_enabled", ml_injury_prediction_enabled
+                )
+            if hide_preconfigured_equipment is not None:
+                self.settings.set_bool(
+                    "hide_preconfigured_equipment", hide_preconfigured_equipment
                 )
             return {"status": "updated"}
 

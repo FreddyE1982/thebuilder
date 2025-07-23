@@ -1272,6 +1272,7 @@ class SettingsRepository(BaseRepository):
             "ml_goal_prediction_enabled",
             "ml_injury_training_enabled",
             "ml_injury_prediction_enabled",
+            "hide_preconfigured_equipment",
         }
         for k, v in rows:
             if k in bool_keys:
@@ -1305,6 +1306,7 @@ class SettingsRepository(BaseRepository):
                 "ml_goal_prediction_enabled",
                 "ml_injury_training_enabled",
                 "ml_injury_prediction_enabled",
+                "hide_preconfigured_equipment",
             }
             for key, value in data.items():
                 val = str(value)
@@ -1379,6 +1381,7 @@ class SettingsRepository(BaseRepository):
             "ml_goal_prediction_enabled",
             "ml_injury_training_enabled",
             "ml_injury_prediction_enabled",
+            "hide_preconfigured_equipment",
         }
         for k in bool_keys:
             if k in data:
@@ -1389,9 +1392,19 @@ class SettingsRepository(BaseRepository):
 class EquipmentRepository(BaseRepository):
     """Repository for equipment data."""
 
-    def __init__(self, db_path: str = "workout.db") -> None:
+    def __init__(
+        self,
+        db_path: str = "workout.db",
+        settings_repo: Optional[SettingsRepository] = None,
+    ) -> None:
         super().__init__(db_path)
         self.muscles = MuscleRepository(db_path)
+        self.settings = settings_repo
+
+    def _hide_preconfigured(self) -> bool:
+        if self.settings is None:
+            return False
+        return self.settings.get_bool("hide_preconfigured_equipment", False)
 
     def upsert_many(self, records: Iterable[Tuple[str, str, str]]) -> None:
         for equipment_type, name, muscles in records:
@@ -1403,9 +1416,12 @@ class EquipmentRepository(BaseRepository):
             )
 
     def fetch_types(self) -> List[str]:
-        rows = self.fetch_all(
-            "SELECT DISTINCT equipment_type FROM equipment ORDER BY equipment_type;"
-        )
+        query = "SELECT DISTINCT equipment_type FROM equipment WHERE 1=1"
+        params: List[str] = []
+        if self._hide_preconfigured():
+            query += " AND is_custom = 1"
+        query += " ORDER BY equipment_type;"
+        rows = self.fetch_all(query, tuple(params))
         return [r[0] for r in rows]
 
     def fetch_names(
@@ -1428,6 +1444,8 @@ class EquipmentRepository(BaseRepository):
                 clause_parts = ["muscles LIKE ?" for _ in aliases]
                 query += " AND (" + " OR ".join(clause_parts) + ")"
                 params.extend([f"%{a}%" for a in aliases])
+        if self._hide_preconfigured():
+            query += " AND is_custom = 1"
         query += " ORDER BY name;"
         rows = self.fetch_all(query, tuple(params))
         return [r[0] for r in rows]
@@ -1455,12 +1473,20 @@ class EquipmentRepository(BaseRepository):
         return None
 
     def fetch_all_records(self) -> List[Tuple[str, str, str, int]]:
-        return self.fetch_all(
-            "SELECT name, equipment_type, muscles, is_custom FROM equipment ORDER BY name;"
+        query = (
+            "SELECT name, equipment_type, muscles, is_custom FROM equipment WHERE 1=1"
         )
+        if self._hide_preconfigured():
+            query += " AND is_custom = 1"
+        query += " ORDER BY name;"
+        return self.fetch_all(query)
 
     def fetch_all_muscles(self) -> List[str]:
-        rows = self.fetch_all("SELECT muscles FROM equipment;")
+        query = "SELECT muscles FROM equipment"
+        if self._hide_preconfigured():
+            query += " WHERE is_custom = 1"
+        query += ";"
+        rows = self.fetch_all(query)
         muscles: Set[str] = set()
         for row in rows:
             for m in row[0].split("|"):

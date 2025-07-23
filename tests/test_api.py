@@ -235,6 +235,26 @@ class APITestCase(unittest.TestCase):
         conn.close()
         self.assertEqual(count, 0)
 
+    def test_hide_preconfigured_equipment(self) -> None:
+        resp = self.client.get("/equipment")
+        self.assertIn("Olympic Barbell", resp.json())
+
+        resp = self.client.post(
+            "/settings/general", params={"hide_preconfigured_equipment": True}
+        )
+        self.assertEqual(resp.status_code, 200)
+        resp = self.client.get("/equipment/types")
+        self.assertNotIn("Free Weights", resp.json())
+        resp = self.client.get("/equipment")
+        self.assertNotIn("Olympic Barbell", resp.json())
+
+        resp = self.client.post(
+            "/settings/general", params={"hide_preconfigured_equipment": False}
+        )
+        self.assertEqual(resp.status_code, 200)
+        resp = self.client.get("/equipment")
+        self.assertIn("Olympic Barbell", resp.json())
+
     def test_plan_workflow(self) -> None:
         plan_date = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
 
