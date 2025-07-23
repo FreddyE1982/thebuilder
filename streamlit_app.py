@@ -1651,13 +1651,15 @@ class GymApp:
                 for m in muscles:
                     st.markdown(f"- {m}")
             note_val = st.text_input(
-                "Note", value=note or "", key=f"note_{exercise_id}"
+                "Note",
+                value=note or "",
+                key=f"exercise_note_{exercise_id}",
             )
             if st.button("Update Note", key=f"upd_note_{exercise_id}"):
                 self.exercises.update_note(exercise_id, note_val or None)
             if st.button("Clear Note", key=f"clear_note_{exercise_id}"):
                 self.exercises.update_note(exercise_id, None)
-                st.session_state[f"note_{exercise_id}"] = ""
+                st.session_state[f"exercise_note_{exercise_id}"] = ""
             with st.expander("Sets", expanded=True):
                 for set_id, reps, weight, rpe, start_time, end_time in sets:
                     detail = self.sets.fetch_detail(set_id)
