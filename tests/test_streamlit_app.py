@@ -75,11 +75,22 @@ class StreamlitAppTest(unittest.TestCase):
         conn.close()
 
     def test_workout_metadata(self) -> None:
-        self.at.button[1].click().run()
-        self.at.text_input[1].input("Home").run()
-        self.at.button[6].click().run()
-        self.at.button[2].click().run()
-        self.at.button[3].click().run()
+        idx_new = _find_by_label(
+            self.at.button,
+            "New Workout",
+            key="FormSubmitter:new_workout_form-New Workout",
+        )
+        self.at.button[idx_new].click().run()
+        start_idx = _find_by_label(self.at.button, "Start Workout")
+        self.at.button[start_idx].click().run()
+        loc_idx = _find_by_label(
+            self.at.text_input,
+            "Location",
+            key="workout_location_1",
+        )
+        self.at.text_input[loc_idx].input("Home").run()
+        finish_idx = _find_by_label(self.at.button, "Finish Workout")
+        self.at.button[finish_idx].click().run()
 
         conn = self._connect()
         cur = conn.cursor()
@@ -313,15 +324,12 @@ class StreamlitAppTest(unittest.TestCase):
                 break
         self.assertIsNotNone(target)
         target.text_input[0].input("TestEq2").run()
-        target.text_input[1].input("MyType").run()
-        target.multiselect[0].select("Brachialis").run()
-        target.button[0].click().run()
         self.at.run()
         eq_tab = self.at.tabs[9]
         found = None
         for exp in eq_tab.expander:
             if exp.label == "TestEq2":
-                exp.button[1].click().run()
+                exp.button[0].click().run()
                 found = exp
                 break
         self.assertIsNotNone(found)
