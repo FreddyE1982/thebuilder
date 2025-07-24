@@ -514,3 +514,4 @@ keep the AGENTS.md updated by adding new sensible rules when they occur to you. 
 - Set pace analytics must compute sets per minute per workout and be available via `/stats/set_pace`.
 - Workout consistency analytics must compute the coefficient of variation of days between workouts and be available via `/stats/workout_consistency`.
 - Mobile layout must use a `--vh` CSS variable set via JavaScript in `_configure_page` for reliable viewport height across orientations.
+- Power history analytics must compute average power per day using weight and velocity and be available via `/stats/power_history`.

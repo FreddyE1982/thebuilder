@@ -102,6 +102,22 @@ class MathTools:
         return (reps * rom) / total_seconds
 
     @staticmethod
+    def estimate_power_from_set(
+        reps: int,
+        weight: float,
+        start_time: datetime.datetime | str,
+        finish_time: datetime.datetime | str,
+        rom: float = 0.5,
+    ) -> float:
+        """Estimate average mechanical power output for a set."""
+        velocity = MathTools.estimate_velocity_from_set(
+            reps, start_time, finish_time, rom
+        )
+        if velocity == 0.0:
+            return 0.0
+        return float(weight) * 9.81 * velocity
+
+    @staticmethod
     def session_efficiency(
         volume: float, duration_seconds: float, avg_rpe: float | None = None
     ) -> float:

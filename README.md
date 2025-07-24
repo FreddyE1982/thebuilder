@@ -31,6 +31,7 @@ The Builder is a full featured workout planner, logger and analytics platform bu
 - Assess workout variety with `/stats/exercise_diversity` and charts in the Reports tab.
 - Analyze training intensity zones with `/stats/intensity_distribution` displayed under Exercise Stats.
 - View velocity history per exercise with `/stats/velocity_history` and charts in the Stats tab.
+- View power output history per exercise with `/stats/power_history`.
 - Summarize volume by muscle group with `/stats/muscle_group_usage`.
 - Summarize workouts by location with `/stats/location_summary` and view tables in the Reports tab.
 - Summarize workouts by training type with `/stats/training_type_summary`.
