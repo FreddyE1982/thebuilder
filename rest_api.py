@@ -1842,6 +1842,10 @@ class GymAPI:
         def stats_heart_rate_summary(start_date: str = None, end_date: str = None):
             return self.statistics.heart_rate_summary(start_date, end_date)
 
+        @self.app.get("/stats/heart_rate_zones")
+        def stats_heart_rate_zones(start_date: str = None, end_date: str = None):
+            return self.statistics.heart_rate_zones(start_date, end_date)
+
         @self.app.get("/ml_logs/{model_name}")
         def get_ml_logs(model_name: str, start_date: str = None, end_date: str = None):
             rows = self.ml_logs.fetch_range(model_name, start_date, end_date)

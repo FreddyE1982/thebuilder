@@ -1690,6 +1690,39 @@ class StatisticsService:
             "max": float(max(rates)),
         }
 
+    def heart_rate_zones(
+        self, start_date: str | None = None, end_date: str | None = None
+    ) -> list[dict[str, float]]:
+        """Return distribution of heart rate measurements across intensity zones."""
+        history = self.heart_rate_history(start_date, end_date)
+        if not history:
+            return []
+        max_hr = max(h["heart_rate"] for h in history)
+        boundaries = [0.6, 0.7, 0.8, 0.9]
+        zones = []
+        last = 0.0
+        for b in boundaries:
+            zones.append((last, b))
+            last = b
+        zones.append((last, 1.01))
+        total = len(history)
+        result: list[dict[str, float]] = []
+        for idx, (lo, hi) in enumerate(zones, start=1):
+            lo_val = lo * max_hr
+            hi_val = hi * max_hr
+            count = sum(
+                1 for h in history if lo_val <= h["heart_rate"] < hi_val
+            )
+            percent = count / total * 100.0 if total else 0.0
+            result.append(
+                {
+                    "zone": str(idx),
+                    "count": count,
+                    "percent": round(percent, 2),
+                }
+            )
+        return result
+
     def exercise_frequency(
         self,
         exercise: str | None = None,
