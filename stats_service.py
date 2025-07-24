@@ -8,6 +8,7 @@ from db import (
     BodyWeightRepository,
     EquipmentRepository,
     WellnessRepository,
+    HeartRateRepository,
 )
 from ml_service import (
     VolumeModelService,
@@ -37,6 +38,7 @@ class StatisticsService:
         wellness_repo: "WellnessRepository" | None = None,
         catalog_repo: "ExerciseCatalogRepository" | None = None,
         workout_repo: "WorkoutRepository" | None = None,
+        heart_rate_repo: "HeartRateRepository" | None = None,
     ) -> None:
         self.sets = set_repo
         self.exercise_names = name_repo
@@ -51,6 +53,7 @@ class StatisticsService:
         self.wellness = wellness_repo
         self.catalog = catalog_repo
         self.workouts = workout_repo
+        self.heart_rates = heart_rate_repo
 
     def _current_body_weight(self) -> float:
         """Fetch the latest logged body weight or fallback to settings."""

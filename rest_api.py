@@ -27,6 +27,7 @@ from db import (
     ExercisePrescriptionLogRepository,
     BodyWeightRepository,
     WellnessRepository,
+    HeartRateRepository,
     FavoriteExerciseRepository,
     FavoriteTemplateRepository,
     FavoriteWorkoutRepository,
@@ -85,6 +86,7 @@ class GymAPI:
         self.prescription_logs = ExercisePrescriptionLogRepository(db_path)
         self.body_weights = BodyWeightRepository(db_path)
         self.wellness = WellnessRepository(db_path)
+        self.heart_rates = HeartRateRepository(db_path)
         self.goals = GoalRepository(db_path)
         self.gamification = GamificationService(
             self.game_repo,
@@ -145,6 +147,7 @@ class GymAPI:
             self.wellness,
             self.exercise_catalog,
             self.workouts,
+            self.heart_rates,
         )
         self.app = FastAPI()
         self._setup_routes()
@@ -1664,6 +1667,50 @@ class GymAPI:
         def delete_wellness(entry_id: int):
             try:
                 self.wellness.delete(entry_id)
+                return {"status": "deleted"}
+            except ValueError as e:
+                raise HTTPException(status_code=404, detail=str(e))
+
+        @self.app.post("/workouts/{workout_id}/heart_rate")
+        def log_heart_rate(workout_id: int, timestamp: str, heart_rate: int):
+            try:
+                hid = self.heart_rates.log(workout_id, timestamp, heart_rate)
+                return {"id": hid}
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
+        @self.app.get("/workouts/{workout_id}/heart_rate")
+        def list_workout_heart_rate(workout_id: int):
+            rows = self.heart_rates.fetch_for_workout(workout_id)
+            return [
+                {"id": rid, "timestamp": ts, "heart_rate": hr} for rid, ts, hr in rows
+            ]
+
+        @self.app.get("/heart_rate")
+        def list_heart_rate(start_date: str = None, end_date: str = None):
+            rows = self.heart_rates.fetch_range(start_date, end_date)
+            return [
+                {
+                    "id": rid,
+                    "workout_id": wid,
+                    "timestamp": ts,
+                    "heart_rate": hr,
+                }
+                for rid, wid, ts, hr in rows
+            ]
+
+        @self.app.put("/heart_rate/{entry_id}")
+        def update_heart_rate(entry_id: int, timestamp: str, heart_rate: int):
+            try:
+                self.heart_rates.update(entry_id, timestamp, heart_rate)
+                return {"status": "updated"}
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
+        @self.app.delete("/heart_rate/{entry_id}")
+        def delete_heart_rate(entry_id: int):
+            try:
+                self.heart_rates.delete(entry_id)
                 return {"status": "deleted"}
             except ValueError as e:
                 raise HTTPException(status_code=404, detail=str(e))

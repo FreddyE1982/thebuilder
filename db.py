@@ -314,6 +314,16 @@ class Database:
                 "stress_level",
             ],
         ),
+        "heart_rate_logs": (
+            """CREATE TABLE heart_rate_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    workout_id INTEGER NOT NULL,
+                    timestamp TEXT NOT NULL,
+                    heart_rate INTEGER NOT NULL,
+                    FOREIGN KEY(workout_id) REFERENCES workouts(id) ON DELETE CASCADE
+                );""",
+            ["id", "workout_id", "timestamp", "heart_rate"],
+        ),
         "favorite_exercises": (
             """CREATE TABLE favorite_exercises (
                     name TEXT PRIMARY KEY
@@ -2402,6 +2412,59 @@ class WellnessRepository(BaseRepository):
         if not rows:
             raise ValueError("log not found")
         self.execute("DELETE FROM wellness_logs WHERE id = ?;", (entry_id,))
+
+
+class HeartRateRepository(BaseRepository):
+    """Repository for logging heart rate during workouts."""
+
+    def log(self, workout_id: int, timestamp: str, heart_rate: int) -> int:
+        return self.execute(
+            "INSERT INTO heart_rate_logs (workout_id, timestamp, heart_rate) VALUES (?, ?, ?);",
+            (workout_id, timestamp, heart_rate),
+        )
+
+    def fetch_for_workout(self, workout_id: int) -> list[tuple[int, str, int]]:
+        rows = self.fetch_all(
+            "SELECT id, timestamp, heart_rate FROM heart_rate_logs WHERE workout_id = ? ORDER BY timestamp;",
+            (workout_id,),
+        )
+        return [(int(r[0]), r[1], int(r[2])) for r in rows]
+
+    def fetch_range(self, start_date: str | None = None, end_date: str | None = None) -> list[tuple[int, int, str, int]]:
+        query = (
+            "SELECT hr.id, hr.workout_id, hr.timestamp, hr.heart_rate FROM heart_rate_logs hr JOIN workouts w ON hr.workout_id = w.id WHERE 1=1"
+        )
+        params: list[str] = []
+        if start_date:
+            query += " AND w.date >= ?"
+            params.append(start_date)
+        if end_date:
+            query += " AND w.date <= ?"
+            params.append(end_date)
+        query += " ORDER BY timestamp;"
+        rows = self.fetch_all(query, tuple(params))
+        return [(int(r[0]), int(r[1]), r[2], int(r[3])) for r in rows]
+
+    def update(self, entry_id: int, timestamp: str, heart_rate: int) -> None:
+        rows = self.fetch_all(
+            "SELECT id FROM heart_rate_logs WHERE id = ?;",
+            (entry_id,),
+        )
+        if not rows:
+            raise ValueError("log not found")
+        self.execute(
+            "UPDATE heart_rate_logs SET timestamp = ?, heart_rate = ? WHERE id = ?;",
+            (timestamp, heart_rate, entry_id),
+        )
+
+    def delete(self, entry_id: int) -> None:
+        rows = self.fetch_all(
+            "SELECT id FROM heart_rate_logs WHERE id = ?;",
+            (entry_id,),
+        )
+        if not rows:
+            raise ValueError("log not found")
+        self.execute("DELETE FROM heart_rate_logs WHERE id = ?;", (entry_id,))
 
 
 class FavoriteExerciseRepository(BaseRepository):
