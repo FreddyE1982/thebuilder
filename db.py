@@ -705,6 +705,15 @@ class WorkoutRepository(BaseRepository):
     def delete_all(self) -> None:
         self._delete_all("workouts")
 
+    def delete(self, workout_id: int) -> None:
+        rows = super().fetch_all(
+            "SELECT id FROM workouts WHERE id = ?;",
+            (workout_id,),
+        )
+        if not rows:
+            raise ValueError("workout not found")
+        self.execute("DELETE FROM workouts WHERE id = ?;", (workout_id,))
+
 
 class ExerciseRepository(BaseRepository):
     """Repository for exercise table operations."""
