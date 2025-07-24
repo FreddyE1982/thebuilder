@@ -2229,6 +2229,42 @@ class APITestCase(unittest.TestCase):
         self.assertAlmostEqual(summary["avg_quality"], 3.5)
         self.assertAlmostEqual(summary["avg_stress"], 2.5)
 
+    def test_heart_rate_logging(self) -> None:
+        self.client.post("/workouts", params={"date": "2023-01-01"})
+        resp = self.client.post(
+            "/workouts/1/heart_rate",
+            params={"timestamp": "2023-01-01T10:00:00", "heart_rate": 120},
+        )
+        self.assertEqual(resp.status_code, 200)
+        hr_id = resp.json()["id"]
+
+        resp = self.client.get("/workouts/1/heart_rate")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["id"], hr_id)
+        self.assertEqual(data[0]["heart_rate"], 120)
+
+        resp = self.client.get(
+            "/heart_rate",
+            params={"start_date": "2023-01-01", "end_date": "2023-01-02"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(len(resp.json()), 1)
+
+        upd = self.client.put(
+            f"/heart_rate/{hr_id}",
+            params={"timestamp": "2023-01-01T10:05:00", "heart_rate": 125},
+        )
+        self.assertEqual(upd.status_code, 200)
+
+        resp = self.client.get("/workouts/1/heart_rate")
+        self.assertEqual(resp.json()[0]["heart_rate"], 125)
+
+        del_resp = self.client.delete(f"/heart_rate/{hr_id}")
+        self.assertEqual(del_resp.status_code, 200)
+        self.assertEqual(self.client.get("/workouts/1/heart_rate").json(), [])
+
     def test_exercise_frequency(self) -> None:
         d1 = (datetime.date.today() - datetime.timedelta(days=7)).isoformat()
         d2 = datetime.date.today().isoformat()
