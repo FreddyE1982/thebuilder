@@ -3324,6 +3324,15 @@ class GymApp:
                             {"Velocity": [v["velocity"] for v in vel_hist]},
                             [v["date"] for v in vel_hist],
                         )
+                rel_power = self.stats.relative_power_history(
+                    ex_choice, start_str, end_str
+                )
+                if rel_power:
+                    with st.expander("Relative Power History", expanded=False):
+                        self._line_chart(
+                            {"Power/Weight": [p["relative_power"] for p in rel_power]},
+                            [p["date"] for p in rel_power],
+                        )
                 self._progress_forecast_section(ex_choice)
             self._volume_forecast_section(start_str, end_str)
         with rec_tab:
