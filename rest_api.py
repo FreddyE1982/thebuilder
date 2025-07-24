@@ -43,7 +43,7 @@ from ml_service import (
     InjuryRiskModelService,
     AdaptationModelService,
 )
-from tools import ExercisePrescription, MathTools
+from tools import ExercisePrescription, MathTools, GitTools
 
 
 class GymAPI:
@@ -1860,6 +1860,14 @@ class GymAPI:
                 return {"status": "confirmation_failed"}
             self.planned_workouts.delete_all()
             return {"status": "deleted"}
+
+        @self.app.post("/settings/git_pull")
+        def git_pull():
+            try:
+                output = GitTools.git_pull("~/thebuilder")
+                return {"status": "pulled", "output": output}
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=str(e))
 
 
 api = GymAPI()

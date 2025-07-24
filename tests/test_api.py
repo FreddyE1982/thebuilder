@@ -3,6 +3,8 @@ import sys
 import datetime
 import unittest
 import sqlite3
+import shutil
+import subprocess
 from fastapi.testclient import TestClient
 import yaml
 
@@ -2620,3 +2622,28 @@ class APITestCase(unittest.TestCase):
         expected = presc["prescription"][0]
         self.assertAlmostEqual(sets_data[0]["weight"], expected["weight"], places=1)
         self.assertEqual(sets_data[0]["reps"], expected["reps"])
+
+    def test_git_pull_endpoint(self) -> None:
+        remote_dir = os.path.join(os.getcwd(), "git_remote")
+        repo_dir = os.path.expanduser("~/thebuilder")
+        for path in [remote_dir, repo_dir]:
+            if os.path.exists(path):
+                shutil.rmtree(path)
+        subprocess.run(["git", "init", "--bare", remote_dir], check=True)
+        subprocess.run(["git", "clone", remote_dir, repo_dir], check=True)
+        temp_clone = os.path.join(os.getcwd(), "temp_clone")
+        subprocess.run(["git", "clone", remote_dir, temp_clone], check=True)
+        with open(os.path.join(temp_clone, "file.txt"), "w", encoding="utf-8") as f:
+            f.write("data")
+        subprocess.run(["git", "add", "file.txt"], cwd=temp_clone, check=True)
+        subprocess.run(["git", "commit", "-m", "init"], cwd=temp_clone, check=True)
+        subprocess.run(["git", "push"], cwd=temp_clone, check=True)
+        shutil.rmtree(temp_clone)
+
+        resp = self.client.post("/settings/git_pull")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data["status"], "pulled")
+        self.assertTrue(os.path.exists(os.path.join(repo_dir, "file.txt")))
+        shutil.rmtree(remote_dir)
+        shutil.rmtree(repo_dir)
