@@ -131,6 +131,7 @@ class GymApp:
             self.goal_model,
             self.body_weights_repo,
             self.goals_repo,
+            self.wellness_repo,
         )
         self.planner = PlannerService(
             self.workouts,

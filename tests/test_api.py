@@ -2626,6 +2626,16 @@ class APITestCase(unittest.TestCase):
                 f"/exercises/{ex_id}/sets",
                 params={"reps": 5, "weight": w, "rpe": 8},
             )
+        self.client.post(
+            "/wellness",
+            params={
+                "date": datetime.date.today().isoformat(),
+                "calories": 2500.0,
+                "sleep_hours": 8.0,
+                "sleep_quality": 5.0,
+                "stress_level": 3,
+            },
+        )
         plan_date = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
         resp = self.client.post(
             "/planned_workouts/auto_plan",
@@ -2645,6 +2655,10 @@ class APITestCase(unittest.TestCase):
             [5] * len(weights),
             list(range(len(weights))),
             [8] * len(weights),
+            calories=[2500.0],
+            sleep_hours=[8.0],
+            sleep_quality=[5.0],
+            stress_levels=[3],
             body_weight=80.0,
             months_active=1.0,
             workouts_per_month=len(weights),

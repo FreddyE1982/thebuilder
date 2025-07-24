@@ -107,6 +107,7 @@ class GymAPI:
             self.goal_model,
             self.body_weights,
             self.goals,
+            self.wellness,
         )
         self.planner = PlannerService(
             self.workouts,
