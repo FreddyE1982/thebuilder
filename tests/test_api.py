@@ -2691,3 +2691,34 @@ class APITestCase(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(repo_dir, "file.txt")))
         shutil.rmtree(remote_dir)
         shutil.rmtree(repo_dir)
+
+    def test_ai_plan_requires_only_history(self) -> None:
+        """AI planner should work with only workout history available."""
+        weights = [60.0, 62.5, 65.0]
+        for w in weights:
+            w_res = self.client.post("/workouts")
+            wid = w_res.json()["id"]
+            ex_res = self.client.post(
+                f"/workouts/{wid}/exercises",
+                params={"name": "Squat", "equipment": "Power Rack"},
+            )
+            ex_id = ex_res.json()["id"]
+            self.client.post(
+                f"/exercises/{ex_id}/sets",
+                params={"reps": 5, "weight": w, "rpe": 8},
+            )
+
+        plan_date = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
+        resp = self.client.post(
+            "/planned_workouts/auto_plan",
+            params={"date": plan_date, "exercises": "Squat@Power Rack"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        pid = resp.json()["id"]
+        ex_resp = self.client.get(f"/planned_workouts/{pid}/exercises")
+        self.assertEqual(len(ex_resp.json()), 1)
+        planned_ex_id = ex_resp.json()[0]["id"]
+        sets_resp = self.client.get(f"/planned_exercises/{planned_ex_id}/sets")
+        self.assertEqual(sets_resp.status_code, 200)
+        sets_data = sets_resp.json()
+        self.assertGreaterEqual(len(sets_data), 1)
