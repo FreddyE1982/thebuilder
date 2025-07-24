@@ -2754,3 +2754,33 @@ class APITestCase(unittest.TestCase):
         self.assertIsNotNone(status["prescription_last_success"])
         self.assertGreaterEqual(len(status["prescription_errors"]), 1)
         self.assertTrue(any(m["name"] == "performance_model" for m in status["models"]))
+
+    def test_autoplanner_model_toggle(self) -> None:
+        """Disabling and enabling a model should affect status output."""
+        # volume model should be present by default
+        status = self.client.get("/autoplanner/status").json()
+        self.assertTrue(any(m["name"] == "volume_model" for m in status["models"]))
+
+        # disable both training and prediction
+        resp = self.client.post(
+            "/settings/general",
+            params={
+                "ml_volume_training_enabled": False,
+                "ml_volume_prediction_enabled": False,
+            },
+        )
+        self.assertEqual(resp.status_code, 200)
+        status = self.client.get("/autoplanner/status").json()
+        self.assertFalse(any(m["name"] == "volume_model" for m in status["models"]))
+
+        # enable again
+        resp = self.client.post(
+            "/settings/general",
+            params={
+                "ml_volume_training_enabled": True,
+                "ml_volume_prediction_enabled": True,
+            },
+        )
+        self.assertEqual(resp.status_code, 200)
+        status = self.client.get("/autoplanner/status").json()
+        self.assertTrue(any(m["name"] == "volume_model" for m in status["models"]))

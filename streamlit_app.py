@@ -4361,18 +4361,28 @@ class GymApp:
                 st.write("Prescription Errors:")
                 for ts, msg in presc_errs:
                     st.write(f"{ts}: {msg}")
-            models = [
-                "performance_model",
-                "volume_model",
-                "readiness_model",
-                "progress_model",
-                "rl_goal_model",
-                "injury_model",
-                "adaptation_model",
-            ]
-            for name in models:
+            model_map = {
+                "performance_model": "rpe",
+                "volume_model": "volume",
+                "readiness_model": "readiness",
+                "progress_model": "progress",
+                "rl_goal_model": "goal",
+                "injury_model": "injury",
+                "adaptation_model": "adaptation",
+            }
+            for name, prefix in model_map.items():
+                train_flag = self.settings_repo.get_bool(
+                    f"ml_{prefix}_training_enabled", True
+                )
+                pred_flag = self.settings_repo.get_bool(
+                    f"ml_{prefix}_prediction_enabled", True
+                )
+                if not train_flag and not pred_flag:
+                    continue
                 status = self.ml_status.fetch(name)
                 st.subheader(name)
+                st.write(f"Training Enabled: {train_flag}")
+                st.write(f"Prediction Enabled: {pred_flag}")
                 st.write(f"Loaded: {status['last_loaded']}")
                 st.write(f"Last Train: {status['last_train']}")
                 st.write(f"Last Prediction: {status['last_predict']}")
