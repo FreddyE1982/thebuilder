@@ -47,7 +47,7 @@ from ml_service import (
     ProgressModelService,
     RLGoalModelService,
 )
-from tools import MathTools
+from tools import MathTools, GitTools
 
 
 class GymApp:
@@ -3739,6 +3739,14 @@ class GymApp:
                         "ml_injury_prediction_enabled", True
                     ),
                 )
+            with st.expander("Repository Maintenance", expanded=True):
+                if st.button("Git Pull"):
+                    try:
+                        output = GitTools.git_pull("~/thebuilder")
+                        st.code(output)
+                        st.success("Repository updated")
+                    except Exception as e:
+                        st.warning(str(e))
             if st.button("Save General Settings"):
                 self.settings_repo.set_float("body_weight", bw)
                 self.settings_repo.set_float("height", height)
