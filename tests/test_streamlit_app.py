@@ -163,7 +163,7 @@ class StreamlitAppTest(unittest.TestCase):
         self.at.query_params["tab"] = "settings"
         self.at.run()
         # Custom exercise
-        cust_tab = self.at.tabs[12]
+        cust_tab = next(t for t in self.at.tabs if t.label == "Exercise Management")
         idx_group = _find_by_label(cust_tab.selectbox, "Muscle Group", key="cust_ex_group")
         cust_tab.selectbox[idx_group].select("Chest").run()
         cust_tab.text_input[0].input("CustomEx").run()
@@ -189,7 +189,7 @@ class StreamlitAppTest(unittest.TestCase):
         )
 
         # Body weight log
-        bw_tab = self.at.tabs[13]
+        bw_tab = next(t for t in self.at.tabs if t.label == "Body Weight Logs")
         bw_tab.date_input[0].set_value("2024-01-02").run()
         bw_tab.number_input[0].set_value(80.5).run()
         bw_tab.button[0].click().run()
@@ -199,7 +199,7 @@ class StreamlitAppTest(unittest.TestCase):
         self.assertAlmostEqual(cur.fetchone()[0], 80.5)
 
         # Wellness log
-        well_tab = self.at.tabs[14]
+        well_tab = next(t for t in self.at.tabs if t.label == "Wellness Logs")
         well_tab.date_input[0].set_value("2024-01-03").run()
         well_tab.number_input[0].set_value(2500.0).run()
         well_tab.number_input[1].set_value(8.0).run()
@@ -214,7 +214,7 @@ class StreamlitAppTest(unittest.TestCase):
         self.assertEqual(cur.fetchone(), (2500.0, 8.0, 5.0, 3))
 
         # Tag
-        tag_tab = self.at.tabs[15]
+        tag_tab = next(t for t in self.at.tabs if t.label == "Workout Tags")
         tag_tab.text_input[0].input("morning").run()
         tag_tab.button[0].click().run()
         self.at.run()
@@ -523,6 +523,7 @@ class StreamlitFullGUITest(unittest.TestCase):
             "Exercise Management",
             "Body Weight Logs",
             "Wellness Logs",
+            "Heart Rate Logs",
             "Workout Tags",
             "Autoplanner Status",
         ]:
@@ -639,6 +640,53 @@ class StreamlitTemplateWorkflowTest(unittest.TestCase):
         self.assertEqual(cur.fetchone()[0], 1)
         cur.execute("SELECT COUNT(*) FROM workouts;")
         self.assertEqual(cur.fetchone()[0], 1)
+        conn.close()
+
+
+class StreamlitHeartRateGUITest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.db_path = "test_gui_hr.db"
+        self.yaml_path = "test_gui_hr.yaml"
+        for path in [self.db_path, self.yaml_path]:
+            if os.path.exists(path):
+                os.remove(path)
+        os.environ["DB_PATH"] = self.db_path
+        os.environ["YAML_PATH"] = self.yaml_path
+        os.environ["TEST_MODE"] = "0"
+        self.at = AppTest.from_file("streamlit_app.py", default_timeout=20)
+        self.at.query_params["mode"] = "desktop"
+        self.at.query_params["tab"] = "workouts"
+        self.at.run(timeout=20)
+
+    def tearDown(self) -> None:
+        for path in [self.db_path, self.yaml_path]:
+            if os.path.exists(path):
+                os.remove(path)
+
+    def _connect(self) -> sqlite3.Connection:
+        return sqlite3.connect(self.db_path)
+
+    def test_log_heart_rate(self) -> None:
+        idx_new = _find_by_label(
+            self.at.button,
+            "New Workout",
+            key="FormSubmitter:new_workout_form-New Workout",
+        )
+        self.at.button[idx_new].click().run()
+        hr_idx = _find_by_label(self.at.expander, "Heart Rate")
+        self.at.expander[hr_idx].text_input[0].input("2023-01-01T10:00:00").run()
+        self.at.expander[hr_idx].number_input[0].set_value(120).run()
+        b_idx = _find_by_label(
+            self.at.expander[hr_idx].button,
+            "Log Heart Rate",
+            key="FormSubmitter:hr_form_1-Log Heart Rate",
+        )
+        self.at.expander[hr_idx].button[b_idx].click().run()
+
+        conn = self._connect()
+        cur = conn.cursor()
+        cur.execute("SELECT heart_rate FROM heart_rate_logs WHERE workout_id = 1;")
+        self.assertEqual(cur.fetchone()[0], 120)
         conn.close()
 
 

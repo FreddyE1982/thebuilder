@@ -83,6 +83,7 @@ class LongTermUsageTestCase(unittest.TestCase):
         bench_rpe_total = 0
         max_1rm = 0.0
         success_count = 0
+        heart_rates: list[int] = []
 
         for i in range(14):
             w_date = start + datetime.timedelta(days=i * 2)
@@ -147,6 +148,13 @@ class LongTermUsageTestCase(unittest.TestCase):
                     if est > max_1rm:
                         max_1rm = est
                 volume_bench = 3 * reps * weight
+
+            hr = 60 + i
+            self.client.post(
+                f"/workouts/{workout_id}/heart_rate",
+                params={"timestamp": f"{date_str}T10:00:00", "heart_rate": hr},
+            )
+            heart_rates.append(hr)
 
             if i % 9 == 1:
                 r = self.client.put(
@@ -235,6 +243,11 @@ class LongTermUsageTestCase(unittest.TestCase):
         self.assertAlmostEqual(summary["avg_rpe"], avg_rpe)
         self.assertAlmostEqual(summary["max_1rm"], round(max_1rm, 2))
 
+        hr_summary = self.client.get("/stats/heart_rate_summary").json()
+        self.assertAlmostEqual(hr_summary["avg"], round(sum(heart_rates) / len(heart_rates), 2))
+        self.assertEqual(hr_summary["min"], float(min(heart_rates)))
+        self.assertEqual(hr_summary["max"], float(max(heart_rates)))
+
         # verify db rows
         conn = sqlite3.connect(self.db_path)
         cur = conn.cursor()
@@ -242,6 +255,8 @@ class LongTermUsageTestCase(unittest.TestCase):
         self.assertEqual(cur.fetchone()[0], 14)
         cur.execute("SELECT COUNT(*) FROM sets;")
         self.assertEqual(cur.fetchone()[0], 100)
+        cur.execute("SELECT COUNT(*) FROM heart_rate_logs;")
+        self.assertEqual(cur.fetchone()[0], len(heart_rates))
         conn.close()
 
 
@@ -320,6 +335,7 @@ class ExtendedUsageTestCase(unittest.TestCase):
         bench_rpe_total = 0
         max_1rm = 0.0
         success_count = 0
+        heart_rates: list[int] = []
 
         for i in range(n):
             w_date = start + datetime.timedelta(days=i * 2)
@@ -369,6 +385,12 @@ class ExtendedUsageTestCase(unittest.TestCase):
                 ids = [resp.json()["id"]]
 
             volume_bench = reps * weight
+            hr = 70 + i
+            self.client.post(
+                f"/workouts/{workout_id}/heart_rate",
+                params={"timestamp": f"{date_str}T10:00:00", "heart_rate": hr},
+            )
+            heart_rates.append(hr)
             bench_sets += 1
             bench_rpe_total += 8
             est = MathTools.epley_1rm(weight, reps)
@@ -477,11 +499,18 @@ class ExtendedUsageTestCase(unittest.TestCase):
         self.assertAlmostEqual(summary["avg_rpe"], avg_rpe)
         self.assertAlmostEqual(summary["max_1rm"], round(max_1rm, 2))
 
+        hr_summary = self.client.get("/stats/heart_rate_summary").json()
+        self.assertAlmostEqual(hr_summary["avg"], round(sum(heart_rates) / len(heart_rates), 2))
+        self.assertEqual(hr_summary["min"], float(min(heart_rates)))
+        self.assertEqual(hr_summary["max"], float(max(heart_rates)))
+
         conn = sqlite3.connect(self.db_path)
         cur = conn.cursor()
         cur.execute("SELECT COUNT(*) FROM workouts;")
         self.assertEqual(cur.fetchone()[0], n)
         cur.execute("SELECT COUNT(*) FROM sets;")
         self.assertEqual(cur.fetchone()[0], 3 * n + 3 * n + 2 * (n - 6))
+        cur.execute("SELECT COUNT(*) FROM heart_rate_logs;")
+        self.assertEqual(cur.fetchone()[0], len(heart_rates))
         conn.close()
 
