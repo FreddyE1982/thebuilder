@@ -203,6 +203,7 @@ class GymApp:
             self.game_repo,
             self.exercises,
             self.settings_repo,
+            self.workouts,
         )
         self.ml_service = PerformanceModelService(
             self.ml_models,
@@ -3707,6 +3708,14 @@ class GymApp:
                     {"Points": [p[1] for p in data]},
                     [str(p[0]) for p in data],
                 )
+        streak = self.gamification.workout_streak()
+        with st.expander("Streak", expanded=True):
+            self._metric_grid(
+                [
+                    ("Current Streak", streak["current"]),
+                    ("Record Streak", streak["record"]),
+                ]
+            )
 
     def _tests_tab(self) -> None:
         st.header("Pyramid Test")

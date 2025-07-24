@@ -2958,6 +2958,15 @@ class APITestCase(unittest.TestCase):
         status = self.client.get("/autoplanner/status").json()
         self.assertTrue(any(m["name"] == "volume_model" for m in status["models"]))
 
+    def test_workout_streak_endpoint(self) -> None:
+        today = datetime.date.today()
+        for i in range(3):
+            date = (today - datetime.timedelta(days=2 - i)).isoformat()
+            self.client.post("/workouts", params={"date": date})
+        resp = self.client.get("/gamification/streak")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), {"current": 3, "record": 3})
+
         # disable both training and prediction
         resp = self.client.post(
             "/settings/general",
