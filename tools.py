@@ -83,6 +83,15 @@ class MathTools:
         return [round(target_weight * float(i), 2) for i in inc]
 
     @staticmethod
+    def warmup_plan(target_weight: float, target_reps: int, sets: int = 3) -> list[tuple[int, float]]:
+        """Generate a warmup plan as list of (reps, weight)."""
+        if target_weight <= 0 or target_reps <= 0 or sets <= 0:
+            raise ValueError("invalid input values")
+        weights = MathTools.warmup_weights(target_weight, sets)
+        rep_range = np.linspace(target_reps + 2, max(1, target_reps // 2), sets)
+        return [(int(round(r)), w) for r, w in zip(rep_range, weights)]
+
+    @staticmethod
     def estimate_velocity_from_set(
         reps: int,
         start_time: datetime.datetime | str,

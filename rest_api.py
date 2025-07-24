@@ -932,10 +932,13 @@ class GymAPI:
             weight: float,
             rpe: int,
             note: str | None = None,
+            warmup: bool = False,
         ):
             prev = self.sets.last_rpe(exercise_id)
             try:
-                set_id = self.sets.add(exercise_id, reps, weight, rpe, note)
+                set_id = self.sets.add(
+                    exercise_id, reps, weight, rpe, note, warmup=warmup
+                )
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
             _, name, _, _ = self.exercises.fetch_detail(exercise_id)
@@ -976,11 +979,41 @@ class GymAPI:
                 self.recommender.record_result(rid, reps_i, weight_i, rpe_i)
             return {"added": len(ids)}
 
+        @self.app.post("/exercises/{exercise_id}/warmup_sets")
+        def add_warmup_sets(
+            exercise_id: int,
+            target_weight: float,
+            target_reps: int,
+            sets: int = 3,
+        ):
+            try:
+                plan = MathTools.warmup_plan(target_weight, target_reps, sets)
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+            ids: list[int] = []
+            for reps_i, weight_i in plan:
+                sid = self.sets.add(
+                    exercise_id,
+                    int(reps_i),
+                    float(weight_i),
+                    6,
+                    warmup=True,
+                )
+                self.recommender.record_result(sid, int(reps_i), float(weight_i), 6)
+                try:
+                    self.gamification.record_set(exercise_id, int(reps_i), float(weight_i), 6)
+                except Exception:
+                    pass
+                ids.append(sid)
+            return {"added": len(ids), "ids": ids}
+
         @self.app.put("/sets/{set_id}")
-        def update_set(set_id: int, reps: int, weight: float, rpe: int):
+        def update_set(
+            set_id: int, reps: int, weight: float, rpe: int, warmup: bool | None = None
+        ):
             prev = self.sets.previous_rpe(set_id)
             try:
-                self.sets.update(set_id, reps, weight, rpe)
+                self.sets.update(set_id, reps, weight, rpe, warmup)
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
             ex_id = self.sets.fetch_exercise_id(set_id)
@@ -1056,12 +1089,13 @@ class GymAPI:
         def list_sets(exercise_id: int):
             sets = self.sets.fetch_for_exercise(exercise_id)
             result = []
-            for sid, reps, weight, rpe, start_time, end_time in sets:
+            for sid, reps, weight, rpe, start_time, end_time, warm in sets:
                 entry = {
                     "id": sid,
                     "reps": reps,
                     "weight": weight,
                     "rpe": rpe,
+                    "warmup": bool(warm),
                 }
                 if start_time is not None:
                     entry["start_time"] = start_time
@@ -1439,6 +1473,20 @@ class GymAPI:
             try:
                 weights = MathTools.warmup_weights(target_weight, sets)
                 return {"weights": weights}
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
+        @self.app.get("/utils/warmup_plan")
+        def utils_warmup_plan(
+            target_weight: float, target_reps: int, sets: int = 3
+        ):
+            try:
+                plan = MathTools.warmup_plan(target_weight, target_reps, sets)
+                return {
+                    "plan": [
+                        {"reps": r, "weight": w} for r, w in plan
+                    ]
+                }
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
 
