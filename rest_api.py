@@ -16,6 +16,7 @@ from db import (
     MuscleRepository,
     MuscleGroupRepository,
     ExerciseNameRepository,
+    ExerciseVariantRepository,
     SettingsRepository,
     PyramidTestRepository,
     PyramidEntryRepository,
@@ -72,6 +73,7 @@ class GymAPI:
         self.muscles = MuscleRepository(db_path)
         self.muscle_groups = MuscleGroupRepository(db_path, self.muscles)
         self.exercise_names = ExerciseNameRepository(db_path)
+        self.exercise_variants = ExerciseVariantRepository(db_path)
         self.favorites = FavoriteExerciseRepository(db_path)
         self.favorite_templates = FavoriteTemplateRepository(db_path)
         self.favorite_workouts = FavoriteWorkoutRepository(db_path)
@@ -271,6 +273,20 @@ class GymAPI:
         def add_exercise_alias(new_name: str, existing: str):
             self.exercise_names.add_alias(new_name, existing)
             return {"status": "added"}
+
+        @self.app.post("/exercise_variants/link")
+        def link_exercise_variant(name: str, variant: str):
+            self.exercise_variants.link(name, variant)
+            return {"status": "linked"}
+
+        @self.app.delete("/exercise_variants/link")
+        def unlink_exercise_variant(name: str, variant: str):
+            self.exercise_variants.unlink(name, variant)
+            return {"status": "unlinked"}
+
+        @self.app.get("/exercise_variants/{name}")
+        def list_exercise_variants(name: str):
+            return self.exercise_variants.fetch_variants(name)
 
         @self.app.get("/favorites/exercises")
         def list_favorite_exercises():
@@ -707,6 +723,11 @@ class GymAPI:
         @self.app.put("/exercises/{exercise_id}/note")
         def update_exercise_note(exercise_id: int, note: str | None = None):
             self.exercises.update_note(exercise_id, note)
+            return {"status": "updated"}
+
+        @self.app.put("/exercises/{exercise_id}/name")
+        def update_exercise_name(exercise_id: int, name: str):
+            self.exercises.update_name(exercise_id, name)
             return {"status": "updated"}
 
         @self.app.get("/workouts/{workout_id}/exercises")
