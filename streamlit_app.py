@@ -863,6 +863,22 @@ class GymApp:
                 cursor: pointer;
                 z-index: 1000;
             }
+            .set-row {
+                padding: 0.5rem;
+                border-radius: 0.25rem;
+                margin-bottom: 0.5rem;
+            }
+            .set-registered {
+                background: #ffffff;
+            }
+            .set-unregistered {
+                background: #ffcccc;
+            }
+            .set-status {
+                font-size: 0.8rem;
+                color: green;
+                margin-top: 0.25rem;
+            }
             @media screen and (min-width: 769px) {
                 .scroll-top {
                     bottom: 1rem;
@@ -1669,14 +1685,19 @@ class GymApp:
             with st.expander("Sets", expanded=True):
                 for idx, (set_id, reps, weight, rpe, start_time, end_time) in enumerate(sets, start=1):
                     detail = self.sets.fetch_detail(set_id)
+                    registered = start_time is not None and end_time is not None
+                    row_class = "set-registered" if registered else "set-unregistered"
                     if st.session_state.is_mobile:
                         with st.expander(f"Set {idx}"):
+                            st.markdown(f"<div class='set-row {row_class}'>", unsafe_allow_html=True)
                             reps_val = st.number_input(
                                 "Reps",
                                 min_value=1,
                                 step=1,
                                 value=int(reps),
                                 key=f"reps_{set_id}",
+                                on_change=self._update_set,
+                                args=(set_id,),
                             )
                             weight_val = st.number_input(
                                 "Weight (kg)",
@@ -1684,17 +1705,23 @@ class GymApp:
                                 step=0.5,
                                 value=float(weight),
                                 key=f"weight_{set_id}",
+                                on_change=self._update_set,
+                                args=(set_id,),
                             )
                             rpe_val = st.selectbox(
                                 "RPE",
                                 options=list(range(11)),
                                 index=int(rpe),
                                 key=f"rpe_{set_id}",
+                                on_change=self._update_set,
+                                args=(set_id,),
                             )
                             note_val = st.text_input(
                                 "Note",
                                 value=detail.get("note") or "",
                                 key=f"note_{set_id}",
+                                on_change=self._update_set,
+                                args=(set_id,),
                             )
                             dur_default = 0.0
                             if start_time and end_time:
@@ -1707,6 +1734,8 @@ class GymApp:
                                 step=1.0,
                                 value=dur_default,
                                 key=f"duration_{set_id}",
+                                on_change=self._update_set,
+                                args=(set_id,),
                             )
                             st.write(f"{detail['diff_reps']:+}")
                             st.write(f"{detail['diff_weight']:+.1f}")
@@ -1715,36 +1744,28 @@ class GymApp:
                             if start_col.button("Start", key=f"start_set_{set_id}"):
                                 self.sets.set_start_time(
                                     set_id,
-                                    datetime.datetime.now().isoformat(
-                                        timespec="seconds"
-                                    ),
+                                    datetime.datetime.now().isoformat(timespec="seconds"),
                                 )
+                                st.rerun()
                             if finish_col.button("Finish", key=f"finish_set_{set_id}"):
                                 self.sets.set_end_time(
                                     set_id,
-                                    datetime.datetime.now().isoformat(
-                                        timespec="seconds"
-                                    ),
+                                    datetime.datetime.now().isoformat(timespec="seconds"),
                                 )
-                            del_col, upd_col = st.columns(2)
+                                st.rerun()
+                            del_col, _ = st.columns(2)
                             if del_col.button("Delete", key=f"del_{set_id}"):
                                 self._confirm_delete_set(set_id)
                                 continue
-                            if upd_col.button("Update", key=f"upd_{set_id}"):
-                                self.sets.update(
-                                    set_id,
-                                    int(reps_val),
-                                    float(weight_val),
-                                    int(rpe_val),
-                                )
-                                self.sets.update_note(set_id, note_val or None)
-                                if duration_val > 0:
-                                    self.sets.set_duration(set_id, float(duration_val))
                             if start_time:
                                 st.write(start_time)
                             if end_time:
                                 st.write(end_time)
+                            if registered:
+                                st.markdown("<div class='set-status'>registered</div>", unsafe_allow_html=True)
+                            st.markdown("</div>", unsafe_allow_html=True)
                     else:
+                        st.markdown(f"<div class='set-row {row_class}'>", unsafe_allow_html=True)
                         cols = st.columns(13)
                         with cols[0]:
                             st.write(f"Set {idx}")
@@ -1754,6 +1775,8 @@ class GymApp:
                             step=1,
                             value=int(reps),
                             key=f"reps_{set_id}",
+                            on_change=self._update_set,
+                            args=(set_id,),
                         )
                         weight_val = cols[2].number_input(
                             "Weight (kg)",
@@ -1761,17 +1784,23 @@ class GymApp:
                             step=0.5,
                             value=float(weight),
                             key=f"weight_{set_id}",
+                            on_change=self._update_set,
+                            args=(set_id,),
                         )
                         rpe_val = cols[3].selectbox(
                             "RPE",
                             options=list(range(11)),
                             index=int(rpe),
                             key=f"rpe_{set_id}",
+                            on_change=self._update_set,
+                            args=(set_id,),
                         )
                         note_val = cols[4].text_input(
                             "Note",
                             value=detail.get("note") or "",
                             key=f"note_{set_id}",
+                            on_change=self._update_set,
+                            args=(set_id,),
                         )
                         dur_default = 0.0
                         if start_time and end_time:
@@ -1784,6 +1813,8 @@ class GymApp:
                             step=1.0,
                             value=dur_default,
                             key=f"duration_{set_id}",
+                            on_change=self._update_set,
+                            args=(set_id,),
                         )
                         cols[6].write(f"{detail['diff_reps']:+}")
                         cols[7].write(f"{detail['diff_weight']:+.1f}")
@@ -1793,25 +1824,23 @@ class GymApp:
                                 set_id,
                                 datetime.datetime.now().isoformat(timespec="seconds"),
                             )
+                            st.rerun()
                         if cols[10].button("Finish", key=f"finish_set_{set_id}"):
                             self.sets.set_end_time(
                                 set_id,
                                 datetime.datetime.now().isoformat(timespec="seconds"),
                             )
+                            st.rerun()
                         if cols[11].button("Delete", key=f"del_{set_id}"):
                             self._confirm_delete_set(set_id)
                             continue
-                        if cols[12].button("Update", key=f"upd_{set_id}"):
-                            self.sets.update(
-                                set_id, int(reps_val), float(weight_val), int(rpe_val)
-                            )
-                            self.sets.update_note(set_id, note_val or None)
-                            if duration_val > 0:
-                                self.sets.set_duration(set_id, float(duration_val))
                         if start_time:
                             cols[9].write(start_time)
                         if end_time:
                             cols[10].write(end_time)
+                        if registered:
+                            cols[12].markdown("<div class='set-status'>registered</div>", unsafe_allow_html=True)
+                        st.markdown("</div>", unsafe_allow_html=True)
             hist = self.stats.exercise_history(name)
             if hist:
                 with st.expander("History (last 5)"):
@@ -1909,6 +1938,19 @@ class GymApp:
             st.button("Close", key=f"bulk_close_{exercise_id}")
 
         self._show_dialog("Bulk Add Sets", _content)
+
+    def _update_set(self, set_id: int) -> None:
+        """Update set values based on current widget state."""
+        reps_val = st.session_state.get(f"reps_{set_id}")
+        weight_val = st.session_state.get(f"weight_{set_id}")
+        rpe_val = st.session_state.get(f"rpe_{set_id}")
+        note_val = st.session_state.get(f"note_{set_id}", "")
+        dur_val = st.session_state.get(f"duration_{set_id}", 0.0)
+        self.sets.update(set_id, int(reps_val), float(weight_val), int(rpe_val))
+        self.sets.update_note(set_id, note_val or None)
+        if dur_val and float(dur_val) > 0:
+            self.sets.set_duration(set_id, float(dur_val))
+        st.rerun()
 
     def _confirm_delete_set(self, set_id: int) -> None:
         def _content() -> None:
