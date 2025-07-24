@@ -22,6 +22,9 @@ from db import (
     GamificationRepository,
     MLModelRepository,
     MLLogRepository,
+    MLModelStatusRepository,
+    AutoPlannerLogRepository,
+    ExercisePrescriptionLogRepository,
     BodyWeightRepository,
     WellnessRepository,
     FavoriteExerciseRepository,
@@ -77,6 +80,9 @@ class GymAPI:
         self.game_repo = GamificationRepository(db_path)
         self.ml_models = MLModelRepository(db_path)
         self.ml_logs = MLLogRepository(db_path)
+        self.ml_status = MLModelStatusRepository(db_path)
+        self.autoplan_logs = AutoPlannerLogRepository(db_path)
+        self.prescription_logs = ExercisePrescriptionLogRepository(db_path)
         self.body_weights = BodyWeightRepository(db_path)
         self.wellness = WellnessRepository(db_path)
         self.goals = GoalRepository(db_path)
@@ -89,13 +95,14 @@ class GymAPI:
             self.ml_models,
             self.exercise_names,
             self.ml_logs,
+            self.ml_status,
         )
-        self.volume_model = VolumeModelService(self.ml_models)
-        self.readiness_model = ReadinessModelService(self.ml_models)
-        self.progress_model = ProgressModelService(self.ml_models)
-        self.goal_model = RLGoalModelService(self.ml_models)
-        self.injury_model = InjuryRiskModelService(self.ml_models)
-        self.adaptation_model = AdaptationModelService(self.ml_models)
+        self.volume_model = VolumeModelService(self.ml_models, status_repo=self.ml_status)
+        self.readiness_model = ReadinessModelService(self.ml_models, status_repo=self.ml_status)
+        self.progress_model = ProgressModelService(self.ml_models, status_repo=self.ml_status)
+        self.goal_model = RLGoalModelService(self.ml_models, status_repo=self.ml_status)
+        self.injury_model = InjuryRiskModelService(self.ml_models, status_repo=self.ml_status)
+        self.adaptation_model = AdaptationModelService(self.ml_models, status_repo=self.ml_status)
         self.recommender = RecommendationService(
             self.workouts,
             self.exercises,
@@ -108,6 +115,7 @@ class GymAPI:
             self.body_weights,
             self.goals,
             self.wellness,
+            prescription_log_repo=self.prescription_logs,
         )
         self.planner = PlannerService(
             self.workouts,
@@ -121,6 +129,7 @@ class GymAPI:
             self.template_exercises,
             self.template_sets,
             recommender=self.recommender,
+            log_repo=self.autoplan_logs,
         )
         self.statistics = StatisticsService(
             self.sets,
@@ -1765,6 +1774,48 @@ class GymAPI:
                 }
                 for ts, pred, conf in rows
             ]
+
+        @self.app.get("/autoplanner/status")
+        def autoplan_status():
+            last_success = self.autoplan_logs.last_success()
+            errors = [
+                {"timestamp": ts, "message": msg}
+                for ts, msg in self.autoplan_logs.last_errors(5)
+            ]
+            presc_success = self.prescription_logs.last_success()
+            presc_errors = [
+                {"timestamp": ts, "message": msg}
+                for ts, msg in self.prescription_logs.last_errors(5)
+            ]
+            model_names = [
+                "performance_model",
+                "volume_model",
+                "readiness_model",
+                "progress_model",
+                "rl_goal_model",
+                "injury_model",
+                "adaptation_model",
+            ]
+            models = []
+            for name in model_names:
+                status = self.ml_status.fetch(name)
+                models.append(
+                    {
+                        "name": name,
+                        "training_enabled": self.settings.get_bool(f"ml_{name.split('_')[0]}_training_enabled", True),
+                        "prediction_enabled": self.settings.get_bool(f"ml_{name.split('_')[0]}_prediction_enabled", True),
+                        "last_loaded": status["last_loaded"],
+                        "last_train": status["last_train"],
+                        "last_predict": status["last_predict"],
+                    }
+                )
+            return {
+                "last_success": last_success,
+                "errors": errors,
+                "models": models,
+                "prescription_last_success": presc_success,
+                "prescription_errors": presc_errors,
+            }
 
         @self.app.get("/settings/general")
         def get_general_settings():

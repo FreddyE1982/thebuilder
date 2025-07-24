@@ -1,7 +1,12 @@
 from __future__ import annotations
 import io
 import torch
-from db import MLModelRepository, ExerciseNameRepository, MLLogRepository
+from db import (
+    MLModelRepository,
+    ExerciseNameRepository,
+    MLLogRepository,
+    MLModelStatusRepository,
+)
 from typing import Iterable, Optional
 
 torch.manual_seed(0)
@@ -31,10 +36,17 @@ class RPEModel(torch.nn.Module):
 class BaseModelService:
     """Base functionality for persistent Torch models."""
 
-    def __init__(self, repo: MLModelRepository, name: str, lr: float) -> None:
+    def __init__(
+        self,
+        repo: MLModelRepository,
+        name: str,
+        lr: float,
+        status_repo: MLModelStatusRepository | None = None,
+    ) -> None:
         self.repo = repo
         self.name = name
         self.lr = lr
+        self.status_repo = status_repo
 
     def _save_state(
         self,
@@ -48,9 +60,13 @@ class BaseModelService:
             state.update(extra)
         torch.save(state, buf)
         self.repo.save(self.name, buf.getvalue())
+        if self.status_repo is not None:
+            self.status_repo.set_trained(self.name)
 
     def _load_state(self) -> Optional[dict]:
         blob = self.repo.load(self.name)
+        if self.status_repo is not None:
+            self.status_repo.set_loaded(self.name)
         if blob is None:
             return None
         buffer = io.BytesIO(blob)
@@ -66,11 +82,13 @@ class PerformanceModelService:
         repo: MLModelRepository,
         name_repo: ExerciseNameRepository,
         log_repo: MLLogRepository | None = None,
+        status_repo: MLModelStatusRepository | None = None,
         lr: float = 0.1,
     ) -> None:
         self.repo = repo
         self.names = name_repo
         self.log_repo = log_repo
+        self.status_repo = status_repo
         self.lr = lr
         self.models: dict[str, tuple[RPEModel, torch.optim.Optimizer]] = {}
 
@@ -85,6 +103,8 @@ class PerformanceModelService:
                 buffer = io.BytesIO(blob)
                 state = torch.load(buffer)
                 model.load_state_dict(state)
+            if self.status_repo is not None:
+                self.status_repo.set_loaded("performance_model")
             self.models[canonical] = (model, opt)
         return self.models[canonical]
 
@@ -105,6 +125,8 @@ class PerformanceModelService:
         buf = io.BytesIO()
         torch.save(model.state_dict(), buf)
         self.repo.save(self.names.canonical(name), buf.getvalue())
+        if self.status_repo is not None:
+            self.status_repo.set_trained("performance_model")
 
     def predict(
         self, name: str, reps: int, weight: float, prev_rpe: float
@@ -119,6 +141,8 @@ class PerformanceModelService:
             conf_v = float(conf.item())
         if self.log_repo is not None:
             self.log_repo.add(self.names.canonical(name), value, conf_v)
+        if self.status_repo is not None:
+            self.status_repo.set_prediction("performance_model")
         return value, conf_v
 
 
@@ -138,8 +162,13 @@ class VolumeModelService(BaseModelService):
 
     SCALE: float = 1000.0
 
-    def __init__(self, repo: MLModelRepository, lr: float = 0.001) -> None:
-        super().__init__(repo, "volume_model", lr)
+    def __init__(
+        self,
+        repo: MLModelRepository,
+        lr: float = 0.001,
+        status_repo: MLModelStatusRepository | None = None,
+    ) -> None:
+        super().__init__(repo, "volume_model", lr, status_repo)
         self.model, self.opt, self.initialized = self._load()
 
     def _load(self) -> tuple[VolumePredictor, torch.optim.Optimizer, bool]:
@@ -181,7 +210,10 @@ class VolumeModelService(BaseModelService):
                 [f / self.SCALE for f in features], dtype=torch.float32
             ).view(1, -1)
             pred = self.model(x)
-            return float(pred.item() * self.SCALE)
+            val = float(pred.item() * self.SCALE)
+        if self.status_repo is not None:
+            self.status_repo.set_prediction("volume_model")
+        return val
 
 
 class ReadinessPredictor(torch.nn.Module):
@@ -200,8 +232,13 @@ class ReadinessModelService(BaseModelService):
 
     SCALE: float = 10.0
 
-    def __init__(self, repo: MLModelRepository, lr: float = 0.01) -> None:
-        super().__init__(repo, "readiness_model", lr)
+    def __init__(
+        self,
+        repo: MLModelRepository,
+        lr: float = 0.01,
+        status_repo: MLModelStatusRepository | None = None,
+    ) -> None:
+        super().__init__(repo, "readiness_model", lr, status_repo)
         self.model, self.opt, self.initialized = self._load()
 
     def _load(self) -> tuple[ReadinessPredictor, torch.optim.Optimizer, bool]:
@@ -242,6 +279,8 @@ class ReadinessModelService(BaseModelService):
             )
             pred = self.model(x)
             val = float(pred.item() * self.SCALE)
+        if self.status_repo is not None:
+            self.status_repo.set_prediction("readiness_model")
         return (val + fallback) / 2
 
 
@@ -264,8 +303,13 @@ class ProgressModelService(BaseModelService):
 
     SCALE: float = 200.0
 
-    def __init__(self, repo: MLModelRepository, lr: float = 0.001) -> None:
-        super().__init__(repo, "progress_model", lr)
+    def __init__(
+        self,
+        repo: MLModelRepository,
+        lr: float = 0.001,
+        status_repo: MLModelStatusRepository | None = None,
+    ) -> None:
+        super().__init__(repo, "progress_model", lr, status_repo)
         self.model, self.opt, self.initialized, self.history = self._load()
 
     def _load(self) -> tuple[LSTMProgressPredictor, torch.optim.Optimizer, bool, list]:
@@ -312,7 +356,10 @@ class ProgressModelService(BaseModelService):
         with torch.no_grad():
             x = torch.tensor([seq], dtype=torch.float32)
             pred = self.model(x)
-            return float(pred.item() * self.SCALE)
+            val = float(pred.item() * self.SCALE)
+        if self.status_repo is not None:
+            self.status_repo.set_prediction("progress_model")
+        return val
 
 
 class RLGoalNet(torch.nn.Module):
@@ -338,9 +385,13 @@ class RLGoalModelService(BaseModelService):
     ACTIONS = [-2.5, 0.0, 2.5]
 
     def __init__(
-        self, repo: MLModelRepository, lr: float = 0.001, gamma: float = 0.9
+        self,
+        repo: MLModelRepository,
+        lr: float = 0.001,
+        gamma: float = 0.9,
+        status_repo: MLModelStatusRepository | None = None,
     ) -> None:
-        super().__init__(repo, "rl_goal_model", lr)
+        super().__init__(repo, "rl_goal_model", lr, status_repo)
         self.gamma = gamma
         self.model, self.opt, self.initialized, self.history = self._load()
         self.pending: dict[int, tuple[list[float], int]] = {}
@@ -371,7 +422,10 @@ class RLGoalModelService(BaseModelService):
         with torch.no_grad():
             x = torch.tensor(list(state), dtype=torch.float32)
             q = self.model(x)
-            return int(torch.argmax(q).item())
+            action = int(torch.argmax(q).item())
+        if self.status_repo is not None:
+            self.status_repo.set_prediction("rl_goal_model")
+        return action
 
     def train_step(
         self,
@@ -421,8 +475,13 @@ class InjuryRiskPredictor(torch.nn.Module):
 class InjuryRiskModelService(BaseModelService):
     """Predict injury probability based on training load metrics."""
 
-    def __init__(self, repo: MLModelRepository, lr: float = 0.001) -> None:
-        super().__init__(repo, "injury_model", lr)
+    def __init__(
+        self,
+        repo: MLModelRepository,
+        lr: float = 0.001,
+        status_repo: MLModelStatusRepository | None = None,
+    ) -> None:
+        super().__init__(repo, "injury_model", lr, status_repo)
         self.model, self.opt, self.initialized = self._load()
 
     def _load(self) -> tuple[InjuryRiskPredictor, torch.optim.Optimizer, bool]:
@@ -456,7 +515,10 @@ class InjuryRiskModelService(BaseModelService):
         with torch.no_grad():
             x = torch.tensor([list(features)], dtype=torch.float32)
             pred = self.model(x)
-            return float(pred.item())
+            val = float(pred.item())
+        if self.status_repo is not None:
+            self.status_repo.set_prediction("injury_model")
+        return val
 
 
 class FusionNet(torch.nn.Module):
@@ -478,8 +540,13 @@ class FusionNet(torch.nn.Module):
 class AdaptationModelService(BaseModelService):
     """Predict overall adaptation index from multiple metrics."""
 
-    def __init__(self, repo: MLModelRepository, lr: float = 0.001) -> None:
-        super().__init__(repo, "adaptation_model", lr)
+    def __init__(
+        self,
+        repo: MLModelRepository,
+        lr: float = 0.001,
+        status_repo: MLModelStatusRepository | None = None,
+    ) -> None:
+        super().__init__(repo, "adaptation_model", lr, status_repo)
         self.model, self.opt, self.initialized = self._load()
 
     def _load(self) -> tuple[FusionNet, torch.optim.Optimizer, bool]:
@@ -516,4 +583,6 @@ class AdaptationModelService(BaseModelService):
             x = torch.tensor([list(features)], dtype=torch.float32)
             pred = self.model(x)
             val = float(pred.item())
+        if self.status_repo is not None:
+            self.status_repo.set_prediction("adaptation_model")
         return (val + fallback) / 2

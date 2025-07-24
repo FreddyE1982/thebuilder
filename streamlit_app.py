@@ -28,6 +28,9 @@ from db import (
     GamificationRepository,
     MLModelRepository,
     MLLogRepository,
+    MLModelStatusRepository,
+    AutoPlannerLogRepository,
+    ExercisePrescriptionLogRepository,
     BodyWeightRepository,
     WellnessRepository,
     FavoriteExerciseRepository,
@@ -104,6 +107,9 @@ class GymApp:
         self.game_repo = GamificationRepository(db_path)
         self.ml_models = MLModelRepository(db_path)
         self.ml_logs = MLLogRepository(db_path)
+        self.ml_status = MLModelStatusRepository(db_path)
+        self.autoplan_logs = AutoPlannerLogRepository(db_path)
+        self.prescription_logs = ExercisePrescriptionLogRepository(db_path)
         self.body_weights_repo = BodyWeightRepository(db_path)
         self.wellness_repo = WellnessRepository(db_path)
         self.gamification = GamificationService(
@@ -115,11 +121,12 @@ class GymApp:
             self.ml_models,
             self.exercise_names_repo,
             self.ml_logs,
+            self.ml_status,
         )
-        self.volume_model = VolumeModelService(self.ml_models)
-        self.readiness_model = ReadinessModelService(self.ml_models)
-        self.progress_model = ProgressModelService(self.ml_models)
-        self.goal_model = RLGoalModelService(self.ml_models)
+        self.volume_model = VolumeModelService(self.ml_models, status_repo=self.ml_status)
+        self.readiness_model = ReadinessModelService(self.ml_models, status_repo=self.ml_status)
+        self.progress_model = ProgressModelService(self.ml_models, status_repo=self.ml_status)
+        self.goal_model = RLGoalModelService(self.ml_models, status_repo=self.ml_status)
         self.recommender = RecommendationService(
             self.workouts,
             self.exercises,
@@ -132,6 +139,7 @@ class GymApp:
             self.body_weights_repo,
             self.goals_repo,
             self.wellness_repo,
+            prescription_log_repo=self.prescription_logs,
         )
         self.planner = PlannerService(
             self.workouts,
@@ -145,6 +153,7 @@ class GymApp:
             self.template_exercises,
             self.template_sets,
             recommender=self.recommender,
+            log_repo=self.autoplan_logs,
         )
         self.stats = StatisticsService(
             self.sets,
@@ -3807,6 +3816,7 @@ class GymApp:
             bw_tab,
             well_tab,
             tag_tab,
+            auto_tab,
         ) = st.tabs(
             [
                 "General",
@@ -3817,6 +3827,7 @@ class GymApp:
                 "Body Weight Logs",
                 "Wellness Logs",
                 "Workout Tags",
+                "Autoplanner Status",
             ]
         )
 
@@ -4333,6 +4344,38 @@ class GymApp:
                                 st.success("Deleted")
                             except ValueError as e:
                                 st.warning(str(e))
+
+        with auto_tab:
+            st.header("Autoplanner Status")
+            last_success = self.autoplan_logs.last_success()
+            st.write(f"Last successful run: {last_success or 'never'}")
+            errors = self.autoplan_logs.last_errors(5)
+            if errors:
+                st.write("Recent Errors:")
+                for ts, msg in errors:
+                    st.write(f"{ts}: {msg}")
+            presc_success = self.prescription_logs.last_success()
+            st.write(f"Prescription last run: {presc_success or 'never'}")
+            presc_errs = self.prescription_logs.last_errors(5)
+            if presc_errs:
+                st.write("Prescription Errors:")
+                for ts, msg in presc_errs:
+                    st.write(f"{ts}: {msg}")
+            models = [
+                "performance_model",
+                "volume_model",
+                "readiness_model",
+                "progress_model",
+                "rl_goal_model",
+                "injury_model",
+                "adaptation_model",
+            ]
+            for name in models:
+                status = self.ml_status.fetch(name)
+                st.subheader(name)
+                st.write(f"Loaded: {status['last_loaded']}")
+                st.write(f"Last Train: {status['last_train']}")
+                st.write(f"Last Prediction: {status['last_predict']}")
 
 
 if __name__ == "__main__":

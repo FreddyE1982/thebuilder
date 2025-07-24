@@ -2722,3 +2722,35 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(sets_resp.status_code, 200)
         sets_data = sets_resp.json()
         self.assertGreaterEqual(len(sets_data), 1)
+
+    def test_autoplanner_status_success_and_error(self) -> None:
+        """Autoplanner status should report last run and errors."""
+        # Trigger error first
+        plan_date = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
+        resp_err = self.client.post(
+            "/planned_workouts/auto_plan",
+            params={"date": plan_date, "exercises": "Unknown"},
+        )
+        self.assertEqual(resp_err.status_code, 400)
+        # Now add history for success
+        wid = self.client.post("/workouts").json()["id"]
+        ex_id = self.client.post(
+            f"/workouts/{wid}/exercises",
+            params={"name": "Bench", "equipment": "Olympic Barbell"},
+        ).json()["id"]
+        self.client.post(
+            f"/exercises/{ex_id}/sets",
+            params={"reps": 5, "weight": 60.0, "rpe": 8},
+        )
+        resp_ok = self.client.post(
+            "/planned_workouts/auto_plan",
+            params={"date": plan_date, "exercises": "Bench@Olympic Barbell"},
+        )
+        self.assertEqual(resp_ok.status_code, 200)
+
+        status = self.client.get("/autoplanner/status").json()
+        self.assertIsNotNone(status["last_success"])
+        self.assertGreaterEqual(len(status["errors"]), 1)
+        self.assertIsNotNone(status["prescription_last_success"])
+        self.assertGreaterEqual(len(status["prescription_errors"]), 1)
+        self.assertTrue(any(m["name"] == "performance_model" for m in status["models"]))
