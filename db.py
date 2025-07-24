@@ -108,6 +108,16 @@ class Database:
                 "is_custom",
             ],
         ),
+        "exercise_variants": (
+            """CREATE TABLE exercise_variants (
+                    exercise_name TEXT NOT NULL,
+                    variant_name TEXT NOT NULL,
+                    PRIMARY KEY (exercise_name, variant_name),
+                    FOREIGN KEY(exercise_name) REFERENCES exercise_catalog(name) ON DELETE CASCADE,
+                    FOREIGN KEY(variant_name) REFERENCES exercise_catalog(name) ON DELETE CASCADE
+                );""",
+            ["exercise_name", "variant_name"],
+        ),
         "exercises": (
             """CREATE TABLE exercises (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -800,6 +810,13 @@ class ExerciseRepository(BaseRepository):
             (note, exercise_id),
         )
 
+    def update_name(self, exercise_id: int, name: str) -> None:
+        self.exercise_names.ensure([name])
+        self.execute(
+            "UPDATE exercises SET name = ? WHERE id = ?;",
+            (name, exercise_id),
+        )
+
 
 class SetRepository(BaseRepository):
     """Repository for sets table operations."""
@@ -1435,6 +1452,51 @@ class ExerciseNameRepository(BaseRepository):
                 "INSERT OR REPLACE INTO exercise_names (name, canonical_name) VALUES (?, ?);",
                 (new_name, canonical),
             )
+
+
+class ExerciseVariantRepository(BaseRepository):
+    """Repository managing exercise variant links."""
+
+    def __init__(self, db_path: str = "workout.db") -> None:
+        super().__init__(db_path)
+        self.exercise_names = ExerciseNameRepository(db_path)
+
+    def link(self, exercise: str, variant: str) -> None:
+        self.exercise_names.ensure([exercise, variant])
+        ex = self.exercise_names.canonical(exercise)
+        var = self.exercise_names.canonical(variant)
+        if ex == var:
+            return
+        with self._connection() as conn:
+            conn.execute(
+                "INSERT OR IGNORE INTO exercise_variants (exercise_name, variant_name) VALUES (?, ?);",
+                (ex, var),
+            )
+            conn.execute(
+                "INSERT OR IGNORE INTO exercise_variants (exercise_name, variant_name) VALUES (?, ?);",
+                (var, ex),
+            )
+
+    def unlink(self, exercise: str, variant: str) -> None:
+        ex = self.exercise_names.canonical(exercise)
+        var = self.exercise_names.canonical(variant)
+        with self._connection() as conn:
+            conn.execute(
+                "DELETE FROM exercise_variants WHERE exercise_name = ? AND variant_name = ?;",
+                (ex, var),
+            )
+            conn.execute(
+                "DELETE FROM exercise_variants WHERE exercise_name = ? AND variant_name = ?;",
+                (var, ex),
+            )
+
+    def fetch_variants(self, exercise: str) -> List[str]:
+        ex = self.exercise_names.canonical(exercise)
+        rows = self.fetch_all(
+            "SELECT variant_name FROM exercise_variants WHERE exercise_name = ? ORDER BY variant_name;",
+            (ex,),
+        )
+        return [r[0] for r in rows]
 
 
 class SettingsRepository(BaseRepository):

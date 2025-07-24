@@ -22,6 +22,7 @@ from db import (
     MuscleRepository,
     MuscleGroupRepository,
     ExerciseNameRepository,
+    ExerciseVariantRepository,
     SettingsRepository,
     PyramidTestRepository,
     PyramidEntryRepository,
@@ -181,6 +182,7 @@ class GymApp:
         self.muscles_repo = MuscleRepository(db_path)
         self.muscle_groups_repo = MuscleGroupRepository(db_path, self.muscles_repo)
         self.exercise_names_repo = ExerciseNameRepository(db_path)
+        self.exercise_variants_repo = ExerciseVariantRepository(db_path)
         self.favorites_repo = FavoriteExerciseRepository(db_path)
         self.favorite_templates_repo = FavoriteTemplateRepository(db_path)
         self.favorite_workouts_repo = FavoriteWorkoutRepository(db_path)
@@ -1813,6 +1815,13 @@ class GymApp:
             if st.button("Clear Note", key=f"clear_note_{exercise_id}"):
                 self.exercises.update_note(exercise_id, None)
                 st.session_state[f"exercise_note_{exercise_id}"] = ""
+            variants = self.exercise_variants_repo.fetch_variants(name)
+            if variants:
+                st.markdown("**Variants:**")
+                for v in variants:
+                    if st.button(v, key=f"switch_{exercise_id}_{v}"):
+                        self.exercises.update_name(exercise_id, v)
+                        st.rerun()
             with st.expander("Sets", expanded=True):
                 for idx, (set_id, reps, weight, rpe, start_time, end_time) in enumerate(sets, start=1):
                     detail = self.sets.fetch_detail(set_id)
@@ -2848,6 +2857,17 @@ class GymApp:
         groups = self.exercise_catalog.fetch_muscle_groups()
         equipment_names = self.equipment.fetch_names()
 
+        with st.expander("Link Variants"):
+            names = self.exercise_catalog.fetch_names(None, None, None, None)
+            col1, col2 = st.columns(2)
+            with col1:
+                base_ex = st.selectbox("Exercise", names, key="var_base")
+            with col2:
+                var_ex = st.selectbox("Variant", names, key="var_variant")
+            if st.button("Link Variant"):
+                self.exercise_variants_repo.link(base_ex, var_ex)
+                st.success("Linked")
+
         if st.session_state.is_mobile:
             with st.expander("Add Custom Exercise"):
                 group = st.selectbox("Muscle Group", groups, key="cust_ex_group")
@@ -2939,6 +2959,18 @@ class GymApp:
                         edit_other = st.text_input(
                             "Other", other, key=f"cust_oth_{name}"
                         )
+                        with st.expander("Variants", expanded=False):
+                            current_vars = self.exercise_variants_repo.fetch_variants(name)
+                            for v in current_vars:
+                                c1, c2 = st.columns(2)
+                                c1.write(v)
+                                if c2.button("Unlink", key=f"unlink_var_{name}_{v}"):
+                                    self.exercise_variants_repo.unlink(name, v)
+                                    st.rerun()
+                            add_v = st.selectbox("Add Variant", [""] + names, key=f"add_var_{name}")
+                            if st.button("Add Variant", key=f"add_var_btn_{name}") and add_v:
+                                self.exercise_variants_repo.link(name, add_v)
+                                st.rerun()
                         cols = st.columns(2)
                         if cols[0].button("Update", key=f"upd_cust_{name}"):
                             try:
@@ -3054,6 +3086,18 @@ class GymApp:
                         edit_other = st.text_input(
                             "Other", other, key=f"cust_oth_{name}"
                         )
+                        with st.expander("Variants", expanded=False):
+                            current_vars = self.exercise_variants_repo.fetch_variants(name)
+                            for v in current_vars:
+                                c1, c2 = st.columns(2)
+                                c1.write(v)
+                                if c2.button("Unlink", key=f"unlink_var_{name}_{v}"):
+                                    self.exercise_variants_repo.unlink(name, v)
+                                    st.rerun()
+                            add_v = st.selectbox("Add Variant", [""] + names, key=f"add_var_{name}")
+                            if st.button("Add Variant", key=f"add_var_btn_{name}") and add_v:
+                                self.exercise_variants_repo.link(name, add_v)
+                                st.rerun()
                         cols = st.columns(2)
                         if cols[0].button("Update", key=f"upd_cust_{name}"):
                             try:

@@ -370,6 +370,38 @@ class StreamlitAppTest(unittest.TestCase):
         self.assertEqual(cur.fetchone()[0], "Barbell Bench Press")
         conn.close()
 
+    def test_exercise_variant_switch(self) -> None:
+        self.at.query_params["tab"] = "settings"
+        self.at.run()
+        cust_tab = next(t for t in self.at.tabs if t.label == "Exercise Management")
+        var_exp = cust_tab.expander[_find_by_label(cust_tab.expander, "Link Variants")]
+        var_exp.selectbox[0].select("Barbell Bench Press").run()
+        var_exp.selectbox[1].select("Dumbbell Bench Press").run()
+        var_exp.button[0].click().run()
+        self.at.run()
+
+        self.at.query_params["tab"] = "workouts"
+        self.at.run()
+        idx_new = _find_by_label(self.at.button, "New Workout", key="FormSubmitter:new_workout_form-New Workout")
+        self.at.button[idx_new].click().run()
+        idx_ex = _find_by_label(self.at.selectbox, "Exercise", "Barbell Bench Press")
+        self.at.selectbox[idx_ex].select("Barbell Bench Press").run()
+        idx_eq = _find_by_label(self.at.selectbox, "Equipment Name", "Olympic Barbell")
+        self.at.selectbox[idx_eq].select("Olympic Barbell").run()
+        idx_add_ex = _find_by_label(self.at.button, "Add Exercise", key="add_ex_btn")
+        self.at.button[idx_add_ex].click().run()
+        self.at.run()
+        ex_idx = _find_by_label(self.at.expander, "Barbell Bench Press (Olympic Barbell)")
+        exp = self.at.expander[ex_idx]
+        btn_idx = _find_by_label(exp.button, "Dumbbell Bench Press")
+        exp.button[btn_idx].click().run()
+        self.at.run()
+        conn = self._connect()
+        cur = conn.cursor()
+        cur.execute("SELECT name FROM exercises;")
+        self.assertEqual(cur.fetchone()[0], "Dumbbell Bench Press")
+        conn.close()
+
     def test_toggle_theme_button(self) -> None:
         for btn in self.at.button:
             if btn.label == "Toggle Theme":

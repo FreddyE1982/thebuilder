@@ -747,6 +747,27 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIn("My Pulls", resp.json())
 
+    def test_exercise_variants(self) -> None:
+        self.client.post(
+            "/exercise_variants/link",
+            params={"name": "Barbell Bench Press", "variant": "Dumbbell Bench Press"},
+        )
+
+        resp = self.client.get("/exercise_variants/Barbell Bench Press")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("Dumbbell Bench Press", resp.json())
+
+        resp = self.client.delete(
+            "/exercise_variants/link",
+            params={"name": "Barbell Bench Press", "variant": "Dumbbell Bench Press"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), {"status": "unlinked"})
+
+        resp = self.client.get("/exercise_variants/Barbell Bench Press")
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotIn("Dumbbell Bench Press", resp.json())
+
     def test_statistics_endpoints(self) -> None:
         self.client.post("/workouts")
         today = datetime.date.today().isoformat()
