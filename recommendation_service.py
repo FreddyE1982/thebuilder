@@ -7,6 +7,7 @@ from db import (
     ExerciseNameRepository,
     SettingsRepository,
     BodyWeightRepository,
+    WellnessRepository,
     GoalRepository,
 )
 from tools import ExercisePrescription
@@ -30,6 +31,7 @@ class RecommendationService:
         rl_goal: "RLGoalModelService" | None = None,
         body_weight_repo: BodyWeightRepository | None = None,
         goal_repo: GoalRepository | None = None,
+        wellness_repo: WellnessRepository | None = None,
     ) -> None:
         self.workouts = workout_repo
         self.exercises = exercise_repo
@@ -41,6 +43,7 @@ class RecommendationService:
         self.rl_goal = rl_goal
         self.body_weights = body_weight_repo
         self.goals = goal_repo
+        self.wellness = wellness_repo
         self._pending: dict[int, list[float]] = {}
 
     def _current_body_weight(self) -> float:
@@ -49,6 +52,35 @@ class RecommendationService:
             if latest is not None:
                 return latest
         return self.settings.get_float("body_weight", 80.0)
+
+    def _recent_wellness(
+        self, days: int = 7
+    ) -> tuple[list[float] | None, list[float] | None, list[float] | None, list[int] | None]:
+        """Fetch recent wellness data lists for the given period."""
+        if self.wellness is None:
+            return None, None, None, None
+        end = datetime.date.today()
+        start = end - datetime.timedelta(days=days - 1)
+        rows = self.wellness.fetch_history(start.isoformat(), end.isoformat())
+        calories: list[float] = []
+        sleep_hours: list[float] = []
+        sleep_quality: list[float] = []
+        stress_levels: list[int] = []
+        for _id, _d, cal, sh, sq, sl in rows:
+            if cal is not None:
+                calories.append(float(cal))
+            if sh is not None:
+                sleep_hours.append(float(sh))
+            if sq is not None:
+                sleep_quality.append(float(sq))
+            if sl is not None:
+                stress_levels.append(int(sl))
+        return (
+            calories or None,
+            sleep_hours or None,
+            sleep_quality or None,
+            stress_levels or None,
+        )
 
     def has_history(self, exercise_name: str) -> bool:
         names = self.exercise_names.aliases(exercise_name)
@@ -158,6 +190,7 @@ class RecommendationService:
                     goal_days = max(diff, 1)
                 except Exception:
                     goal_days = None
+        calories, sleep_hours, sleep_quality, stress_levels = self._recent_wellness()
         prescription = ExercisePrescription.exercise_prescription(
             weight_list,
             reps_list,
@@ -173,6 +206,10 @@ class RecommendationService:
             body_weight=self._current_body_weight(),
             months_active=months_active,
             workouts_per_month=workouts_per_month,
+            calories=calories,
+            sleep_hours=sleep_hours,
+            sleep_quality=sleep_quality,
+            stress_levels=stress_levels,
             exercise_name=exercise_name,
             target_1rm=goal_target,
             days_remaining=goal_days,
