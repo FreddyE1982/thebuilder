@@ -9,7 +9,7 @@ If the agent gets a task that it thinks may be to extensive or complex to perfor
 Whenever the agent finishes a step from the TODO.md, it has to mark that step as "complete" in the TODO.md
 If there are no more steps left in the TODO.md, the agent deletes the file. TODO.md MUST be included in commit if present.
 
-
+## Agent main rules ##
 
 The agent is to always follow there rules:
 
