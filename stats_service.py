@@ -1233,6 +1233,35 @@ class StatisticsService:
             )
         return result
 
+    def training_type_summary(
+        self, start_date: Optional[str] = None, end_date: Optional[str] = None
+    ) -> List[Dict[str, float | int]]:
+        """Return workout counts and volume grouped by training type."""
+        if self.workouts is None:
+            return []
+        workouts = self.workouts.fetch_all_workouts(start_date, end_date)
+        stats: Dict[str, Dict[str, float | int]] = {}
+        for wid, _date, _s, _e, t_type, _notes, _rating in workouts:
+            summary = self.sets.workout_summary(wid)
+            entry = stats.setdefault(
+                t_type, {"workouts": 0, "volume": 0.0, "sets": 0}
+            )
+            entry["workouts"] += 1
+            entry["volume"] += summary["volume"]
+            entry["sets"] += summary["sets"]
+        result: List[Dict[str, float | int]] = []
+        for t_type in sorted(stats):
+            entry = stats[t_type]
+            result.append(
+                {
+                    "training_type": t_type,
+                    "workouts": entry["workouts"],
+                    "volume": round(float(entry["volume"]), 2),
+                    "sets": entry["sets"],
+                }
+            )
+        return result
+
     def stress_overview(
         self,
         start_date: Optional[str] = None,

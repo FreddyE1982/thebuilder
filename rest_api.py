@@ -1336,6 +1336,13 @@ class GymAPI:
         ):
             return self.statistics.location_summary(start_date, end_date)
 
+        @self.app.get("/stats/training_type_summary")
+        def stats_training_type_summary(
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            return self.statistics.training_type_summary(start_date, end_date)
+
         @self.app.get("/stats/workout_consistency")
         def stats_workout_consistency(
             start_date: str = None,
