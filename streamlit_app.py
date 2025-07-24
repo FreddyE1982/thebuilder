@@ -1502,6 +1502,8 @@ class GymApp:
                     mime="text/csv",
                     key=f"export_{selected}",
                 )
+                if st.button("Delete Workout", key=f"del_workout_{selected}"):
+                    self._confirm_delete_workout(int(selected))
 
     def _planned_workout_section(self) -> None:
         with self._section("Planned Workouts"):
@@ -1665,10 +1667,10 @@ class GymApp:
                 self.exercises.update_note(exercise_id, None)
                 st.session_state[f"exercise_note_{exercise_id}"] = ""
             with st.expander("Sets", expanded=True):
-                for set_id, reps, weight, rpe, start_time, end_time in sets:
+                for idx, (set_id, reps, weight, rpe, start_time, end_time) in enumerate(sets, start=1):
                     detail = self.sets.fetch_detail(set_id)
                     if st.session_state.is_mobile:
-                        with st.expander(f"Set {set_id}"):
+                        with st.expander(f"Set {idx}"):
                             reps_val = st.number_input(
                                 "Reps",
                                 min_value=1,
@@ -1745,7 +1747,7 @@ class GymApp:
                     else:
                         cols = st.columns(13)
                         with cols[0]:
-                            st.write(f"Set {set_id}")
+                            st.write(f"Set {idx}")
                         reps_val = cols[1].number_input(
                             "Reps",
                             min_value=1,
@@ -1880,6 +1882,7 @@ class GymApp:
             st.session_state.pop(f"new_weight_{exercise_id}", None)
             st.session_state.pop(f"new_rpe_{exercise_id}", None)
             st.session_state.pop(f"new_duration_{exercise_id}", None)
+            st.rerun()
 
     def _bulk_add_sets_dialog(self, exercise_id: int) -> None:
         def _content() -> None:
@@ -1915,6 +1918,20 @@ class GymApp:
                 self.sets.remove(set_id)
                 st.rerun()
             if cols[1].button("No", key=f"no_{set_id}"):
+                st.rerun()
+
+        self._show_dialog("Confirm Delete", _content)
+
+    def _confirm_delete_workout(self, workout_id: int) -> None:
+        def _content() -> None:
+            st.write(f"Delete workout {workout_id}?")
+            cols = st.columns(2)
+            if cols[0].button("Yes", key=f"yes_w_{workout_id}"):
+                self.workouts.delete(workout_id)
+                if st.session_state.get("selected_workout") == workout_id:
+                    st.session_state.selected_workout = None
+                st.rerun()
+            if cols[1].button("No", key=f"no_w_{workout_id}"):
                 st.rerun()
 
         self._show_dialog("Confirm Delete", _content)
@@ -2260,9 +2277,9 @@ class GymApp:
                 self.template_exercises.remove(exercise_id)
                 return
             with st.expander("Sets", expanded=True):
-                for sid, reps, weight, rpe in sets:
+                for idx, (sid, reps, weight, rpe) in enumerate(sets, start=1):
                     if st.session_state.is_mobile:
-                        with st.expander(f"Set {sid}"):
+                        with st.expander(f"Set {idx}"):
                             reps_val = st.number_input(
                                 "Reps",
                                 min_value=1,
@@ -2293,7 +2310,7 @@ class GymApp:
                                 )
                     else:
                         cols = st.columns(5)
-                        cols[0].write(f"Set {sid}")
+                        cols[0].write(f"Set {idx}")
                         reps_val = cols[1].number_input(
                             "Reps",
                             min_value=1,

@@ -109,6 +109,14 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), [])
 
+        response = self.client.delete("/workouts/1")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"status": "deleted"})
+
+        response = self.client.get("/workouts")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), [])
+
     def test_delete_endpoints(self) -> None:
         plan_date = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
 

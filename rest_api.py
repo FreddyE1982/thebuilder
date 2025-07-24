@@ -616,6 +616,14 @@ class GymAPI:
             self.workouts.set_rating(workout_id, rating)
             return {"status": "updated"}
 
+        @self.app.delete("/workouts/{workout_id}")
+        def delete_workout(workout_id: int):
+            try:
+                self.workouts.delete(workout_id)
+                return {"status": "deleted"}
+            except ValueError as e:
+                raise HTTPException(status_code=404, detail=str(e))
+
         @self.app.post("/workouts/{workout_id}/start")
         def start_workout(workout_id: int):
             timestamp = datetime.datetime.now().isoformat(timespec="seconds")
