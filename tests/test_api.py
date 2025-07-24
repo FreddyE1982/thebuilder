@@ -2265,6 +2265,27 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(del_resp.status_code, 200)
         self.assertEqual(self.client.get("/workouts/1/heart_rate").json(), [])
 
+    def test_heart_rate_summary(self) -> None:
+        self.client.post("/workouts", params={"date": "2023-01-01"})
+        self.client.post(
+            "/workouts/1/heart_rate",
+            params={"timestamp": "2023-01-01T10:00:00", "heart_rate": 120},
+        )
+        self.client.post(
+            "/workouts/1/heart_rate",
+            params={"timestamp": "2023-01-01T10:05:00", "heart_rate": 130},
+        )
+
+        resp = self.client.get(
+            "/stats/heart_rate_summary",
+            params={"start_date": "2023-01-01", "end_date": "2023-01-02"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertAlmostEqual(data["avg"], 125.0)
+        self.assertEqual(data["min"], 120.0)
+        self.assertEqual(data["max"], 130.0)
+
     def test_exercise_frequency(self) -> None:
         d1 = (datetime.date.today() - datetime.timedelta(days=7)).isoformat()
         d2 = datetime.date.today().isoformat()
