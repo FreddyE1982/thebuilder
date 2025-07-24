@@ -204,6 +204,7 @@ class Database:
                     start_time TEXT,
                     end_time TEXT,
                     note TEXT,
+                    warmup INTEGER NOT NULL DEFAULT 0,
                     FOREIGN KEY(exercise_id) REFERENCES exercises(id) ON DELETE CASCADE,
                     FOREIGN KEY(planned_set_id) REFERENCES planned_sets(id) ON DELETE SET NULL
                 );""",
@@ -220,6 +221,7 @@ class Database:
                 "start_time",
                 "end_time",
                 "note",
+                "warmup",
             ],
         ),
         "settings": (
@@ -841,6 +843,7 @@ class SetRepository(BaseRepository):
         diff_reps: int = 0,
         diff_weight: float = 0.0,
         diff_rpe: int = 0,
+        warmup: bool = False,
     ) -> int:
         if reps <= 0:
             raise ValueError("reps must be positive")
@@ -849,8 +852,8 @@ class SetRepository(BaseRepository):
         if rpe < 0 or rpe > 10:
             raise ValueError("rpe must be between 0 and 10")
         return self.execute(
-            "INSERT INTO sets (exercise_id, reps, weight, rpe, note, planned_set_id, diff_reps, diff_weight, diff_rpe) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);",
+            "INSERT INTO sets (exercise_id, reps, weight, rpe, note, planned_set_id, diff_reps, diff_weight, diff_rpe, warmup) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
             (
                 exercise_id,
                 reps,
@@ -861,6 +864,7 @@ class SetRepository(BaseRepository):
                 diff_reps,
                 diff_weight,
                 diff_rpe,
+                int(warmup),
             ),
         )
 
@@ -872,7 +876,9 @@ class SetRepository(BaseRepository):
             ids.append(self.add(exercise_id, reps, weight, rpe, None))
         return ids
 
-    def update(self, set_id: int, reps: int, weight: float, rpe: int) -> None:
+    def update(
+        self, set_id: int, reps: int, weight: float, rpe: int, warmup: bool | None = None
+    ) -> None:
         if reps <= 0:
             raise ValueError("reps must be positive")
         if weight < 0:
@@ -893,11 +899,16 @@ class SetRepository(BaseRepository):
                 diff_reps = reps - int(plan[0][0])
                 diff_weight = weight - float(plan[0][1])
                 diff_rpe = rpe - int(plan[0][2])
-        self.execute(
-            "UPDATE sets SET reps = ?, weight = ?, rpe = ?, diff_reps = ?, diff_weight = ?, diff_rpe = ? "
-            "WHERE id = ?;",
-            (reps, weight, rpe, diff_reps, diff_weight, diff_rpe, set_id),
+        query = (
+            "UPDATE sets SET reps = ?, weight = ?, rpe = ?, diff_reps = ?, diff_weight = ?, diff_rpe = ?"
         )
+        params = [reps, weight, rpe, diff_reps, diff_weight, diff_rpe]
+        if warmup is not None:
+            query += ", warmup = ?"
+            params.append(int(warmup))
+        query += " WHERE id = ?;"
+        params.append(set_id)
+        self.execute(query, tuple(params))
 
     def remove(self, set_id: int) -> None:
         self.execute("DELETE FROM sets WHERE id = ?;", (set_id,))
@@ -943,15 +954,15 @@ class SetRepository(BaseRepository):
 
     def fetch_for_exercise(
         self, exercise_id: int
-    ) -> List[Tuple[int, int, float, int, Optional[str], Optional[str]]]:
+    ) -> List[Tuple[int, int, float, int, Optional[str], Optional[str], int]]:
         return self.fetch_all(
-            "SELECT id, reps, weight, rpe, start_time, end_time FROM sets WHERE exercise_id = ?;",
+            "SELECT id, reps, weight, rpe, start_time, end_time, warmup FROM sets WHERE exercise_id = ?;",
             (exercise_id,),
         )
 
     def fetch_detail(self, set_id: int) -> dict:
         rows = self.fetch_all(
-            "SELECT id, reps, weight, rpe, note, planned_set_id, diff_reps, diff_weight, diff_rpe, start_time, end_time FROM sets WHERE id = ?;",
+            "SELECT id, reps, weight, rpe, note, planned_set_id, diff_reps, diff_weight, diff_rpe, start_time, end_time, warmup FROM sets WHERE id = ?;",
             (set_id,),
         )
         (
@@ -966,6 +977,7 @@ class SetRepository(BaseRepository):
             diff_rpe,
             start_time,
             end_time,
+            warmup,
         ) = rows[0]
         velocity = self._velocity(int(reps), start_time, end_time)
         return {
@@ -980,6 +992,7 @@ class SetRepository(BaseRepository):
             "start_time": start_time,
             "end_time": end_time,
             "note": note,
+            "warmup": bool(warmup),
             "velocity": velocity,
         }
 

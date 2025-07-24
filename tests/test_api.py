@@ -72,7 +72,8 @@ class APITestCase(unittest.TestCase):
         response = self.client.get("/exercises/1/sets")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
-            response.json(), [{"id": 1, "reps": 10, "weight": 100.0, "rpe": 8}]
+            response.json(),
+            [{"id": 1, "reps": 10, "weight": 100.0, "rpe": 8, "warmup": False}],
         )
 
         response = self.client.put(
@@ -84,7 +85,8 @@ class APITestCase(unittest.TestCase):
         response = self.client.get("/exercises/1/sets")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
-            response.json(), [{"id": 1, "reps": 12, "weight": 105.0, "rpe": 9}]
+            response.json(),
+            [{"id": 1, "reps": 12, "weight": 105.0, "rpe": 9, "warmup": False}],
         )
 
         response = self.client.get("/workouts/1/export_csv")
@@ -355,7 +357,8 @@ class APITestCase(unittest.TestCase):
         response = self.client.get("/exercises/1/sets")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
-            response.json(), [{"id": 1, "reps": 5, "weight": 150.0, "rpe": 8}]
+            response.json(),
+            [{"id": 1, "reps": 5, "weight": 150.0, "rpe": 8, "warmup": False}],
         )
 
         response = self.client.put(
@@ -380,6 +383,7 @@ class APITestCase(unittest.TestCase):
                 "start_time": None,
                 "end_time": None,
                 "note": None,
+                "warmup": False,
                 "velocity": 0.0,
             },
         )
@@ -598,7 +602,10 @@ class APITestCase(unittest.TestCase):
 
         resp = client.get("/exercises/1/sets")
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.json(), [{"id": 1, "reps": 8, "weight": 80.0, "rpe": 7}])
+        self.assertEqual(
+            resp.json(),
+            [{"id": 1, "reps": 8, "weight": 80.0, "rpe": 7, "warmup": False}],
+        )
 
         resp = client.get("/sets/1")
         self.assertEqual(resp.status_code, 200)
@@ -2139,6 +2146,33 @@ class APITestCase(unittest.TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json(), {"weights": [30.0, 60.0, 90.0]})
+
+    def test_warmup_plan_endpoint(self) -> None:
+        resp = self.client.get(
+            "/utils/warmup_plan",
+            params={"target_weight": 100.0, "target_reps": 5, "sets": 2},
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(
+            resp.json(),
+            {"plan": [{"reps": 7, "weight": 30.0}, {"reps": 2, "weight": 90.0}]},
+        )
+
+    def test_add_warmup_sets(self) -> None:
+        self.client.post("/workouts")
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        resp = self.client.post(
+            "/exercises/1/warmup_sets",
+            params={"target_weight": 100.0, "target_reps": 5, "sets": 2},
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["added"], 2)
+        sets = self.client.get("/exercises/1/sets").json()
+        self.assertEqual(len(sets), 2)
+        self.assertTrue(all(s["warmup"] for s in sets))
 
     def test_ml_training(self) -> None:
         self.client.post("/workouts")

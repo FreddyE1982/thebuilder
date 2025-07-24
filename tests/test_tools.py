@@ -60,6 +60,12 @@ class MathToolsTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             MathTools.warmup_weights(-1.0, 3)
 
+    def test_warmup_plan(self) -> None:
+        plan = MathTools.warmup_plan(100.0, 5, 2)
+        self.assertEqual(plan, [(7, 30.0), (2, 60.0)])
+        with self.assertRaises(ValueError):
+            MathTools.warmup_plan(-1.0, 5, 2)
+
     def test_session_density(self) -> None:
         val = MathTools.session_density(1000.0, 600)
         self.assertAlmostEqual(val, 100.0)

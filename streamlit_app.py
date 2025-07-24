@@ -1824,7 +1824,7 @@ class GymApp:
                         self.exercises.update_name(exercise_id, v)
                         st.rerun()
             with st.expander("Sets", expanded=True):
-                for idx, (set_id, reps, weight, rpe, start_time, end_time) in enumerate(sets, start=1):
+                for idx, (set_id, reps, weight, rpe, start_time, end_time, warm) in enumerate(sets, start=1):
                     detail = self.sets.fetch_detail(set_id)
                     registered = start_time is not None and end_time is not None
                     row_class = "set-registered" if registered else "set-unregistered"
@@ -1854,6 +1854,13 @@ class GymApp:
                                 options=list(range(11)),
                                 index=int(rpe),
                                 key=f"rpe_{set_id}",
+                                on_change=self._update_set,
+                                args=(set_id,),
+                            )
+                            warm_val = st.checkbox(
+                                "Warmup",
+                                value=bool(detail.get("warmup")),
+                                key=f"warm_{set_id}",
                                 on_change=self._update_set,
                                 args=(set_id,),
                             )
@@ -1907,7 +1914,7 @@ class GymApp:
                             st.markdown("</div>", unsafe_allow_html=True)
                     else:
                         st.markdown(f"<div class='set-row {row_class}'>", unsafe_allow_html=True)
-                        cols = st.columns(13)
+                        cols = st.columns(14)
                         with cols[0]:
                             st.write(f"Set {idx}")
                         reps_val = cols[1].number_input(
@@ -1936,7 +1943,14 @@ class GymApp:
                             on_change=self._update_set,
                             args=(set_id,),
                         )
-                        note_val = cols[4].text_input(
+                        warm_chk = cols[4].checkbox(
+                            "W",
+                            value=bool(detail.get("warmup")),
+                            key=f"warm_{set_id}",
+                            on_change=self._update_set,
+                            args=(set_id,),
+                        )
+                        note_val = cols[5].text_input(
                             "Note",
                             value=detail.get("note") or "",
                             key=f"note_{set_id}",
@@ -1948,7 +1962,7 @@ class GymApp:
                             t0 = datetime.datetime.fromisoformat(start_time)
                             t1 = datetime.datetime.fromisoformat(end_time)
                             dur_default = (t1 - t0).total_seconds()
-                        duration_val = cols[5].number_input(
+                        duration_val = cols[6].number_input(
                             "Duration (sec)",
                             min_value=0.0,
                             step=1.0,
@@ -1957,30 +1971,30 @@ class GymApp:
                             on_change=self._update_set,
                             args=(set_id,),
                         )
-                        cols[6].write(f"{detail['diff_reps']:+}")
-                        cols[7].write(f"{detail['diff_weight']:+.1f}")
-                        cols[8].write(f"{detail['diff_rpe']:+}")
-                        if cols[9].button("Start", key=f"start_set_{set_id}"):
+                        cols[7].write(f"{detail['diff_reps']:+}")
+                        cols[8].write(f"{detail['diff_weight']:+.1f}")
+                        cols[9].write(f"{detail['diff_rpe']:+}")
+                        if cols[10].button("Start", key=f"start_set_{set_id}"):
                             self.sets.set_start_time(
                                 set_id,
                                 datetime.datetime.now().isoformat(timespec="seconds"),
                             )
                             st.rerun()
-                        if cols[10].button("Finish", key=f"finish_set_{set_id}"):
+                        if cols[11].button("Finish", key=f"finish_set_{set_id}"):
                             self.sets.set_end_time(
                                 set_id,
                                 datetime.datetime.now().isoformat(timespec="seconds"),
                             )
                             st.rerun()
-                        if cols[11].button("Delete", key=f"del_{set_id}"):
+                        if cols[12].button("Delete", key=f"del_{set_id}"):
                             self._confirm_delete_set(set_id)
                             continue
                         if start_time:
-                            cols[9].write(start_time)
+                            cols[10].write(start_time)
                         if end_time:
-                            cols[10].write(end_time)
+                            cols[11].write(end_time)
                         if registered:
-                            cols[12].markdown("<div class='set-status'>registered</div>", unsafe_allow_html=True)
+                            cols[13].markdown("<div class='set-status'>registered</div>", unsafe_allow_html=True)
                         st.markdown("</div>", unsafe_allow_html=True)
             hist = self.stats.exercise_history(name)
             if hist:
@@ -2012,6 +2026,8 @@ class GymApp:
                 self._add_set_form(exercise_id, with_button=False)
             if st.button("Bulk Add Sets", key=f"bulk_{exercise_id}"):
                 self._bulk_add_sets_dialog(exercise_id)
+            if st.button("Warmup Plan", key=f"warmup_plan_{exercise_id}"):
+                self._warmup_plan_dialog(exercise_id)
 
     def _add_set_form(self, exercise_id: int, with_button: bool = True) -> None:
         reps = st.number_input(
@@ -2038,6 +2054,7 @@ class GymApp:
             step=1.0,
             key=f"new_duration_{exercise_id}",
         )
+        warmup = st.checkbox("Warmup", key=f"new_warmup_{exercise_id}")
         last = self.sets.fetch_for_exercise(exercise_id)
         if last:
             if st.button("Copy Last Set", key=f"copy_{exercise_id}"):
@@ -2046,7 +2063,7 @@ class GymApp:
                 st.session_state[f"new_weight_{exercise_id}"] = float(l[2])
                 st.session_state[f"new_rpe_{exercise_id}"] = int(l[3])
         if with_button and st.button("Add Set", key=f"add_set_{exercise_id}"):
-            self._submit_set(exercise_id, reps, weight, rpe, note, duration)
+            self._submit_set(exercise_id, reps, weight, rpe, note, duration, warmup)
 
     def _bulk_add_sets_dialog(self, exercise_id: int) -> None:
         def _content() -> None:
@@ -2074,6 +2091,32 @@ class GymApp:
 
         self._show_dialog("Bulk Add Sets", _content)
 
+    def _warmup_plan_dialog(self, exercise_id: int) -> None:
+        def _content() -> None:
+            tgt = st.number_input(
+                "Target Weight (kg)", min_value=0.0, step=0.5, key=f"plan_tgt_{exercise_id}"
+            )
+            reps = st.number_input(
+                "Target Reps", min_value=1, step=1, key=f"plan_reps_{exercise_id}"
+            )
+            count = st.number_input(
+                "Warmup Sets", min_value=1, step=1, value=3, key=f"plan_cnt_{exercise_id}"
+            )
+            if st.button("Add", key=f"plan_add_{exercise_id}"):
+                try:
+                    plan = MathTools.warmup_plan(float(tgt), int(reps), int(count))
+                    for r, w in plan:
+                        self.sets.add(exercise_id, int(r), float(w), 6, warmup=True)
+                        self.gamification.record_set(exercise_id, int(r), float(w), 6)
+                    st.success(f"Added {len(plan)} sets")
+                except ValueError as e:
+                    st.warning(str(e))
+                for key in [f"plan_tgt_{exercise_id}", f"plan_reps_{exercise_id}", f"plan_cnt_{exercise_id}"]:
+                    st.session_state.pop(key, None)
+            st.button("Close", key=f"plan_close_{exercise_id}")
+
+        self._show_dialog("Warmup Plan", _content)
+
     def _submit_set(
         self,
         exercise_id: int,
@@ -2082,9 +2125,12 @@ class GymApp:
         rpe: int,
         note: str,
         duration: float,
+        warmup: bool = False,
     ) -> None:
         """Create a new set and record gamification metrics."""
-        sid = self.sets.add(exercise_id, int(reps), float(weight), int(rpe), note or None)
+        sid = self.sets.add(
+            exercise_id, int(reps), float(weight), int(rpe), note or None, warmup=warmup
+        )
         if duration > 0:
             self.sets.set_duration(sid, float(duration))
         self.gamification.record_set(exercise_id, int(reps), float(weight), int(rpe))
@@ -2092,6 +2138,7 @@ class GymApp:
         st.session_state.pop(f"new_weight_{exercise_id}", None)
         st.session_state.pop(f"new_rpe_{exercise_id}", None)
         st.session_state.pop(f"new_duration_{exercise_id}", None)
+        st.session_state.pop(f"new_warmup_{exercise_id}", None)
         st.session_state.scroll_to = f"ex_{exercise_id}_sets"
         st.session_state[f"open_add_set_{exercise_id}"] = True
         st.rerun()
@@ -2103,7 +2150,10 @@ class GymApp:
         rpe_val = st.session_state.get(f"rpe_{set_id}")
         note_val = st.session_state.get(f"note_{set_id}", "")
         dur_val = st.session_state.get(f"duration_{set_id}", 0.0)
-        self.sets.update(set_id, int(reps_val), float(weight_val), int(rpe_val))
+        warm_val = st.session_state.get(f"warm_{set_id}")
+        self.sets.update(
+            set_id, int(reps_val), float(weight_val), int(rpe_val), warm_val
+        )
         self.sets.update_note(set_id, note_val or None)
         if dur_val and float(dur_val) > 0:
             self.sets.set_duration(set_id, float(dur_val))
