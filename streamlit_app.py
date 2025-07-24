@@ -3617,6 +3617,10 @@ class GymApp:
             loc_stats = self.stats.location_summary(start_str, end_str)
             if loc_stats:
                 st.table(loc_stats)
+        with st.expander("Training Type Summary", expanded=False):
+            tt_stats = self.stats.training_type_summary(start_str, end_str)
+            if tt_stats:
+                st.table(tt_stats)
         with st.expander("Workout Consistency", expanded=False):
             consistency = self.stats.workout_consistency(start_str, end_str)
             metrics = [

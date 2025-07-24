@@ -1654,6 +1654,44 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(data[1]["workouts"], 1)
         self.assertAlmostEqual(data[1]["volume"], 500.0)
 
+    def test_training_type_summary_endpoint(self) -> None:
+        self.client.post(
+            "/workouts",
+            params={"date": "2023-01-01", "training_type": "strength"},
+        )
+        self.client.post(
+            "/workouts",
+            params={"date": "2023-01-02", "training_type": "hypertrophy"},
+        )
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/workouts/2/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8},
+        )
+        self.client.post(
+            "/exercises/2/sets",
+            params={"reps": 5, "weight": 110.0, "rpe": 8},
+        )
+        resp = self.client.get("/stats/training_type_summary")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(len(data), 2)
+        self.assertEqual(data[0]["training_type"], "hypertrophy")
+        self.assertEqual(data[0]["workouts"], 1)
+        self.assertAlmostEqual(data[0]["volume"], 550.0)
+        self.assertEqual(data[0]["sets"], 1)
+        self.assertEqual(data[1]["training_type"], "strength")
+        self.assertEqual(data[1]["workouts"], 1)
+        self.assertAlmostEqual(data[1]["volume"], 500.0)
+        self.assertEqual(data[1]["sets"], 1)
+
     def test_weekly_volume_change_endpoint(self) -> None:
         d1 = (datetime.date.today() - datetime.timedelta(days=14)).isoformat()
         d2 = (datetime.date.today() - datetime.timedelta(days=7)).isoformat()
