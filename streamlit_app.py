@@ -1442,9 +1442,9 @@ class GymApp:
                         training_options,
                         index=training_options.index(current_type),
                         key=f"type_select_{selected}",
+                        on_change=self._update_workout_type,
+                        args=(int(selected),),
                     )
-                    if st.button("Save", key=f"save_type_{selected}"):
-                        self.workouts.set_training_type(int(selected), type_choice)
                 else:
                     cols = st.columns(3)
                     if cols[0].button("Start Workout", key=f"start_workout_{selected}"):
@@ -1464,9 +1464,9 @@ class GymApp:
                         training_options,
                         index=training_options.index(current_type),
                         key=f"type_select_{selected}",
+                        on_change=self._update_workout_type,
+                        args=(int(selected),),
                     )
-                    if cols[2].button("Save", key=f"save_type_{selected}"):
-                        self.workouts.set_training_type(int(selected), type_choice)
                 if start_time:
                     st.write(f"Start: {start_time}")
                 if end_time:
@@ -1476,11 +1476,15 @@ class GymApp:
                     "Notes",
                     value=notes_val,
                     key=f"workout_notes_{selected}",
+                    on_change=self._update_workout_notes,
+                    args=(int(selected),),
                 )
                 loc_edit = st.text_input(
                     "Location",
                     value=loc_val,
                     key=f"workout_location_{selected}",
+                    on_change=self._update_workout_location,
+                    args=(int(selected),),
                 )
                 rating_edit = st.slider(
                     "Rating",
@@ -1488,16 +1492,11 @@ class GymApp:
                     5,
                     value=rating_val if rating_val is not None else 0,
                     key=f"rating_{selected}",
+                    on_change=self._update_workout_rating,
+                    args=(int(selected),),
                 )
                 st.markdown("</div>", unsafe_allow_html=True)
-                if st.button("Save Notes", key=f"save_notes_{selected}"):
-                    self.workouts.set_note(int(selected), notes_edit)
-                if st.button("Save Location", key=f"save_location_{selected}"):
-                    self.workouts.set_location(int(selected), loc_edit or None)
-                if st.button("Save Rating", key=f"save_rating_{selected}"):
-                    self.workouts.set_rating(int(selected), int(rating_edit))
                 tags_all = self.tags_repo.fetch_all()
-                name_map = {n: tid for tid, n in tags_all}
                 current_tags = [
                     n for _, n in self.tags_repo.fetch_for_workout(int(selected))
                 ]
@@ -1506,10 +1505,9 @@ class GymApp:
                     [n for _, n in tags_all],
                     current_tags,
                     key=f"tags_sel_{selected}",
+                    on_change=self._update_workout_tags,
+                    args=(int(selected),),
                 )
-                if st.button("Save Tags", key=f"save_tags_{selected}"):
-                    ids = [name_map[n] for n in tag_sel]
-                    self.tags_repo.set_tags(int(selected), ids)
                 csv_data = self.sets.export_workout_csv(int(selected))
                 st.download_button(
                     label="Export CSV",
@@ -1574,12 +1572,16 @@ class GymApp:
                             "New Date",
                             datetime.date.fromisoformat(pdate),
                             key=f"plan_edit_{pid}",
+                            on_change=self._update_planned_workout,
+                            args=(pid,),
                         )
                         type_choice = st.selectbox(
                             "Type",
                             self.training_options,
                             index=self.training_options.index(ptype),
                             key=f"plan_type_{pid}",
+                            on_change=self._update_planned_workout,
+                            args=(pid,),
                         )
                         dup_date = st.date_input(
                             "Duplicate To",
@@ -1588,14 +1590,6 @@ class GymApp:
                         )
                         st.markdown("</div>", unsafe_allow_html=True)
                         if st.session_state.is_mobile:
-                            if st.button("Save", key=f"save_plan_{pid}"):
-                                self.planned_workouts.update_date(
-                                    pid, edit_date.isoformat()
-                                )
-                                self.planned_workouts.set_training_type(
-                                    pid, type_choice
-                                )
-                                st.success("Updated")
                             if st.button("Duplicate", key=f"dup_plan_{pid}"):
                                 self.planner.duplicate_plan(pid, dup_date.isoformat())
                                 st.success("Duplicated")
@@ -1604,14 +1598,6 @@ class GymApp:
                                 st.success("Deleted")
                         else:
                             cols = st.columns(3)
-                            if cols[0].button("Save", key=f"save_plan_{pid}"):
-                                self.planned_workouts.update_date(
-                                    pid, edit_date.isoformat()
-                                )
-                                self.planned_workouts.set_training_type(
-                                    pid, type_choice
-                                )
-                                st.success("Updated")
                             if cols[1].button("Duplicate", key=f"dup_plan_{pid}"):
                                 self.planner.duplicate_plan(pid, dup_date.isoformat())
                                 st.success("Duplicated")
@@ -1952,6 +1938,66 @@ class GymApp:
             self.sets.set_duration(set_id, float(dur_val))
         st.rerun()
 
+    def _update_workout_type(self, workout_id: int) -> None:
+        val = st.session_state.get(f"type_select_{workout_id}")
+        self.workouts.set_training_type(workout_id, val)
+        st.rerun()
+
+    def _update_workout_notes(self, workout_id: int) -> None:
+        val = st.session_state.get(f"workout_notes_{workout_id}", "")
+        self.workouts.set_note(workout_id, val or None)
+        st.rerun()
+
+    def _update_workout_location(self, workout_id: int) -> None:
+        val = st.session_state.get(f"workout_location_{workout_id}", "")
+        self.workouts.set_location(workout_id, val or None)
+        st.rerun()
+
+    def _update_workout_rating(self, workout_id: int) -> None:
+        val = st.session_state.get(f"rating_{workout_id}")
+        self.workouts.set_rating(workout_id, int(val) if val is not None else None)
+        st.rerun()
+
+    def _update_workout_tags(self, workout_id: int) -> None:
+        selected = st.session_state.get(f"tags_sel_{workout_id}", [])
+        name_map = {n: tid for tid, n in self.tags_repo.fetch_all()}
+        ids = [name_map[n] for n in selected]
+        self.tags_repo.set_tags(workout_id, ids)
+        st.rerun()
+
+    def _update_planned_workout(self, plan_id: int) -> None:
+        date_val = st.session_state.get(f"plan_edit_{plan_id}")
+        type_val = st.session_state.get(f"plan_type_{plan_id}")
+        if date_val:
+            self.planned_workouts.update_date(plan_id, date_val.isoformat())
+        if type_val:
+            self.planned_workouts.set_training_type(plan_id, type_val)
+        st.rerun()
+
+    def _update_planned_set(self, set_id: int) -> None:
+        reps_val = st.session_state.get(f"plan_reps_{set_id}")
+        weight_val = st.session_state.get(f"plan_weight_{set_id}")
+        rpe_val = st.session_state.get(f"plan_rpe_{set_id}")
+        self.planned_sets.update(set_id, int(reps_val), float(weight_val), int(rpe_val))
+        st.rerun()
+
+    def _update_template_set(self, set_id: int) -> None:
+        reps_val = st.session_state.get(f"tmpl_reps_{set_id}")
+        weight_val = st.session_state.get(f"tmpl_w_{set_id}")
+        rpe_val = st.session_state.get(f"tmpl_rpe_{set_id}")
+        self.template_sets.update(set_id, int(reps_val), float(weight_val), int(rpe_val))
+        st.rerun()
+
+    def _update_equipment(self, original: str) -> None:
+        new_name = st.session_state.get(f"edit_name_{original}")
+        new_type = st.session_state.get(f"edit_type_{original}")
+        muscles = st.session_state.get(f"edit_mus_{original}", [])
+        try:
+            self.equipment.update(original, new_type, muscles, new_name)
+        except ValueError as e:
+            st.warning(str(e))
+        st.rerun()
+
     def _confirm_delete_set(self, set_id: int) -> None:
         def _content() -> None:
             st.write(f"Delete set {set_id}?")
@@ -2125,17 +2171,36 @@ class GymApp:
                                 index=int(rpe),
                                 key=f"plan_rpe_{set_id}",
                             )
-                            del_col, upd_col = st.columns(2)
+                            del_col, _ = st.columns(2)
                             if del_col.button("Delete", key=f"del_plan_set_{set_id}"):
                                 self.planned_sets.remove(set_id)
                                 continue
-                            if upd_col.button("Update", key=f"upd_plan_set_{set_id}"):
-                                self.planned_sets.update(
-                                    set_id,
-                                    int(reps_val),
-                                    float(weight_val),
-                                    int(rpe_val),
-                                )
+                            reps_val = st.number_input(
+                                "Reps",
+                                min_value=1,
+                                step=1,
+                                value=int(reps),
+                                key=f"plan_reps_{set_id}",
+                                on_change=self._update_planned_set,
+                                args=(set_id,),
+                            )
+                            weight_val = st.number_input(
+                                "Weight (kg)",
+                                min_value=0.0,
+                                step=0.5,
+                                value=float(weight),
+                                key=f"plan_weight_{set_id}",
+                                on_change=self._update_planned_set,
+                                args=(set_id,),
+                            )
+                            rpe_val = st.selectbox(
+                                "RPE",
+                                options=list(range(11)),
+                                index=int(rpe),
+                                key=f"plan_rpe_{set_id}",
+                                on_change=self._update_planned_set,
+                                args=(set_id,),
+                            )
                     else:
                         cols = st.columns(6)
                         cols[0].write(f"Set {set_id}")
@@ -2145,6 +2210,8 @@ class GymApp:
                             step=1,
                             value=int(reps),
                             key=f"plan_reps_{set_id}",
+                            on_change=self._update_planned_set,
+                            args=(set_id,),
                         )
                         weight_val = cols[2].number_input(
                             "Weight (kg)",
@@ -2152,20 +2219,20 @@ class GymApp:
                             step=0.5,
                             value=float(weight),
                             key=f"plan_weight_{set_id}",
+                            on_change=self._update_planned_set,
+                            args=(set_id,),
                         )
                         rpe_val = cols[3].selectbox(
                             "RPE",
                             options=list(range(11)),
                             index=int(rpe),
                             key=f"plan_rpe_{set_id}",
+                            on_change=self._update_planned_set,
+                            args=(set_id,),
                         )
                         if cols[4].button("Delete", key=f"del_plan_set_{set_id}"):
                             self.planned_sets.remove(set_id)
                             continue
-                        if cols[5].button("Update", key=f"upd_plan_set_{set_id}"):
-                            self.planned_sets.update(
-                                set_id, int(reps_val), float(weight_val), int(rpe_val)
-                            )
             with st.expander("Add Planned Set"):
                 self._add_planned_set_form(exercise_id)
 
@@ -2342,14 +2409,36 @@ class GymApp:
                                 index=int(rpe),
                                 key=f"tmpl_rpe_{sid}",
                             )
-                            del_col, upd_col = st.columns(2)
+                            del_col, _ = st.columns(2)
                             if del_col.button("Delete", key=f"tmpl_del_set_{sid}"):
                                 self.template_sets.remove(sid)
                                 continue
-                            if upd_col.button("Update", key=f"tmpl_upd_set_{sid}"):
-                                self.template_sets.update(
-                                    sid, int(reps_val), float(weight_val), int(rpe_val)
-                                )
+                            reps_val = st.number_input(
+                                "Reps",
+                                min_value=1,
+                                step=1,
+                                value=int(reps),
+                                key=f"tmpl_reps_{sid}",
+                                on_change=self._update_template_set,
+                                args=(sid,),
+                            )
+                            weight_val = st.number_input(
+                                "Weight",
+                                min_value=0.0,
+                                step=0.5,
+                                value=float(weight),
+                                key=f"tmpl_w_{sid}",
+                                on_change=self._update_template_set,
+                                args=(sid,),
+                            )
+                            rpe_val = st.selectbox(
+                                "RPE",
+                                options=list(range(11)),
+                                index=int(rpe),
+                                key=f"tmpl_rpe_{sid}",
+                                on_change=self._update_template_set,
+                                args=(sid,),
+                            )
                     else:
                         cols = st.columns(5)
                         cols[0].write(f"Set {idx}")
@@ -2366,20 +2455,20 @@ class GymApp:
                             step=0.5,
                             value=float(weight),
                             key=f"tmpl_w_{sid}",
+                            on_change=self._update_template_set,
+                            args=(sid,),
                         )
                         rpe_val = cols[3].selectbox(
                             "RPE",
                             options=list(range(11)),
                             index=int(rpe),
                             key=f"tmpl_rpe_{sid}",
+                            on_change=self._update_template_set,
+                            args=(sid,),
                         )
                         if cols[4].button("Delete", key=f"tmpl_del_set_{sid}"):
                             self.template_sets.remove(sid)
                             continue
-                        if cols[4].button("Update", key=f"tmpl_upd_set_{sid}"):
-                            self.template_sets.update(
-                                sid, int(reps_val), float(weight_val), int(rpe_val)
-                            )
             with st.expander("Add Set"):
                 reps = st.number_input(
                     "Reps", min_value=1, step=1, key=f"tmpl_new_reps_{exercise_id}"
@@ -3922,25 +4011,19 @@ class GymApp:
                         musc_list = muscles.split("|")
                         if is_custom:
                             edit_name = st.text_input(
-                                "Name", name, key=f"edit_name_{name}"
+                                "Name", name, key=f"edit_name_{name}", on_change=self._update_equipment, args=(name,)
                             )
                             edit_type = st.text_input(
-                                "Type", eq_type, key=f"edit_type_{name}"
+                                "Type", eq_type, key=f"edit_type_{name}", on_change=self._update_equipment, args=(name,)
                             )
                             edit_muscles = st.multiselect(
                                 "Muscles",
                                 muscles_list,
                                 musc_list,
                                 key=f"edit_mus_{name}",
+                                on_change=self._update_equipment,
+                                args=(name,),
                             )
-                            if st.button("Update", key=f"upd_eq_{name}"):
-                                try:
-                                    self.equipment.update(
-                                        name, edit_type, edit_muscles, edit_name
-                                    )
-                                    st.success("Updated")
-                                except ValueError as e:
-                                    st.warning(str(e))
                             if st.button("Delete", key=f"del_eq_{name}"):
                                 try:
                                     self.equipment.remove(name)
