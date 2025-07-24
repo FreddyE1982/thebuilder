@@ -373,6 +373,33 @@ class Database:
                 "achieved",
             ],
         ),
+        "autoplanner_logs": (
+            """CREATE TABLE autoplanner_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    message TEXT
+                );""",
+            ["id", "timestamp", "status", "message"],
+        ),
+        "exercise_prescription_logs": (
+            """CREATE TABLE exercise_prescription_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    message TEXT
+                );""",
+            ["id", "timestamp", "status", "message"],
+        ),
+        "ml_model_status": (
+            """CREATE TABLE ml_model_status (
+                    name TEXT PRIMARY KEY,
+                    last_loaded TEXT,
+                    last_train TEXT,
+                    last_predict TEXT
+                );""",
+            ["name", "last_loaded", "last_train", "last_predict"],
+        ),
     }
 
     def __init__(self, db_path: str = "workout.db") -> None:
@@ -2719,3 +2746,101 @@ class GoalRepository(BaseRepository):
                 }
             )
         return result
+
+
+class AutoPlannerLogRepository(BaseRepository):
+    """Repository for autoplanner run logs."""
+
+    def log_success(self) -> int:
+        return self.execute(
+            "INSERT INTO autoplanner_logs (timestamp, status, message) VALUES (?, 'success', NULL);",
+            (datetime.datetime.now().isoformat(),),
+        )
+
+    def log_error(self, message: str) -> int:
+        return self.execute(
+            "INSERT INTO autoplanner_logs (timestamp, status, message) VALUES (?, 'error', ?);",
+            (datetime.datetime.now().isoformat(), message),
+        )
+
+    def last_success(self) -> Optional[str]:
+        rows = self.fetch_all(
+            "SELECT timestamp FROM autoplanner_logs WHERE status='success' ORDER BY id DESC LIMIT 1;"
+        )
+        return rows[0][0] if rows else None
+
+    def last_errors(self, limit: int = 5) -> list[tuple[str, str]]:
+        rows = self.fetch_all(
+            "SELECT timestamp, message FROM autoplanner_logs WHERE status='error' ORDER BY id DESC LIMIT ?;",
+            (limit,),
+        )
+        return [(r[0], r[1]) for r in rows]
+
+
+class ExercisePrescriptionLogRepository(BaseRepository):
+    """Repository for exercise prescription run logs."""
+
+    def log_success(self) -> int:
+        return self.execute(
+            "INSERT INTO exercise_prescription_logs (timestamp, status, message) VALUES (?, 'success', NULL);",
+            (datetime.datetime.now().isoformat(),),
+        )
+
+    def log_error(self, message: str) -> int:
+        return self.execute(
+            "INSERT INTO exercise_prescription_logs (timestamp, status, message) VALUES (?, 'error', ?);",
+            (datetime.datetime.now().isoformat(), message),
+        )
+
+    def last_success(self) -> Optional[str]:
+        rows = self.fetch_all(
+            "SELECT timestamp FROM exercise_prescription_logs WHERE status='success' ORDER BY id DESC LIMIT 1;"
+        )
+        return rows[0][0] if rows else None
+
+    def last_errors(self, limit: int = 5) -> list[tuple[str, str]]:
+        rows = self.fetch_all(
+            "SELECT timestamp, message FROM exercise_prescription_logs WHERE status='error' ORDER BY id DESC LIMIT ?;",
+            (limit,),
+        )
+        return [(r[0], r[1]) for r in rows]
+
+
+class MLModelStatusRepository(BaseRepository):
+    """Repository tracking ML model usage timestamps."""
+
+    def set_loaded(self, name: str) -> None:
+        self.execute(
+            "INSERT INTO ml_model_status (name, last_loaded) VALUES (?, ?) "
+            "ON CONFLICT(name) DO UPDATE SET last_loaded=excluded.last_loaded;",
+            (name, datetime.datetime.now().isoformat()),
+        )
+
+    def set_trained(self, name: str) -> None:
+        self.execute(
+            "INSERT INTO ml_model_status (name, last_train) VALUES (?, ?) "
+            "ON CONFLICT(name) DO UPDATE SET last_train=excluded.last_train;",
+            (name, datetime.datetime.now().isoformat()),
+        )
+
+    def set_prediction(self, name: str) -> None:
+        self.execute(
+            "INSERT INTO ml_model_status (name, last_predict) VALUES (?, ?) "
+            "ON CONFLICT(name) DO UPDATE SET last_predict=excluded.last_predict;",
+            (name, datetime.datetime.now().isoformat()),
+        )
+
+    def fetch(self, name: str) -> dict[str, Optional[str]]:
+        rows = self.fetch_all(
+            "SELECT last_loaded, last_train, last_predict FROM ml_model_status WHERE name = ?;",
+            (name,),
+        )
+        if not rows:
+            return {"last_loaded": None, "last_train": None, "last_predict": None}
+        r = rows[0]
+        return {
+            "last_loaded": r[0],
+            "last_train": r[1],
+            "last_predict": r[2],
+        }
+

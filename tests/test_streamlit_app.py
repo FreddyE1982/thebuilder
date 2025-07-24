@@ -524,6 +524,7 @@ class StreamlitFullGUITest(unittest.TestCase):
             "Body Weight Logs",
             "Wellness Logs",
             "Workout Tags",
+            "Autoplanner Status",
         ]:
             self.assertIn(name, labels)
 

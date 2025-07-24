@@ -9,6 +9,7 @@ from db import (
     BodyWeightRepository,
     WellnessRepository,
     GoalRepository,
+    ExercisePrescriptionLogRepository,
 )
 from tools import ExercisePrescription
 from gamification_service import GamificationService
@@ -32,6 +33,7 @@ class RecommendationService:
         body_weight_repo: BodyWeightRepository | None = None,
         goal_repo: GoalRepository | None = None,
         wellness_repo: WellnessRepository | None = None,
+        prescription_log_repo: ExercisePrescriptionLogRepository | None = None,
     ) -> None:
         self.workouts = workout_repo
         self.exercises = exercise_repo
@@ -44,6 +46,7 @@ class RecommendationService:
         self.body_weights = body_weight_repo
         self.goals = goal_repo
         self.wellness = wellness_repo
+        self.prescription_logs = prescription_log_repo
         self._pending: dict[int, list[float]] = {}
 
     def _current_body_weight(self) -> float:
@@ -94,6 +97,8 @@ class RecommendationService:
             alias_names, with_duration=True, with_workout_id=True
         )
         if not history:
+            if self.prescription_logs is not None:
+                self.prescription_logs.log_error("no history for exercise")
             raise ValueError("no history for exercise")
         reps_list = [int(r[0]) for r in history]
         weight_list = [float(r[1]) for r in history]
@@ -191,29 +196,36 @@ class RecommendationService:
                 except Exception:
                     goal_days = None
         calories, sleep_hours, sleep_quality, stress_levels = self._recent_wellness()
-        prescription = ExercisePrescription.exercise_prescription(
-            weight_list,
-            reps_list,
-            timestamps,
-            rpe_list,
-            durations=durations,
-            rest_times=rest_times,
-            recovery_times=recovery_times,
-            optimal_recovery_times=optimal_times,
-            session_volumes=session_volumes,
-            recovery_quality_mean=recovery_quality_mean,
-            frequency_factor=frequency_factor,
-            body_weight=self._current_body_weight(),
-            months_active=months_active,
-            workouts_per_month=workouts_per_month,
-            calories=calories,
-            sleep_hours=sleep_hours,
-            sleep_quality=sleep_quality,
-            stress_levels=stress_levels,
-            exercise_name=exercise_name,
-            target_1rm=goal_target,
-            days_remaining=goal_days,
-        )
+        try:
+            prescription = ExercisePrescription.exercise_prescription(
+                weight_list,
+                reps_list,
+                timestamps,
+                rpe_list,
+                durations=durations,
+                rest_times=rest_times,
+                recovery_times=recovery_times,
+                optimal_recovery_times=optimal_times,
+                session_volumes=session_volumes,
+                recovery_quality_mean=recovery_quality_mean,
+                frequency_factor=frequency_factor,
+                body_weight=self._current_body_weight(),
+                months_active=months_active,
+                workouts_per_month=workouts_per_month,
+                calories=calories,
+                sleep_hours=sleep_hours,
+                sleep_quality=sleep_quality,
+                stress_levels=stress_levels,
+                exercise_name=exercise_name,
+                target_1rm=goal_target,
+                days_remaining=goal_days,
+            )
+            if self.prescription_logs is not None:
+                self.prescription_logs.log_success()
+        except Exception as e:
+            if self.prescription_logs is not None:
+                self.prescription_logs.log_error(str(e))
+            raise
         return {
             "prescription": prescription["prescription"],
             "weights": weight_list,

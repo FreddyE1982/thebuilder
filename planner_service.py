@@ -9,6 +9,7 @@ from db import (
     TemplateWorkoutRepository,
     TemplateExerciseRepository,
     TemplateSetRepository,
+    AutoPlannerLogRepository,
 )
 from gamification_service import GamificationService
 
@@ -29,6 +30,7 @@ class PlannerService:
         template_exercise_repo: TemplateExerciseRepository | None = None,
         template_set_repo: TemplateSetRepository | None = None,
         recommender: RecommendationService | None = None,
+        log_repo: AutoPlannerLogRepository | None = None,
     ) -> None:
         self.workouts = workout_repo
         self.exercises = exercise_repo
@@ -41,6 +43,7 @@ class PlannerService:
         self.template_exercises = template_exercise_repo or TemplateExerciseRepository()
         self.template_sets = template_set_repo or TemplateSetRepository()
         self.recommender = recommender
+        self.log_repo = log_repo
 
     def create_workout_from_plan(self, plan_id: int) -> int:
         _pid, date, t_type = self.planned_workouts.fetch_detail(plan_id)
@@ -97,15 +100,22 @@ class PlannerService:
     ) -> int:
         if not self.recommender:
             raise ValueError("recommender not configured")
-        plan_id = self.planned_workouts.create(date, training_type)
-        for name, equipment in exercises:
-            ex_id = self.planned_exercises.add(plan_id, name, equipment)
-            presc = self.recommender.generate_prescription(name)
-            for item in presc["prescription"]:
-                self.planned_sets.add(
-                    ex_id,
-                    int(item["reps"]),
-                    float(item["weight"]),
-                    int(round(item["target_rpe"])),
-                )
-        return plan_id
+        try:
+            plan_id = self.planned_workouts.create(date, training_type)
+            for name, equipment in exercises:
+                ex_id = self.planned_exercises.add(plan_id, name, equipment)
+                presc = self.recommender.generate_prescription(name)
+                for item in presc["prescription"]:
+                    self.planned_sets.add(
+                        ex_id,
+                        int(item["reps"]),
+                        float(item["weight"]),
+                        int(round(item["target_rpe"])),
+                    )
+            if self.log_repo is not None:
+                self.log_repo.log_success()
+            return plan_id
+        except Exception as e:
+            if self.log_repo is not None:
+                self.log_repo.log_error(str(e))
+            raise
