@@ -128,6 +128,13 @@ class LayoutManager:
             unsafe_allow_html=True,
         )
 
+    def scroll_to(self, element_id: str) -> None:
+        """Scroll smoothly to the element with the given id."""
+        st.components.v1.html(
+            f"<script>document.getElementById('{element_id}')?.scrollIntoView({{behavior:'smooth'}});</script>",
+            height=0,
+        )
+
 
 class GymApp:
     """Streamlit application for workout logging."""
@@ -1390,6 +1397,9 @@ class GymApp:
         self._close_content()
         self._bottom_nav()
         self._end_page()
+        target = st.session_state.pop("scroll_to", None)
+        if target:
+            self.layout.scroll_to(target)
 
     def _log_tab(self) -> None:
         plans = sorted(
@@ -1680,7 +1690,14 @@ class GymApp:
         with self._section("Exercises"):
             workout_id = st.session_state.selected_workout
             with st.expander("Exercise Management", expanded=True):
-                with st.expander("Add New Exercise"):
+                if st.button("Add Exercise", key="open_add_ex_btn"):
+                    st.session_state.open_add_ex_flag = True
+                    st.session_state.scroll_to = "add_ex_form"
+                with st.expander(
+                    "Add New Exercise",
+                    expanded=st.session_state.get("open_add_ex_flag", False),
+                ):
+                    st.markdown("<div id='add_ex_form'></div>", unsafe_allow_html=True)
                     ex_name = self._exercise_selector(
                         "log_new",
                         None,
@@ -1692,11 +1709,18 @@ class GymApp:
                         st.session_state.get("log_new_muscles", []),
                     )
                     note_val = st.text_input("Note", key="new_exercise_note")
-                    if st.button("Add Exercise"):
+                    if st.button("Add Exercise", key="add_ex_btn"):
                         if ex_name and eq:
-                            self.exercises.add(
+                            ex_id = self.exercises.add(
                                 workout_id, ex_name, eq, note_val or None
                             )
+                            self.sets.add(ex_id, 1, 0.0, 0)
+                            self.gamification.record_set(ex_id, 1, 0.0, 0)
+                            st.session_state.open_add_ex_flag = False
+                            st.session_state[f"open_ex_{ex_id}"] = True
+                            st.session_state[f"open_add_set_{ex_id}"] = True
+                            st.session_state.scroll_to = f"ex_{ex_id}_sets"
+                            st.rerun()
                         else:
                             st.warning("Exercise and equipment required")
                 with st.expander("Logged Exercises", expanded=True):
@@ -1755,14 +1779,25 @@ class GymApp:
         self, exercise_id: int, name: str, equipment: Optional[str], note: Optional[str]
     ) -> None:
         sets = self.sets.fetch_for_exercise(exercise_id)
+        st.markdown(f"<div id='ex_{exercise_id}'></div>", unsafe_allow_html=True)
         header = name if not equipment else f"{name} ({equipment})"
         if note:
             header += f" - {note}"
-        expander = st.expander(header)
+        expander = st.expander(
+            header,
+            expanded=st.session_state.pop(f"open_ex_{exercise_id}", False),
+        )
         with expander:
             if st.button("Remove Exercise", key=f"remove_ex_{exercise_id}"):
                 self.exercises.remove(exercise_id)
                 return
+            if st.button("Add Set", key=f"add_set_{exercise_id}"):
+                reps_val = st.session_state.get(f"new_reps_{exercise_id}", 1)
+                weight_val = st.session_state.get(f"new_weight_{exercise_id}", 0.0)
+                rpe_val = st.session_state.get(f"new_rpe_{exercise_id}", 0)
+                note_val = st.session_state.get(f"new_note_{exercise_id}", "")
+                dur_val = st.session_state.get(f"new_duration_{exercise_id}", 0.0)
+                self._submit_set(exercise_id, reps_val, weight_val, rpe_val, note_val, dur_val)
             if equipment:
                 muscles = self.equipment.fetch_muscles(equipment)
                 st.markdown("**Muscles:**")
@@ -1959,12 +1994,16 @@ class GymApp:
                         self.recommender.recommend_next_set(exercise_id)
                     except ValueError as e:
                         st.warning(str(e))
-            with st.expander("Add Set"):
-                self._add_set_form(exercise_id)
+            st.markdown(f"<div id='ex_{exercise_id}_sets'></div>", unsafe_allow_html=True)
+            with st.expander(
+                "Add Set",
+                expanded=st.session_state.pop(f"open_add_set_{exercise_id}", False),
+            ):
+                self._add_set_form(exercise_id, with_button=False)
             if st.button("Bulk Add Sets", key=f"bulk_{exercise_id}"):
                 self._bulk_add_sets_dialog(exercise_id)
 
-    def _add_set_form(self, exercise_id: int) -> None:
+    def _add_set_form(self, exercise_id: int, with_button: bool = True) -> None:
         reps = st.number_input(
             "Reps",
             min_value=1,
@@ -1996,18 +2035,8 @@ class GymApp:
                 st.session_state[f"new_reps_{exercise_id}"] = int(l[1])
                 st.session_state[f"new_weight_{exercise_id}"] = float(l[2])
                 st.session_state[f"new_rpe_{exercise_id}"] = int(l[3])
-        if st.button("Add Set", key=f"add_set_{exercise_id}"):
-            sid = self.sets.add(exercise_id, int(reps), float(weight), int(rpe), note or None)
-            if duration > 0:
-                self.sets.set_duration(sid, float(duration))
-            self.gamification.record_set(
-                exercise_id, int(reps), float(weight), int(rpe)
-            )
-            st.session_state.pop(f"new_reps_{exercise_id}", None)
-            st.session_state.pop(f"new_weight_{exercise_id}", None)
-            st.session_state.pop(f"new_rpe_{exercise_id}", None)
-            st.session_state.pop(f"new_duration_{exercise_id}", None)
-            st.rerun()
+        if with_button and st.button("Add Set", key=f"add_set_{exercise_id}"):
+            self._submit_set(exercise_id, reps, weight, rpe, note, duration)
 
     def _bulk_add_sets_dialog(self, exercise_id: int) -> None:
         def _content() -> None:
@@ -2034,6 +2063,28 @@ class GymApp:
             st.button("Close", key=f"bulk_close_{exercise_id}")
 
         self._show_dialog("Bulk Add Sets", _content)
+
+    def _submit_set(
+        self,
+        exercise_id: int,
+        reps: int,
+        weight: float,
+        rpe: int,
+        note: str,
+        duration: float,
+    ) -> None:
+        """Create a new set and record gamification metrics."""
+        sid = self.sets.add(exercise_id, int(reps), float(weight), int(rpe), note or None)
+        if duration > 0:
+            self.sets.set_duration(sid, float(duration))
+        self.gamification.record_set(exercise_id, int(reps), float(weight), int(rpe))
+        st.session_state.pop(f"new_reps_{exercise_id}", None)
+        st.session_state.pop(f"new_weight_{exercise_id}", None)
+        st.session_state.pop(f"new_rpe_{exercise_id}", None)
+        st.session_state.pop(f"new_duration_{exercise_id}", None)
+        st.session_state.scroll_to = f"ex_{exercise_id}_sets"
+        st.session_state[f"open_add_set_{exercise_id}"] = True
+        st.rerun()
 
     def _update_set(self, set_id: int) -> None:
         """Update set values based on current widget state."""

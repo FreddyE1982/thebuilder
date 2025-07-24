@@ -57,7 +57,7 @@ class StreamlitAppTest(unittest.TestCase):
         self.at.selectbox[idx_ex].select("Barbell Bench Press").run()
         idx_eq = _find_by_label(self.at.selectbox, "Equipment Name", "Olympic Barbell")
         self.at.selectbox[idx_eq].select("Olympic Barbell").run()
-        idx_add_ex = _find_by_label(self.at.button, "Add Exercise")
+        idx_add_ex = _find_by_label(self.at.button, "Add Exercise", key="add_ex_btn")
         self.at.button[idx_add_ex].click().run()
         self.at.number_input[0].set_value(5).run()
         self.at.number_input[1].set_value(100.0).run()
@@ -71,7 +71,10 @@ class StreamlitAppTest(unittest.TestCase):
         cur.execute("SELECT name FROM exercises;")
         self.assertEqual(cur.fetchone()[0], "Barbell Bench Press")
         cur.execute("SELECT reps, weight FROM sets;")
-        self.assertEqual(cur.fetchone(), (5, 100.0))
+        rows = cur.fetchall()
+        self.assertEqual(len(rows), 2)
+        self.assertIn((1, 0.0), rows)
+        self.assertIn((5, 100.0), rows)
         conn.close()
 
     def test_workout_metadata(self) -> None:
