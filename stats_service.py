@@ -1630,6 +1630,37 @@ class StatisticsService:
             "avg_stress": round(sum(stress) / len(stress), 2) if stress else 0.0,
         }
 
+    def heart_rate_history(
+        self, start_date: str | None = None, end_date: str | None = None
+    ) -> list[dict[str, int | str]]:
+        """Return logged heart rate entries ordered by timestamp."""
+        if self.heart_rates is None:
+            return []
+        rows = self.heart_rates.fetch_range(start_date, end_date)
+        return [
+            {
+                "id": rid,
+                "workout_id": wid,
+                "timestamp": ts,
+                "heart_rate": hr,
+            }
+            for rid, wid, ts, hr in rows
+        ]
+
+    def heart_rate_summary(
+        self, start_date: str | None = None, end_date: str | None = None
+    ) -> dict[str, float]:
+        """Return average, min and max heart rate for the range."""
+        history = self.heart_rate_history(start_date, end_date)
+        if not history:
+            return {"avg": 0.0, "min": 0.0, "max": 0.0}
+        rates = [h["heart_rate"] for h in history]
+        return {
+            "avg": round(sum(rates) / len(rates), 2),
+            "min": float(min(rates)),
+            "max": float(max(rates)),
+        }
+
     def exercise_frequency(
         self,
         exercise: str | None = None,
