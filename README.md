@@ -41,6 +41,7 @@ The Builder is a full featured workout planner, logger and analytics platform bu
 - Forecast future body weight trends with `/stats/weight_forecast`.
 - View weight history, BMI charts and forecasts in the Progress tab's new "Body Weight" section.
 - Review workout ratings via `/stats/rating_history` and `/stats/rating_stats`.
+- Analyze heart rate zone distribution with `/stats/heart_rate_zones`.
 
 ## Installation
 
