@@ -633,6 +633,34 @@ class StatisticsService:
             result.append({"date": d, "power": round(avg, 2)})
         return result
 
+    def relative_power_history(
+        self,
+        exercise: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> List[Dict[str, float]]:
+        """Return average power to body weight ratio per day."""
+        body_weight = self._current_body_weight()
+        if body_weight <= 0:
+            return []
+        names = self._alias_names(exercise)
+        rows = self.sets.fetch_history_by_names(
+            names,
+            start_date=start_date,
+            end_date=end_date,
+            with_duration=True,
+        )
+        by_date: Dict[str, List[float]] = {}
+        for reps, weight, _rpe, date, start, end in rows:
+            power = MathTools.estimate_power_from_set(int(reps), float(weight), start, end)
+            by_date.setdefault(date, []).append(power / body_weight)
+        result: List[Dict[str, float]] = []
+        for d in sorted(by_date):
+            vals = by_date[d]
+            avg = sum(vals) / len(vals) if vals else 0.0
+            result.append({"date": d, "relative_power": round(avg, 2)})
+        return result
+
     def overview(
         self,
         start_date: Optional[str] = None,

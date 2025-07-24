@@ -1222,6 +1222,18 @@ class GymAPI:
                 end_date,
             )
 
+        @self.app.get("/stats/relative_power_history")
+        def stats_relative_power_history(
+            exercise: str,
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            return self.statistics.relative_power_history(
+                exercise,
+                start_date,
+                end_date,
+            )
+
         @self.app.get("/stats/overview")
         def stats_overview(
             start_date: str = None,
