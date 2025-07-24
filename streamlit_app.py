@@ -54,6 +54,81 @@ from ml_service import (
 from tools import MathTools, GitTools
 
 
+class LayoutManager:
+    """Manage top-level page layout and navigation."""
+
+    @property
+    def is_mobile(self) -> bool:
+        return st.session_state.get("is_mobile", False)
+
+    def start_page(self) -> None:
+        st.markdown("<div class='page-wrapper'>", unsafe_allow_html=True)
+
+    def end_page(self) -> None:
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    def open_header(self) -> None:
+        st.markdown(
+            "<header class='header-wrapper'><div class='header-inner'>",
+            unsafe_allow_html=True,
+        )
+
+    def close_header(self) -> None:
+        st.markdown("</div></header>", unsafe_allow_html=True)
+
+    def open_content(self) -> None:
+        st.markdown("<main class='content-wrapper'>", unsafe_allow_html=True)
+
+    def close_content(self) -> None:
+        st.markdown("</main>", unsafe_allow_html=True)
+
+    def _render_nav(self, container_class: str, selected_tab: int) -> None:
+        labels = ["workouts", "library", "progress", "settings"]
+        icons = {
+            "workouts": "🏋️",
+            "library": "📚",
+            "progress": "📈",
+            "settings": "⚙️",
+        }
+        mode = "mobile" if self.is_mobile else "desktop"
+        html = (
+            f'<nav class="{container_class}" role="tablist" aria-label="Main Navigation">'
+            + "".join(
+                f'<button role="tab" title="{label.title()}" '
+                f'aria-label="{label.title()} Tab" '
+                f'aria-selected="{str(selected_tab == idx).lower()}" '
+                f'{"aria-current=\"page\" " if selected_tab == idx else ""}'
+                f'tabindex="0" '
+                f'onclick="const p=new URLSearchParams(window.location.search);'
+                f"p.set('mode','{mode}');p.set('tab','{label}');"
+                f'window.location.search=p.toString();"><span class="icon">{icons[label]}</span>'
+                f'<span class="label">{label.title()}</span></button>'
+                for idx, label in enumerate(labels)
+            )
+            + "</nav>"
+        )
+        st.markdown(html, unsafe_allow_html=True)
+
+    def bottom_nav(self, selected_tab: int) -> None:
+        if not self.is_mobile:
+            return
+        self._render_nav("bottom-nav", selected_tab)
+        self.scroll_top_button()
+
+    def top_nav(self, selected_tab: int) -> None:
+        if self.is_mobile:
+            return
+        self._render_nav("top-nav", selected_tab)
+
+    def scroll_top_button(self) -> None:
+        st.markdown(
+            """
+            <button class='scroll-top' aria-label='Back to top' onclick="window.scrollTo({top:0,behavior:'smooth'});">⬆</button>
+            """,
+            unsafe_allow_html=True,
+        )
+
+
 class GymApp:
     """Streamlit application for workout logging."""
 
@@ -84,6 +159,7 @@ class GymApp:
         self._configure_page()
         self._inject_responsive_css()
         self._apply_theme()
+        self.layout = LayoutManager()
         self.workouts = WorkoutRepository(db_path)
         self.exercises = ExerciseRepository(db_path)
         self.sets = SetRepository(db_path)
@@ -977,54 +1053,22 @@ class GymApp:
                 self._about_dialog()
 
     def _render_nav(self, container_class: str) -> None:
-        """Render navigation bar."""
-        labels = ["workouts", "library", "progress", "settings"]
-        icons = {
-            "workouts": "🏋️",
-            "library": "📚",
-            "progress": "📈",
-            "settings": "⚙️",
-        }
-        mode = "mobile" if st.session_state.is_mobile else "desktop"
-        html = (
-            f'<nav class="{container_class}" role="tablist" aria-label="Main Navigation">'
-            + "".join(
-                f'<button role="tab" title="{label.title()}" '
-                f'aria-label="{label.title()} Tab" '
-                f'aria-selected="{str(st.session_state.get("main_tab", 0) == idx).lower()}" '
-                f'{"aria-current=\"page\" " if st.session_state.get("main_tab", 0) == idx else ""}'
-                f'tabindex="0" '
-                f'onclick="const p=new URLSearchParams(window.location.search);'
-                f"p.set('mode','{mode}');p.set('tab','{label}');"
-                f'window.location.search=p.toString();"><span class="icon">{icons[label]}</span>'
-                f'<span class="label">{label.title()}</span></button>'
-                for idx, label in enumerate(labels)
-            )
-            + "</nav>"
-        )
-        st.markdown(html, unsafe_allow_html=True)
+        """Render navigation bar using LayoutManager."""
+        selected = st.session_state.get("main_tab", 0)
+        self.layout._render_nav(container_class, selected)
 
     def _bottom_nav(self) -> None:
         """Render bottom navigation on mobile devices."""
-        if not st.session_state.is_mobile:
-            return
-        self._render_nav("bottom-nav")
-        self._scroll_top_button()
+        selected = st.session_state.get("main_tab", 0)
+        self.layout.bottom_nav(selected)
 
     def _scroll_top_button(self) -> None:
-        """Render a button to quickly scroll back to the top."""
-        st.markdown(
-            """
-            <button class='scroll-top' aria-label='Back to top' onclick="window.scrollTo({top:0,behavior:'smooth'});">⬆</button>
-            """,
-            unsafe_allow_html=True,
-        )
+        self.layout.scroll_top_button()
 
     def _top_nav(self) -> None:
         """Render top navigation on desktop."""
-        if st.session_state.is_mobile:
-            return
-        self._render_nav("top-nav")
+        selected = st.session_state.get("main_tab", 0)
+        self.layout.top_nav(selected)
 
     def _switch_tab(self, label: str) -> None:
         mode = "mobile" if st.session_state.is_mobile else "desktop"
@@ -1077,30 +1121,27 @@ class GymApp:
 
     def _start_page(self) -> None:
         """Open the page wrapper."""
-        st.markdown("<div class='page-wrapper'>", unsafe_allow_html=True)
+        self.layout.start_page()
 
     def _open_header(self) -> None:
         """Open the header container."""
-        st.markdown(
-            "<header class='header-wrapper'><div class='header-inner'>",
-            unsafe_allow_html=True,
-        )
+        self.layout.open_header()
 
     def _close_header(self) -> None:
         """Close the header container."""
-        st.markdown("</div></header>", unsafe_allow_html=True)
+        self.layout.close_header()
 
     def _end_page(self) -> None:
         """Close the page wrapper."""
-        st.markdown("</div>", unsafe_allow_html=True)
+        self.layout.end_page()
 
     def _open_content(self) -> None:
         """Begin main content container."""
-        st.markdown("<main class='content-wrapper'>", unsafe_allow_html=True)
+        self.layout.open_content()
 
     def _close_content(self) -> None:
         """End main content container."""
-        st.markdown("</main>", unsafe_allow_html=True)
+        self.layout.close_content()
 
     def _help_dialog(self) -> None:
         def _content() -> None:
@@ -1259,6 +1300,12 @@ class GymApp:
         self._open_header()
         st.markdown("<div class='title-section'>", unsafe_allow_html=True)
         st.title("Workout Logger")
+        if st.button("Toggle Theme", key="toggle_theme_header"):
+            new_theme = "dark" if self.theme == "light" else "light"
+            self.settings_repo.set_text("theme", new_theme)
+            self.theme = new_theme
+            self._apply_theme()
+            st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
         self._top_nav()
         self._close_header()

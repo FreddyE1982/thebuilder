@@ -376,6 +376,13 @@ class StreamlitAppTest(unittest.TestCase):
             data = yaml.safe_load(f)
         self.assertEqual(data["theme"], "dark")
 
+    def test_toggle_theme_header_button(self) -> None:
+        idx = _find_by_label(self.at.button, "Toggle Theme", key="toggle_theme_header")
+        self.at.button[idx].click().run()
+        with open(self.yaml_path, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+        self.assertEqual(data["theme"], "dark")
+
     def test_git_pull_button(self) -> None:
         self.at.query_params["tab"] = "settings"
         self.at.run()
