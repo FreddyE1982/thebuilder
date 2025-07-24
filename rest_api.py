@@ -1787,23 +1787,31 @@ class GymAPI:
                 {"timestamp": ts, "message": msg}
                 for ts, msg in self.prescription_logs.last_errors(5)
             ]
-            model_names = [
-                "performance_model",
-                "volume_model",
-                "readiness_model",
-                "progress_model",
-                "rl_goal_model",
-                "injury_model",
-                "adaptation_model",
-            ]
+            model_map = {
+                "performance_model": "rpe",
+                "volume_model": "volume",
+                "readiness_model": "readiness",
+                "progress_model": "progress",
+                "rl_goal_model": "goal",
+                "injury_model": "injury",
+                "adaptation_model": "adaptation",
+            }
             models = []
-            for name in model_names:
+            for name, prefix in model_map.items():
+                train_flag = self.settings.get_bool(
+                    f"ml_{prefix}_training_enabled", True
+                )
+                pred_flag = self.settings.get_bool(
+                    f"ml_{prefix}_prediction_enabled", True
+                )
+                if not train_flag and not pred_flag:
+                    continue
                 status = self.ml_status.fetch(name)
                 models.append(
                     {
                         "name": name,
-                        "training_enabled": self.settings.get_bool(f"ml_{name.split('_')[0]}_training_enabled", True),
-                        "prediction_enabled": self.settings.get_bool(f"ml_{name.split('_')[0]}_prediction_enabled", True),
+                        "training_enabled": train_flag,
+                        "prediction_enabled": pred_flag,
                         "last_loaded": status["last_loaded"],
                         "last_train": status["last_train"],
                         "last_predict": status["last_predict"],
