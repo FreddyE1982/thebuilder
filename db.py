@@ -851,6 +851,18 @@ class SetRepository(BaseRepository):
             (timestamp, set_id),
         )
 
+    def set_duration(self, set_id: int, seconds: float, end_timestamp: str | None = None) -> None:
+        if seconds <= 0:
+            raise ValueError("seconds must be positive")
+        end_dt = (
+            datetime.datetime.now()
+            if end_timestamp is None
+            else datetime.datetime.fromisoformat(end_timestamp)
+        )
+        start_dt = end_dt - datetime.timedelta(seconds=float(seconds))
+        self.set_start_time(set_id, start_dt.isoformat(timespec="seconds"))
+        self.set_end_time(set_id, end_dt.isoformat(timespec="seconds"))
+
     def update_note(self, set_id: int, note: Optional[str]) -> None:
         self.execute(
             "UPDATE sets SET note = ? WHERE id = ?;",
