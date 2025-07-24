@@ -1,6 +1,16 @@
 The agent is NEVER to simplify any functionality in any way.
 The agent is forbidden to write any "demonstration" code, "rough implementation" or code that in ANY way NOT fully implements to the maximum possible extent what the user requested.
 
+## TODO.md ##
+
+Before the agent does ANYTHING it checks if a TODO.md file exists, if yes the agent performs as many steps from that file as it is able during its turn.
+Executing steps in TODO.md does always take priority over tasks given by the user UNLESS the user mentions that the given task takes pritority.
+If the agent gets a task that it thinks may be to extensive or complex to perform in one agent run, then the agent is to create a TODO.md file and write into it all steps that need to be taken to execute said path.
+Whenever the agent finishes a step from the TODO.md, it has to mark that step as "complete" in the TODO.md
+If there are no more steps left in the TODO.md, the agent deletes the file. TODO.md MUST be included in commit if present.
+
+
+
 The agent is to always follow there rules:
 
 1. ONE purpose for each class or function
@@ -415,6 +425,8 @@ Always use the formula above, and document the ROM assumption in your UI and rep
 If ever you record true per-exercise ROM values, substitute those for ROM_default to improve accuracy.
 
 This approach ensures every set in your app receives a velocity value in a uniform, reproducible, and fully transparent manner using only the data you record.
+
+
 
 ## AGENTS.md
 
