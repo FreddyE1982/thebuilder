@@ -33,6 +33,7 @@ from db import (
     ExercisePrescriptionLogRepository,
     BodyWeightRepository,
     WellnessRepository,
+    HeartRateRepository,
     FavoriteExerciseRepository,
     FavoriteTemplateRepository,
     FavoriteWorkoutRepository,
@@ -112,6 +113,7 @@ class GymApp:
         self.prescription_logs = ExercisePrescriptionLogRepository(db_path)
         self.body_weights_repo = BodyWeightRepository(db_path)
         self.wellness_repo = WellnessRepository(db_path)
+        self.heart_rates = HeartRateRepository(db_path)
         self.gamification = GamificationService(
             self.game_repo,
             self.exercises,
@@ -167,6 +169,9 @@ class GymApp:
             self.body_weights_repo,
             self.equipment,
             self.wellness_repo,
+            self.exercise_catalog,
+            self.workouts,
+            self.heart_rates,
         )
         self._state_init()
 
@@ -1659,6 +1664,45 @@ class GymApp:
                         ("Avg RPE", summary["avg_rpe"]),
                     ]
                     self._metric_grid(metrics)
+                self._heart_rate_section(workout_id)
+
+    def _heart_rate_section(self, workout_id: int) -> None:
+        """Display heart rate logs and summary for a workout."""
+        with st.expander("Heart Rate", expanded=False):
+            logs = self.heart_rates.fetch_for_workout(workout_id)
+            if logs:
+                df = pd.DataFrame(logs, columns=["id", "timestamp", "heart_rate"])
+                st.table(df[["timestamp", "heart_rate"]])
+                values = [int(r[2]) for r in logs]
+                metrics = [
+                    ("Avg", round(sum(values) / len(values), 2)),
+                    ("Min", float(min(values))),
+                    ("Max", float(max(values))),
+                ]
+                self._metric_grid(metrics)
+            with st.form(f"hr_form_{workout_id}"):
+                ts = st.text_input(
+                    "Timestamp",
+                    datetime.datetime.now().isoformat(timespec="seconds"),
+                    key=f"hr_ts_{workout_id}",
+                )
+                rate = st.number_input(
+                    "Heart Rate (bpm)",
+                    min_value=30,
+                    max_value=220,
+                    step=1,
+                    key=f"hr_val_{workout_id}",
+                )
+                if st.form_submit_button("Log Heart Rate"):
+                    try:
+                        self.heart_rates.log(
+                            workout_id,
+                            ts,
+                            int(rate),
+                        )
+                        st.success("Logged")
+                    except ValueError as e:
+                        st.warning(str(e))
 
     def _exercise_card(
         self, exercise_id: int, name: str, equipment: Optional[str], note: Optional[str]
@@ -3815,6 +3859,7 @@ class GymApp:
             cust_tab,
             bw_tab,
             well_tab,
+            hr_tab,
             tag_tab,
             auto_tab,
         ) = st.tabs(
@@ -3826,6 +3871,7 @@ class GymApp:
                 "Exercise Management",
                 "Body Weight Logs",
                 "Wellness Logs",
+                "Heart Rate Logs",
                 "Workout Tags",
                 "Autoplanner Status",
             ]
@@ -4308,6 +4354,27 @@ class GymApp:
                                 st.success("Deleted")
                             except ValueError as e:
                                 st.warning(str(e))
+
+        with hr_tab:
+            st.header("Heart Rate Logs")
+            summary = self.stats.heart_rate_summary()
+            with st.expander("Summary", expanded=True):
+                metrics = [
+                    ("Average", summary["avg"]),
+                    ("Min", summary["min"]),
+                    ("Max", summary["max"]),
+                ]
+                self._metric_grid(metrics)
+            with st.expander("History", expanded=True):
+                rows = self.heart_rates.fetch_range()
+                if rows:
+                    df = pd.DataFrame(
+                        rows,
+                        columns=["id", "workout_id", "timestamp", "heart_rate"],
+                    )
+                    st.table(df[["timestamp", "heart_rate", "workout_id"]])
+                else:
+                    st.write("No logs")
 
         with tag_tab:
             st.header("Workout Tags")

@@ -2,6 +2,6 @@
 2. Instantiate HeartRateRepository in rest_api.GymAPI and expose REST endpoints for logging and retrieving heart rate data [complete]
 3. Add tests in tests/test_api.py verifying heart rate logging and retrieval [complete]
 4. Implement StatisticsService.heart_rate_summary and corresponding API endpoint [complete]
-5. Display heart rate logs and summary in the Streamlit GUI
-6. Extend long term usage test to include heart rate logging
-7. Add GUI tests for heart rate functionality
+5. Display heart rate logs and summary in the Streamlit GUI [complete]
+6. Extend long term usage test to include heart rate logging [complete]
+7. Add GUI tests for heart rate functionality [complete]
