@@ -1717,6 +1717,28 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(data[0]["date"], today)
         self.assertAlmostEqual(data[0]["velocity"], 0.5, places=2)
 
+    def test_set_duration_endpoint(self) -> None:
+        self.client.post("/workouts")
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        set_id = self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8},
+        ).json()["id"]
+        end = "2023-01-01T00:00:05"
+        resp = self.client.post(
+            f"/sets/{set_id}/duration", params={"seconds": 5, "end": end}
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data["end_time"], end)
+        self.assertEqual(data["start_time"], "2023-01-01T00:00:00")
+        resp = self.client.get(f"/sets/{set_id}")
+        vel = resp.json()["velocity"]
+        self.assertAlmostEqual(vel, 0.5, places=2)
+
     def test_volume_forecast_endpoint(self) -> None:
         d1 = (datetime.date.today() - datetime.timedelta(days=2)).isoformat()
         d2 = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()

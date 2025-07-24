@@ -987,6 +987,24 @@ class GymAPI:
             self.sets.set_end_time(set_id, ts)
             return {"status": "finished", "timestamp": ts}
 
+        @self.app.post("/sets/{set_id}/duration")
+        def set_duration(set_id: int, seconds: float, end: str | None = None):
+            try:
+                self.sets.set_duration(set_id, seconds, end)
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+            end_dt = (
+                datetime.datetime.now()
+                if end is None
+                else datetime.datetime.fromisoformat(end)
+            )
+            start_dt = end_dt - datetime.timedelta(seconds=float(seconds))
+            return {
+                "status": "updated",
+                "start_time": start_dt.isoformat(timespec="seconds"),
+                "end_time": end_dt.isoformat(timespec="seconds"),
+            }
+
         @self.app.get("/sets/{set_id}")
         def get_set(set_id: int):
             return self.sets.fetch_detail(set_id)
