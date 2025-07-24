@@ -247,7 +247,10 @@ class GymApp:
             """
             <style>
             :root {
-                --section-bg: #fff;
+                --section-bg: #fafafa;
+                --accent-color: #ff4b4b;
+                --header-bg: #ffffff;
+                --border-color: #cccccc;
                 --safe-bottom: 0px;
             }
             html, body {
@@ -319,7 +322,7 @@ class GymApp:
                 .header-wrapper {
                     position: sticky;
                     top: 0;
-                    background: #ffffff;
+                    background: var(--header-bg);
                     z-index: 1000;
                     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
                 }
@@ -540,8 +543,8 @@ class GymApp:
                     bottom: 0;
                     left: 0;
                     right: 0;
-                    background: #ffffff;
-                    border-top: 1px solid #cccccc;
+                    background: var(--header-bg);
+                    border-top: 1px solid var(--border-color);
                     display: grid;
                     grid-template-columns: repeat(4, 1fr);
                     justify-items: center;
@@ -638,8 +641,8 @@ class GymApp:
             nav.top-nav {
                 position: sticky;
                 top: 0;
-                background: #ffffff;
-                border-bottom: 1px solid #cccccc;
+                background: var(--header-bg);
+                border-bottom: 1px solid var(--border-color);
                 display: flex;
                 justify-content: space-around;
                 padding: 0.25rem 0.5rem;
@@ -701,11 +704,11 @@ class GymApp:
                 scroll-snap-align: start;
             }
             button[aria-selected="true"] {
-                border-bottom: 2px solid #ff4b4b;
+                border-bottom: 2px solid var(--accent-color);
                 background: #f0f0f0;
             }
             nav.bottom-nav button:focus, nav.top-nav button:focus {
-                outline: 2px solid #ff4b4b;
+                outline: 2px solid var(--accent-color);
             }
             .metric-grid {
                 display: grid;
@@ -854,7 +857,7 @@ class GymApp:
                 height: 2.25rem;
                 border: none;
                 border-radius: 50%;
-                background: #ff4b4b;
+                background: var(--accent-color);
                 color: #ffffff;
                 font-size: 1.25rem;
                 display: none;
@@ -869,7 +872,7 @@ class GymApp:
                 margin-bottom: 0.5rem;
             }
             .set-registered {
-                background: #ffffff;
+                background: var(--section-bg);
             }
             .set-unregistered {
                 background: #ffcccc;
@@ -895,11 +898,14 @@ class GymApp:
                 """
                 <style>
                 body {
-                    background-color: #111;
+                    background-color: #121212;
                     color: #eee;
                 }
                 :root {
-                    --section-bg: #222;
+                    --section-bg: #1f1f1f;
+                    --accent-color: #ff6b6b;
+                    --header-bg: #2a2a2a;
+                    --border-color: #444444;
                 }
                 </style>
                 """,
@@ -910,7 +916,10 @@ class GymApp:
                 """
                 <style>
                 :root {
-                    --section-bg: #fff;
+                    --section-bg: #fafafa;
+                    --accent-color: #ff4b4b;
+                    --header-bg: #ffffff;
+                    --border-color: #cccccc;
                 }
                 </style>
                 """,
