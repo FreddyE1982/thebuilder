@@ -94,6 +94,7 @@ class GymAPI:
             self.game_repo,
             self.exercises,
             self.settings,
+            self.workouts,
         )
         self.ml_service = PerformanceModelService(
             self.ml_models,
@@ -1428,6 +1429,10 @@ class GymAPI:
                 {"workout_id": wid, "points": pts}
                 for wid, pts in self.gamification.points_by_workout()
             ]
+
+        @self.app.get("/gamification/streak")
+        def gamification_streak():
+            return self.gamification.workout_streak()
 
         @self.app.get("/utils/warmup_weights")
         def utils_warmup_weights(target_weight: float, sets: int = 3):

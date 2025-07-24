@@ -1,5 +1,11 @@
 import math
-from db import GamificationRepository, ExerciseRepository, SettingsRepository
+import datetime
+from db import (
+    GamificationRepository,
+    ExerciseRepository,
+    SettingsRepository,
+    WorkoutRepository,
+)
 from tools import MathTools
 
 
@@ -11,10 +17,12 @@ class GamificationService:
         repo: GamificationRepository,
         exercise_repo: ExerciseRepository,
         settings_repo: SettingsRepository,
+        workout_repo: WorkoutRepository | None = None,
     ) -> None:
         self.repo = repo
         self.exercises = exercise_repo
         self.settings = settings_repo
+        self.workouts = workout_repo
 
     def enable(self, enabled: bool) -> None:
         self.settings.set_text("game_enabled", "1" if enabled else "0")
@@ -38,3 +46,25 @@ class GamificationService:
     def _points(self, reps: int, weight: float, rpe: int) -> float:
         est = MathTools.epley_1rm(weight, reps)
         return round(est * (rpe / 10.0), 2)
+
+    def workout_streak(self) -> dict[str, int]:
+        """Return current and record workout streak lengths."""
+        if self.workouts is None:
+            return {"current": 0, "record": 0}
+        rows = self.workouts.fetch_all_workouts()
+        if not rows:
+            return {"current": 0, "record": 0}
+        dates = sorted(datetime.date.fromisoformat(r[1]) for r in rows)
+        record = 1
+        current = 1
+        for i in range(1, len(dates)):
+            gap = (dates[i] - dates[i - 1]).days
+            if gap == 1:
+                current += 1
+            elif gap > 1:
+                record = max(record, current)
+                current = 1
+        record = max(record, current)
+        if (datetime.date.today() - dates[-1]).days > 1:
+            current = 0
+        return {"current": current, "record": record}
