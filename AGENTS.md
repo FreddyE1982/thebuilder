@@ -57,6 +57,70 @@ The goal is that the ENTIRE streamlit gui is thoroughly tested.
 NO parts of the gui may be skipped during testing. NO tab and no other element must remain untested.
 If the agent is extending / enhancing / working on the gui tests it is FORBIDDEN to only work on a few parts of the gui, instead it is to work on creating tests for a significant part of the GUI..for example a whole tab or at least half of a tab.
 10. if the agent changes the gui in any way, it needs to modify / extend the gui testing appropriatly
+11. the full GUI design MUST conform with the principles about good GUI design below. The agent is to always ensure it. If it come across any part of the GUI during ANY task the agent performs that does not yet conform..then the agent has to correct that immediatly!
+
+## rules of good GUI design
+
+1. Klarheit vor Krawall
+
+    Einfachheit ist Trumpf. Jeder zusätzliche Button, jedes Icon erhöht die kognitive Last – frag dich ständig: „Braucht der User das wirklich?“
+
+    Aber, minimalistisches Design kann überforden, wenn du alles weglässt. Manchmal hilft ein dezenter Hinweis mehr als gar kein Hinweis.
+
+2. Konsistenz vs. Kreativität
+
+    Plattform-Konventionen nutzen (z. B. Standard-Icons, Menüstrukturen). So fühlt sich der User sofort zuhause und stolpert nicht über deine Eigenkreationen.
+
+    Doch manchmal lohnt es, die Regeln zu brechen, um deine App unvergesslich zu machen – aber bleib dir darüber bewusst, dass das auf Kosten der Lernkurve geht.
+
+3. Feedback ist König
+
+    Jede User-Aktion braucht unmittelbare Rückmeldung: Klick-Animationen, Ladeindikatoren, Snackbar-Messages. Sonst fühlt sich der User wie in der Steinzeit der Software an.
+
+    Störfaktor-Check: Zu viel Feedback (Pop-ups bei jedem Klick) nervt eher.
+
+4. Visuelle Hierarchie & Lesbarkeit
+
+    Größen, Farben, Abstände steuern, wohin der Blick wandert. Haupt-CTA (Call to Action) in Signalfarbe, Sekundäres dezent zurücknehmen.
+
+    Konflikt: Manche Designtheoretiker schwören auf subtile Farbunterschiede – für mich persönlich sieht das oft eher nach unentschlossenem Grau aus.
+
+5. Affordances & Metaphern
+
+    Buttons sehen wie Buttons aus, Slider wie Schiebeleisten. Nutze vertraute Metaphern.
+
+    Aber: Überstrapazierte Metaphern (Papierkorb, Diskette) wirken altbacken. Manchmal ist ein klares Icon ohne physische Anlehnung moderner.
+
+
+
+7. Performance & Reaktionsgeschwindigkeit
+
+    Ruckelt das Interface, fliegt der User nach drei Klicks wieder raus.
+
+   
+
+8. Fehlervermeidung & Recovery
+
+    Prevent: Disable Buttons, wenn Eingaben fehlen.
+
+    Recover: Klare, verständliche Fehlermeldungen – kein kryptisches „Error 0x80070005“. Und immer One-Click-Undo anbieten, wenn’s geht.
+
+9. Testing & Iteration
+
+    Usability-Tests sind dein bester Freund. Beobachte echte Nutzer, hör auf ihr Schweigen und ihr Stöhnen.
+
+    Stolperstein: Zu viel Testing kann die Produktivität killen. Finde die Balance zwischen „zu selten“ und „zu oft“.
+
+10. Responsive Design & Skalierbarkeit
+
+    Dein GUI muss auf verschiedenen Bildschirmgrößen funktionieren – vom Smartphone bis zum ultrabreiten Monitor.
+
+    Gegenthese: Manchmal lohnt es sich, eine eigene Mobile-App zu bauen, statt alles in responsiv zu quetschen.
+
+Zum Abschluss: Die goldene Regel
+
+Hinterfrage jeden deiner Design-Entscheidungen. Bau Prototypen, teste schnell, wirf Sachen weg, die nicht funktionieren.
+Und vergiss nicht: Ein „geiles“ UI ist nicht das, was du hübsch findest, sondern das, woran deine Nutzer Spaß haben und das sie mühelos bedienen können.
 
 
 ## longterm usage test
