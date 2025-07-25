@@ -1564,15 +1564,11 @@ class GymApp:
     def _workout_section(self) -> None:
         with self._section("Workouts"):
             with st.expander("Workout Management", expanded=True):
-                if st.session_state.is_mobile:
+                create_tab, manage_tab = st.tabs(["Create New", "Existing"])
+                with create_tab:
                     self._create_workout_form(self.training_options)
+                with manage_tab:
                     self._existing_workout_form(self.training_options)
-                else:
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        self._create_workout_form(self.training_options)
-                    with col2:
-                        self._existing_workout_form(self.training_options)
 
     def _create_workout_form(self, training_options: list[str]) -> None:
         with st.expander("Create New Workout"):
@@ -1724,15 +1720,11 @@ class GymApp:
     def _planned_workout_section(self) -> None:
         with self._section("Planned Workouts"):
             with st.expander("Plan Management", expanded=True):
-                if st.session_state.is_mobile:
+                create_tab, manage_tab = st.tabs(["Create New", "Existing"])
+                with create_tab:
                     self._create_plan_form()
+                with manage_tab:
                     self._existing_plan_form()
-                else:
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        self._create_plan_form()
-                    with col2:
-                        self._existing_plan_form()
 
     def _create_plan_form(self) -> None:
         with st.expander("Create New Plan"):
