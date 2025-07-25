@@ -12,7 +12,7 @@
 - [ ] 12. Display key stats like today's volume in a metric grid at the top of the Workouts tab.
 - [ ] 13. Add collapsible sections for advanced analytics to reduce clutter.
 - [ ] 14. Ensure every chart has consistent colors and accessible labels.
-- [ ] 15. Add confirmation dialogs when deleting workouts or exercises to prevent mistakes.
+- [x] 15. Add confirmation dialogs when deleting workouts or exercises to prevent mistakes.
 - [ ] 16. Provide an editable table view for sets with drag and drop reordering.
 - [ ] 17. Introduce filter chips for tags and equipment in the Library tab for faster browsing.
 - [ ] 18. Move wellness logging to its own subtab under Progress for visibility.
@@ -58,3 +58,53 @@
 - [ ] 58. Add avatar and profile management with an image upload field in settings.
 - [ ] 59. Provide a summary banner after logging a workout with key statistics.
 - [ ] 60. Implement optional email export of weekly reports triggered via settings.
+- [ ] 61. Consolidate progress charts into a carousel for easier comparison.
+- [ ] 62. Add haptic feedback on mobile when logging sets.
+- [ ] 63. Create contextual menus on right click for quick actions on workouts.
+- [ ] 64. Provide an overview page with widgets summarizing current goals.
+- [ ] 65. Add a resizable sidebar for customizing visible metrics.
+- [ ] 66. Support drag and drop to reorder workout templates.
+- [ ] 67. Implement search suggestions as users type in dropdown filters.
+- [ ] 68. Offer automatic backup and restore options in settings.
+- [ ] 69. Include a timer widget for rest periods between sets.
+- [ ] 70. Introduce color coding for workout types across the app.
+- [ ] 71. Add a mini calendar widget showing upcoming planned workouts.
+- [ ] 72. Provide quick filter chips for common date ranges in history views.
+- [ ] 73. Implement a unified notification center for alerts and reminders.
+- [ ] 74. Allow users to collapse the header on scroll for more screen space.
+- [ ] 75. Create a dedicated analytics landing page with shortcuts to reports.
+- [ ] 76. Add gesture support to close dialogs on mobile by swiping down.
+- [ ] 77. Provide an option to auto-open the last viewed workout on startup.
+- [ ] 78. Implement lazy loading for long tables to improve performance.
+- [ ] 79. Include a widget to display ongoing challenges and achievements.
+- [ ] 80. Add undo/redo controls for workout editing actions.
+- [ ] 81. Provide customizable quick-add weight values for faster input.
+- [ ] 82. Show weekly streak counters on the Progress tab.
+- [ ] 83. Offer automatic dark mode based on system preferences.
+- [ ] 84. Introduce a split view on tablets to show history and logging side by side.
+- [ ] 85. Add persistent toolbars within expanders for common actions.
+- [ ] 86. Implement fuzzy search for equipment and muscle names.
+- [ ] 87. Surface recently used filters at the top of dropdowns.
+- [ ] 88. Provide collapsible filter sections to declutter the interface.
+- [ ] 89. Add inline editing for workout notes directly in the history list.
+- [ ] 90. Include a progress ring showing completion percentage of planned sets.
+- [ ] 91. Offer bookmarking of favorite analytics views in settings.
+- [ ] 92. Integrate emoji reactions for workouts in the history feed.
+- [ ] 93. Add a slide-out panel with quick tips relevant to the current tab.
+- [ ] 94. Support automatic scrolling to today's date in calendar views.
+- [ ] 95. Display a running timer when logging active workouts.
+- [ ] 96. Allow copying an existing workout as a template with one click.
+- [ ] 97. Provide optional large-font mode for accessibility.
+- [ ] 98. Add split buttons for logging warm-up versus working sets.
+- [ ] 99. Introduce keyboard navigation hints in footer tooltips.
+- [ ] 100. Enable exporting analytics charts as images from the GUI.
+- [ ] 101. Add dynamic breadcrumbs to show navigation context on mobile.
+- [ ] 102. Allow pinning important stats to the header for constant visibility.
+- [ ] 103. Provide auto-save of set inputs as they are entered.
+- [ ] 104. Implement color-coded badges for workout intensity levels.
+- [ ] 105. Add quick actions for sharing workouts via social media.
+- [ ] 106. Offer per-user customization for which tabs appear in the nav bar.
+- [ ] 107. Include example workouts for new users accessible from onboarding.
+- [ ] 108. Display estimated calories burned per workout in the summary.
+- [ ] 109. Add option to hide completed planned workouts from the calendar.
+- [ ] 110. Support inline graphs of weight progression within the workout log.
