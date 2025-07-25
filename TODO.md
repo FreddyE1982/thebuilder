@@ -1,0 +1,60 @@
+- [ ] 1. Restructure the navigation to use a single consistent top and bottom bar across modes.
+- [ ] 2. Create an onboarding wizard in a dialog for first‑time users explaining key features.
+- [ ] 3. Implement in‑app tooltips for all form inputs using `st.help` for accessibility.
+- [ ] 4. Group workout planning tools into an expander inside the Workouts tab.
+- [ ] 5. Add quick‑add buttons for favorite exercises directly in the workout logging form.
+- [ ] 6. Add keyboard shortcuts for adding sets and toggling tabs via Streamlit hotkeys.
+- [ ] 7. Enhance mobile layout by ensuring all buttons are reachable with one hand.
+- [ ] 8. Add a floating action button to log a new workout from any tab on mobile.
+- [ ] 9. Reorganize the Library tab with expanders for exercises, templates and equipment.
+- [ ] 10. Provide a dark/light mode toggle in the Settings tab.
+- [ ] 11. Add global search at the top navigation to quickly find workouts, exercises or tags.
+- [ ] 12. Display key stats like today's volume in a metric grid at the top of the Workouts tab.
+- [ ] 13. Add collapsible sections for advanced analytics to reduce clutter.
+- [ ] 14. Ensure every chart has consistent colors and accessible labels.
+- [ ] 15. Add confirmation dialogs when deleting workouts or exercises to prevent mistakes.
+- [ ] 16. Provide an editable table view for sets with drag and drop reordering.
+- [ ] 17. Introduce filter chips for tags and equipment in the Library tab for faster browsing.
+- [ ] 18. Move wellness logging to its own subtab under Progress for visibility.
+- [ ] 19. Implement status badges for machine learning models showing training state.
+- [ ] 20. Use icons next to each menu item to aid quick recognition.
+- [ ] 21. Add optional compact mode with reduced padding on desktop for large data tables.
+- [ ] 22. Enable sorting on all tables through the REST endpoints and reflect in the GUI.
+- [ ] 23. Highlight personal records in workout history using a distinctive color.
+- [ ] 24. Provide a dashboard subtab summarizing recent workouts, body weight and readiness.
+- [ ] 25. Reorder items in Settings so commonly used options appear first.
+- [ ] 26. Add progress bars to indicate long‑running operations like model training.
+- [ ] 27. Integrate undo functionality for accidentally deleted sets within the session.
+- [ ] 28. Provide expandable tips in each tab explaining best practices.
+- [ ] 29. Include customizable keyboard shortcuts in settings.
+- [ ] 30. Implement left and right swipe gestures on mobile to move between tabs.
+- [ ] 31. Add a help overlay accessible via a "?" button linking to README sections.
+- [ ] 32. Make table rows expandable to show more set details without leaving the page.
+- [ ] 33. Provide a quick summary of planned workouts on the Workouts tab home screen.
+- [ ] 34. Allow pinning favorite templates to the top of the list for faster selection.
+- [ ] 35. Add color themes beyond light/dark and remember preference in settings.
+- [ ] 36. Include a collapsible history of automatic recommendations in the Planner tab.
+- [ ] 37. Show an alert when planned workouts are overdue.
+- [ ] 38. Add an interactive calendar view for planned and logged workouts.
+- [ ] 39. Provide bulk editing tools for sets across different workouts.
+- [ ] 40. Add a quick report generator with preset date ranges like last week or last month.
+- [ ] 41. Surface recently used muscles and equipment in dropdowns for convenience.
+- [ ] 42. Include inline validation messages next to each form field when data is invalid.
+- [ ] 43. Display connection status of the REST API and database in the header.
+- [ ] 44. Introduce optional desktop side navigation for large screens.
+- [ ] 45. Add colorblind‑friendly palette options in settings.
+- [ ] 46. Offer step‑by‑step tutorial for advanced analytics features.
+- [ ] 47. Implement collapsible lists for tags, goals and equipment to avoid long scrolls.
+- [ ] 48. Create a unified progress summary tab combining charts and gamification points.
+- [ ] 49. Add export options for workouts to CSV and JSON from the Workouts tab.
+- [ ] 50. Provide micro‑animations for adding items to improve responsiveness.
+- [ ] 51. Integrate responsive tables that collapse columns on small screens with a details view.
+- [ ] 52. Provide user customization for metric display units (kg/lb) and time format.
+- [ ] 53. Add quick links to recent analytics directly from workout detail pages.
+- [ ] 54. Introduce a command palette (Ctrl+K) for power users to run any action.
+- [ ] 55. Ensure all dialogs and forms are fully reachable using keyboard navigation.
+- [ ] 56. Break down the Settings tab into categories like Display, Data Management and Integrations using expanders.
+- [ ] 57. Show progress indicators when syncing settings with `settings.yaml`.
+- [ ] 58. Add avatar and profile management with an image upload field in settings.
+- [ ] 59. Provide a summary banner after logging a workout with key statistics.
+- [ ] 60. Implement optional email export of weekly reports triggered via settings.
