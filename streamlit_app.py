@@ -1544,6 +1544,15 @@ class GymApp:
                 if selected and st.button("Use Plan"):
                     new_id = self.planner.create_workout_from_plan(int(selected))
                     st.session_state.selected_workout = new_id
+
+        today = datetime.date.today().isoformat()
+        daily = self.stats.daily_volume(today, today)
+        if daily:
+            metrics = [
+                ("Today's Volume", daily[0]["volume"]),
+                ("Sets", daily[0]["sets"]),
+            ]
+            self._metric_grid(metrics)
         sections = ["Workouts"]
         if st.session_state.selected_workout:
             sections.append("Exercises")
