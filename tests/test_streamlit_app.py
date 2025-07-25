@@ -603,7 +603,7 @@ class StreamlitFullGUITest(unittest.TestCase):
         self.at.query_params["tab"] = "workouts"
         self.at.run()
         plan_tab = self._get_tab("Plan")
-        labels = [t.label for t in plan_tab.tabs]
+        labels = [e.label for e in plan_tab.expander]
         for name in ["AI Planner", "Templates", "Planned Workouts"]:
             self.assertIn(name, labels)
 
@@ -719,16 +719,24 @@ class StreamlitTemplateWorkflowTest(unittest.TestCase):
     def _connect(self) -> sqlite3.Connection:
         return sqlite3.connect(self.db_path)
 
+    def _get_tab(self, label: str):
+        for tab in self.at.tabs:
+            if tab.label == label:
+                return tab
+        self.fail(f"Tab {label} not found")
+
     def test_template_plan_to_workout(self) -> None:
-        tmpl_tab = next(t for t in self.at.tabs if t.label == "Templates")
-        tmpl_tab.text_input[0].input("Tpl1").run()
-        idx = _find_by_label(tmpl_tab.selectbox, "Training Type")
-        tmpl_tab.selectbox[idx].select("strength").run()
-        b_idx = _find_by_label(tmpl_tab.button, "Create Template")
-        tmpl_tab.button[b_idx].click().run()
+        plan_tab = self._get_tab("Plan")
+        tmpl_exp = next(e for e in plan_tab.expander if e.label == "Templates")
+        tmpl_exp.text_input[0].input("Tpl1").run()
+        idx = _find_by_label(tmpl_exp.selectbox, "Training Type")
+        tmpl_exp.selectbox[idx].select("strength").run()
+        b_idx = _find_by_label(tmpl_exp.button, "Create Template")
+        tmpl_exp.button[b_idx].click().run()
         self.at.run()
-        tmpl_tab = next(t for t in self.at.tabs if t.label == "Templates")
-        for exp in tmpl_tab.expander:
+        plan_tab = self._get_tab("Plan")
+        tmpl_exp = next(e for e in plan_tab.expander if e.label == "Templates")
+        for exp in tmpl_exp.expander:
             if exp.label.startswith("Tpl1"):
                 exp.button[1].click().run()
                 break
