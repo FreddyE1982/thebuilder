@@ -3,6 +3,7 @@ import pandas as pd
 from contextlib import contextmanager
 from typing import Optional, Generator, Callable
 import streamlit as st
+import streamlit.components.v1 as components
 import altair as alt
 from altair.utils.deprecation import AltairDeprecationWarning
 import warnings
@@ -131,7 +132,7 @@ class LayoutManager:
 
     def scroll_to(self, element_id: str) -> None:
         """Scroll smoothly to the element with the given id."""
-        st.components.v1.html(
+        components.html(
             f"<script>document.getElementById('{element_id}')?.scrollIntoView({{behavior:'smooth'}});</script>",
             height=0,
         )
@@ -272,7 +273,7 @@ class GymApp:
         params = st.query_params
         mode = params.get("mode")
         if mode is None:
-            st.components.v1.html(
+            components.html(
                 """
                 <script>
                 const mode = Math.min(window.innerWidth, window.innerHeight) < 768 ? 'mobile' : 'desktop';
@@ -292,7 +293,7 @@ class GymApp:
         )
         st.session_state.layout_set = True
         st.session_state.is_mobile = mode == "mobile"
-        st.components.v1.html(
+        components.html(
             """
             <script>
             function setMode() {
@@ -1536,9 +1537,18 @@ class GymApp:
 
     def _existing_workout_form(self, training_options: list[str]) -> None:
         with st.expander("Existing Workouts", expanded=True):
+            search = st.text_input("Search", key="workout_search")
+            if st.button("Reset Search", key="workout_search_reset"):
+                st.session_state.workout_search = ""
+                st.rerun()
             workouts = sorted(
                 self.workouts.fetch_all_workouts(), key=lambda w: w[1]
             )
+            if search:
+                query = search.lower()
+                workouts = [
+                    w for w in workouts if query in (w[5] or "").lower()
+                ]
             options = {str(w[0]): w for w in workouts}
             if options:
                 selected = st.selectbox(
