@@ -525,6 +525,28 @@ class StreamlitAppTest(unittest.TestCase):
         help_text = any("Workout Logger Help" in m.body for m in self.at.markdown)
         self.assertTrue(help_text)
 
+    def test_delete_exercise_confirmation(self) -> None:
+        idx_new = _find_by_label(
+            self.at.button,
+            "New Workout",
+            key="FormSubmitter:new_workout_form-New Workout",
+        )
+        self.at.button[idx_new].click().run()
+        idx_ex = _find_by_label(self.at.selectbox, "Exercise", "Barbell Bench Press")
+        self.at.selectbox[idx_ex].select("Barbell Bench Press").run()
+        idx_eq = _find_by_label(self.at.selectbox, "Equipment Name", "Olympic Barbell")
+        self.at.selectbox[idx_eq].select("Olympic Barbell").run()
+        idx_add_ex = _find_by_label(self.at.button, "Add Exercise", key="add_ex_btn")
+        self.at.button[idx_add_ex].click().run()
+        ex_idx = _find_by_label(
+            self.at.expander, "Barbell Bench Press (Olympic Barbell)"
+        )
+        exp = self.at.expander[ex_idx]
+        rm_idx = _find_by_label(exp.button, "Remove Exercise", key="remove_ex_1")
+        exp.button[rm_idx].click().run()
+        confirm = any("Delete exercise 1?" in m.body for m in self.at.markdown)
+        self.assertTrue(confirm)
+
     def test_header_quick_search(self) -> None:
         idx_new = _find_by_label(
             self.at.button,
@@ -541,9 +563,7 @@ class StreamlitAppTest(unittest.TestCase):
         self.at.text_input[s_idx].input("Morning").run()
         b_idx = _find_by_label(self.at.button, "Search", key="header_search_btn")
         self.at.button[b_idx].click().run()
-        sel_idx = _find_by_label(
-            self.at.selectbox, "Results", key="header_search_sel"
-        )
+        sel_idx = _find_by_label(self.at.selectbox, "Results", key="header_search_sel")
         option = self.at.selectbox[sel_idx].options[0]
         self.at.selectbox[sel_idx].select(option).run()
         o_idx = _find_by_label(self.at.button, "Open", key="header_search_open")

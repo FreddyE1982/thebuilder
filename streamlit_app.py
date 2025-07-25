@@ -1926,7 +1926,7 @@ class GymApp:
         )
         with expander:
             if st.button("Remove Exercise", key=f"remove_ex_{exercise_id}"):
-                self.exercises.remove(exercise_id)
+                self._confirm_delete_exercise(exercise_id)
                 return
             if st.button("Add Set", key=f"add_set_{exercise_id}"):
                 reps_val = st.session_state.get(f"new_reps_{exercise_id}", 1)
@@ -2415,6 +2415,18 @@ class GymApp:
                     st.session_state.selected_workout = None
                 st.rerun()
             if cols[1].button("No", key=f"no_w_{workout_id}"):
+                st.rerun()
+
+        self._show_dialog("Confirm Delete", _content)
+
+    def _confirm_delete_exercise(self, exercise_id: int) -> None:
+        def _content() -> None:
+            st.write(f"Delete exercise {exercise_id}?")
+            cols = st.columns(2)
+            if cols[0].button("Yes", key=f"yes_e_{exercise_id}"):
+                self.exercises.remove(exercise_id)
+                st.rerun()
+            if cols[1].button("No", key=f"no_e_{exercise_id}"):
                 st.rerun()
 
         self._show_dialog("Confirm Delete", _content)
