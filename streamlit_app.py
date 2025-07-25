@@ -1090,20 +1090,7 @@ class GymApp:
             if st.button("Show About", key="about_btn"):
                 self._about_dialog()
         with st.sidebar.expander("Quick Search"):
-            query = st.text_input("Search", key="sidebar_search")
-            if st.button("Search", key="sidebar_search_btn"):
-                st.session_state.sidebar_search_results = (
-                    self.workouts.search(query) if query else []
-                )
-            results = st.session_state.get("sidebar_search_results", [])
-            if results:
-                options = {f"{wid} - {date}": wid for wid, date in results}
-                choice = st.selectbox(
-                    "Results", list(options.keys()), key="sidebar_search_sel"
-                )
-                if st.button("Open", key="sidebar_search_open"):
-                    st.session_state.selected_workout = options[choice]
-                    self._switch_tab("workouts")
+            self._quick_search("sidebar")
 
     def _render_nav(self, container_class: str) -> None:
         """Render navigation bar using LayoutManager."""
@@ -1117,6 +1104,23 @@ class GymApp:
 
     def _scroll_top_button(self) -> None:
         self.layout.scroll_top_button()
+
+    def _quick_search(self, prefix: str) -> None:
+        """Search workouts by notes or location and open them."""
+        query = st.text_input("Search", key=f"{prefix}_search")
+        if st.button("Search", key=f"{prefix}_search_btn"):
+            st.session_state[f"{prefix}_search_results"] = (
+                self.workouts.search(query) if query else []
+            )
+        results = st.session_state.get(f"{prefix}_search_results", [])
+        if results:
+            options = {f"{wid} - {date}": wid for wid, date in results}
+            choice = st.selectbox(
+                "Results", list(options.keys()), key=f"{prefix}_search_sel"
+            )
+            if st.button("Open", key=f"{prefix}_search_open"):
+                st.session_state.selected_workout = options[choice]
+                self._switch_tab("workouts")
 
     def _quick_workout_button(self) -> None:
         """Display floating button to quickly add a workout."""
@@ -1421,15 +1425,22 @@ class GymApp:
         self._start_page()
         self._open_header()
         st.markdown("<div class='title-section'>", unsafe_allow_html=True)
-        st.title("Workout Logger")
-        if st.button("Toggle Theme", key="toggle_theme_header"):
-            new_theme = "dark" if self.theme == "light" else "light"
-            self.settings_repo.set_text("theme", new_theme)
-            self.theme = new_theme
-            self._apply_theme()
-            st.rerun()
-        if st.button("Help", key="help_button_header"):
-            self._help_dialog()
+        cols = st.columns([3, 1, 1, 3])
+        with cols[0]:
+            st.title("Workout Logger")
+        with cols[1]:
+            if st.button("Toggle Theme", key="toggle_theme_header"):
+                new_theme = "dark" if self.theme == "light" else "light"
+                self.settings_repo.set_text("theme", new_theme)
+                self.theme = new_theme
+                self._apply_theme()
+                st.rerun()
+        with cols[2]:
+            if st.button("Help", key="help_button_header"):
+                self._help_dialog()
+        with cols[3]:
+            with st.expander("Quick Search", expanded=False):
+                self._quick_search("header")
         st.markdown("</div>", unsafe_allow_html=True)
         self._top_nav()
         self._close_header()

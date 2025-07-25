@@ -525,6 +525,32 @@ class StreamlitAppTest(unittest.TestCase):
         help_text = any("Workout Logger Help" in m.body for m in self.at.markdown)
         self.assertTrue(help_text)
 
+    def test_header_quick_search(self) -> None:
+        idx_new = _find_by_label(
+            self.at.button,
+            "New Workout",
+            key="FormSubmitter:new_workout_form-New Workout",
+        )
+        self.at.button[idx_new].click().run()
+        conn = self._connect()
+        cur = conn.cursor()
+        cur.execute("UPDATE workouts SET notes=? WHERE id=1", ("Morning",))
+        conn.commit()
+        conn.close()
+        s_idx = _find_by_label(self.at.text_input, "Search", key="header_search")
+        self.at.text_input[s_idx].input("Morning").run()
+        b_idx = _find_by_label(self.at.button, "Search", key="header_search_btn")
+        self.at.button[b_idx].click().run()
+        sel_idx = _find_by_label(
+            self.at.selectbox, "Results", key="header_search_sel"
+        )
+        option = self.at.selectbox[sel_idx].options[0]
+        self.at.selectbox[sel_idx].select(option).run()
+        o_idx = _find_by_label(self.at.button, "Open", key="header_search_open")
+        self.at.button[o_idx].click().run()
+        exp_idx = _find_by_label(self.at.expander, "Exercise Management")
+        self.assertGreater(len(self.at.expander[exp_idx].button), 0)
+
     def test_git_pull_button(self) -> None:
         self.at.query_params["tab"] = "settings"
         self.at.run()
