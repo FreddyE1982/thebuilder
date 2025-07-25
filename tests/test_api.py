@@ -2992,6 +2992,14 @@ class APITestCase(unittest.TestCase):
         status = self.client.get("/autoplanner/status").json()
         self.assertTrue(any(m["name"] == "volume_model" for m in status["models"]))
 
+    def test_workout_search_endpoint(self) -> None:
+        today = datetime.date.today().isoformat()
+        self.client.post("/workouts", params={"notes": "Home session"})
+        self.client.post("/workouts", params={"notes": "Gym session"})
+        resp = self.client.get("/workouts/search", params={"query": "Gym"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), [{"id": 2, "date": today}])
+
     def test_workout_streak_endpoint(self) -> None:
         today = datetime.date.today()
         for i in range(3):

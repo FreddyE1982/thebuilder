@@ -542,6 +542,11 @@ class GymAPI:
             workouts = self.workouts.fetch_all_workouts(start_date, end_date)
             return [{"id": wid, "date": date} for wid, date, *_ in workouts]
 
+        @self.app.get("/workouts/search")
+        def search_workouts(query: str):
+            rows = self.workouts.search(query)
+            return [{"id": wid, "date": date} for wid, date in rows]
+
         @self.app.get("/workouts/history")
         def workout_history(
             start_date: str,
