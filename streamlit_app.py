@@ -1462,33 +1462,47 @@ class GymApp:
             self._exercise_section()
 
     def _plan_tab(self) -> None:
-        with st.expander("AI Generated Plan", expanded=False):
-            ai_date = st.date_input("Plan Date", datetime.date.today(), key="ai_plan_date")
-            names = self.exercise_catalog.fetch_names(None, None, None, None)
-            ex_sel = st.multiselect("Exercises", names, key="ai_plan_exercises")
-            ai_type = st.selectbox(
-                "Training Type",
-                self.training_options,
-                index=self.training_options.index("strength"),
-                key="ai_plan_type",
-            )
-            if st.button("Generate AI Plan", key="ai_plan_btn"):
-                if ex_sel:
-                    pairs = [(n, None) for n in ex_sel]
-                    try:
-                        pid = self.planner.create_ai_plan(ai_date.isoformat(), pairs, ai_type)
-                        st.session_state.selected_planned_workout = pid
-                        st.success("Plan created")
-                    except ValueError as e:
-                        st.warning(str(e))
-                else:
-                    st.warning("Select exercises")
-        self._template_section()
-        if st.session_state.get("selected_template") is not None:
-            self._template_exercise_section()
-        self._planned_workout_section()
-        if st.session_state.selected_planned_workout:
-            self._planned_exercise_section()
+        ai_tab, tmpl_tab, plan_tab = st.tabs([
+            "AI Planner",
+            "Templates",
+            "Planned Workouts",
+        ])
+        with ai_tab:
+            with st.expander("AI Generated Plan", expanded=False):
+                ai_date = st.date_input(
+                    "Plan Date", datetime.date.today(), key="ai_plan_date"
+                )
+                names = self.exercise_catalog.fetch_names(None, None, None, None)
+                ex_sel = st.multiselect(
+                    "Exercises", names, key="ai_plan_exercises"
+                )
+                ai_type = st.selectbox(
+                    "Training Type",
+                    self.training_options,
+                    index=self.training_options.index("strength"),
+                    key="ai_plan_type",
+                )
+                if st.button("Generate AI Plan", key="ai_plan_btn"):
+                    if ex_sel:
+                        pairs = [(n, None) for n in ex_sel]
+                        try:
+                            pid = self.planner.create_ai_plan(
+                                ai_date.isoformat(), pairs, ai_type
+                            )
+                            st.session_state.selected_planned_workout = pid
+                            st.success("Plan created")
+                        except ValueError as e:
+                            st.warning(str(e))
+                    else:
+                        st.warning("Select exercises")
+        with tmpl_tab:
+            self._template_section()
+            if st.session_state.get("selected_template") is not None:
+                self._template_exercise_section()
+        with plan_tab:
+            self._planned_workout_section()
+            if st.session_state.selected_planned_workout:
+                self._planned_exercise_section()
 
     def _workout_section(self) -> None:
         with self._section("Workouts"):

@@ -50,6 +50,12 @@ class StreamlitAppTest(unittest.TestCase):
     def _connect(self) -> sqlite3.Connection:
         return sqlite3.connect(self.db_path)
 
+    def _get_tab(self, label: str):
+        for tab in self.at.tabs:
+            if tab.label == label:
+                return tab
+        self.fail(f"Tab {label} not found")
+
     def test_add_workout_and_set(self) -> None:
         idx_new = _find_by_label(self.at.button, "New Workout", key="FormSubmitter:new_workout_form-New Workout")
         self.at.button[idx_new].click().run()
@@ -155,28 +161,33 @@ class StreamlitAppTest(unittest.TestCase):
     def test_equipment_filtering(self) -> None:
         self.at.query_params["tab"] = "library"
         self.at.run()
-        eq_tab = self.at.tabs[5]
+        lib_tab = self._get_tab("Library")
+        eq_tab = next(t for t in lib_tab.tabs if t.label == "Equipment")
         eq_tab.selectbox[0].select("Free Weights").run()
         self.at.run()
-        eq_tab = self.at.tabs[5]
+        lib_tab = self._get_tab("Library")
+        eq_tab = next(t for t in lib_tab.tabs if t.label == "Equipment")
         self.assertIn("Olympic Barbell", eq_tab.selectbox[1].options)
 
     def test_exercise_filtering(self) -> None:
         self.at.query_params["tab"] = "library"
         self.at.run()
-        ex_tab = self.at.tabs[6]
+        lib_tab = self._get_tab("Library")
+        ex_tab = next(t for t in lib_tab.tabs if t.label == "Exercises")
         ex_tab.multiselect[0].select("Chest").run()
         self.at.run()
-        ex_tab = self.at.tabs[6]
+        lib_tab = self._get_tab("Library")
+        ex_tab = next(t for t in lib_tab.tabs if t.label == "Exercises")
         self.assertIn("Barbell Bench Press", ex_tab.selectbox[1].options)
 
     def test_reset_buttons_present(self) -> None:
         self.at.query_params["tab"] = "library"
         self.at.run()
-        eq_tab = self.at.tabs[5]
+        lib_tab = self._get_tab("Library")
+        eq_tab = next(t for t in lib_tab.tabs if t.label == "Equipment")
         idx_eq = _find_by_label(eq_tab.button, "Reset Filters", key="lib_eq_reset")
         self.assertIsNotNone(idx_eq)
-        ex_tab = self.at.tabs[6]
+        ex_tab = next(t for t in lib_tab.tabs if t.label == "Exercises")
         idx_ex = _find_by_label(ex_tab.button, "Reset Filters", key="lib_ex_reset")
         self.assertIsNotNone(idx_ex)
 
@@ -184,7 +195,8 @@ class StreamlitAppTest(unittest.TestCase):
         self.at.query_params["tab"] = "settings"
         self.at.run()
         # Custom exercise
-        cust_tab = next(t for t in self.at.tabs if t.label == "Exercise Management")
+        settings_tab = self._get_tab("Settings")
+        cust_tab = next(t for t in settings_tab.tabs if t.label == "Exercise Management")
         idx_group = _find_by_label(cust_tab.selectbox, "Muscle Group", key="cust_ex_group")
         cust_tab.selectbox[idx_group].select("Chest").run()
         cust_tab.text_input[0].input("CustomEx").run()
@@ -196,7 +208,8 @@ class StreamlitAppTest(unittest.TestCase):
         idx_btn = _find_by_label(cust_tab.button, "Add Exercise", key="cust_ex_add")
         cust_tab.button[idx_btn].click().run()
         self.at.run()
-        cust_tab = self.at.tabs[13]
+        settings_tab = self._get_tab("Settings")
+        cust_tab = next(t for t in settings_tab.tabs if t.label == "Exercise Management")
 
         conn = self._connect()
         cur = conn.cursor()
@@ -210,17 +223,19 @@ class StreamlitAppTest(unittest.TestCase):
         )
 
         # Body weight log
-        bw_tab = next(t for t in self.at.tabs if t.label == "Body Weight Logs")
+        settings_tab = self._get_tab("Settings")
+        bw_tab = next(t for t in settings_tab.tabs if t.label == "Body Weight Logs")
         bw_tab.date_input[0].set_value("2024-01-02").run()
         bw_tab.number_input[0].set_value(80.5).run()
         bw_tab.button[0].click().run()
         self.at.run()
-        bw_tab = self.at.tabs[14]
+        settings_tab = self._get_tab("Settings")
+        bw_tab = next(t for t in settings_tab.tabs if t.label == "Body Weight Logs")
         cur.execute("SELECT weight FROM body_weight_logs;")
         self.assertAlmostEqual(cur.fetchone()[0], 80.5)
 
         # Wellness log
-        well_tab = next(t for t in self.at.tabs if t.label == "Wellness Logs")
+        well_tab = next(t for t in settings_tab.tabs if t.label == "Wellness Logs")
         well_tab.date_input[0].set_value("2024-01-03").run()
         well_tab.number_input[0].set_value(2500.0).run()
         well_tab.number_input[1].set_value(8.0).run()
@@ -228,18 +243,18 @@ class StreamlitAppTest(unittest.TestCase):
         well_tab.number_input[3].set_value(3).run()
         well_tab.button[0].click().run()
         self.at.run()
-        well_tab = self.at.tabs[15]
+        well_tab = next(t for t in settings_tab.tabs if t.label == "Wellness Logs")
         cur.execute(
             "SELECT calories, sleep_hours, sleep_quality, stress_level FROM wellness_logs;"
         )
         self.assertEqual(cur.fetchone(), (2500.0, 8.0, 5.0, 3))
 
         # Tag
-        tag_tab = next(t for t in self.at.tabs if t.label == "Workout Tags")
+        tag_tab = next(t for t in settings_tab.tabs if t.label == "Workout Tags")
         tag_tab.text_input[0].input("morning").run()
         tag_tab.button[0].click().run()
         self.at.run()
-        tag_tab = self.at.tabs[16]
+        tag_tab = next(t for t in settings_tab.tabs if t.label == "Workout Tags")
         cur.execute("SELECT name FROM tags;")
         self.assertEqual(cur.fetchone()[0], "morning")
         conn.close()
@@ -247,7 +262,8 @@ class StreamlitAppTest(unittest.TestCase):
     def test_muscle_alias_and_link(self) -> None:
         self.at.query_params["tab"] = "settings"
         self.at.run()
-        mus_tab = self.at.tabs[11]
+        settings_tab = self._get_tab("Settings")
+        mus_tab = next(t for t in settings_tab.tabs if t.label == "Muscles")
         mus_tab.selectbox[0].select("Biceps Brachii").run()
         mus_tab.selectbox[1].select("Brachialis").run()
         mus_tab.button[0].click().run()
@@ -259,7 +275,8 @@ class StreamlitAppTest(unittest.TestCase):
             ("Brachialis",),
         )
         self.assertEqual(cur.fetchone()[0], "Biceps Brachii")
-        mus_tab = self.at.tabs[11]
+        settings_tab = self._get_tab("Settings")
+        mus_tab = next(t for t in settings_tab.tabs if t.label == "Muscles")
         mus_tab.text_input[0].input("Lats").run()
         mus_tab.selectbox[2].select("Latissimus Dorsi").run()
         mus_tab.button[1].click().run()
@@ -274,7 +291,8 @@ class StreamlitAppTest(unittest.TestCase):
     def test_add_muscle(self) -> None:
         self.at.query_params["tab"] = "settings"
         self.at.run()
-        mus_tab = self.at.tabs[11]
+        settings_tab = self._get_tab("Settings")
+        mus_tab = next(t for t in settings_tab.tabs if t.label == "Muscles")
         mus_tab.text_input[1].input("Obliques").run()
         mus_tab.button[2].click().run()
         self.at.run()
@@ -287,11 +305,13 @@ class StreamlitAppTest(unittest.TestCase):
     def test_muscle_dropdown_sorted(self) -> None:
         self.at.query_params["tab"] = "settings"
         self.at.run()
-        mus_tab = self.at.tabs[11]
+        settings_tab = self._get_tab("Settings")
+        mus_tab = next(t for t in settings_tab.tabs if t.label == "Muscles")
         mus_tab.text_input[1].input("Aardvark").run()
         mus_tab.button[2].click().run()
         self.at.run()
-        mus_tab = self.at.tabs[11]
+        settings_tab = self._get_tab("Settings")
+        mus_tab = next(t for t in settings_tab.tabs if t.label == "Muscles")
         idx = _find_by_label(mus_tab.selectbox, "Muscle 1")
         options = mus_tab.selectbox[idx].options
         self.assertEqual(options, sorted(options))
@@ -299,12 +319,14 @@ class StreamlitAppTest(unittest.TestCase):
     def test_muscle_group_management(self) -> None:
         self.at.query_params["tab"] = "settings"
         self.at.run()
-        mus_tab = self.at.tabs[11]
+        settings_tab = self._get_tab("Settings")
+        mus_tab = next(t for t in settings_tab.tabs if t.label == "Muscles")
         group_exp = mus_tab.expander[3]
         group_exp.text_input[0].input("Arms").run()
         group_exp.button[0].click().run()
         self.at.run()
-        mus_tab = self.at.tabs[11]
+        settings_tab = self._get_tab("Settings")
+        mus_tab = next(t for t in settings_tab.tabs if t.label == "Muscles")
         group_exp = mus_tab.expander[3]
         target = None
         for exp in group_exp.expander:
@@ -327,17 +349,20 @@ class StreamlitAppTest(unittest.TestCase):
     def test_equipment_add_update_delete(self) -> None:
         self.at.query_params["tab"] = "settings"
         self.at.run()
-        eq_tab = self.at.tabs[10]
+        settings_tab = self._get_tab("Settings")
+        eq_tab = next(t for t in settings_tab.tabs if t.label == "Equipment")
         eq_tab.text_input[0].input("MyType").run()
         eq_tab.button[0].click().run()
         self.at.run()
-        eq_tab = self.at.tabs[10]
+        settings_tab = self._get_tab("Settings")
+        eq_tab = next(t for t in settings_tab.tabs if t.label == "Equipment")
         eq_tab.selectbox[0].select("MyType").run()
         eq_tab.text_input[1].input("TestEq").run()
         eq_tab.multiselect[0].select("Biceps Brachii").run()
         eq_tab.button[1].click().run()
         self.at.run()
-        eq_tab = self.at.tabs[10]
+        settings_tab = self._get_tab("Settings")
+        eq_tab = next(t for t in settings_tab.tabs if t.label == "Equipment")
         target = None
         for exp in eq_tab.expander:
             if exp.label == "TestEq":
@@ -346,7 +371,8 @@ class StreamlitAppTest(unittest.TestCase):
         self.assertIsNotNone(target)
         target.text_input[0].input("TestEq2").run()
         self.at.run()
-        eq_tab = self.at.tabs[10]
+        settings_tab = self._get_tab("Settings")
+        eq_tab = next(t for t in settings_tab.tabs if t.label == "Equipment")
         found = None
         for exp in eq_tab.expander:
             if exp.label == "TestEq2":
@@ -364,7 +390,8 @@ class StreamlitAppTest(unittest.TestCase):
     def test_exercise_alias_linking(self) -> None:
         self.at.query_params["tab"] = "settings"
         self.at.run()
-        ex_tab = self.at.tabs[12]
+        settings_tab = self._get_tab("Settings")
+        ex_tab = next(t for t in settings_tab.tabs if t.label == "Exercise Aliases")
         ex_tab.selectbox[0].select("Barbell Bench Press").run()
         ex_tab.selectbox[1].select("Dumbbell Bench Press").run()
         ex_tab.button[0].click().run()
@@ -376,7 +403,8 @@ class StreamlitAppTest(unittest.TestCase):
             ("Dumbbell Bench Press",),
         )
         self.assertEqual(cur.fetchone()[0], "Barbell Bench Press")
-        ex_tab = self.at.tabs[12]
+        settings_tab = self._get_tab("Settings")
+        ex_tab = next(t for t in settings_tab.tabs if t.label == "Exercise Aliases")
         ex_tab.text_input[0].input("DB Press").run()
         ex_tab.selectbox[2].select("Barbell Bench Press").run()
         ex_tab.button[1].click().run()
@@ -447,7 +475,8 @@ class StreamlitAppTest(unittest.TestCase):
     def test_git_pull_button(self) -> None:
         self.at.query_params["tab"] = "settings"
         self.at.run()
-        gen_tab = self.at.tabs[9]
+        settings_tab = self._get_tab("Settings")
+        gen_tab = next(t for t in settings_tab.tabs if t.label == "General")
         remote_dir = os.path.join(os.getcwd(), "git_remote")
         repo_dir = os.path.expanduser("~/thebuilder")
         for path in [remote_dir, repo_dir]:
@@ -570,6 +599,14 @@ class StreamlitFullGUITest(unittest.TestCase):
         self.assertIn("Log", labels)
         self.assertIn("Plan", labels)
 
+    def test_plan_inner_tabs(self) -> None:
+        self.at.query_params["tab"] = "workouts"
+        self.at.run()
+        plan_tab = self._get_tab("Plan")
+        labels = [t.label for t in plan_tab.tabs]
+        for name in ["AI Planner", "Templates", "Planned Workouts"]:
+            self.assertIn(name, labels)
+
     def test_library_subtabs(self) -> None:
         self.at.query_params["tab"] = "library"
         self.at.run()
@@ -683,15 +720,15 @@ class StreamlitTemplateWorkflowTest(unittest.TestCase):
         return sqlite3.connect(self.db_path)
 
     def test_template_plan_to_workout(self) -> None:
-        plan_tab = self.at.tabs[2]
-        plan_tab.text_input[0].input("Tpl1").run()
-        idx = _find_by_label(plan_tab.selectbox, "Training Type")
-        plan_tab.selectbox[idx].select("strength").run()
-        b_idx = _find_by_label(plan_tab.button, "Create Template")
-        plan_tab.button[b_idx].click().run()
+        tmpl_tab = next(t for t in self.at.tabs if t.label == "Templates")
+        tmpl_tab.text_input[0].input("Tpl1").run()
+        idx = _find_by_label(tmpl_tab.selectbox, "Training Type")
+        tmpl_tab.selectbox[idx].select("strength").run()
+        b_idx = _find_by_label(tmpl_tab.button, "Create Template")
+        tmpl_tab.button[b_idx].click().run()
         self.at.run()
-        plan_tab = self.at.tabs[2]
-        for exp in plan_tab.expander:
+        tmpl_tab = next(t for t in self.at.tabs if t.label == "Templates")
+        for exp in tmpl_tab.expander:
             if exp.label.startswith("Tpl1"):
                 exp.button[1].click().run()
                 break
