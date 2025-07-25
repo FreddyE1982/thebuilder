@@ -110,6 +110,30 @@ class StreamlitAppTest(unittest.TestCase):
         self.assertIsNotNone(end_time)
         conn.close()
 
+    def test_workout_search(self) -> None:
+        loc_idx = _find_by_label(
+            self.at.text_input,
+            "Location",
+            key="new_workout_location",
+        )
+        self.at.text_input[loc_idx].input("Home Workout").run()
+        new_idx = _find_by_label(
+            self.at.button,
+            "New Workout",
+            key="FormSubmitter:new_workout_form-New Workout",
+        )
+        self.at.button[new_idx].click().run()
+        self.at.text_input[loc_idx].input("Gym Workout").run()
+        self.at.button[new_idx].click().run()
+        exp_idx = _find_by_label(self.at.expander, "Existing Workouts")
+        ex_exp = self.at.expander[exp_idx]
+        s_idx = _find_by_label(ex_exp.text_input, "Search", key="workout_search")
+        ex_exp.text_input[s_idx].input("Gym").run()
+        self.at.run()
+        ex_exp = self.at.expander[exp_idx]
+        options = ex_exp.selectbox[0].options
+        self.assertEqual(options, ["2"])
+
     def test_jump_to_section_selectbox(self) -> None:
         idx = _find_by_label(
             self.at.selectbox, "Jump to Section", key="log_jump"
