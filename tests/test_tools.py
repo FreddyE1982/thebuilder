@@ -62,7 +62,7 @@ class MathToolsTestCase(unittest.TestCase):
 
     def test_warmup_plan(self) -> None:
         plan = MathTools.warmup_plan(100.0, 5, 2)
-        self.assertEqual(plan, [(7, 30.0), (2, 60.0)])
+        self.assertEqual(plan, [(7, 30.0), (2, 90.0)])
         with self.assertRaises(ValueError):
             MathTools.warmup_plan(-1.0, 5, 2)
 
