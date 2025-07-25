@@ -418,6 +418,14 @@ class StreamlitAppTest(unittest.TestCase):
             data = yaml.safe_load(f)
         self.assertEqual(data["theme"], "dark")
 
+    def test_help_header_button(self) -> None:
+        idx = _find_by_label(self.at.button, "Help", key="help_button_header")
+        self.at.button[idx].click().run()
+        help_text = any(
+            "Workout Logger Help" in m.body for m in self.at.markdown
+        )
+        self.assertTrue(help_text)
+
     def test_git_pull_button(self) -> None:
         self.at.query_params["tab"] = "settings"
         self.at.run()

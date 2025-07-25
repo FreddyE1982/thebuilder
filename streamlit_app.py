@@ -1316,6 +1316,8 @@ class GymApp:
             self.theme = new_theme
             self._apply_theme()
             st.rerun()
+        if st.button("Help", key="help_button_header"):
+            self._help_dialog()
         st.markdown("</div>", unsafe_allow_html=True)
         self._top_nav()
         self._close_header()
