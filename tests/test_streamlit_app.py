@@ -170,6 +170,16 @@ class StreamlitAppTest(unittest.TestCase):
         ex_tab = self.at.tabs[5]
         self.assertIn("Barbell Bench Press", ex_tab.selectbox[2].options)
 
+    def test_reset_buttons_present(self) -> None:
+        self.at.query_params["tab"] = "library"
+        self.at.run()
+        eq_tab = self.at.tabs[4]
+        idx_eq = _find_by_label(eq_tab.button, "Reset Filters", key="lib_eq_reset")
+        self.assertIsNotNone(idx_eq)
+        ex_tab = self.at.tabs[5]
+        idx_ex = _find_by_label(ex_tab.button, "Reset Filters", key="lib_ex_reset")
+        self.assertIsNotNone(idx_ex)
+
     def test_custom_exercise_and_logs(self) -> None:
         self.at.query_params["tab"] = "settings"
         self.at.run()

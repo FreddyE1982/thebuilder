@@ -1167,6 +1167,23 @@ class GymApp:
             st.session_state.scroll_to = self._slugify(choice)
             st.rerun()
 
+    def _reset_equipment_filters(self) -> None:
+        """Clear equipment library filter inputs."""
+        st.session_state.lib_eq_type = ""
+        st.session_state.lib_eq_prefix = ""
+        st.session_state.lib_eq_mus = []
+        if os.environ.get("TEST_MODE") != "1":
+            st.rerun()
+
+    def _reset_exercise_filters(self) -> None:
+        """Clear exercise library filter inputs."""
+        st.session_state.lib_ex_groups = []
+        st.session_state.lib_ex_mus = []
+        st.session_state.lib_ex_eq = ""
+        st.session_state.lib_ex_prefix = ""
+        if os.environ.get("TEST_MODE") != "1":
+            st.rerun()
+
     def _help_dialog(self) -> None:
         def _content() -> None:
             st.markdown("## Workout Logger Help")
@@ -2744,6 +2761,8 @@ class GymApp:
                 sel_type = st.selectbox("Type", types, key="lib_eq_type")
                 prefix = st.text_input("Name Contains", key="lib_eq_prefix")
                 mus_filter = st.multiselect("Muscles", muscles, key="lib_eq_mus")
+                if st.button("Reset Filters", key="lib_eq_reset"):
+                    self._reset_equipment_filters()
             names = self.equipment.fetch_names(
                 sel_type or None,
                 prefix or None,
@@ -2769,6 +2788,8 @@ class GymApp:
                 sel_type = st.selectbox("Type", types, key="lib_eq_type")
                 prefix = st.text_input("Name Contains", key="lib_eq_prefix")
                 mus_filter = st.multiselect("Muscles", muscles, key="lib_eq_mus")
+                if st.button("Reset Filters", key="lib_eq_reset"):
+                    self._reset_equipment_filters()
             names = self.equipment.fetch_names(
                 sel_type or None,
                 prefix or None,
@@ -2824,6 +2845,8 @@ class GymApp:
             eq_names = self.equipment.fetch_names()
             sel_eq = st.selectbox("Equipment", [""] + eq_names, key="lib_ex_eq")
             name_filter = st.text_input("Name Contains", key="lib_ex_prefix")
+            if st.button("Reset Filters", key="lib_ex_reset"):
+                self._reset_exercise_filters()
             names = self.exercise_catalog.fetch_names(
                 sel_groups or None,
                 sel_mus or None,
@@ -2878,6 +2901,8 @@ class GymApp:
                     eq_names = self.equipment.fetch_names()
                     sel_eq = st.selectbox("Equipment", [""] + eq_names, key="lib_ex_eq")
                     name_filter = st.text_input("Name Contains", key="lib_ex_prefix")
+                    if st.button("Reset Filters", key="lib_ex_reset"):
+                        self._reset_exercise_filters()
             names = self.exercise_catalog.fetch_names(
                 sel_groups or None,
                 sel_mus or None,
