@@ -2747,11 +2747,38 @@ class GymApp:
 
     def _library_tab(self) -> None:
         st.header("Library")
-        eq_tab, ex_tab = st.tabs(["Equipment", "Exercises"])
+        fav_tab, eq_tab, ex_tab = st.tabs([
+            "Favorites",
+            "Equipment",
+            "Exercises",
+        ])
+        with fav_tab:
+            self._favorites_library()
         with eq_tab:
             self._equipment_library()
         with ex_tab:
             self._exercise_catalog_library()
+
+    def _favorites_library(self) -> None:
+        st.header("Favorite Exercises")
+        favs = self.favorites_repo.fetch_all()
+        if favs:
+            for f in favs:
+                cols = st.columns(2)
+                cols[0].write(f)
+                if cols[1].button("Remove", key=f"fav_rm_{f}"):
+                    self.favorites_repo.remove(f)
+                    st.rerun()
+        else:
+            st.write("No favorites.")
+        add_choice = st.selectbox(
+            "Add Favorite",
+            [""] + self.exercise_names_repo.fetch_all(),
+            key="fav_add_name",
+        )
+        if st.button("Add Favorite", key="fav_add_btn") and add_choice:
+            self.favorites_repo.add(add_choice)
+            st.rerun()
 
     def _equipment_library(self) -> None:
         muscles = self.muscles_repo.fetch_all()
@@ -2820,25 +2847,6 @@ class GymApp:
             ),
         )
         self.settings_repo.set_bool("hide_preconfigured_exercises", hide_pre)
-        favs = self.favorites_repo.fetch_all()
-        with st.expander("Favorite Exercises", expanded=True):
-            if favs:
-                for f in favs:
-                    cols = st.columns(2)
-                    cols[0].write(f)
-                    if cols[1].button("Remove", key=f"fav_rm_{f}"):
-                        self.favorites_repo.remove(f)
-                        st.rerun()
-            else:
-                st.write("No favorites.")
-            add_choice = st.selectbox(
-                "Add Favorite",
-                [""] + self.exercise_names_repo.fetch_all(),
-                key="fav_add_name",
-            )
-            if st.button("Add Favorite", key="fav_add_btn") and add_choice:
-                self.favorites_repo.add(add_choice)
-                st.rerun()
         if st.session_state.is_mobile:
             sel_groups = st.multiselect("Muscle Groups", groups, key="lib_ex_groups")
             sel_mus = st.multiselect("Muscles", muscles, key="lib_ex_mus")
