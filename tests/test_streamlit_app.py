@@ -110,6 +110,12 @@ class StreamlitAppTest(unittest.TestCase):
         self.assertIsNotNone(end_time)
         conn.close()
 
+    def test_no_workouts_message(self) -> None:
+        exp_idx = _find_by_label(self.at.expander, "Existing Workouts")
+        exp = self.at.expander[exp_idx]
+        texts = [i.body for i in getattr(exp, "info", [])]
+        self.assertIn("No workouts found.", texts)
+
     def test_workout_search(self) -> None:
         loc_idx = _find_by_label(
             self.at.text_input,
