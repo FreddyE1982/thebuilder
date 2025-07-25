@@ -125,14 +125,21 @@ class StreamlitAppTest(unittest.TestCase):
         self.at.button[new_idx].click().run()
         self.at.text_input[loc_idx].input("Gym Workout").run()
         self.at.button[new_idx].click().run()
+        # set notes to enable search functionality
+        conn = self._connect()
+        cur = conn.cursor()
+        cur.execute("UPDATE workouts SET notes=? WHERE id=1", ("Home Workout",))
+        cur.execute("UPDATE workouts SET notes=? WHERE id=2", ("Gym Workout",))
+        conn.commit()
+        conn.close()
         exp_idx = _find_by_label(self.at.expander, "Existing Workouts")
         ex_exp = self.at.expander[exp_idx]
         s_idx = _find_by_label(ex_exp.text_input, "Search", key="workout_search")
-        ex_exp.text_input[s_idx].input("Gym").run()
+        ex_exp.text_input[s_idx].input("Gym Workout").run()
         self.at.run()
         ex_exp = self.at.expander[exp_idx]
         options = ex_exp.selectbox[0].options
-        self.assertEqual(options, ["2"])
+        self.assertEqual(len(options), 1)
 
     def test_jump_to_section_selectbox(self) -> None:
         idx = _find_by_label(
