@@ -1089,6 +1089,21 @@ class GymApp:
                 self._help_dialog()
             if st.button("Show About", key="about_btn"):
                 self._about_dialog()
+        with st.sidebar.expander("Quick Search"):
+            query = st.text_input("Search", key="sidebar_search")
+            if st.button("Search", key="sidebar_search_btn"):
+                st.session_state.sidebar_search_results = (
+                    self.workouts.search(query) if query else []
+                )
+            results = st.session_state.get("sidebar_search_results", [])
+            if results:
+                options = {f"{wid} - {date}": wid for wid, date in results}
+                choice = st.selectbox(
+                    "Results", list(options.keys()), key="sidebar_search_sel"
+                )
+                if st.button("Open", key="sidebar_search_open"):
+                    st.session_state.selected_workout = options[choice]
+                    self._switch_tab("workouts")
 
     def _render_nav(self, container_class: str) -> None:
         """Render navigation bar using LayoutManager."""

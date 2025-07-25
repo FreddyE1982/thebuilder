@@ -751,6 +751,15 @@ class WorkoutRepository(BaseRepository):
             (note, workout_id),
         )
 
+    def search(self, query: str) -> list[tuple[int, str]]:
+        """Return workouts where notes or location match the query."""
+        like = f"%{query.lower()}%"
+        rows = self.fetch_all(
+            "SELECT id, date FROM workouts WHERE lower(notes) LIKE ? OR lower(location) LIKE ? ORDER BY id DESC;",
+            (like, like),
+        )
+        return [(wid, date) for wid, date in rows]
+
     def delete_all(self) -> None:
         self._delete_all("workouts")
 

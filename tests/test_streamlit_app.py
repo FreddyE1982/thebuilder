@@ -769,6 +769,24 @@ class StreamlitAdditionalGUITest(unittest.TestCase):
         self.assertEqual(cur.fetchone()[0], 1)
         conn.close()
 
+    def test_sidebar_quick_search(self) -> None:
+        idx_new = _find_by_label(
+            self.at.button,
+            "New Workout",
+            key="FormSubmitter:new_workout_form-New Workout",
+        )
+        self.at.button[idx_new].click().run()
+        self.at.button[idx_new].click().run()
+        conn = self._connect()
+        cur = conn.cursor()
+        cur.execute("UPDATE workouts SET notes='Home' WHERE id=1")
+        cur.execute("UPDATE workouts SET notes='Gym' WHERE id=2")
+        conn.commit()
+        conn.close()
+        exp_idx = _find_by_label(self.at.sidebar.expander, "Quick Search")
+        exp = self.at.sidebar.expander[exp_idx]
+        self.assertEqual(exp.button[0].label, "Search")
+
 
 class StreamlitTemplateWorkflowTest(unittest.TestCase):
     def setUp(self) -> None:
