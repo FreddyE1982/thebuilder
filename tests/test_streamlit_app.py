@@ -104,10 +104,18 @@ class StreamlitAppTest(unittest.TestCase):
         self.assertIsNotNone(end_time)
         conn.close()
 
+    def test_jump_to_section_selectbox(self) -> None:
+        idx = _find_by_label(
+            self.at.selectbox, "Jump to Section", key="log_jump"
+        )
+        options = self.at.selectbox[idx].options
+        self.assertIn("Workouts", options)
+
     def test_plan_to_workout(self) -> None:
         idx_date = _find_by_label(self.at.date_input, "Plan Date", key="plan_date")
         self.at.date_input[idx_date].set_value("2024-01-02").run()
-        self.at.selectbox[0].select("strength").run()
+        idx_type = _find_by_label(self.at.selectbox, "Training Type")
+        self.at.selectbox[idx_type].select("strength").run()
         idx = _find_by_label(
             self.at.button,
             "New Planned Workout",

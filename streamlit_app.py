@@ -1119,10 +1119,17 @@ class GymApp:
 
         _dlg()
 
+    def _slugify(self, text: str) -> str:
+        """Create a safe slug from a section title."""
+        return text.lower().replace(" ", "_")
+
     @contextmanager
     def _section(self, title: str) -> Generator[None, None, None]:
-        """Context manager for a styled section."""
-        st.markdown("<div class='section-wrapper'>", unsafe_allow_html=True)
+        """Context manager for a styled section with an id for navigation."""
+        ident = self._slugify(title)
+        st.markdown(
+            f"<div id='{ident}' class='section-wrapper'>", unsafe_allow_html=True
+        )
         st.header(title)
         try:
             yield
@@ -1152,6 +1159,13 @@ class GymApp:
     def _close_content(self) -> None:
         """End main content container."""
         self.layout.close_content()
+
+    def _jump_to_section(self, sections: list[str], key: str) -> None:
+        """Provide a select box to quickly jump to a section."""
+        choice = st.selectbox("Jump to Section", [""] + sections, key=key)
+        if choice:
+            st.session_state.scroll_to = self._slugify(choice)
+            st.rerun()
 
     def _help_dialog(self) -> None:
         def _content() -> None:
@@ -1422,6 +1436,10 @@ class GymApp:
                 if selected and st.button("Use Plan"):
                     new_id = self.planner.create_workout_from_plan(int(selected))
                     st.session_state.selected_workout = new_id
+        sections = ["Workouts"]
+        if st.session_state.selected_workout:
+            sections.append("Exercises")
+        self._jump_to_section(sections, "log_jump")
         self._workout_section()
         if st.session_state.selected_workout:
             self._exercise_section()
