@@ -7,6 +7,7 @@ import streamlit.components.v1 as components
 import altair as alt
 from altair.utils.deprecation import AltairDeprecationWarning
 import warnings
+
 warnings.filterwarnings("ignore", category=AltairDeprecationWarning)
 from db import (
     WorkoutRepository,
@@ -160,11 +161,13 @@ class GymApp:
                     alt.themes.enable = _noop_theme
         self.settings_repo = SettingsRepository(db_path, yaml_path)
         self.theme = self.settings_repo.get_text("theme", "light")
-        self.training_options = sorted([
-            "strength",
-            "hypertrophy",
-            "highintensity",
-        ])
+        self.training_options = sorted(
+            [
+                "strength",
+                "hypertrophy",
+                "highintensity",
+            ]
+        )
         self._configure_page()
         self._inject_responsive_css()
         self._apply_theme()
@@ -212,9 +215,15 @@ class GymApp:
             self.ml_logs,
             self.ml_status,
         )
-        self.volume_model = VolumeModelService(self.ml_models, status_repo=self.ml_status)
-        self.readiness_model = ReadinessModelService(self.ml_models, status_repo=self.ml_status)
-        self.progress_model = ProgressModelService(self.ml_models, status_repo=self.ml_status)
+        self.volume_model = VolumeModelService(
+            self.ml_models, status_repo=self.ml_status
+        )
+        self.readiness_model = ReadinessModelService(
+            self.ml_models, status_repo=self.ml_status
+        )
+        self.progress_model = ProgressModelService(
+            self.ml_models, status_repo=self.ml_status
+        )
         self.goal_model = RLGoalModelService(self.ml_models, status_repo=self.ml_status)
         self.recommender = RecommendationService(
             self.workouts,
@@ -968,6 +977,21 @@ class GymApp:
                 cursor: pointer;
                 z-index: 1000;
             }
+            .fab-container {
+                position: fixed;
+                right: 0.75rem;
+                bottom: calc(var(--safe-bottom) + 7rem);
+                z-index: 1000;
+            }
+            .fab-container button {
+                width: 3rem;
+                height: 3rem;
+                border: none;
+                border-radius: 50%;
+                background: var(--accent-color);
+                color: #ffffff;
+                font-size: 1.5rem;
+            }
             .set-row {
                 padding: 0.5rem;
                 border-radius: 0.25rem;
@@ -987,6 +1011,9 @@ class GymApp:
             @media screen and (min-width: 769px) {
                 .scroll-top {
                     bottom: 1rem;
+                }
+                .fab-container {
+                    bottom: 2rem;
                 }
             }
             </style>
@@ -1075,6 +1102,15 @@ class GymApp:
 
     def _scroll_top_button(self) -> None:
         self.layout.scroll_top_button()
+
+    def _quick_workout_button(self) -> None:
+        """Display floating button to quickly add a workout."""
+        st.markdown("<div class='fab-container'>", unsafe_allow_html=True)
+        if st.button("➕", key="quick_workout_btn"):
+            st.session_state.open_quick_workout = True
+        st.markdown("</div>", unsafe_allow_html=True)
+        if st.session_state.get("open_quick_workout"):
+            self._new_workout_dialog()
 
     def _top_nav(self) -> None:
         """Render top navigation on desktop."""
@@ -1210,6 +1246,35 @@ class GymApp:
             st.button("Close")
 
         self._show_dialog("About", _content)
+
+    def _close_quick_workout(self) -> None:
+        st.session_state.open_quick_workout = False
+
+    def _new_workout_dialog(self) -> None:
+        def _content() -> None:
+            with st.form("quick_workout_form"):
+                new_type = st.selectbox(
+                    "Training Type",
+                    self.training_options,
+                    index=self.training_options.index("strength"),
+                    key="quick_workout_type",
+                )
+                new_loc = st.text_input("Location", key="quick_workout_loc")
+                submitted = st.form_submit_button("Create")
+                if submitted:
+                    wid = self.workouts.create(
+                        datetime.date.today().isoformat(),
+                        new_type,
+                        None,
+                        new_loc or None,
+                        None,
+                    )
+                    st.session_state.selected_workout = wid
+                    st.session_state.open_quick_workout = False
+                    st.rerun()
+            st.button("Close", on_click=self._close_quick_workout)
+
+        self._show_dialog("Quick New Workout", _content)
 
     def _dashboard_tab(self) -> None:
         with self._section("Dashboard"):
@@ -1432,6 +1497,7 @@ class GymApp:
         with settings_tab:
             self._settings_tab()
         self._close_content()
+        self._quick_workout_button()
         self._bottom_nav()
         self._end_page()
         target = st.session_state.pop("scroll_to", None)
@@ -1439,9 +1505,7 @@ class GymApp:
             self.layout.scroll_to(target)
 
     def _log_tab(self) -> None:
-        plans = sorted(
-            self.planned_workouts.fetch_all(), key=lambda p: p[1]
-        )
+        plans = sorted(self.planned_workouts.fetch_all(), key=lambda p: p[1])
         options = {str(p[0]): p for p in plans}
         if options:
             with st.expander("Use Planned Workout", expanded=False):
@@ -1468,9 +1532,7 @@ class GymApp:
                 "Plan Date", datetime.date.today(), key="ai_plan_date"
             )
             names = self.exercise_catalog.fetch_names(None, None, None, None)
-            ex_sel = st.multiselect(
-                "Exercises", names, key="ai_plan_exercises"
-            )
+            ex_sel = st.multiselect("Exercises", names, key="ai_plan_exercises")
             ai_type = st.selectbox(
                 "Training Type",
                 self.training_options,
@@ -1544,14 +1606,10 @@ class GymApp:
                 if st.button("Reset Search", key="workout_search_reset"):
                     st.session_state.workout_search = ""
                     st.rerun()
-            workouts = sorted(
-                self.workouts.fetch_all_workouts(), key=lambda w: w[1]
-            )
+            workouts = sorted(self.workouts.fetch_all_workouts(), key=lambda w: w[1])
             if search:
                 query = search.lower()
-                workouts = [
-                    w for w in workouts if query in (w[5] or "").lower()
-                ]
+                workouts = [w for w in workouts if query in (w[5] or "").lower()]
             options = {str(w[0]): w for w in workouts}
             if options:
                 selected = st.selectbox(
@@ -1697,9 +1755,7 @@ class GymApp:
 
     def _existing_plan_form(self) -> None:
         with st.expander("Existing Plans", expanded=True):
-            plans = sorted(
-                self.planned_workouts.fetch_all(), key=lambda x: x[1]
-            )
+            plans = sorted(self.planned_workouts.fetch_all(), key=lambda x: x[1])
             options = {str(p[0]): p for p in plans}
             if options:
                 selected = st.selectbox(
@@ -1860,7 +1916,9 @@ class GymApp:
                 rpe_val = st.session_state.get(f"new_rpe_{exercise_id}", 0)
                 note_val = st.session_state.get(f"new_note_{exercise_id}", "")
                 dur_val = st.session_state.get(f"new_duration_{exercise_id}", 0.0)
-                self._submit_set(exercise_id, reps_val, weight_val, rpe_val, note_val, dur_val)
+                self._submit_set(
+                    exercise_id, reps_val, weight_val, rpe_val, note_val, dur_val
+                )
             if equipment:
                 muscles = self.equipment.fetch_muscles(equipment)
                 st.markdown("**Muscles:**")
@@ -1884,13 +1942,24 @@ class GymApp:
                         self.exercises.update_name(exercise_id, v)
                         st.rerun()
             with st.expander("Sets", expanded=True):
-                for idx, (set_id, reps, weight, rpe, start_time, end_time, warm) in enumerate(sets, start=1):
+                for idx, (
+                    set_id,
+                    reps,
+                    weight,
+                    rpe,
+                    start_time,
+                    end_time,
+                    warm,
+                ) in enumerate(sets, start=1):
                     detail = self.sets.fetch_detail(set_id)
                     registered = start_time is not None and end_time is not None
                     row_class = "set-registered" if registered else "set-unregistered"
                     if st.session_state.is_mobile:
                         with st.expander(f"Set {idx}"):
-                            st.markdown(f"<div class='set-row {row_class}'>", unsafe_allow_html=True)
+                            st.markdown(
+                                f"<div class='set-row {row_class}'>",
+                                unsafe_allow_html=True,
+                            )
                             reps_val = st.number_input(
                                 "Reps",
                                 min_value=1,
@@ -1952,13 +2021,17 @@ class GymApp:
                             if start_col.button("Start", key=f"start_set_{set_id}"):
                                 self.sets.set_start_time(
                                     set_id,
-                                    datetime.datetime.now().isoformat(timespec="seconds"),
+                                    datetime.datetime.now().isoformat(
+                                        timespec="seconds"
+                                    ),
                                 )
                                 st.rerun()
                             if finish_col.button("Finish", key=f"finish_set_{set_id}"):
                                 self.sets.set_end_time(
                                     set_id,
-                                    datetime.datetime.now().isoformat(timespec="seconds"),
+                                    datetime.datetime.now().isoformat(
+                                        timespec="seconds"
+                                    ),
                                 )
                                 st.rerun()
                             del_col, _ = st.columns(2)
@@ -1970,10 +2043,15 @@ class GymApp:
                             if end_time:
                                 st.write(end_time)
                             if registered:
-                                st.markdown("<div class='set-status'>registered</div>", unsafe_allow_html=True)
+                                st.markdown(
+                                    "<div class='set-status'>registered</div>",
+                                    unsafe_allow_html=True,
+                                )
                             st.markdown("</div>", unsafe_allow_html=True)
                     else:
-                        st.markdown(f"<div class='set-row {row_class}'>", unsafe_allow_html=True)
+                        st.markdown(
+                            f"<div class='set-row {row_class}'>", unsafe_allow_html=True
+                        )
                         cols = st.columns(14)
                         with cols[0]:
                             st.write(f"Set {idx}")
@@ -2054,7 +2132,10 @@ class GymApp:
                         if end_time:
                             cols[11].write(end_time)
                         if registered:
-                            cols[13].markdown("<div class='set-status'>registered</div>", unsafe_allow_html=True)
+                            cols[13].markdown(
+                                "<div class='set-status'>registered</div>",
+                                unsafe_allow_html=True,
+                            )
                         st.markdown("</div>", unsafe_allow_html=True)
             hist = self.stats.exercise_history(name)
             if hist:
@@ -2078,7 +2159,9 @@ class GymApp:
                         self.recommender.recommend_next_set(exercise_id)
                     except ValueError as e:
                         st.warning(str(e))
-            st.markdown(f"<div id='ex_{exercise_id}_sets'></div>", unsafe_allow_html=True)
+            st.markdown(
+                f"<div id='ex_{exercise_id}_sets'></div>", unsafe_allow_html=True
+            )
             with st.expander(
                 "Add Set",
                 expanded=st.session_state.pop(f"open_add_set_{exercise_id}", False),
@@ -2154,13 +2237,20 @@ class GymApp:
     def _warmup_plan_dialog(self, exercise_id: int) -> None:
         def _content() -> None:
             tgt = st.number_input(
-                "Target Weight (kg)", min_value=0.0, step=0.5, key=f"plan_tgt_{exercise_id}"
+                "Target Weight (kg)",
+                min_value=0.0,
+                step=0.5,
+                key=f"plan_tgt_{exercise_id}",
             )
             reps = st.number_input(
                 "Target Reps", min_value=1, step=1, key=f"plan_reps_{exercise_id}"
             )
             count = st.number_input(
-                "Warmup Sets", min_value=1, step=1, value=3, key=f"plan_cnt_{exercise_id}"
+                "Warmup Sets",
+                min_value=1,
+                step=1,
+                value=3,
+                key=f"plan_cnt_{exercise_id}",
             )
             if st.button("Add", key=f"plan_add_{exercise_id}"):
                 try:
@@ -2171,7 +2261,11 @@ class GymApp:
                     st.success(f"Added {len(plan)} sets")
                 except ValueError as e:
                     st.warning(str(e))
-                for key in [f"plan_tgt_{exercise_id}", f"plan_reps_{exercise_id}", f"plan_cnt_{exercise_id}"]:
+                for key in [
+                    f"plan_tgt_{exercise_id}",
+                    f"plan_reps_{exercise_id}",
+                    f"plan_cnt_{exercise_id}",
+                ]:
                     st.session_state.pop(key, None)
             st.button("Close", key=f"plan_close_{exercise_id}")
 
@@ -2266,7 +2360,9 @@ class GymApp:
         reps_val = st.session_state.get(f"tmpl_reps_{set_id}")
         weight_val = st.session_state.get(f"tmpl_w_{set_id}")
         rpe_val = st.session_state.get(f"tmpl_rpe_{set_id}")
-        self.template_sets.update(set_id, int(reps_val), float(weight_val), int(rpe_val))
+        self.template_sets.update(
+            set_id, int(reps_val), float(weight_val), int(rpe_val)
+        )
         st.rerun()
 
     def _update_equipment(self, original: str) -> None:
@@ -2770,11 +2866,13 @@ class GymApp:
 
     def _library_tab(self) -> None:
         st.header("Library")
-        fav_tab, eq_tab, ex_tab = st.tabs([
-            "Favorites",
-            "Equipment",
-            "Exercises",
-        ])
+        fav_tab, eq_tab, ex_tab = st.tabs(
+            [
+                "Favorites",
+                "Equipment",
+                "Exercises",
+            ]
+        )
         with fav_tab:
             self._favorites_library()
         with eq_tab:
@@ -2865,9 +2963,7 @@ class GymApp:
         muscles = self.muscles_repo.fetch_all()
         hide_pre = st.checkbox(
             "Hide Preconfigured Exercises",
-            value=self.settings_repo.get_bool(
-                "hide_preconfigured_exercises", False
-            ),
+            value=self.settings_repo.get_bool("hide_preconfigured_exercises", False),
         )
         self.settings_repo.set_bool("hide_preconfigured_exercises", hide_pre)
         if st.session_state.is_mobile:
@@ -3000,21 +3096,15 @@ class GymApp:
                 group = st.selectbox("Muscle Group", groups, key="cust_ex_group")
                 name = st.text_input("Exercise Name", key="cust_ex_name")
                 variants = st.text_input("Variants", key="cust_ex_variants")
-                eq_sel = st.multiselect(
-                    "Equipment", equipment_names, key="cust_ex_eq"
-                )
+                eq_sel = st.multiselect("Equipment", equipment_names, key="cust_ex_eq")
                 match_muscles = st.checkbox(
                     "Muscles Like Equipment", key="cust_ex_match"
                 )
                 primary_sel = st.selectbox(
                     "Primary Muscle", muscles, key="cust_ex_primary"
                 )
-                secondary_sel = st.multiselect(
-                    "Secondary", muscles, key="cust_ex_sec"
-                )
-                tertiary_sel = st.multiselect(
-                    "Tertiary", muscles, key="cust_ex_ter"
-                )
+                secondary_sel = st.multiselect("Secondary", muscles, key="cust_ex_sec")
+                tertiary_sel = st.multiselect("Tertiary", muscles, key="cust_ex_ter")
                 other_sel = st.multiselect("Other", muscles, key="cust_ex_other")
                 if st.button("Add Exercise", key="cust_ex_add"):
                     if name:
@@ -3087,15 +3177,22 @@ class GymApp:
                             "Other", other, key=f"cust_oth_{name}"
                         )
                         with st.expander("Variants", expanded=False):
-                            current_vars = self.exercise_variants_repo.fetch_variants(name)
+                            current_vars = self.exercise_variants_repo.fetch_variants(
+                                name
+                            )
                             for v in current_vars:
                                 c1, c2 = st.columns(2)
                                 c1.write(v)
                                 if c2.button("Unlink", key=f"unlink_var_{name}_{v}"):
                                     self.exercise_variants_repo.unlink(name, v)
                                     st.rerun()
-                            add_v = st.selectbox("Add Variant", [""] + names, key=f"add_var_{name}")
-                            if st.button("Add Variant", key=f"add_var_btn_{name}") and add_v:
+                            add_v = st.selectbox(
+                                "Add Variant", [""] + names, key=f"add_var_{name}"
+                            )
+                            if (
+                                st.button("Add Variant", key=f"add_var_btn_{name}")
+                                and add_v
+                            ):
                                 self.exercise_variants_repo.link(name, add_v)
                                 st.rerun()
                         cols = st.columns(2)
@@ -3127,21 +3224,15 @@ class GymApp:
                 group = st.selectbox("Muscle Group", groups, key="cust_ex_group")
                 name = st.text_input("Exercise Name", key="cust_ex_name")
                 variants = st.text_input("Variants", key="cust_ex_variants")
-                eq_sel = st.multiselect(
-                    "Equipment", equipment_names, key="cust_ex_eq"
-                )
+                eq_sel = st.multiselect("Equipment", equipment_names, key="cust_ex_eq")
                 match_muscles = st.checkbox(
                     "Muscles Like Equipment", key="cust_ex_match"
                 )
                 primary_sel = st.selectbox(
                     "Primary Muscle", muscles, key="cust_ex_primary"
                 )
-                secondary_sel = st.multiselect(
-                    "Secondary", muscles, key="cust_ex_sec"
-                )
-                tertiary_sel = st.multiselect(
-                    "Tertiary", muscles, key="cust_ex_ter"
-                )
+                secondary_sel = st.multiselect("Secondary", muscles, key="cust_ex_sec")
+                tertiary_sel = st.multiselect("Tertiary", muscles, key="cust_ex_ter")
                 other_sel = st.multiselect("Other", muscles, key="cust_ex_other")
                 if st.button("Add Exercise", key="cust_ex_add"):
                     if name:
@@ -3214,15 +3305,22 @@ class GymApp:
                             "Other", other, key=f"cust_oth_{name}"
                         )
                         with st.expander("Variants", expanded=False):
-                            current_vars = self.exercise_variants_repo.fetch_variants(name)
+                            current_vars = self.exercise_variants_repo.fetch_variants(
+                                name
+                            )
                             for v in current_vars:
                                 c1, c2 = st.columns(2)
                                 c1.write(v)
                                 if c2.button("Unlink", key=f"unlink_var_{name}_{v}"):
                                     self.exercise_variants_repo.unlink(name, v)
                                     st.rerun()
-                            add_v = st.selectbox("Add Variant", [""] + names, key=f"add_var_{name}")
-                            if st.button("Add Variant", key=f"add_var_btn_{name}") and add_v:
+                            add_v = st.selectbox(
+                                "Add Variant", [""] + names, key=f"add_var_{name}"
+                            )
+                            if (
+                                st.button("Add Variant", key=f"add_var_btn_{name}")
+                                and add_v
+                            ):
                                 self.exercise_variants_repo.link(name, add_v)
                                 st.rerun()
                         cols = st.columns(2)
@@ -3268,9 +3366,7 @@ class GymApp:
                 st.write("No favorites.")
             all_workouts = {
                 str(w[0]): w[1]
-                for w in sorted(
-                    self.workouts.fetch_all_workouts(), key=lambda r: r[1]
-                )
+                for w in sorted(self.workouts.fetch_all_workouts(), key=lambda r: r[1])
             }
             add_choice = st.selectbox(
                 "Add Favorite",
@@ -3299,7 +3395,7 @@ class GymApp:
                 st.session_state.hist_type = ""
                 st.session_state.hist_tags = []
                 st.rerun()
-            hist_types = ["" ] + self.training_options
+            hist_types = [""] + self.training_options
             ttype = st.selectbox(
                 "Training Type",
                 hist_types,
@@ -4368,10 +4464,18 @@ class GymApp:
                         musc_list = muscles.split("|")
                         if is_custom:
                             edit_name = st.text_input(
-                                "Name", name, key=f"edit_name_{name}", on_change=self._update_equipment, args=(name,)
+                                "Name",
+                                name,
+                                key=f"edit_name_{name}",
+                                on_change=self._update_equipment,
+                                args=(name,),
                             )
                             edit_type = st.text_input(
-                                "Type", eq_type, key=f"edit_type_{name}", on_change=self._update_equipment, args=(name,)
+                                "Type",
+                                eq_type,
+                                key=f"edit_type_{name}",
+                                on_change=self._update_equipment,
+                                args=(name,),
                             )
                             edit_muscles = st.multiselect(
                                 "Muscles",
@@ -4446,8 +4550,10 @@ class GymApp:
                     with gexp:
                         new_name = st.text_input("Name", g, key=f"grp_name_{g}")
                         sel = st.multiselect(
-                            "Muscles", muscles, self.muscle_groups_repo.fetch_muscles(g),
-                            key=f"grp_mus_{g}"
+                            "Muscles",
+                            muscles,
+                            self.muscle_groups_repo.fetch_muscles(g),
+                            key=f"grp_mus_{g}",
                         )
                         if st.button("Update", key=f"grp_up_{g}"):
                             try:
