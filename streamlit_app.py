@@ -1537,10 +1537,13 @@ class GymApp:
 
     def _existing_workout_form(self, training_options: list[str]) -> None:
         with st.expander("Existing Workouts", expanded=True):
-            search = st.text_input("Search", key="workout_search")
-            if st.button("Reset Search", key="workout_search_reset"):
-                st.session_state.workout_search = ""
-                st.rerun()
+            c1, c2 = st.columns([3, 1])
+            with c1:
+                search = st.text_input("Search", key="workout_search")
+            with c2:
+                if st.button("Reset Search", key="workout_search_reset"):
+                    st.session_state.workout_search = ""
+                    st.rerun()
             workouts = sorted(
                 self.workouts.fetch_all_workouts(), key=lambda w: w[1]
             )
@@ -1657,6 +1660,8 @@ class GymApp:
                 )
                 if st.button("Delete Workout", key=f"del_workout_{selected}"):
                     self._confirm_delete_workout(int(selected))
+            else:
+                st.info("No workouts found.")
 
     def _planned_workout_section(self) -> None:
         with self._section("Planned Workouts"):
