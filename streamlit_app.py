@@ -841,6 +841,16 @@ class GymApp:
                 padding: 0.5rem;
                 box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             }
+            .badge {
+                display: inline-block;
+                padding: 0.1rem 0.4rem;
+                border-radius: 0.25rem;
+                color: #fff;
+                font-size: 0.75rem;
+            }
+            .badge.success { background: #4caf50; }
+            .badge.error { background: #e74c3c; }
+            .badge.warning { background: #f1c40f; }
             .metric-grid::-webkit-scrollbar {
                 display: none;
             }
@@ -1509,6 +1519,7 @@ class GymApp:
                     stats_sub,
                     insights_sub,
                     weight_sub,
+                    well_sub,
                     rep_sub,
                     risk_sub,
                     game_sub,
@@ -1522,6 +1533,7 @@ class GymApp:
                         "Exercise Stats",
                         "Insights",
                         "Body Weight",
+                        "Wellness Logs",
                         "Reports",
                         "Risk",
                         "Gamification",
@@ -1541,6 +1553,8 @@ class GymApp:
                     self._insights_tab()
                 with weight_sub:
                     self._weight_tab()
+                with well_sub:
+                    self._wellness_tab()
                 with rep_sub:
                     self._reports_tab()
                 with risk_sub:
@@ -3818,6 +3832,98 @@ class GymApp:
                         [str(f["day"]) for f in forecast],
                     )
 
+    def _wellness_tab(self) -> None:
+        st.header("Wellness Logs")
+        with st.expander("Add Entry"):
+            w_date = st.date_input(
+                "Date",
+                datetime.date.today(),
+                key="well_date",
+            )
+            calories = st.number_input(
+                "Calories", min_value=0.0, step=50.0, key="well_calories"
+            )
+            sleep_h = st.number_input(
+                "Sleep Hours", min_value=0.0, step=0.5, key="well_sleep"
+            )
+            sleep_q = st.number_input(
+                "Sleep Quality",
+                min_value=0.0,
+                max_value=5.0,
+                step=1.0,
+                key="well_quality",
+            )
+            stress = st.number_input(
+                "Stress Level", min_value=0, max_value=10, step=1, key="well_stress"
+            )
+            if st.button("Log Wellness", key="well_add"):
+                try:
+                    self.wellness_repo.log(
+                        w_date.isoformat(),
+                        calories,
+                        sleep_h,
+                        sleep_q,
+                        int(stress),
+                    )
+                    st.success("Logged")
+                except ValueError as e:
+                    st.warning(str(e))
+
+        with st.expander("History", expanded=True):
+            rows = self.wellness_repo.fetch_history()
+            for rid, d, cal, sh, sq, st_lvl in rows:
+                exp = st.expander(f"{d}")
+                with exp:
+                    date_e = st.date_input(
+                        "Date",
+                        datetime.date.fromisoformat(d),
+                        key=f"well_edit_date_{rid}",
+                    )
+                    cal_e = st.number_input(
+                        "Calories",
+                        value=cal or 0.0,
+                        step=50.0,
+                        key=f"well_edit_cal_{rid}",
+                    )
+                    sh_e = st.number_input(
+                        "Sleep Hours",
+                        value=sh or 0.0,
+                        step=0.5,
+                        key=f"well_edit_sleep_{rid}",
+                    )
+                    sq_e = st.number_input(
+                        "Sleep Quality",
+                        value=sq or 0.0,
+                        step=1.0,
+                        key=f"well_edit_quality_{rid}",
+                    )
+                    st_e = st.number_input(
+                        "Stress Level",
+                        value=st_lvl or 0,
+                        step=1,
+                        key=f"well_edit_stress_{rid}",
+                    )
+                    cols = st.columns(2)
+                    if cols[0].button("Update", key=f"well_upd_{rid}"):
+                        try:
+                            self.wellness_repo.update(
+                                rid,
+                                date_e.isoformat(),
+                                cal_e,
+                                sh_e,
+                                sq_e,
+                                int(st_e),
+                            )
+                            st.success("Updated")
+                        except ValueError as e:
+                            st.warning(str(e))
+                    if cols[1].button("Delete", key=f"well_del_{rid}"):
+                        try:
+                            self.wellness_repo.delete(rid)
+                            st.success("Deleted")
+                        except ValueError as e:
+                            st.warning(str(e))
+
     def _reports_tab(self) -> None:
         st.header("Reports")
         with st.expander("Date Range", expanded=True):
@@ -4333,7 +4439,6 @@ class GymApp:
             ex_tab,
             cust_tab,
             bw_tab,
-            well_tab,
             hr_tab,
             tag_tab,
             auto_tab,
@@ -4345,7 +4450,6 @@ class GymApp:
                 "Exercise Aliases",
                 "Exercise Management",
                 "Body Weight Logs",
-                "Wellness Logs",
                 "Heart Rate Logs",
                 "Workout Tags",
                 "Autoplanner Status",
@@ -4748,98 +4852,6 @@ class GymApp:
                     df_bmi = pd.DataFrame(bmi_hist).set_index("date")
                     st.line_chart(df_bmi["bmi"])
 
-        with well_tab:
-            st.header("Wellness Logs")
-            with st.expander("Add Entry"):
-                w_date = st.date_input(
-                    "Date",
-                    datetime.date.today(),
-                    key="well_date",
-                )
-                calories = st.number_input(
-                    "Calories", min_value=0.0, step=50.0, key="well_calories"
-                )
-                sleep_h = st.number_input(
-                    "Sleep Hours", min_value=0.0, step=0.5, key="well_sleep"
-                )
-                sleep_q = st.number_input(
-                    "Sleep Quality",
-                    min_value=0.0,
-                    max_value=5.0,
-                    step=1.0,
-                    key="well_quality",
-                )
-                stress = st.number_input(
-                    "Stress Level", min_value=0, max_value=10, step=1, key="well_stress"
-                )
-                if st.button("Log Wellness", key="well_add"):
-                    try:
-                        self.wellness_repo.log(
-                            w_date.isoformat(),
-                            calories,
-                            sleep_h,
-                            sleep_q,
-                            int(stress),
-                        )
-                        st.success("Logged")
-                    except ValueError as e:
-                        st.warning(str(e))
-
-            with st.expander("History", expanded=True):
-                rows = self.wellness_repo.fetch_history()
-                for rid, d, cal, sh, sq, st_lvl in rows:
-                    exp = st.expander(f"{d}")
-                    with exp:
-                        date_e = st.date_input(
-                            "Date",
-                            datetime.date.fromisoformat(d),
-                            key=f"well_edit_date_{rid}",
-                        )
-                        cal_e = st.number_input(
-                            "Calories",
-                            value=cal or 0.0,
-                            step=50.0,
-                            key=f"well_edit_cal_{rid}",
-                        )
-                        sh_e = st.number_input(
-                            "Sleep Hours",
-                            value=sh or 0.0,
-                            step=0.5,
-                            key=f"well_edit_sleep_{rid}",
-                        )
-                        sq_e = st.number_input(
-                            "Sleep Quality",
-                            value=sq or 0.0,
-                            step=1.0,
-                            key=f"well_edit_quality_{rid}",
-                        )
-                        st_e = st.number_input(
-                            "Stress Level",
-                            value=st_lvl or 0,
-                            step=1,
-                            key=f"well_edit_stress_{rid}",
-                        )
-                        cols = st.columns(2)
-                        if cols[0].button("Update", key=f"well_upd_{rid}"):
-                            try:
-                                self.wellness_repo.update(
-                                    rid,
-                                    date_e.isoformat(),
-                                    cal_e,
-                                    sh_e,
-                                    sq_e,
-                                    int(st_e),
-                                )
-                                st.success("Updated")
-                            except ValueError as e:
-                                st.warning(str(e))
-                        if cols[1].button("Delete", key=f"well_del_{rid}"):
-                            try:
-                                self.wellness_repo.delete(rid)
-                                st.success("Deleted")
-                            except ValueError as e:
-                                st.warning(str(e))
-
         with hr_tab:
             st.header("Heart Rate Logs")
             summary = self.stats.heart_rate_summary()
@@ -4922,6 +4934,9 @@ class GymApp:
                 "injury_model": "injury",
                 "adaptation_model": "adaptation",
             }
+            badge = (
+                lambda flag: f"<span class='badge {'success' if flag else 'error'}'>{'ON' if flag else 'OFF'}</span>"
+            )
             for name, prefix in model_map.items():
                 train_flag = self.settings_repo.get_bool(
                     f"ml_{prefix}_training_enabled", True
@@ -4933,11 +4948,22 @@ class GymApp:
                     continue
                 status = self.ml_status.fetch(name)
                 st.subheader(name)
-                st.write(f"Training Enabled: {train_flag}")
-                st.write(f"Prediction Enabled: {pred_flag}")
-                st.write(f"Loaded: {status['last_loaded']}")
-                st.write(f"Last Train: {status['last_train']}")
-                st.write(f"Last Prediction: {status['last_predict']}")
+                st.markdown(
+                    f"Training {badge(train_flag)} Prediction {badge(pred_flag)}",
+                    unsafe_allow_html=True,
+                )
+                load = status['last_loaded'] or 'never'
+                train_time = status['last_train'] or 'never'
+                pred_time = status['last_predict'] or 'never'
+                st.markdown(f"Loaded: <span class='badge warning'>{load}</span>", unsafe_allow_html=True)
+                st.markdown(
+                    f"Last Train: <span class='badge warning'>{train_time}</span>",
+                    unsafe_allow_html=True,
+                )
+                st.markdown(
+                    f"Last Prediction: <span class='badge warning'>{pred_time}</span>",
+                    unsafe_allow_html=True,
+                )
 
 
 if __name__ == "__main__":

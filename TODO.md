@@ -15,8 +15,8 @@
 - [x] 15. Add confirmation dialogs when deleting workouts or exercises to prevent mistakes.
 - [ ] 16. Provide an editable table view for sets with drag and drop reordering.
 - [ ] 17. Introduce filter chips for tags and equipment in the Library tab for faster browsing.
-- [ ] 18. Move wellness logging to its own subtab under Progress for visibility.
-- [ ] 19. Implement status badges for machine learning models showing training state.
+- [x] 18. Move wellness logging to its own subtab under Progress for visibility.
+- [x] 19. Implement status badges for machine learning models showing training state.
 - [x] 20. Use icons next to each menu item to aid quick recognition.
 - [ ] 21. Add optional compact mode with reduced padding on desktop for large data tables.
 - [ ] 22. Enable sorting on all tables through the REST endpoints and reflect in the GUI.
