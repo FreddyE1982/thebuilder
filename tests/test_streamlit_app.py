@@ -56,6 +56,21 @@ class StreamlitAppTest(unittest.TestCase):
                 return tab
         self.fail(f"Tab {label} not found")
 
+    def _connect(self) -> sqlite3.Connection:
+        return sqlite3.connect(self.db_path)
+
+    def _connect(self) -> sqlite3.Connection:
+        return sqlite3.connect(self.db_path)
+
+    def _connect(self) -> sqlite3.Connection:
+        return sqlite3.connect(self.db_path)
+
+    def _connect(self) -> sqlite3.Connection:
+        return sqlite3.connect(self.db_path)
+
+    def _connect(self) -> sqlite3.Connection:
+        return sqlite3.connect(self.db_path)
+
     def test_add_workout_and_set(self) -> None:
         idx_new = _find_by_label(
             self.at.button,
@@ -314,20 +329,7 @@ class StreamlitAppTest(unittest.TestCase):
         cur.execute("SELECT weight FROM body_weight_logs;")
         self.assertAlmostEqual(cur.fetchone()[0], 80.5)
 
-        # Wellness log
-        well_tab = next(t for t in settings_tab.tabs if t.label == "Wellness Logs")
-        well_tab.date_input[0].set_value("2024-01-03").run()
-        well_tab.number_input[0].set_value(2500.0).run()
-        well_tab.number_input[1].set_value(8.0).run()
-        well_tab.number_input[2].set_value(5.0).run()
-        well_tab.number_input[3].set_value(3).run()
-        well_tab.button[0].click().run()
-        self.at.run()
-        well_tab = next(t for t in settings_tab.tabs if t.label == "Wellness Logs")
-        cur.execute(
-            "SELECT calories, sleep_hours, sleep_quality, stress_level FROM wellness_logs;"
-        )
-        self.assertEqual(cur.fetchone(), (2500.0, 8.0, 5.0, 3))
+
 
         # Tag
         tag_tab = next(t for t in settings_tab.tabs if t.label == "Workout Tags")
@@ -657,6 +659,9 @@ class StreamlitFullGUITest(unittest.TestCase):
             if tab.label == label:
                 return tab
         self.fail(f"Tab {label} not found")
+    def _connect(self) -> sqlite3.Connection:
+        return sqlite3.connect(self.db_path)
+
 
     def test_calendar_tab(self) -> None:
         tab = self._get_tab("Calendar")
@@ -696,6 +701,23 @@ class StreamlitFullGUITest(unittest.TestCase):
         tab = self._get_tab("Body Weight")
         self.assertEqual(tab.header[0].value, "Body Weight")
         self.assertGreater(len(tab.metric), 3)
+
+    def test_wellness_tab(self) -> None:
+        tab = self._get_tab("Wellness Logs")
+        self.assertEqual(tab.header[0].value, "Wellness Logs")
+        tab.expander[0].date_input[0].set_value("2024-01-03").run()
+        tab.expander[0].number_input[0].set_value(2500.0).run()
+        tab.expander[0].number_input[1].set_value(8.0).run()
+        tab.expander[0].number_input[2].set_value(5.0).run()
+        tab.expander[0].number_input[3].set_value(3).run()
+        tab.expander[0].button[0].click().run()
+        conn = self._connect()
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT calories, sleep_hours, sleep_quality, stress_level FROM wellness_logs;"
+        )
+        self.assertEqual(cur.fetchone(), (2500.0, 8.0, 5.0, 3))
+        conn.close()
 
     def test_reports_tab(self) -> None:
         tab = self._get_tab("Reports")
@@ -764,7 +786,6 @@ class StreamlitFullGUITest(unittest.TestCase):
             "Exercise Aliases",
             "Exercise Management",
             "Body Weight Logs",
-            "Wellness Logs",
             "Heart Rate Logs",
             "Workout Tags",
             "Autoplanner Status",
