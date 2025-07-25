@@ -1266,6 +1266,35 @@ class GymApp:
 
         self._show_dialog("About", _content)
 
+    def _onboarding_wizard(self) -> None:
+        """Display onboarding steps for first-time users."""
+
+        steps = [
+            "Welcome to The Builder! Log and plan your workouts easily.",
+            "Add workouts in the Workouts tab and record each set with reps, weight and RPE.",
+            "Analyze progress in the Progress tab and adjust settings to your preference.",
+        ]
+        step = st.session_state.get("onboarding_step", 0)
+
+        def _content() -> None:
+            st.markdown(steps[step])
+            col1, col2 = st.columns(2)
+            if step > 0:
+                if col1.button("Back", key="onboard_back"):
+                    st.session_state.onboarding_step -= 1
+                    st.rerun()
+            if step < len(steps) - 1:
+                if col2.button("Next", key="onboard_next"):
+                    st.session_state.onboarding_step += 1
+                    st.rerun()
+            else:
+                if col2.button("Finish", key="onboard_finish"):
+                    self.settings_repo.set_bool("onboarding_complete", True)
+                    st.session_state.pop("onboarding_step", None)
+                    st.rerun()
+
+        self._show_dialog("Welcome", _content)
+
     def _close_quick_workout(self) -> None:
         st.session_state.open_quick_workout = False
 
@@ -1423,6 +1452,8 @@ class GymApp:
         if tab_param in tab_map:
             st.session_state["main_tab"] = tab_map[tab_param]
         self._start_page()
+        if os.environ.get("TEST_MODE") is None and not self.settings_repo.get_bool("onboarding_complete", False):
+            self._onboarding_wizard()
         self._open_header()
         st.markdown("<div class='title-section'>", unsafe_allow_html=True)
         cols = st.columns([3, 1, 1, 3])
@@ -1839,6 +1870,25 @@ class GymApp:
                 if st.button("Add Exercise", key="open_add_ex_btn"):
                     st.session_state.open_add_ex_flag = True
                     st.session_state.scroll_to = "add_ex_form"
+                favs = self.favorites_repo.fetch_all()
+                if favs:
+                    st.markdown("### Quick Add Favorites")
+                    cols = st.columns(len(favs))
+                    for idx, fav in enumerate(favs):
+                        if cols[idx].button(fav, key=f"quick_add_{fav}"):
+                            eq_name = None
+                            detail = self.exercise_catalog.fetch_detail(fav)
+                            if detail:
+                                eq_names = detail[2]
+                                if eq_names:
+                                    eq_name = eq_names.split("|")[0]
+                            ex_id = self.exercises.add(workout_id, fav, eq_name, None)
+                            self.sets.add(ex_id, 1, 0.0, 0)
+                            self.gamification.record_set(ex_id, 1, 0.0, 0)
+                            st.session_state[f"open_ex_{ex_id}"] = True
+                            st.session_state[f"open_add_set_{ex_id}"] = True
+                            st.session_state.scroll_to = f"ex_{ex_id}_sets"
+                            st.rerun()
                 with st.expander(
                     "Add New Exercise",
                     expanded=st.session_state.get("open_add_ex_flag", False),

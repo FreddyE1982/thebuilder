@@ -199,6 +199,37 @@ class StreamlitAppTest(unittest.TestCase):
         self.assertEqual(cur.fetchone()[0], "Barbell Bench Press")
         conn.close()
 
+    def test_quick_add_favorite(self) -> None:
+        self.at.query_params["tab"] = "library"
+        self.at.run()
+        fav_tab = next(t for t in self._get_tab("Library").tabs if t.label == "Favorites")
+        idx = _find_by_label(
+            fav_tab.selectbox, "Add Favorite", "Barbell Bench Press", key="fav_add_name"
+        )
+        fav_tab.selectbox[idx].select("Barbell Bench Press").run()
+        btn_idx = _find_by_label(fav_tab.button, "Add Favorite", key="fav_add_btn")
+        fav_tab.button[btn_idx].click().run()
+
+        self.at.query_params["tab"] = "workouts"
+        self.at.run()
+        log_tab = self._get_tab("Workouts").tabs[0]
+        idx_new = _find_by_label(
+            log_tab.button,
+            "New Workout",
+            key="FormSubmitter:new_workout_form-New Workout",
+        )
+        log_tab.button[idx_new].click().run()
+        log_tab = self._get_tab("Workouts").tabs[0]
+        mgmt_exp = next(e for e in log_tab.expander if e.label == "Exercise Management")
+        q_idx = _find_by_label(mgmt_exp.button, "Barbell Bench Press")
+        mgmt_exp.button[q_idx].click().run()
+
+        conn = self._connect()
+        cur = conn.cursor()
+        cur.execute("SELECT name FROM exercises;")
+        self.assertEqual(cur.fetchone()[0], "Barbell Bench Press")
+        conn.close()
+
     def test_equipment_filtering(self) -> None:
         self.at.query_params["tab"] = "library"
         self.at.run()
