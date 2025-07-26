@@ -58,6 +58,11 @@ from ml_service import (
 )
 from tools import MathTools, GitTools
 
+# Preinitialize session state for library widget keys to prevent missing state
+for _k, _default in {"lib_eq_name": "", "lib_ex_name": ""}.items():
+    if _k not in st.session_state:
+        st.session_state[_k] = _default
+
 
 class LayoutManager:
     """Manage top-level page layout and navigation."""
@@ -165,6 +170,7 @@ class GymApp:
         self.theme = self.settings_repo.get_text("theme", "light")
         self.color_theme = self.settings_repo.get_text("color_theme", "red")
         self.compact_mode = self.settings_repo.get_bool("compact_mode", False)
+        self.side_nav = self.settings_repo.get_bool("side_nav", False)
         self.add_set_key = self.settings_repo.get_text("hotkey_add_set", "a")
         self.tab_keys = self.settings_repo.get_text(
             "hotkey_tab_keys", "1,2,3,4"
@@ -808,6 +814,20 @@ class GymApp:
                 white-space: pre-line;
                 font-size: 0.9rem;
             }
+            nav.side-nav {
+                display: flex;
+                flex-direction: column;
+                gap: 0.25rem;
+            }
+            nav.side-nav button {
+                justify-content: flex-start;
+            }
+            @media screen and (min-width: 1200px) {
+                nav.side-nav {
+                    position: sticky;
+                    top: 4rem;
+                }
+            }
             nav.top-nav .icon {
                 font-size: 1.1rem;
                 line-height: 1;
@@ -1135,8 +1155,16 @@ class GymApp:
             st.session_state.selected_template = None
         if "pyramid_inputs" not in st.session_state:
             st.session_state.pyramid_inputs = [0.0]
+        # ensure library widgets always have state available for testing
+        if "lib_eq_name" not in st.session_state:
+            st.session_state.lib_eq_name = ""
+        if "lib_ex_name" not in st.session_state:
+            st.session_state.lib_ex_name = ""
 
     def _create_sidebar(self) -> None:
+        if self.side_nav and not st.session_state.get("is_mobile", False):
+            self._render_nav("side-nav")
+            st.sidebar.divider()
         st.sidebar.header("Quick Actions")
         if st.sidebar.button("New Workout"):
             wid = self.workouts.create(
@@ -4783,6 +4811,10 @@ class GymApp:
                     "Compact Mode",
                     value=self.compact_mode,
                 )
+                side_nav_opt = st.checkbox(
+                    "Enable Side Navigation",
+                    value=self.side_nav,
+                )
                 add_key_in = st.text_input(
                     "Add Set Hotkey",
                     value=self.add_set_key,
@@ -4899,6 +4931,8 @@ class GymApp:
                 self._apply_theme()
                 self.settings_repo.set_bool("compact_mode", compact)
                 self.compact_mode = compact
+                self.settings_repo.set_bool("side_nav", side_nav_opt)
+                self.side_nav = side_nav_opt
                 self.settings_repo.set_text("hotkey_add_set", add_key_in or 'a')
                 self.settings_repo.set_text("hotkey_tab_keys", tab_keys_in or '1,2,3,4')
                 self.add_set_key = add_key_in or 'a'
