@@ -2022,6 +2022,23 @@ class APITestCase(unittest.TestCase):
         self.assertIsInstance(data[0]["readiness"], float)
         self.assertGreaterEqual(data[0]["readiness"], 0.0)
 
+    def test_readiness_stats_endpoint(self) -> None:
+        self.client.post("/workouts")
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8},
+        )
+        resp = self.client.get("/stats/readiness_stats")
+        self.assertEqual(resp.status_code, 200)
+        stats = resp.json()
+        self.assertIn("avg", stats)
+        self.assertIn("min", stats)
+        self.assertIn("max", stats)
+
     def test_adaptation_index_endpoint(self) -> None:
         self.client.post("/workouts")
         self.client.post(

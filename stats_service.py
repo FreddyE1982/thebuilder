@@ -1517,8 +1517,22 @@ class StatisticsService:
                 and self.settings.get_bool("ml_readiness_training_enabled", True)
             ):
                 self.readiness_model.train(stress, fatigue, base_ready)
-            result.append({"date": d, "readiness": round(ready_val, 2)})
+        result.append({"date": d, "readiness": round(ready_val, 2)})
         return result
+
+    def readiness_stats(
+        self, start_date: Optional[str] = None, end_date: Optional[str] = None
+    ) -> Dict[str, float]:
+        """Return average, min and max readiness for the period."""
+        history = self.readiness(start_date, end_date)
+        if not history:
+            return {"avg": 0.0, "min": 0.0, "max": 0.0}
+        vals = [h["readiness"] for h in history]
+        return {
+            "avg": round(sum(vals) / len(vals), 2),
+            "min": min(vals),
+            "max": max(vals),
+        }
 
     def performance_momentum(
         self,

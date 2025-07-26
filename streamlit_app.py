@@ -8,6 +8,7 @@ import streamlit.components.v1 as components
 import altair as alt
 from altair.utils.deprecation import AltairDeprecationWarning
 import warnings
+import json
 
 warnings.filterwarnings("ignore", category=AltairDeprecationWarning)
 from db import (
@@ -163,6 +164,10 @@ class GymApp:
         self.settings_repo = SettingsRepository(db_path, yaml_path)
         self.theme = self.settings_repo.get_text("theme", "light")
         self.compact_mode = self.settings_repo.get_bool("compact_mode", False)
+        self.add_set_key = self.settings_repo.get_text("hotkey_add_set", "a")
+        self.tab_keys = self.settings_repo.get_text(
+            "hotkey_tab_keys", "1,2,3,4"
+        )
         self.training_options = sorted(
             [
                 "strength",
@@ -305,7 +310,8 @@ class GymApp:
         st.session_state.layout_set = True
         st.session_state.is_mobile = mode == "mobile"
         components.html(
-            """
+            (
+                """
             <script>
             function setMode() {
                 const mode = Math.min(window.innerWidth, window.innerHeight) < 768 ? 'mobile' : 'desktop';
@@ -350,13 +356,16 @@ class GymApp:
             window.addEventListener('DOMContentLoaded', handleResize);
             window.addEventListener('load', handleResize);
             handleResize();
+            const tabKeys = JSON.parse('%TAB_KEYS%');
+            const addSetKey = '%ADD_KEY%'.toLowerCase();
             function handleHotkeys(e) {
-                if (e.altKey && ['1','2','3','4'].includes(e.key)) {
+                if (e.altKey && tabKeys.includes(e.key)) {
                     const labels = ['workouts','library','progress','settings'];
+                    const idx = tabKeys.indexOf(e.key);
                     const params = new URLSearchParams(window.location.search);
-                    params.set('tab', labels[parseInt(e.key)-1]);
+                    params.set('tab', labels[idx]);
                     window.location.search = params.toString();
-                } else if (e.altKey && e.key.toLowerCase() === 'a') {
+                } else if (e.altKey && e.key.toLowerCase() === addSetKey) {
                     const btn = Array.from(document.querySelectorAll('button'))
                         .find(b => b.innerText.trim() === 'Add Set');
                     if (btn) btn.click();
@@ -364,7 +373,10 @@ class GymApp:
             }
             window.addEventListener('keydown', handleHotkeys);
             </script>
-            """,
+            """
+            )
+            .replace('%TAB_KEYS%', json.dumps(self.tab_keys.split(',')))
+            .replace('%ADD_KEY%', self.add_set_key),
             height=0,
         )
 
@@ -1486,6 +1498,8 @@ class GymApp:
                     st.session_state.dash_end = datetime.date.today()
                     st.rerun()
         stats = self.stats.overview(start.isoformat(), end.isoformat())
+        w_stats = self.stats.weight_stats(start.isoformat(), end.isoformat())
+        r_stats = self.stats.readiness_stats(start.isoformat(), end.isoformat())
         with st.expander("Overview Metrics", expanded=True):
             metrics = [
                 ("Workouts", stats["workouts"]),
@@ -1494,6 +1508,8 @@ class GymApp:
                 ("Exercises", stats["exercises"]),
                 ("Avg Density", stats.get("avg_density", 0)),
                 ("BMI", self.stats.bmi()),
+                ("Avg Weight", w_stats["avg"]),
+                ("Avg Readiness", r_stats["avg"]),
             ]
             self._metric_grid(metrics)
         daily = self.stats.daily_volume(start.isoformat(), end.isoformat())
@@ -2922,12 +2938,12 @@ class GymApp:
                                 st.rerun()
                     else:
                         st.write("No favorites.")
-                templates = {
-                    str(t[0]): t[1]
-                    for t in sorted(
-                        self.template_workouts.fetch_all(), key=lambda r: r[1]
-                    )
-                }
+                all_templates = self.template_workouts.fetch_all()
+                favs = self.favorite_templates_repo.fetch_all()
+                fav_templates = [t for t in all_templates if t[0] in favs]
+                other_templates = [t for t in all_templates if t[0] not in favs]
+                ordered = fav_templates + sorted(other_templates, key=lambda r: r[1])
+                templates = {str(t[0]): t[1] for t in ordered}
                 add_choice = st.selectbox(
                     "Add Favorite",
                     [""] + list(templates.keys()),
@@ -2949,9 +2965,11 @@ class GymApp:
                     tid = self.template_workouts.create(name, t_type)
                     st.session_state.selected_template = tid
             with st.expander("Existing Templates", expanded=True):
-                templates = sorted(
-                    self.template_workouts.fetch_all(), key=lambda r: r[1]
-                )
+                all_templates = self.template_workouts.fetch_all()
+                favs = self.favorite_templates_repo.fetch_all()
+                fav_templates = [t for t in all_templates if t[0] in favs]
+                other_templates = [t for t in all_templates if t[0] not in favs]
+                templates = fav_templates + sorted(other_templates, key=lambda r: r[1])
                 options = {str(t[0]): t for t in templates}
                 if options:
                     selected = st.selectbox(
@@ -4677,6 +4695,16 @@ class GymApp:
                     "Compact Mode",
                     value=self.compact_mode,
                 )
+                add_key_in = st.text_input(
+                    "Add Set Hotkey",
+                    value=self.add_set_key,
+                    max_chars=1,
+                )
+                tab_keys_in = st.text_input(
+                    "Tab Hotkeys",
+                    value=self.tab_keys,
+                    help="Comma separated keys for Workouts, Library, Progress, Settings",
+                )
             with st.expander("Gamification", expanded=True):
                 game_enabled = st.checkbox(
                     "Enable Gamification",
@@ -4781,6 +4809,10 @@ class GymApp:
                 self._apply_theme()
                 self.settings_repo.set_bool("compact_mode", compact)
                 self.compact_mode = compact
+                self.settings_repo.set_text("hotkey_add_set", add_key_in or 'a')
+                self.settings_repo.set_text("hotkey_tab_keys", tab_keys_in or '1,2,3,4')
+                self.add_set_key = add_key_in or 'a'
+                self.tab_keys = tab_keys_in or '1,2,3,4'
                 self._inject_responsive_css()
                 self.gamification.enable(game_enabled)
                 self.settings_repo.set_bool("ml_all_enabled", ml_global)
