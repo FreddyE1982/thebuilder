@@ -582,6 +582,15 @@ class StreamlitAppTest(unittest.TestCase):
         help_text = any("Workout Logger Help" in m.body for m in self.at.markdown)
         self.assertTrue(help_text)
 
+    def test_colorblind_theme_option(self) -> None:
+        self.at.query_params["tab"] = "settings"
+        self.at.run()
+        settings_tab = self._get_tab("Settings")
+        gen_tab = settings_tab.tabs[0]
+        idx = _find_by_label(gen_tab.selectbox, "Color Theme")
+        options = gen_tab.selectbox[idx].options
+        self.assertIn("colorblind", options)
+
     def test_tooltips_present(self) -> None:
         tooltips = []
         for node in self.at._tree:
