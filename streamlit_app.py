@@ -1185,6 +1185,13 @@ class GymApp:
 
         _dlg()
 
+    def _add_help(self, text: str) -> None:
+        class _Tooltip:
+            pass
+
+        _Tooltip.__doc__ = text
+        st.help(_Tooltip)
+
     def _slugify(self, text: str) -> str:
         """Create a safe slug from a section title."""
         return text.lower().replace(" ", "_")
@@ -1317,7 +1324,9 @@ class GymApp:
                     index=self.training_options.index("strength"),
                     key="quick_workout_type",
                 )
+                self._add_help("Training focus for this workout")
                 new_loc = st.text_input("Location", key="quick_workout_loc")
+                self._add_help("Workout location")
                 submitted = st.form_submit_button("Create")
                 if submitted:
                     wid = self.workouts.create(
@@ -1660,7 +1669,9 @@ class GymApp:
                     index=training_options.index("strength"),
                     key="new_workout_type",
                 )
+                self._add_help("Select the primary training focus")
                 new_location = st.text_input("Location", key="new_workout_location")
+                self._add_help("Where the workout takes place")
                 st.markdown("</div>", unsafe_allow_html=True)
                 submitted = st.form_submit_button("New Workout")
                 if submitted:
@@ -1813,12 +1824,14 @@ class GymApp:
                 plan_date = st.date_input(
                     "Plan Date", datetime.date.today(), key="plan_date"
                 )
+                self._add_help("Date the workout is planned for")
                 plan_type = st.selectbox(
                     "Training Type",
                     self.training_options,
                     index=self.training_options.index("strength"),
                     key="plan_type",
                 )
+                self._add_help("Planned workout focus")
                 st.markdown("</div>", unsafe_allow_html=True)
                 submitted = st.form_submit_button("New Planned Workout")
                 if submitted:
@@ -3685,27 +3698,27 @@ class GymApp:
                 self._metric_grid(metrics)
 
     def _progress_forecast_section(self, exercise: str) -> None:
-        st.subheader("Progress Forecast")
-        weeks = st.slider("Weeks", 1, 12, 4, key="forecast_weeks")
-        wpw = st.slider("Workouts per Week", 1, 7, 3, key="forecast_wpw")
-        if st.button("Show Forecast"):
-            forecast = self.stats.progress_forecast(exercise, weeks, wpw)
-            if forecast:
-                self._line_chart(
-                    {"Est 1RM": [f["est_1rm"] for f in forecast]},
-                    [str(f["week"]) for f in forecast],
-                )
+        with st.expander("Progress Forecast", expanded=False):
+            weeks = st.slider("Weeks", 1, 12, 4, key="forecast_weeks")
+            wpw = st.slider("Workouts per Week", 1, 7, 3, key="forecast_wpw")
+            if st.button("Show Forecast"):
+                forecast = self.stats.progress_forecast(exercise, weeks, wpw)
+                if forecast:
+                    self._line_chart(
+                        {"Est 1RM": [f["est_1rm"] for f in forecast]},
+                        [str(f["week"]) for f in forecast],
+                    )
 
     def _volume_forecast_section(self, start: str, end: str) -> None:
-        st.subheader("Volume Forecast")
-        days = st.slider("Days", 1, 14, 7, key="vol_forecast_days")
-        if st.button("Show Volume Forecast"):
-            data = self.stats.volume_forecast(days, start, end)
-            if data:
-                self._line_chart(
-                    {"Volume": [d["volume"] for d in data]},
-                    [d["date"] for d in data],
-                )
+        with st.expander("Volume Forecast", expanded=False):
+            days = st.slider("Days", 1, 14, 7, key="vol_forecast_days")
+            if st.button("Show Volume Forecast"):
+                data = self.stats.volume_forecast(days, start, end)
+                if data:
+                    self._line_chart(
+                        {"Volume": [d["volume"] for d in data]},
+                        [d["date"] for d in data],
+                    )
 
     def _insights_tab(self) -> None:
         st.header("Insights")
