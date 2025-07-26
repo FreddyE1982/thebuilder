@@ -3,10 +3,10 @@
  - [x] 3. Implement in‑app tooltips for all form inputs using `st.help` for accessibility.
 - [x] 4. Group workout planning tools into an expander inside the Workouts tab.
 - [x] 5. Add quick‑add buttons for favorite exercises directly in the workout logging form.
-- [ ] 6. Add keyboard shortcuts for adding sets and toggling tabs via Streamlit hotkeys.
+- [x] 6. Add keyboard shortcuts for adding sets and toggling tabs via Streamlit hotkeys.
 - [x] 7. Enhance mobile layout by ensuring all buttons are reachable with one hand.
 - [x] 8. Add a floating action button to log a new workout from any tab on mobile.
-- [ ] 9. Reorganize the Library tab with expanders for exercises, templates and equipment.
+- [x] 9. Reorganize the Library tab with expanders for exercises, templates and equipment.
 - [x] 10. Provide a dark/light mode toggle in the Settings tab.
 - [x] 11. Add global search at the top navigation to quickly find workouts, exercises or tags.
 - [x] 12. Display key stats like today's volume in a metric grid at the top of the Workouts tab.
