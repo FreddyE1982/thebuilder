@@ -274,11 +274,11 @@ class StreamlitAppTest(unittest.TestCase):
         self.at.run()
         lib_tab = self._get_tab("Library")
         eq_tab = next(e for e in lib_tab.expander if e.label == "Equipment")
-        eq_tab.selectbox[0].select("Free Weights").run()
+        eq_tab.multiselect[0].select("Free Weights").run()
         self.at.run()
         lib_tab = self._get_tab("Library")
         eq_tab = next(e for e in lib_tab.expander if e.label == "Equipment")
-        self.assertIn("Olympic Barbell", eq_tab.selectbox[1].options)
+        self.assertIn("Olympic Barbell", eq_tab.selectbox[0].options)
 
     def test_exercise_filtering(self) -> None:
         self.at.query_params["tab"] = "library"
@@ -755,6 +755,17 @@ class StreamlitFullGUITest(unittest.TestCase):
         tab = self._get_tab("Reports")
         self.assertEqual(tab.header[0].value, "Reports")
         self.assertGreater(len(tab.metric), 4)
+
+    def test_quick_report_buttons(self) -> None:
+        tab = self._get_tab("Reports")
+        range_exp = tab.expander[0]
+        buttons = [b.label for b in range_exp.button]
+        self.assertIn("Last Week", buttons)
+        self.assertIn("Last Month", buttons)
+
+    def test_connection_status_display(self) -> None:
+        status_present = any("conn-status" in m.body for m in self.at.markdown)
+        self.assertTrue(status_present)
 
     def test_risk_tab(self) -> None:
         tab = self._get_tab("Risk")

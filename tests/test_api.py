@@ -3109,3 +3109,8 @@ class APITestCase(unittest.TestCase):
         resp = self.client.get("/muscles/recent")
         self.assertEqual(resp.status_code, 200)
         self.assertIn("Pectoralis Major", resp.json())
+
+    def test_health_endpoint(self) -> None:
+        resp = self.client.get("/health")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["status"], "ok")
