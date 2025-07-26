@@ -2023,6 +2023,7 @@ class GymAPI:
             height: float = None,
             months_active: float = None,
             theme: str = None,
+            color_theme: str = None,
             ml_all_enabled: bool = None,
             ml_training_enabled: bool = None,
             ml_prediction_enabled: bool = None,
@@ -2050,6 +2051,8 @@ class GymAPI:
                 self.settings.set_float("months_active", months_active)
             if theme is not None:
                 self.settings.set_text("theme", theme)
+            if color_theme is not None:
+                self.settings.set_text("color_theme", color_theme)
             if ml_all_enabled is not None:
                 self.settings.set_bool("ml_all_enabled", ml_all_enabled)
             if ml_training_enabled is not None:

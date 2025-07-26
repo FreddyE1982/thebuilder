@@ -163,6 +163,7 @@ class GymApp:
                     alt.themes.enable = _noop_theme
         self.settings_repo = SettingsRepository(db_path, yaml_path)
         self.theme = self.settings_repo.get_text("theme", "light")
+        self.color_theme = self.settings_repo.get_text("color_theme", "red")
         self.compact_mode = self.settings_repo.get_bool("compact_mode", False)
         self.add_set_key = self.settings_repo.get_text("hotkey_add_set", "a")
         self.tab_keys = self.settings_repo.get_text(
@@ -4691,6 +4692,12 @@ class GymApp:
                     themes,
                     index=themes.index(self.theme),
                 )
+                colors = ["red", "blue", "green", "purple"]
+                color_opt = st.selectbox(
+                    "Color Theme",
+                    colors,
+                    index=colors.index(self.color_theme),
+                )
                 compact = st.checkbox(
                     "Compact Mode",
                     value=self.compact_mode,
@@ -4805,7 +4812,9 @@ class GymApp:
                 self.settings_repo.set_float("height", height)
                 self.settings_repo.set_float("months_active", ma)
                 self.settings_repo.set_text("theme", theme_opt)
+                self.settings_repo.set_text("color_theme", color_opt)
                 self.theme = theme_opt
+                self.color_theme = color_opt
                 self._apply_theme()
                 self.settings_repo.set_bool("compact_mode", compact)
                 self.compact_mode = compact

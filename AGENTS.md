@@ -49,7 +49,8 @@ The agent is to always follow there rules:
 4. The agent must use st.dialog where appropriate as explained here: https://docs.streamlit.io/develop/api-reference/execution-flow/st.dialog
 5. The agent is absolutley forbidden to ever remove existing functionality from the GUI.
 6. group things where it makes sense logically together using expandables. you are allowed to create expendables inside expandables if it makes sense logically
-7. If the agent is asked by the user to "refurbish", "refresh", "rework", "redo", or "redesign" the GUI then the agent ensures that ALL above rules (1. - 6.) about the streamlit gui are strictly adhered to but 
+7. The Streamlit version used must fully support nested expanders. Always set the requirements accordingly.
+7. If the agent is asked by the user to "refurbish", "refresh", "rework", "redo", or "redesign" the GUI then the agent ensures that ALL above rules (1. - 6.) about the streamlit gui are strictly adhered to but
    those rules ALSO apply WHENEVER the agent works on the application in any way.
 8. The agent is to unittest the streamlit gui. How this can be done is explained in the file "streamlittestinghowto.md" found in the repo. The streamlit gui is big but that is not to discourage the agent. 
 It is to work iteratively using as much as possible of its available time during each agent turn. 
