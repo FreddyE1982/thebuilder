@@ -1723,6 +1723,7 @@ class GymApp:
                 "Use quick-add buttons for your favorite exercises.",
             ]
         )
+        self._mini_calendar_widget()
         plans = sorted(self.planned_workouts.fetch_all(), key=lambda p: p[1])
         options = {str(p[0]): p for p in plans}
         today = datetime.date.today().isoformat()
@@ -1882,6 +1883,10 @@ class GymApp:
                             int(selected),
                             datetime.datetime.now().isoformat(timespec="seconds"),
                         )
+                        summary = self.sets.workout_summary(int(selected))
+                        st.success(
+                            f"Logged {summary['sets']} sets, volume {summary['volume']} kg, avg RPE {summary['avg_rpe']}"
+                        )
                     type_choice = st.selectbox(
                         "Type",
                         training_options,
@@ -1903,6 +1908,10 @@ class GymApp:
                         self.workouts.set_end_time(
                             int(selected),
                             datetime.datetime.now().isoformat(timespec="seconds"),
+                        )
+                        summary = self.sets.workout_summary(int(selected))
+                        st.success(
+                            f"Logged {summary['sets']} sets, volume {summary['volume']} kg, avg RPE {summary['avg_rpe']}"
                         )
                     type_choice = cols[2].selectbox(
                         "Type",
@@ -1969,6 +1978,9 @@ class GymApp:
                     mime="application/json",
                     key=f"export_json_{selected}",
                 )
+                if st.button("Copy to Template", key=f"copy_tpl_{selected}"):
+                    tid = self.planner.copy_workout_to_template(int(selected))
+                    st.success(f"Template {tid} created")
                 if st.button("Delete Workout", key=f"del_workout_{selected}"):
                     self._confirm_delete_workout(int(selected))
             else:
@@ -4518,7 +4530,46 @@ class GymApp:
             )
         rows.sort(key=lambda x: x["date"])
         if rows:
-            st.table(rows)
+            df = pd.DataFrame(rows)
+            df["date"] = pd.to_datetime(df["date"])
+            df["weekday"] = df["date"].dt.day_name()
+            df["week"] = df["date"].dt.isocalendar().week
+            chart = (
+                alt.Chart(df)
+                .mark_rect()
+                .encode(
+                    x=alt.X(
+                        "weekday", sort=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+                    ),
+                    y="week:O",
+                    color=alt.condition(
+                        "datum.planned",
+                        alt.value("orange"),
+                        alt.value("steelblue"),
+                    ),
+                    tooltip=["date", "type", "planned"],
+                )
+                .interactive()
+            )
+            st.altair_chart(chart, use_container_width=True)
+
+    def _mini_calendar_widget(self) -> None:
+        start = datetime.date.today()
+        end = start + datetime.timedelta(days=30)
+        rows = self.planned_workouts.fetch_all(start.isoformat(), end.isoformat())
+        if not rows:
+            st.info("No upcoming plans")
+            return
+        df = pd.DataFrame(
+            [{"date": d, "type": t} for _pid, d, t in rows]
+        )
+        df["date"] = pd.to_datetime(df["date"])
+        chart = (
+            alt.Chart(df)
+            .mark_bar()
+            .encode(x="date:T", y=alt.value(5), tooltip=["date", "type"])
+        )
+        st.altair_chart(chart, use_container_width=True)
 
     def _goals_tab(self) -> None:
         st.header("Goals")
