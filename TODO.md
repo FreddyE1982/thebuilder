@@ -41,7 +41,7 @@
 - [x] 41. Surface recently used muscles and equipment in dropdowns for convenience.
 - [ ] 42. Include inline validation messages next to each form field when data is invalid.
  - [x] 43. Display connection status of the REST API and database in the header.
-- [ ] 44. Introduce optional desktop side navigation for large screens.
+- [x] 44. Introduce optional desktop side navigation for large screens.
 - [ ] 45. Add colorblind‑friendly palette options in settings.
 - [ ] 46. Offer step‑by‑step tutorial for advanced analytics features.
 - [ ] 47. Implement collapsible lists for tags, goals and equipment to avoid long scrolls.
