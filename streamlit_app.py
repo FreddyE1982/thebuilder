@@ -9,6 +9,8 @@ import altair as alt
 from altair.utils.deprecation import AltairDeprecationWarning
 import warnings
 import json
+import time
+import os
 
 warnings.filterwarnings("ignore", category=AltairDeprecationWarning)
 from db import (
@@ -312,6 +314,23 @@ class GymApp:
                     st.experimental_set_query_params(tab="settings")
                     st.rerun()
 
+    def _rest_timer(self) -> None:
+        start = st.session_state.get("rest_start")
+        if not start:
+            return
+        rest_sec = int(self.settings_repo.get_float("rest_timer_seconds", 90))
+        remaining = rest_sec - int(time.time() - start)
+        if remaining <= 0:
+            st.session_state.pop("rest_start", None)
+            st.info("Rest over!")
+            return
+        st.markdown(f"<div id='rest-timer'>Rest: {remaining}s</div>", unsafe_allow_html=True)
+        if os.environ.get("TEST_MODE") != "1":
+            components.html(
+                "<script>setTimeout(()=>window.location.reload(),1000);</script>",
+                height=0,
+            )
+
     def _format_weight(self, weight: float) -> str:
         """Return weight formatted according to user settings."""
         if self.weight_unit == "lb":
@@ -437,6 +456,12 @@ class GymApp:
             }
             window.addEventListener('touchstart', handleTouchStart);
             window.addEventListener('touchend', handleTouchEnd);
+            document.addEventListener('click', e => {
+                const t = e.target;
+                if (t.tagName === 'BUTTON' && t.innerText.trim() === 'Add Set' && navigator.vibrate) {
+                    navigator.vibrate(50);
+                }
+            });
             </script>
             """
             )
@@ -954,6 +979,10 @@ class GymApp:
                 color: #fff;
                 font-size: 0.75rem;
             }
+            .training-badge { padding: 0.1rem 0.4rem; border-radius: 0.25rem; color: #fff; font-size: 0.75rem; }
+            .tt-strength { background: #4caf50; }
+            .tt-hypertrophy { background: #9c27b0; }
+            .tt-highintensity { background: #f39c12; }
             .badge.success { background: #4caf50; }
             .badge.error { background: #e74c3c; }
             .badge.warning { background: #f1c40f; }
@@ -1878,6 +1907,7 @@ class GymApp:
                 "Use quick-add buttons for your favorite exercises.",
             ]
         )
+        self._rest_timer()
         self._mini_calendar_widget()
         plans = sorted(self.planned_workouts.fetch_all(), key=lambda p: p[1])
         options = {str(p[0]): p for p in plans}
@@ -2647,6 +2677,7 @@ class GymApp:
                 self._bulk_add_sets_dialog(exercise_id)
             if st.button("Warmup Plan", key=f"warmup_plan_{exercise_id}"):
                 self._warmup_plan_dialog(exercise_id)
+            self._rest_timer()
 
     def _add_set_form(self, exercise_id: int, with_button: bool = True) -> None:
         reps = st.number_input(
@@ -2781,6 +2812,7 @@ class GymApp:
             warmup=warmup,
         )
         st.session_state.flash_set = sid
+        st.session_state.rest_start = time.time()
         if duration > 0:
             self.sets.set_duration(sid, float(duration))
         self.gamification.record_set(exercise_id, int(reps), float(weight), int(rpe))
@@ -3909,6 +3941,19 @@ class GymApp:
                 )
             with col2:
                 end = st.date_input("End", datetime.date.today(), key="hist_end")
+            chip_cols = st.columns(3)
+            if chip_cols[0].button("Last 7d", key="hist_7d"):
+                st.session_state.hist_start = datetime.date.today() - datetime.timedelta(days=7)
+                st.session_state.hist_end = datetime.date.today()
+                st.rerun()
+            if chip_cols[1].button("Last 30d", key="hist_30d"):
+                st.session_state.hist_start = datetime.date.today() - datetime.timedelta(days=30)
+                st.session_state.hist_end = datetime.date.today()
+                st.rerun()
+            if chip_cols[2].button("Last 90d", key="hist_90d"):
+                st.session_state.hist_start = datetime.date.today() - datetime.timedelta(days=90)
+                st.session_state.hist_end = datetime.date.today()
+                st.rerun()
             if st.button("Reset", key="hist_reset"):
                 st.session_state.hist_start = (
                     datetime.date.today() - datetime.timedelta(days=30)
@@ -3940,7 +3985,8 @@ class GymApp:
             ]
         pr_dates = {r["date"] for r in self.stats.personal_records()}
         for wid, date, _s, _e, training_type, *_ in workouts:
-            label = f"{date} ({training_type})"
+            badge = f"<span class='training-badge tt-{training_type}'>{training_type}</span>"
+            label = f"{date} {badge}"
             if date in pr_dates:
                 label = f"**{label}**"
             with st.expander(label, expanded=False):
