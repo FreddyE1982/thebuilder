@@ -1142,6 +1142,25 @@ class SetRepository(BaseRepository):
             "avg_rpe": round(avg_rpe, 2),
         }
 
+    def recent_equipment(self, limit: int = 5) -> list[str]:
+        """Return recently used equipment names ordered by recency."""
+        rows = self.fetch_all(
+            """
+            SELECT e.equipment_name FROM sets s
+            JOIN exercises e ON s.exercise_id = e.id
+            JOIN workouts w ON e.workout_id = w.id
+            WHERE e.equipment_name IS NOT NULL
+            ORDER BY w.date DESC, s.id DESC LIMIT ?;
+            """,
+            (limit,),
+        )
+        result: list[str] = []
+        for r in rows:
+            name = r[0]
+            if name and name not in result:
+                result.append(name)
+        return result
+
 
 class PlannedWorkoutRepository(BaseRepository):
     """Repository for planned workouts."""

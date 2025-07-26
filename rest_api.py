@@ -177,6 +177,10 @@ class GymAPI:
             muscs = muscles.split("|") if muscles else None
             return self.equipment.fetch_names(equipment_type, prefix, muscs)
 
+        @self.app.get("/equipment/recent")
+        def recent_equipment(limit: int = 5):
+            return self.statistics.recent_equipment(limit)
+
         @self.app.get("/equipment/{name}")
         def get_equipment(name: str):
             muscles = self.equipment.fetch_muscles(name)
@@ -197,6 +201,10 @@ class GymAPI:
         @self.app.get("/muscles")
         def list_muscles():
             return self.muscles.fetch_all()
+
+        @self.app.get("/muscles/recent")
+        def recent_muscles(limit: int = 5):
+            return self.statistics.recent_muscles(limit)
 
         @self.app.post("/muscles")
         def add_muscle(name: str):
