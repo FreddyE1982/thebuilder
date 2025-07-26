@@ -379,6 +379,22 @@ class GymApp:
                 }
             }
             window.addEventListener('keydown', handleHotkeys);
+            let touchX = 0;
+            function handleTouchStart(e) { touchX = e.touches[0].clientX; }
+            function handleTouchEnd(e) {
+                const dx = e.changedTouches[0].clientX - touchX;
+                if (Math.abs(dx) > 50) {
+                    const labels = ['workouts','library','progress','settings'];
+                    const params = new URLSearchParams(window.location.search);
+                    let idx = labels.indexOf(params.get('tab') || 'workouts');
+                    if (dx < 0 && idx < labels.length - 1) idx++;
+                    else if (dx > 0 && idx > 0) idx--;
+                    params.set('tab', labels[idx]);
+                    window.location.search = params.toString();
+                }
+            }
+            window.addEventListener('touchstart', handleTouchStart);
+            window.addEventListener('touchend', handleTouchEnd);
             </script>
             """
             )
@@ -1080,6 +1096,13 @@ class GymApp:
             .set-unregistered {
                 background: #ffcccc;
             }
+            .flash {
+                animation: flash 0.5s ease-in-out;
+            }
+            @keyframes flash {
+                from { background-color: rgba(255,255,0,0.5); }
+                to { background-color: transparent; }
+            }
             .set-status {
                 font-size: 0.8rem;
                 color: green;
@@ -1143,6 +1166,17 @@ class GymApp:
                 """,
                 unsafe_allow_html=True,
             )
+        if self.color_theme == "colorblind":
+            st.markdown(
+                """
+                <style>
+                :root {
+                    --accent-color: #0072B2;
+                }
+                </style>
+                """,
+                unsafe_allow_html=True,
+            )
 
     def _state_init(self) -> None:
         if "selected_workout" not in st.session_state:
@@ -1155,6 +1189,10 @@ class GymApp:
             st.session_state.selected_template = None
         if "pyramid_inputs" not in st.session_state:
             st.session_state.pyramid_inputs = [0.0]
+        if "deleted_set" not in st.session_state:
+            st.session_state.deleted_set = None
+        if "flash_set" not in st.session_state:
+            st.session_state.flash_set = None
         # ensure library widgets always have state available for testing
         if "lib_eq_name" not in st.session_state:
             st.session_state.lib_eq_name = ""
@@ -1454,6 +1492,23 @@ class GymApp:
 
         self._show_dialog("About", _content)
 
+    def _analytics_tutorial_dialog(self) -> None:
+        def _content() -> None:
+            st.markdown("## Advanced Analytics Tutorial")
+            steps = [
+                "1. Choose an exercise and date range to analyze.",
+                "2. Review trend analysis charts for progression insights.",
+                "3. Explore velocity and power history for performance cues.",
+                "4. Check stress balance to monitor fatigue versus recovery.",
+                "5. Combine these metrics with gamification points for motivation.",
+            ]
+            for s in steps:
+                st.markdown(s)
+            if st.button("Close", key="analytics_tut_close"):
+                st.session_state.show_analytics_tutorial = False
+
+        self._show_dialog("Analytics Tutorial", _content)
+
     def _onboarding_wizard(self) -> None:
         """Display onboarding steps for first-time users."""
 
@@ -1634,6 +1689,12 @@ class GymApp:
                     with st.expander("Top Exercises", expanded=False):
                         st.table(top_ex[:5])
 
+    def _summary_tab(self) -> None:
+        with self._section("Summary"):
+            self._dashboard_tab()
+            with st.expander("Gamification", expanded=True):
+                self._metric_grid([("Total Points", self.gamification.total_points())])
+
     def run(self) -> None:
         params = st.query_params
         tab_param = params.get("tab")
@@ -1698,6 +1759,7 @@ class GymApp:
         with progress_tab:
             if not test_mode:
                 (
+                    summary_sub,
                     calendar_sub,
                     history_sub,
                     dash_sub,
@@ -1712,6 +1774,7 @@ class GymApp:
                     goals_sub,
                 ) = st.tabs(
                     [
+                        "Summary",
                         "Calendar",
                         "History",
                         "Dashboard",
@@ -1726,6 +1789,8 @@ class GymApp:
                         "Goals",
                     ]
                 )
+                with summary_sub:
+                    self._summary_tab()
                 with calendar_sub:
                     self._calendar_tab()
                 with history_sub:
@@ -1853,6 +1918,13 @@ class GymApp:
             self._planned_workout_section()
             if st.session_state.selected_planned_workout:
                 self._planned_exercise_section()
+        with st.expander("Recommendation History", expanded=False):
+            last_s = self.autoplan_logs.last_success()
+            st.write(f"Last success: {last_s or 'never'}")
+            errs = self.autoplan_logs.last_errors(10)
+            if errs:
+                for ts, msg in errs:
+                    st.write(f"{ts}: {msg}")
 
     def _workout_section(self) -> None:
         with self._section("Workouts"):
@@ -2281,6 +2353,9 @@ class GymApp:
                     detail = self.sets.fetch_detail(set_id)
                     registered = start_time is not None and end_time is not None
                     row_class = "set-registered" if registered else "set-unregistered"
+                    if st.session_state.get("flash_set") == set_id:
+                        row_class += " flash"
+                        st.session_state.flash_set = None
                     if st.session_state.is_mobile:
                         with st.expander(f"Set {idx}"):
                             st.markdown(
@@ -2376,12 +2451,16 @@ class GymApp:
                                 )
                             st.markdown("</div>", unsafe_allow_html=True)
                     else:
-                        st.markdown(
-                            f"<div class='set-row {row_class}'>", unsafe_allow_html=True
+                        exp = st.expander(
+                            f"Set {idx} - {reps}x{weight}kg RPE {rpe}", expanded=False
                         )
-                        cols = st.columns(14)
-                        with cols[0]:
-                            st.write(f"Set {idx}")
+                        with exp:
+                            st.markdown(
+                                f"<div class='set-row {row_class}'>", unsafe_allow_html=True
+                            )
+                            cols = st.columns(14)
+                            with cols[0]:
+                                st.write(f"Set {idx}")
                         reps_val = cols[1].number_input(
                             "Reps",
                             min_value=1,
@@ -2463,7 +2542,7 @@ class GymApp:
                                 "<div class='set-status'>registered</div>",
                                 unsafe_allow_html=True,
                             )
-                        st.markdown("</div>", unsafe_allow_html=True)
+                            st.markdown("</div>", unsafe_allow_html=True)
             hist = self.stats.exercise_history(name)
             if hist:
                 with st.expander("History (last 5)"):
@@ -2486,6 +2565,28 @@ class GymApp:
                         self.recommender.recommend_next_set(exercise_id)
                     except ValueError as e:
                         st.warning(str(e))
+            deleted = st.session_state.get("deleted_set")
+            if deleted and deleted.get("exercise_id") == exercise_id:
+                if st.button("Undo Delete", key=f"undo_{exercise_id}"):
+                    det = st.session_state.pop("deleted_set")
+                    new_id = self.sets.add(
+                        det["exercise_id"],
+                        int(det["reps"]),
+                        float(det["weight"]),
+                        int(det["rpe"]),
+                        det["note"],
+                        det["planned_set_id"],
+                        int(det["diff_reps"]),
+                        float(det["diff_weight"]),
+                        int(det["diff_rpe"]),
+                        det["warmup"],
+                    )
+                    if det["start_time"]:
+                        self.sets.set_start_time(new_id, det["start_time"])
+                    if det["end_time"]:
+                        self.sets.set_end_time(new_id, det["end_time"])
+                    st.success("Set restored")
+                    st.rerun()
             st.markdown(
                 f"<div id='ex_{exercise_id}_sets'></div>", unsafe_allow_html=True
             )
@@ -2612,6 +2713,7 @@ class GymApp:
         sid = self.sets.add(
             exercise_id, int(reps), float(weight), int(rpe), note or None, warmup=warmup
         )
+        st.session_state.flash_set = sid
         if duration > 0:
             self.sets.set_duration(sid, float(duration))
         self.gamification.record_set(exercise_id, int(reps), float(weight), int(rpe))
@@ -2707,6 +2809,10 @@ class GymApp:
             st.write(f"Delete set {set_id}?")
             cols = st.columns(2)
             if cols[0].button("Yes", key=f"yes_{set_id}"):
+                ex_id = self.sets.fetch_exercise_id(set_id)
+                detail = self.sets.fetch_detail(set_id)
+                detail["exercise_id"] = ex_id
+                st.session_state.deleted_set = detail
                 self.sets.remove(set_id)
                 st.rerun()
             if cols[1].button("No", key=f"no_{set_id}"):
@@ -3264,7 +3370,7 @@ class GymApp:
                 prefix or None,
                 mus_filter or None,
             )
-            with st.expander("Equipment List", expanded=True):
+            with st.expander("Equipment List", expanded=False):
                 choice = st.selectbox("Equipment", [""] + names, key="lib_eq_name")
                 if choice and st.button("Details", key="lib_eq_btn"):
                     detail = self.equipment.fetch_detail(choice)
@@ -3291,7 +3397,7 @@ class GymApp:
                 prefix or None,
                 mus_filter or None,
             )
-            with l_col.expander("Equipment List", expanded=True):
+            with l_col.expander("Equipment List", expanded=False):
                 choice = st.selectbox("Equipment", [""] + names, key="lib_eq_name")
                 if choice and st.button("Details", key="lib_eq_btn"):
                     detail = self.equipment.fetch_detail(choice)
@@ -3988,6 +4094,10 @@ class GymApp:
                 st.session_state.insights_end = datetime.date.today()
                 st.session_state.insights_ex = ""
                 st.rerun()
+        if st.button("Show Tutorial", key="insights_tut"):
+            st.session_state.show_analytics_tutorial = True
+        if st.session_state.get("show_analytics_tutorial"):
+            self._analytics_tutorial_dialog()
         if ex_choice:
             insights = self.stats.progress_insights(
                 ex_choice, start.isoformat(), end.isoformat()
@@ -4658,7 +4768,7 @@ class GymApp:
                     st.success("Added")
                 else:
                     st.warning("Exercise, name and unit required")
-        with st.expander("Existing Goals", expanded=True):
+        with st.expander("Existing Goals", expanded=False):
             rows = self.goals_repo.fetch_all()
             for gid, exn, gname, gval, gunit, sdate, tdate, ach in rows:
                 exp = st.expander(f"{gname} - {gval}{gunit}")
@@ -4801,7 +4911,7 @@ class GymApp:
                     themes,
                     index=themes.index(self.theme),
                 )
-                colors = ["red", "blue", "green", "purple"]
+                colors = ["red", "blue", "green", "purple", "colorblind"]
                 color_opt = st.selectbox(
                     "Color Theme",
                     colors,
@@ -4912,6 +5022,20 @@ class GymApp:
                         "ml_injury_prediction_enabled", True
                     ),
                 )
+                if st.button("Train RPE Model", key="train_rpe_btn"):
+                    rows = self.sets.fetch_all(
+                        "SELECT id, exercise_id, reps, weight, rpe FROM sets ORDER BY id;"
+                    )
+                    progress = st.progress(0.0)
+                    total = len(rows)
+                    prev: dict[int, int] = {}
+                    for i, (sid, ex_id, reps, weight, rpe) in enumerate(rows, start=1):
+                        name = self.exercises.fetch_detail(ex_id)[1]
+                        prev_rpe = prev.get(ex_id, rpe)
+                        self.ml_service.train(name, int(reps), float(weight), int(rpe), prev_rpe)
+                        prev[ex_id] = int(rpe)
+                        progress.progress(i / total)
+                    st.success("Model trained")
             with st.expander("Repository Maintenance", expanded=True):
                 if st.button("Git Pull"):
                     try:
@@ -5240,7 +5364,7 @@ class GymApp:
                     else:
                         st.warning("Name required")
 
-            with st.expander("Existing Tags", expanded=True):
+            with st.expander("Existing Tags", expanded=False):
                 tags = self.tags_repo.fetch_all()
                 for tid, name in tags:
                     exp = st.expander(name)

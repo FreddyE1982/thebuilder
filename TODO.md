@@ -23,17 +23,17 @@
  - [x] 23. Highlight personal records in workout history using a distinctive color.
 - [x] 24. Provide a dashboard subtab summarizing recent workouts, body weight and readiness.
 - [x] 25. Reorder items in Settings so commonly used options appear first.
-- [ ] 26. Add progress bars to indicate long‑running operations like model training.
-- [ ] 27. Integrate undo functionality for accidentally deleted sets within the session.
+- [x] 26. Add progress bars to indicate long‑running operations like model training.
+- [x] 27. Integrate undo functionality for accidentally deleted sets within the session.
 - [x] 28. Provide expandable tips in each tab explaining best practices.
 - [x] 29. Include customizable keyboard shortcuts in settings.
-- [ ] 30. Implement left and right swipe gestures on mobile to move between tabs.
+- [x] 30. Implement left and right swipe gestures on mobile to move between tabs.
 - [x] 31. Add a help overlay accessible via a "?" button linking to README sections.
-- [ ] 32. Make table rows expandable to show more set details without leaving the page.
+- [x] 32. Make table rows expandable to show more set details without leaving the page.
 - [x] 33. Provide a quick summary of planned workouts on the Workouts tab home screen.
 - [x] 34. Allow pinning favorite templates to the top of the list for faster selection.
  - [x] 35. Add color themes beyond light/dark and remember preference in settings.
-- [ ] 36. Include a collapsible history of automatic recommendations in the Planner tab.
+- [x] 36. Include a collapsible history of automatic recommendations in the Planner tab.
 - [x] 37. Show an alert when planned workouts are overdue.
 - [x] 38. Add an interactive calendar view for planned and logged workouts.
 - [ ] 39. Provide bulk editing tools for sets across different workouts.
@@ -42,12 +42,12 @@
 - [ ] 42. Include inline validation messages next to each form field when data is invalid.
  - [x] 43. Display connection status of the REST API and database in the header.
 - [x] 44. Introduce optional desktop side navigation for large screens.
-- [ ] 45. Add colorblind‑friendly palette options in settings.
-- [ ] 46. Offer step‑by‑step tutorial for advanced analytics features.
-- [ ] 47. Implement collapsible lists for tags, goals and equipment to avoid long scrolls.
-- [ ] 48. Create a unified progress summary tab combining charts and gamification points.
+ - [x] 45. Add colorblind‑friendly palette options in settings.
+ - [x] 46. Offer step‑by‑step tutorial for advanced analytics features.
+ - [x] 47. Implement collapsible lists for tags, goals and equipment to avoid long scrolls.
+ - [x] 48. Create a unified progress summary tab combining charts and gamification points.
  - [x] 49. Add export options for workouts to CSV and JSON from the Workouts tab.
-- [ ] 50. Provide micro‑animations for adding items to improve responsiveness.
+ - [x] 50. Provide micro‑animations for adding items to improve responsiveness.
 - [ ] 51. Integrate responsive tables that collapse columns on small screens with a details view.
 - [ ] 52. Provide user customization for metric display units (kg/lb) and time format.
 - [ ] 53. Add quick links to recent analytics directly from workout detail pages.
