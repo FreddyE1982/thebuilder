@@ -15,6 +15,7 @@ from streamlit.testing.v1 import AppTest
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from streamlit_app import GymApp
+from db import TemplateWorkoutRepository, FavoriteTemplateRepository
 
 
 def _find_by_label(elements, label, option=None, key=None):
@@ -685,7 +686,7 @@ class StreamlitFullGUITest(unittest.TestCase):
     def test_dashboard_tab(self) -> None:
         tab = self._get_tab("Dashboard")
         self.assertEqual(tab.header[0].value, "Dashboard")
-        self.assertGreaterEqual(len(tab.metric), 6)
+        self.assertGreaterEqual(len(tab.metric), 8)
 
     def test_stats_tab_subtabs(self) -> None:
         tab = self._get_tab("Exercise Stats")
@@ -1008,6 +1009,19 @@ class StreamlitTemplateWorkflowTest(unittest.TestCase):
         cur.execute("SELECT COUNT(*) FROM workouts;")
         self.assertEqual(cur.fetchone()[0], 1)
         conn.close()
+
+    def test_favorite_template_pinned(self) -> None:
+        repo = TemplateWorkoutRepository(self.db_path)
+        fav_repo = FavoriteTemplateRepository(self.db_path)
+        t1 = repo.create("A", "strength")
+        t2 = repo.create("B", "strength")
+        fav_repo.add(t2)
+        self.at.query_params["tab"] = "library"
+        self.at.run()
+        lib_tab = self._get_tab("Library")
+        tmpl_sec = next(e for e in lib_tab.expander if e.label == "Existing Templates")
+        options = tmpl_sec.selectbox[0].options
+        self.assertEqual(options[0], "B")
 
 
 class StreamlitHeartRateGUITest(unittest.TestCase):

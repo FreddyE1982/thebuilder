@@ -10,7 +10,8 @@ class HotkeyScriptTest(unittest.TestCase):
             content = f.read()
         self.assertIn("handleHotkeys", content)
         self.assertIn("window.addEventListener('keydown'", content)
-        self.assertIn("['workouts','library','progress','settings']", content)
+        self.assertIn("tabKeys", content)
+        self.assertIn("addSetKey", content)
 
 if __name__ == "__main__":
     unittest.main()

@@ -21,17 +21,17 @@
  - [x] 21. Add optional compact mode with reduced padding on desktop for large data tables.
 - [ ] 22. Enable sorting on all tables through the REST endpoints and reflect in the GUI.
  - [x] 23. Highlight personal records in workout history using a distinctive color.
-- [ ] 24. Provide a dashboard subtab summarizing recent workouts, body weight and readiness.
+- [x] 24. Provide a dashboard subtab summarizing recent workouts, body weight and readiness.
 - [x] 25. Reorder items in Settings so commonly used options appear first.
 - [ ] 26. Add progress bars to indicate long‑running operations like model training.
 - [ ] 27. Integrate undo functionality for accidentally deleted sets within the session.
 - [x] 28. Provide expandable tips in each tab explaining best practices.
-- [ ] 29. Include customizable keyboard shortcuts in settings.
+- [x] 29. Include customizable keyboard shortcuts in settings.
 - [ ] 30. Implement left and right swipe gestures on mobile to move between tabs.
 - [x] 31. Add a help overlay accessible via a "?" button linking to README sections.
 - [ ] 32. Make table rows expandable to show more set details without leaving the page.
 - [x] 33. Provide a quick summary of planned workouts on the Workouts tab home screen.
-- [ ] 34. Allow pinning favorite templates to the top of the list for faster selection.
+- [x] 34. Allow pinning favorite templates to the top of the list for faster selection.
 - [ ] 35. Add color themes beyond light/dark and remember preference in settings.
 - [ ] 36. Include a collapsible history of automatic recommendations in the Planner tab.
 - [x] 37. Show an alert when planned workouts are overdue.

@@ -1907,6 +1907,10 @@ class GymAPI:
         def stats_weight_stats(start_date: str = None, end_date: str = None):
             return self.statistics.weight_stats(start_date, end_date)
 
+        @self.app.get("/stats/readiness_stats")
+        def stats_readiness_stats(start_date: str = None, end_date: str = None):
+            return self.statistics.readiness_stats(start_date, end_date)
+
         @self.app.get("/stats/weight_forecast")
         def stats_weight_forecast(days: int):
             return self.statistics.weight_forecast(days)
