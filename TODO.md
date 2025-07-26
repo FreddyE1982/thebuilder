@@ -11,7 +11,7 @@
 - [x] 11. Add global search at the top navigation to quickly find workouts, exercises or tags.
 - [x] 12. Display key stats like today's volume in a metric grid at the top of the Workouts tab.
  - [x] 13. Add collapsible sections for advanced analytics to reduce clutter.
-- [ ] 14. Ensure every chart has consistent colors and accessible labels.
+- [x] 14. Ensure every chart has consistent colors and accessible labels.
 - [x] 15. Add confirmation dialogs when deleting workouts or exercises to prevent mistakes.
 - [ ] 16. Provide an editable table view for sets with drag and drop reordering.
 - [ ] 17. Introduce filter chips for tags and equipment in the Library tab for faster browsing.
@@ -25,10 +25,10 @@
 - [ ] 25. Reorder items in Settings so commonly used options appear first.
 - [ ] 26. Add progress bars to indicate long‑running operations like model training.
 - [ ] 27. Integrate undo functionality for accidentally deleted sets within the session.
-- [ ] 28. Provide expandable tips in each tab explaining best practices.
+- [x] 28. Provide expandable tips in each tab explaining best practices.
 - [ ] 29. Include customizable keyboard shortcuts in settings.
 - [ ] 30. Implement left and right swipe gestures on mobile to move between tabs.
-- [ ] 31. Add a help overlay accessible via a "?" button linking to README sections.
+- [x] 31. Add a help overlay accessible via a "?" button linking to README sections.
 - [ ] 32. Make table rows expandable to show more set details without leaving the page.
 - [ ] 33. Provide a quick summary of planned workouts on the Workouts tab home screen.
 - [ ] 34. Allow pinning favorite templates to the top of the list for faster selection.
