@@ -1045,6 +1045,10 @@ class GymApp:
                 color: #ffffff;
                 font-size: 1.25rem;
             }
+            .conn-status {
+                font-size: 0.8rem;
+                margin-left: auto;
+            }
             .set-row {
                 padding: 0.5rem;
                 border-radius: 0.25rem;
@@ -1205,6 +1209,18 @@ class GymApp:
         if st.session_state.get("open_help_overlay"):
             self._help_overlay_dialog()
 
+    def _connection_status(self) -> None:
+        """Display connection status for API and database."""
+        try:
+            self.workouts.fetch_all_workouts()
+            db_icon = "🟢"
+        except Exception:
+            db_icon = "🔴"
+        st.markdown(
+            f"<div class='conn-status'>DB {db_icon} API 🟢</div>",
+            unsafe_allow_html=True,
+        )
+
     def _top_nav(self) -> None:
         """Render top navigation on desktop."""
         selected = st.session_state.get("main_tab", 0)
@@ -1352,7 +1368,7 @@ class GymApp:
 
     def _reset_equipment_filters(self) -> None:
         """Clear equipment library filter inputs."""
-        st.session_state.lib_eq_type = ""
+        st.session_state.lib_eq_type = []
         st.session_state.lib_eq_prefix = ""
         st.session_state.lib_eq_mus = []
         if os.environ.get("TEST_MODE") != "1":
@@ -1622,6 +1638,7 @@ class GymApp:
         with cols[3]:
             with st.expander("Quick Search", expanded=False):
                 self._quick_search("header")
+        self._connection_status()
         st.markdown("</div>", unsafe_allow_html=True)
         self._top_nav()
         self._close_header()
@@ -3209,13 +3226,13 @@ class GymApp:
         types = [""] + self.equipment.fetch_types()
         if st.session_state.is_mobile:
             with st.expander("Filters", expanded=True):
-                sel_type = st.selectbox("Type", types, key="lib_eq_type")
+                sel_type = st.multiselect("Type", types, key="lib_eq_type")
                 prefix = st.text_input("Name Contains", key="lib_eq_prefix")
                 mus_filter = st.multiselect("Muscles", muscles, key="lib_eq_mus")
                 if st.button("Reset Filters", key="lib_eq_reset"):
                     self._reset_equipment_filters()
             names = self.equipment.fetch_names(
-                sel_type or None,
+                sel_type if sel_type else None,
                 prefix or None,
                 mus_filter or None,
             )
@@ -3236,13 +3253,13 @@ class GymApp:
         else:
             f_col, l_col = st.columns([1, 2], gap="large")
             with f_col.expander("Filters", expanded=True):
-                sel_type = st.selectbox("Type", types, key="lib_eq_type")
+                sel_type = st.multiselect("Type", types, key="lib_eq_type")
                 prefix = st.text_input("Name Contains", key="lib_eq_prefix")
                 mus_filter = st.multiselect("Muscles", muscles, key="lib_eq_mus")
                 if st.button("Reset Filters", key="lib_eq_reset"):
                     self._reset_equipment_filters()
             names = self.equipment.fetch_names(
-                sel_type or None,
+                sel_type if sel_type else None,
                 prefix or None,
                 mus_filter or None,
             )
@@ -4151,6 +4168,19 @@ class GymApp:
                 )
             with col2:
                 end = st.date_input("End", datetime.date.today(), key="rep_end")
+            qcol1, qcol2 = st.columns(2)
+            if qcol1.button("Last Week", key="rep_last_week"):
+                st.session_state.rep_start = (
+                    datetime.date.today() - datetime.timedelta(days=7)
+                )
+                st.session_state.rep_end = datetime.date.today()
+                st.rerun()
+            if qcol2.button("Last Month", key="rep_last_month"):
+                st.session_state.rep_start = (
+                    datetime.date.today() - datetime.timedelta(days=30)
+                )
+                st.session_state.rep_end = datetime.date.today()
+                st.rerun()
             if st.button("Reset", key="rep_reset"):
                 st.session_state.rep_start = datetime.date.today() - datetime.timedelta(
                     days=30

@@ -156,6 +156,16 @@ class GymAPI:
         self._setup_routes()
 
     def _setup_routes(self) -> None:
+        @self.app.get("/health")
+        def health():
+            """Return API and database connection status."""
+            try:
+                # simple query to verify database connectivity
+                self.workouts.fetch_all_workouts()
+                return {"status": "ok"}
+            except Exception as e:  # pragma: no cover - connectivity failure
+                raise HTTPException(status_code=500, detail=str(e))
+
         @self.app.get("/equipment/types")
         def list_equipment_types():
             return self.equipment.fetch_types()

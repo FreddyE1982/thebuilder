@@ -1830,13 +1830,17 @@ class EquipmentRepository(BaseRepository):
 
     def fetch_names(
         self,
-        equipment_type: Optional[str] = None,
+        equipment_type: Optional[str | List[str]] = None,
         prefix: Optional[str] = None,
         muscles: Optional[List[str]] = None,
     ) -> List[str]:
         query = "SELECT name FROM equipment WHERE 1=1"
         params: List[str] = []
-        if equipment_type:
+        if isinstance(equipment_type, list) and equipment_type:
+            placeholders = ",".join("?" for _ in equipment_type)
+            query += f" AND equipment_type IN ({placeholders})"
+            params.extend(equipment_type)
+        elif equipment_type:
             query += " AND equipment_type = ?"
             params.append(equipment_type)
         if prefix:

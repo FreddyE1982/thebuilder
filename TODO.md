@@ -14,7 +14,7 @@
 - [x] 14. Ensure every chart has consistent colors and accessible labels.
 - [x] 15. Add confirmation dialogs when deleting workouts or exercises to prevent mistakes.
 - [ ] 16. Provide an editable table view for sets with drag and drop reordering.
-- [ ] 17. Introduce filter chips for tags and equipment in the Library tab for faster browsing.
+ - [x] 17. Introduce filter chips for tags and equipment in the Library tab for faster browsing.
 - [x] 18. Move wellness logging to its own subtab under Progress for visibility.
 - [x] 19. Implement status badges for machine learning models showing training state.
 - [x] 20. Use icons next to each menu item to aid quick recognition.
@@ -37,10 +37,10 @@
 - [x] 37. Show an alert when planned workouts are overdue.
 - [x] 38. Add an interactive calendar view for planned and logged workouts.
 - [ ] 39. Provide bulk editing tools for sets across different workouts.
-- [ ] 40. Add a quick report generator with preset date ranges like last week or last month.
+ - [x] 40. Add a quick report generator with preset date ranges like last week or last month.
 - [x] 41. Surface recently used muscles and equipment in dropdowns for convenience.
 - [ ] 42. Include inline validation messages next to each form field when data is invalid.
-- [ ] 43. Display connection status of the REST API and database in the header.
+ - [x] 43. Display connection status of the REST API and database in the header.
 - [ ] 44. Introduce optional desktop side navigation for large screens.
 - [ ] 45. Add colorblind‑friendly palette options in settings.
 - [ ] 46. Offer step‑by‑step tutorial for advanced analytics features.
