@@ -38,7 +38,7 @@
 - [ ] 38. Add an interactive calendar view for planned and logged workouts.
 - [ ] 39. Provide bulk editing tools for sets across different workouts.
 - [ ] 40. Add a quick report generator with preset date ranges like last week or last month.
-- [ ] 41. Surface recently used muscles and equipment in dropdowns for convenience.
+- [x] 41. Surface recently used muscles and equipment in dropdowns for convenience.
 - [ ] 42. Include inline validation messages next to each form field when data is invalid.
 - [ ] 43. Display connection status of the REST API and database in the header.
 - [ ] 44. Introduce optional desktop side navigation for large screens.

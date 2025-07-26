@@ -3059,3 +3059,20 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         status = self.client.get("/autoplanner/status").json()
         self.assertTrue(any(m["name"] == "volume_model" for m in status["models"]))
+
+    def test_recent_equipment_and_muscles(self) -> None:
+        self.client.post("/workouts")
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8},
+        )
+        resp = self.client.get("/equipment/recent")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("Olympic Barbell", resp.json())
+        resp = self.client.get("/muscles/recent")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("Pectoralis Major", resp.json())

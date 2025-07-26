@@ -411,6 +411,24 @@ class StatisticsService:
             )
         return result
 
+    def recent_equipment(self, limit: int = 5) -> list[str]:
+        """Return a list of recently used equipment names."""
+        return self.sets.recent_equipment(limit)
+
+    def recent_muscles(self, limit: int = 5) -> list[str]:
+        """Return a list of muscles used with most recent equipment."""
+        if self.equipment is None:
+            return []
+        eq_names = self.sets.recent_equipment(limit * 3)
+        muscles: list[str] = []
+        for eq in eq_names:
+            for m in self.equipment.fetch_muscles(eq):
+                if m not in muscles:
+                    muscles.append(m)
+                if len(muscles) >= limit:
+                    return muscles[:limit]
+        return muscles[:limit]
+
     def muscle_usage(
         self,
         start_date: Optional[str] = None,
