@@ -59,17 +59,17 @@
 - [x] 59. Provide a summary banner after logging a workout with key statistics.
 - [ ] 60. Implement optional email export of weekly reports triggered via settings.
 - [ ] 61. Consolidate progress charts into a carousel for easier comparison.
-- [ ] 62. Add haptic feedback on mobile when logging sets.
+- [x] 62. Add haptic feedback on mobile when logging sets.
 - [ ] 63. Create contextual menus on right click for quick actions on workouts.
 - [ ] 64. Provide an overview page with widgets summarizing current goals.
 - [ ] 65. Add a resizable sidebar for customizing visible metrics.
 - [ ] 66. Support drag and drop to reorder workout templates.
 - [ ] 67. Implement search suggestions as users type in dropdown filters.
 - [ ] 68. Offer automatic backup and restore options in settings.
-- [ ] 69. Include a timer widget for rest periods between sets.
-- [ ] 70. Introduce color coding for workout types across the app.
+- [x] 69. Include a timer widget for rest periods between sets.
+- [x] 70. Introduce color coding for workout types across the app.
 - [x] 71. Add a mini calendar widget showing upcoming planned workouts.
-- [ ] 72. Provide quick filter chips for common date ranges in history views.
+- [x] 72. Provide quick filter chips for common date ranges in history views.
 - [ ] 73. Implement a unified notification center for alerts and reminders.
 - [ ] 74. Allow users to collapse the header on scroll for more screen space.
 - [ ] 75. Create a dedicated analytics landing page with shortcuts to reports.
