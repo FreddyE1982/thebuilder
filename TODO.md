@@ -1,6 +1,6 @@
 - [x] 1. Restructure the navigation to use a single consistent top and bottom bar across modes.
 - [x] 2. Create an onboarding wizard in a dialog for first‑time users explaining key features.
-- [ ] 3. Implement in‑app tooltips for all form inputs using `st.help` for accessibility.
+ - [x] 3. Implement in‑app tooltips for all form inputs using `st.help` for accessibility.
 - [x] 4. Group workout planning tools into an expander inside the Workouts tab.
 - [x] 5. Add quick‑add buttons for favorite exercises directly in the workout logging form.
 - [ ] 6. Add keyboard shortcuts for adding sets and toggling tabs via Streamlit hotkeys.
@@ -10,7 +10,7 @@
 - [x] 10. Provide a dark/light mode toggle in the Settings tab.
 - [x] 11. Add global search at the top navigation to quickly find workouts, exercises or tags.
 - [x] 12. Display key stats like today's volume in a metric grid at the top of the Workouts tab.
-- [ ] 13. Add collapsible sections for advanced analytics to reduce clutter.
+ - [x] 13. Add collapsible sections for advanced analytics to reduce clutter.
 - [ ] 14. Ensure every chart has consistent colors and accessible labels.
 - [x] 15. Add confirmation dialogs when deleting workouts or exercises to prevent mistakes.
 - [ ] 16. Provide an editable table view for sets with drag and drop reordering.

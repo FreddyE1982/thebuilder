@@ -558,6 +558,14 @@ class StreamlitAppTest(unittest.TestCase):
         help_text = any("Workout Logger Help" in m.body for m in self.at.markdown)
         self.assertTrue(help_text)
 
+    def test_tooltips_present(self) -> None:
+        tooltips = []
+        for node in self.at._tree:
+            proto = getattr(node, "proto", None)
+            if proto and getattr(proto, "doc_string", None):
+                tooltips.append(proto.doc_string)
+        self.assertIn("Select the primary training focus", tooltips)
+
     def test_delete_exercise_confirmation(self) -> None:
         idx_new = _find_by_label(
             self.at.button,
@@ -743,6 +751,14 @@ class StreamlitFullGUITest(unittest.TestCase):
         tab = self._get_tab("Goals")
         self.assertEqual(tab.header[0].value, "Goals")
         self.assertGreater(len(tab.expander), 1)
+
+    def test_forecast_sections_collapsible(self) -> None:
+        idx = _find_by_label(self.at.selectbox, "Exercise", key="stats_ex")
+        self.at = self.at.selectbox[idx].select("Barbell Bench Press").run()
+        prog_tab = self._get_tab("Exercise Stats").tabs[3]
+        labels = [e.label for e in prog_tab.expander]
+        self.assertIn("Progress Forecast", labels)
+        self.assertIn("Volume Forecast", labels)
 
     def test_main_tabs_present(self) -> None:
         labels = [t.label for t in self.at.tabs]
