@@ -171,6 +171,8 @@ class GymApp:
         self.color_theme = self.settings_repo.get_text("color_theme", "red")
         self.compact_mode = self.settings_repo.get_bool("compact_mode", False)
         self.side_nav = self.settings_repo.get_bool("side_nav", False)
+        self.weight_unit = self.settings_repo.get_text("weight_unit", "kg")
+        self.time_format = self.settings_repo.get_text("time_format", "24h")
         self.add_set_key = self.settings_repo.get_text("hotkey_add_set", "a")
         self.tab_keys = self.settings_repo.get_text(
             "hotkey_tab_keys", "1,2,3,4"
@@ -290,11 +292,47 @@ class GymApp:
         if st.button("Refresh"):
             st.rerun()
 
+    def _command_palette(self) -> None:
+        if st.session_state.get("open_palette"):
+            with st.dialog("Command Palette"):
+                if st.button("Workouts"):
+                    st.session_state.open_palette = False
+                    st.experimental_set_query_params(tab="workouts")
+                    st.rerun()
+                if st.button("Library"):
+                    st.session_state.open_palette = False
+                    st.experimental_set_query_params(tab="library")
+                    st.rerun()
+                if st.button("Progress"):
+                    st.session_state.open_palette = False
+                    st.experimental_set_query_params(tab="progress")
+                    st.rerun()
+                if st.button("Settings"):
+                    st.session_state.open_palette = False
+                    st.experimental_set_query_params(tab="settings")
+                    st.rerun()
+
+    def _format_weight(self, weight: float) -> str:
+        """Return weight formatted according to user settings."""
+        if self.weight_unit == "lb":
+            return f"{weight * 2.20462:.1f} lb"
+        return f"{weight:.1f} kg"
+
+    def _format_time(self, ts: str | datetime.datetime) -> str:
+        """Return time formatted per user preference."""
+        if isinstance(ts, str):
+            ts = datetime.datetime.fromisoformat(ts)
+        return ts.strftime("%I:%M %p") if self.time_format == "12h" else ts.strftime("%H:%M")
+
     def _configure_page(self) -> None:
         if st.session_state.get("layout_set"):
             return
         params = st.query_params
         mode = params.get("mode")
+        if params.get("cmd") == "1":
+            st.session_state.open_palette = True
+            params.pop("cmd")
+            st.experimental_set_query_params(**params)
         if mode is None:
             components.html(
                 """
@@ -376,6 +414,10 @@ class GymApp:
                     const btn = Array.from(document.querySelectorAll('button'))
                         .find(b => b.innerText.trim() === 'Add Set');
                     if (btn) btn.click();
+                } else if (e.ctrlKey && e.key.toLowerCase() === 'k') {
+                    const params = new URLSearchParams(window.location.search);
+                    params.set('cmd', '1');
+                    window.location.search = params.toString();
                 }
             }
             window.addEventListener('keydown', handleHotkeys);
@@ -1193,6 +1235,8 @@ class GymApp:
             st.session_state.deleted_set = None
         if "flash_set" not in st.session_state:
             st.session_state.flash_set = None
+        if "open_palette" not in st.session_state:
+            st.session_state.open_palette = False
         # ensure library widgets always have state available for testing
         if "lib_eq_name" not in st.session_state:
             st.session_state.lib_eq_name = ""
@@ -1734,6 +1778,7 @@ class GymApp:
         self._create_sidebar()
         self._open_content()
         self._refresh()
+        self._command_palette()
         test_mode = os.environ.get("TEST_MODE") == "1"
         (
             workouts_tab,
@@ -2002,7 +2047,7 @@ class GymApp:
                         )
                         summary = self.sets.workout_summary(int(selected))
                         st.success(
-                            f"Logged {summary['sets']} sets, volume {summary['volume']} kg, avg RPE {summary['avg_rpe']}"
+                            f"Logged {summary['sets']} sets, volume {self._format_weight(summary['volume'])}, avg RPE {summary['avg_rpe']}"
                         )
                     type_choice = st.selectbox(
                         "Type",
@@ -2028,7 +2073,7 @@ class GymApp:
                         )
                         summary = self.sets.workout_summary(int(selected))
                         st.success(
-                            f"Logged {summary['sets']} sets, volume {summary['volume']} kg, avg RPE {summary['avg_rpe']}"
+                            f"Logged {summary['sets']} sets, volume {self._format_weight(summary['volume'])}, avg RPE {summary['avg_rpe']}"
                         )
                     type_choice = cols[2].selectbox(
                         "Type",
@@ -2039,9 +2084,9 @@ class GymApp:
                         args=(int(selected),),
                     )
                 if start_time:
-                    st.write(f"Start: {start_time}")
+                    st.write(f"Start: {self._format_time(start_time)}")
                 if end_time:
-                    st.write(f"End: {end_time}")
+                    st.write(f"End: {self._format_time(end_time)}")
                 st.markdown("<div class='form-grid'>", unsafe_allow_html=True)
                 notes_edit = st.text_area(
                     "Notes",
@@ -2095,6 +2140,9 @@ class GymApp:
                     mime="application/json",
                     key=f"export_json_{selected}",
                 )
+                if start_time and end_time:
+                    link = f"?mode={'mobile' if self.layout.is_mobile else 'desktop'}&tab=progress&start={start_time}&end={end_time}"
+                    st.link_button("View Analytics", link, key=f'analytics_{selected}')
                 if st.button("Copy to Template", key=f"copy_tpl_{selected}"):
                     tid = self.planner.copy_workout_to_template(int(selected))
                     st.success(f"Template {tid} created")
@@ -2372,7 +2420,7 @@ class GymApp:
                                 args=(set_id,),
                             )
                             weight_val = st.number_input(
-                                "Weight (kg)",
+                                f"Weight ({self.weight_unit})",
                                 min_value=0.0,
                                 step=0.5,
                                 value=float(weight),
@@ -2441,9 +2489,9 @@ class GymApp:
                                 self._confirm_delete_set(set_id)
                                 continue
                             if start_time:
-                                st.write(start_time)
+                                st.write(self._format_time(start_time))
                             if end_time:
-                                st.write(end_time)
+                                st.write(self._format_time(end_time))
                             if registered:
                                 st.markdown(
                                     "<div class='set-status'>registered</div>",
@@ -2471,7 +2519,7 @@ class GymApp:
                             args=(set_id,),
                         )
                         weight_val = cols[2].number_input(
-                            "Weight (kg)",
+                            f"Weight ({self.weight_unit})",
                             min_value=0.0,
                             step=0.5,
                             value=float(weight),
@@ -2534,9 +2582,9 @@ class GymApp:
                             self._confirm_delete_set(set_id)
                             continue
                         if start_time:
-                            cols[10].write(start_time)
+                            cols[10].write(self._format_time(start_time))
                         if end_time:
-                            cols[11].write(end_time)
+                            cols[11].write(self._format_time(end_time))
                         if registered:
                             cols[13].markdown(
                                 "<div class='set-status'>registered</div>",
@@ -2607,12 +2655,17 @@ class GymApp:
             step=1,
             key=f"new_reps_{exercise_id}",
         )
+        errs = st.session_state.get(f"set_errors_{exercise_id}", {})
+        if errs.get("reps"):
+            st.error("Reps required")
         weight = st.number_input(
-            "Weight (kg)",
+            f"Weight ({self.weight_unit})",
             min_value=0.0,
             step=0.5,
             key=f"new_weight_{exercise_id}",
         )
+        if errs.get("weight"):
+            st.error("Weight required")
         rpe = st.selectbox(
             "RPE",
             options=list(range(11)),
@@ -2634,7 +2687,16 @@ class GymApp:
                 st.session_state[f"new_weight_{exercise_id}"] = float(l[2])
                 st.session_state[f"new_rpe_{exercise_id}"] = int(l[3])
         if with_button and st.button("Add Set", key=f"add_set_{exercise_id}"):
-            self._submit_set(exercise_id, reps, weight, rpe, note, duration, warmup)
+            errors = {}
+            if reps < 1:
+                errors["reps"] = "required"
+            if weight <= 0:
+                errors["weight"] = "required"
+            if errors:
+                st.session_state[f"set_errors_{exercise_id}"] = errors
+            else:
+                st.session_state.pop(f"set_errors_{exercise_id}", None)
+                self._submit_set(exercise_id, reps, weight, rpe, note, duration, warmup)
 
     def _bulk_add_sets_dialog(self, exercise_id: int) -> None:
         def _content() -> None:
@@ -2711,7 +2773,12 @@ class GymApp:
     ) -> None:
         """Create a new set and record gamification metrics."""
         sid = self.sets.add(
-            exercise_id, int(reps), float(weight), int(rpe), note or None, warmup=warmup
+            exercise_id,
+            int(reps),
+            float(weight) / 2.20462 if self.weight_unit == "lb" else float(weight),
+            int(rpe),
+            note or None,
+            warmup=warmup,
         )
         st.session_state.flash_set = sid
         if duration > 0:
@@ -2734,9 +2801,10 @@ class GymApp:
         note_val = st.session_state.get(f"note_{set_id}", "")
         dur_val = st.session_state.get(f"duration_{set_id}", 0.0)
         warm_val = st.session_state.get(f"warm_{set_id}")
-        self.sets.update(
-            set_id, int(reps_val), float(weight_val), int(rpe_val), warm_val
-        )
+        weight = float(weight_val)
+        if self.weight_unit == "lb":
+            weight /= 2.20462
+        self.sets.update(set_id, int(reps_val), weight, int(rpe_val), warm_val)
         self.sets.update_note(set_id, note_val or None)
         if dur_val and float(dur_val) > 0:
             self.sets.set_duration(set_id, float(dur_val))
@@ -4829,7 +4897,7 @@ class GymApp:
         if "delete_target" not in st.session_state:
             st.session_state.delete_target = None
 
-        with st.expander("Data Deletion", expanded=True):
+        with st.expander("Data Management", expanded=True):
             if st.button("Delete All Logged and Planned Workouts"):
                 st.session_state.delete_target = "all"
             if st.button("Delete All Logged Workouts"):
@@ -4886,7 +4954,7 @@ class GymApp:
 
         with gen_tab:
             st.header("General Settings")
-            with st.expander("User Settings", expanded=True):
+            with st.expander("Display Settings", expanded=True):
                 bw = st.number_input(
                     "Body Weight (kg)",
                     min_value=1.0,
@@ -4916,6 +4984,20 @@ class GymApp:
                     "Color Theme",
                     colors,
                     index=colors.index(self.color_theme),
+                )
+                avatar_file = st.file_uploader("Avatar", type=["png", "jpg"], key="avatar_upload")
+                current_avatar = self.settings_repo.get_text("avatar", "")
+                if current_avatar and Path(current_avatar).exists():
+                    st.image(current_avatar, width=100)
+                unit_opt = st.selectbox(
+                    "Weight Unit",
+                    ["kg", "lb"],
+                    index=["kg", "lb"].index(self.weight_unit),
+                )
+                time_fmt_opt = st.selectbox(
+                    "Time Format",
+                    ["24h", "12h"],
+                    index=["24h", "12h"].index(self.time_format),
                 )
                 compact = st.checkbox(
                     "Compact Mode",
@@ -5036,7 +5118,7 @@ class GymApp:
                         prev[ex_id] = int(rpe)
                         progress.progress(i / total)
                     st.success("Model trained")
-            with st.expander("Repository Maintenance", expanded=True):
+            with st.expander("Integrations", expanded=True):
                 if st.button("Git Pull"):
                     try:
                         output = GitTools.git_pull("~/thebuilder")
@@ -5045,6 +5127,7 @@ class GymApp:
                     except Exception as e:
                         st.warning(str(e))
             if st.button("Save General Settings"):
+                progress = st.progress(0.0)
                 self.settings_repo.set_float("body_weight", bw)
                 self.settings_repo.set_float("height", height)
                 self.settings_repo.set_float("months_active", ma)
@@ -5053,6 +5136,14 @@ class GymApp:
                 self.theme = theme_opt
                 self.color_theme = color_opt
                 self._apply_theme()
+                if avatar_file is not None:
+                    out = Path("avatar.png")
+                    out.write_bytes(avatar_file.getvalue())
+                    self.settings_repo.set_text("avatar", str(out))
+                self.settings_repo.set_text("weight_unit", unit_opt)
+                self.settings_repo.set_text("time_format", time_fmt_opt)
+                self.weight_unit = unit_opt
+                self.time_format = time_fmt_opt
                 self.settings_repo.set_bool("compact_mode", compact)
                 self.compact_mode = compact
                 self.settings_repo.set_bool("side_nav", side_nav_opt)
@@ -5080,6 +5171,7 @@ class GymApp:
                 self.settings_repo.set_bool("ml_goal_prediction_enabled", goal_pred)
                 self.settings_repo.set_bool("ml_injury_training_enabled", inj_train)
                 self.settings_repo.set_bool("ml_injury_prediction_enabled", inj_pred)
+                progress.progress(1.0)
                 st.success("Settings saved")
 
         with eq_tab:
