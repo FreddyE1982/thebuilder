@@ -39,7 +39,7 @@
 - [ ] 39. Provide bulk editing tools for sets across different workouts.
  - [x] 40. Add a quick report generator with preset date ranges like last week or last month.
 - [x] 41. Surface recently used muscles and equipment in dropdowns for convenience.
-- [ ] 42. Include inline validation messages next to each form field when data is invalid.
+- [x] 42. Include inline validation messages next to each form field when data is invalid.
  - [x] 43. Display connection status of the REST API and database in the header.
 - [x] 44. Introduce optional desktop side navigation for large screens.
  - [x] 45. Add colorblind‑friendly palette options in settings.
@@ -49,13 +49,13 @@
  - [x] 49. Add export options for workouts to CSV and JSON from the Workouts tab.
  - [x] 50. Provide micro‑animations for adding items to improve responsiveness.
 - [ ] 51. Integrate responsive tables that collapse columns on small screens with a details view.
-- [ ] 52. Provide user customization for metric display units (kg/lb) and time format.
-- [ ] 53. Add quick links to recent analytics directly from workout detail pages.
-- [ ] 54. Introduce a command palette (Ctrl+K) for power users to run any action.
+- [x] 52. Provide user customization for metric display units (kg/lb) and time format.
+- [x] 53. Add quick links to recent analytics directly from workout detail pages.
+- [x] 54. Introduce a command palette (Ctrl+K) for power users to run any action.
 - [ ] 55. Ensure all dialogs and forms are fully reachable using keyboard navigation.
-- [ ] 56. Break down the Settings tab into categories like Display, Data Management and Integrations using expanders.
-- [ ] 57. Show progress indicators when syncing settings with `settings.yaml`.
-- [ ] 58. Add avatar and profile management with an image upload field in settings.
+- [x] 56. Break down the Settings tab into categories like Display, Data Management and Integrations using expanders.
+- [x] 57. Show progress indicators when syncing settings with `settings.yaml`.
+- [x] 58. Add avatar and profile management with an image upload field in settings.
 - [x] 59. Provide a summary banner after logging a workout with key statistics.
 - [ ] 60. Implement optional email export of weekly reports triggered via settings.
 - [ ] 61. Consolidate progress charts into a carousel for easier comparison.

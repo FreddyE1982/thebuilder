@@ -620,6 +620,8 @@ class Database:
             "ml_injury_training_enabled": "1",
             "ml_injury_prediction_enabled": "1",
             "compact_mode": "0",
+            "weight_unit": "kg",
+            "time_format": "24h",
         }
         with self._connection() as conn:
             for key, value in defaults.items():
