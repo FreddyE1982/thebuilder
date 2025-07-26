@@ -217,7 +217,7 @@ class StreamlitAppTest(unittest.TestCase):
     def test_quick_add_favorite(self) -> None:
         self.at.query_params["tab"] = "library"
         self.at.run()
-        fav_tab = next(t for t in self._get_tab("Library").tabs if t.label == "Favorites")
+        fav_tab = next(e for e in self._get_tab("Library").expander if e.label == "Favorites")
         idx = _find_by_label(
             fav_tab.selectbox, "Add Favorite", "Barbell Bench Press", key="fav_add_name"
         )
@@ -249,32 +249,32 @@ class StreamlitAppTest(unittest.TestCase):
         self.at.query_params["tab"] = "library"
         self.at.run()
         lib_tab = self._get_tab("Library")
-        eq_tab = next(t for t in lib_tab.tabs if t.label == "Equipment")
+        eq_tab = next(e for e in lib_tab.expander if e.label == "Equipment")
         eq_tab.selectbox[0].select("Free Weights").run()
         self.at.run()
         lib_tab = self._get_tab("Library")
-        eq_tab = next(t for t in lib_tab.tabs if t.label == "Equipment")
+        eq_tab = next(e for e in lib_tab.expander if e.label == "Equipment")
         self.assertIn("Olympic Barbell", eq_tab.selectbox[1].options)
 
     def test_exercise_filtering(self) -> None:
         self.at.query_params["tab"] = "library"
         self.at.run()
         lib_tab = self._get_tab("Library")
-        ex_tab = next(t for t in lib_tab.tabs if t.label == "Exercises")
+        ex_tab = next(e for e in lib_tab.expander if e.label == "Exercises")
         ex_tab.multiselect[0].select("Chest").run()
         self.at.run()
         lib_tab = self._get_tab("Library")
-        ex_tab = next(t for t in lib_tab.tabs if t.label == "Exercises")
+        ex_tab = next(e for e in lib_tab.expander if e.label == "Exercises")
         self.assertIn("Barbell Bench Press", ex_tab.selectbox[1].options)
 
     def test_reset_buttons_present(self) -> None:
         self.at.query_params["tab"] = "library"
         self.at.run()
         lib_tab = self._get_tab("Library")
-        eq_tab = next(t for t in lib_tab.tabs if t.label == "Equipment")
+        eq_tab = next(e for e in lib_tab.expander if e.label == "Equipment")
         idx_eq = _find_by_label(eq_tab.button, "Reset Filters", key="lib_eq_reset")
         self.assertIsNotNone(idx_eq)
-        ex_tab = next(t for t in lib_tab.tabs if t.label == "Exercises")
+        ex_tab = next(e for e in lib_tab.expander if e.label == "Exercises")
         idx_ex = _find_by_label(ex_tab.button, "Reset Filters", key="lib_ex_reset")
         self.assertIsNotNone(idx_ex)
 
@@ -781,14 +781,13 @@ class StreamlitFullGUITest(unittest.TestCase):
         for name in ["AI Planner", "Templates", "Planned Workouts"]:
             self.assertIn(name, labels)
 
-    def test_library_subtabs(self) -> None:
+    def test_library_sections(self) -> None:
         self.at.query_params["tab"] = "library"
         self.at.run()
         tab = self._get_tab("Library")
-        labels = [t.label for t in tab.tabs]
-        self.assertIn("Favorites", labels)
-        self.assertIn("Equipment", labels)
-        self.assertIn("Exercises", labels)
+        labels = [e.label for e in tab.expander]
+        for name in ["Favorites", "Templates", "Equipment", "Exercises"]:
+            self.assertIn(name, labels)
 
     def test_settings_subtabs(self) -> None:
         self.at.query_params["tab"] = "settings"

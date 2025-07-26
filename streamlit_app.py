@@ -348,6 +348,19 @@ class GymApp:
             window.addEventListener('DOMContentLoaded', handleResize);
             window.addEventListener('load', handleResize);
             handleResize();
+            function handleHotkeys(e) {
+                if (e.altKey && ['1','2','3','4'].includes(e.key)) {
+                    const labels = ['workouts','library','progress','settings'];
+                    const params = new URLSearchParams(window.location.search);
+                    params.set('tab', labels[parseInt(e.key)-1]);
+                    window.location.search = params.toString();
+                } else if (e.altKey && e.key.toLowerCase() === 'a') {
+                    const btn = Array.from(document.querySelectorAll('button'))
+                        .find(b => b.innerText.trim() === 'Add Set');
+                    if (btn) btn.click();
+                }
+            }
+            window.addEventListener('keydown', handleHotkeys);
             </script>
             """,
             height=0,
@@ -1641,10 +1654,11 @@ class GymApp:
                         st.warning(str(e))
                 else:
                     st.warning("Select exercises")
-        with st.expander("Templates", expanded=False):
-            self._template_section()
-            if st.session_state.get("selected_template") is not None:
-                self._template_exercise_section()
+        if st.query_params.get("tab") == "workouts":
+            with st.expander("Templates", expanded=False):
+                self._template_section()
+                if st.session_state.get("selected_template") is not None:
+                    self._template_exercise_section()
         with st.expander("Planned Workouts", expanded=True):
             self._planned_workout_section()
             if st.session_state.selected_planned_workout:
@@ -2982,18 +2996,19 @@ class GymApp:
 
     def _library_tab(self) -> None:
         st.header("Library")
-        fav_tab, eq_tab, ex_tab = st.tabs(
-            [
-                "Favorites",
-                "Equipment",
-                "Exercises",
-            ]
-        )
-        with fav_tab:
+        with st.expander("Favorites", expanded=False):
             self._favorites_library()
-        with eq_tab:
+        if st.query_params.get("tab") == "library":
+            with st.expander("Templates", expanded=False):
+                self._template_section()
+                if st.session_state.get("selected_template") is not None:
+                    self._template_exercise_section()
+        else:
+            with st.expander("Templates", expanded=False):
+                st.write(" ")
+        with st.expander("Equipment", expanded=False):
             self._equipment_library()
-        with ex_tab:
+        with st.expander("Exercises", expanded=True):
             self._exercise_catalog_library()
 
     def _favorites_library(self) -> None:
