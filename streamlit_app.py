@@ -1,6 +1,7 @@
 import datetime
 import pandas as pd
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Optional, Generator, Callable
 import streamlit as st
 import streamlit.components.v1 as components
@@ -1015,6 +1016,21 @@ class GymApp:
                 color: #ffffff;
                 font-size: 1.5rem;
             }
+            .help-container {
+                position: fixed;
+                right: 0.75rem;
+                bottom: calc(var(--safe-bottom) + 3rem);
+                z-index: 1000;
+            }
+            .help-container button {
+                width: 2.5rem;
+                height: 2.5rem;
+                border: none;
+                border-radius: 50%;
+                background: var(--accent-color);
+                color: #ffffff;
+                font-size: 1.25rem;
+            }
             .set-row {
                 padding: 0.5rem;
                 border-radius: 0.25rem;
@@ -1154,6 +1170,15 @@ class GymApp:
         if st.session_state.get("open_quick_workout"):
             self._new_workout_dialog()
 
+    def _help_overlay_button(self) -> None:
+        """Floating help button opening overlay with README links."""
+        st.markdown("<div class='help-container'>", unsafe_allow_html=True)
+        if st.button("?", key="help_overlay_btn"):
+            st.session_state.open_help_overlay = True
+        st.markdown("</div>", unsafe_allow_html=True)
+        if st.session_state.get("open_help_overlay"):
+            self._help_overlay_dialog()
+
     def _top_nav(self) -> None:
         """Render top navigation on desktop."""
         selected = st.session_state.get("main_tab", 0)
@@ -1173,21 +1198,61 @@ class GymApp:
             st.markdown("</div>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
-    def _line_chart(self, data: dict[str, list], x: list[str]) -> None:
-        """Render a line chart safely even with a single data point."""
+    def _line_chart(
+        self,
+        data: dict[str, list],
+        x: list[str],
+        *,
+        x_label: str = "x",
+        y_label: str = "value",
+    ) -> None:
+        """Render a consistent line chart with accessible labels."""
         df = pd.DataFrame({"x": x})
         for key, values in data.items():
             df[key] = values
-        df = df.set_index("x")
-        st.line_chart(df, use_container_width=True)
+        long_df = df.melt("x", var_name="series", value_name="value")
+        chart = (
+            alt.Chart(long_df)
+            .mark_line()
+            .encode(
+                x=alt.X("x", title=x_label),
+                y=alt.Y("value", title=y_label),
+                color=alt.Color(
+                    "series",
+                    scale=alt.Scale(scheme="dark2"),
+                    legend=None if len(data) == 1 else alt.Legend(title="Series"),
+                ),
+            )
+        )
+        st.altair_chart(chart, use_container_width=True)
 
-    def _bar_chart(self, data: dict[str, list], x: list[str]) -> None:
-        """Render a bar chart safely even with a single data point."""
+    def _bar_chart(
+        self,
+        data: dict[str, list],
+        x: list[str],
+        *,
+        x_label: str = "x",
+        y_label: str = "value",
+    ) -> None:
+        """Render a consistent bar chart with accessible labels."""
         df = pd.DataFrame({"x": x})
         for key, values in data.items():
             df[key] = values
-        df = df.set_index("x")
-        st.bar_chart(df, use_container_width=True)
+        long_df = df.melt("x", var_name="series", value_name="value")
+        chart = (
+            alt.Chart(long_df)
+            .mark_bar()
+            .encode(
+                x=alt.X("x", title=x_label),
+                y=alt.Y("value", title=y_label),
+                color=alt.Color(
+                    "series",
+                    scale=alt.Scale(scheme="dark2"),
+                    legend=None if len(data) == 1 else alt.Legend(title="Series"),
+                ),
+            )
+        )
+        st.altair_chart(chart, use_container_width=True)
 
     def _show_dialog(self, title: str, content_fn: Callable[[], None]) -> None:
         """Display a modal dialog using the decorator API."""
@@ -1204,6 +1269,12 @@ class GymApp:
 
         _Tooltip.__doc__ = text
         st.help(_Tooltip)
+
+    def _tab_tips(self, tips: list[str]) -> None:
+        """Display a collapsible tips section."""
+        with st.expander("Tips", expanded=False):
+            for tip in tips:
+                st.write(f"- {tip}")
 
     def _slugify(self, text: str) -> str:
         """Create a safe slug from a section title."""
@@ -1283,6 +1354,23 @@ class GymApp:
 
         self._show_dialog("Help", _content)
 
+    def _help_overlay_dialog(self) -> None:
+        def _content() -> None:
+            st.markdown("## Help Topics")
+            readme = Path(__file__).with_name("README.md")
+            if readme.exists():
+                with open(readme, "r", encoding="utf-8") as f:
+                    for line in f:
+                        if line.startswith("#"):
+                            lvl = line.count("#")
+                            title = line.strip("# ").strip()
+                            anchor = title.lower().replace(" ", "-")
+                            indent = "  " * (lvl - 1)
+                            st.markdown(f"{indent}- [{title}](README.md#{anchor})")
+            st.button("Close", key="help_overlay_close")
+
+        self._show_dialog("Help", _content)
+        
     def _about_dialog(self) -> None:
         def _content() -> None:
             st.markdown("## About The Builder")
@@ -1591,6 +1679,7 @@ class GymApp:
             self._settings_tab()
         self._close_content()
         self._quick_workout_button()
+        self._help_overlay_button()
         self._bottom_nav()
         self._end_page()
         target = st.session_state.pop("scroll_to", None)
@@ -1598,6 +1687,12 @@ class GymApp:
             self.layout.scroll_to(target)
 
     def _log_tab(self) -> None:
+        self._tab_tips(
+            [
+                "Record start and end times for accurate pace analytics.",
+                "Use quick-add buttons for your favorite exercises.",
+            ]
+        )
         plans = sorted(self.planned_workouts.fetch_all(), key=lambda p: p[1])
         options = {str(p[0]): p for p in plans}
         if options:
@@ -1629,6 +1724,12 @@ class GymApp:
             self._exercise_section()
 
     def _plan_tab(self) -> None:
+        self._tab_tips(
+            [
+                "Generate AI plans or manage existing ones here.",
+                "Drag and drop planned sets to reorder before using them.",
+            ]
+        )
         with st.expander("AI Planner", expanded=False):
             ai_date = st.date_input(
                 "Plan Date", datetime.date.today(), key="ai_plan_date"
@@ -2996,6 +3097,12 @@ class GymApp:
 
     def _library_tab(self) -> None:
         st.header("Library")
+        self._tab_tips(
+            [
+                "Filter by muscle or equipment to locate exercises quickly.",
+                "Link variants so progress is tracked across similar movements.",
+            ]
+        )
         with st.expander("Favorites", expanded=False):
             self._favorites_library()
         if st.query_params.get("tab") == "library":
@@ -4426,6 +4533,12 @@ class GymApp:
 
     def _settings_tab(self) -> None:
         st.header("Settings")
+        self._tab_tips(
+            [
+                "Update your personal data for precise calculations.",
+                "Manage aliases and equipment lists to streamline logging.",
+            ]
+        )
         if "delete_target" not in st.session_state:
             st.session_state.delete_target = None
 
