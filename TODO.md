@@ -32,7 +32,7 @@
 - [ ] 32. Make table rows expandable to show more set details without leaving the page.
 - [x] 33. Provide a quick summary of planned workouts on the Workouts tab home screen.
 - [x] 34. Allow pinning favorite templates to the top of the list for faster selection.
-- [ ] 35. Add color themes beyond light/dark and remember preference in settings.
+ - [x] 35. Add color themes beyond light/dark and remember preference in settings.
 - [ ] 36. Include a collapsible history of automatic recommendations in the Planner tab.
 - [x] 37. Show an alert when planned workouts are overdue.
 - [ ] 38. Add an interactive calendar view for planned and logged workouts.

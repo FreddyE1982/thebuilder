@@ -602,6 +602,7 @@ class Database:
             "height": "1.75",
             "months_active": "1",
             "theme": "light",
+            "color_theme": "red",
             "game_enabled": "0",
             "ml_all_enabled": "1",
             "ml_training_enabled": "1",
