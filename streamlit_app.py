@@ -1695,6 +1695,13 @@ class GymApp:
         )
         plans = sorted(self.planned_workouts.fetch_all(), key=lambda p: p[1])
         options = {str(p[0]): p for p in plans}
+        today = datetime.date.today().isoformat()
+        if plans:
+            upcoming = [p for p in plans if p[1] >= today]
+            if upcoming:
+                with st.expander("Upcoming Planned Workouts", expanded=False):
+                    for pid, pdate, ptype in upcoming[:3]:
+                        st.markdown(f"- {pdate} ({ptype})")
         if options:
             with st.expander("Use Planned Workout", expanded=False):
                 selected = st.selectbox(
@@ -1707,7 +1714,6 @@ class GymApp:
                     new_id = self.planner.create_workout_from_plan(int(selected))
                     st.session_state.selected_workout = new_id
 
-        today = datetime.date.today().isoformat()
         daily = self.stats.daily_volume(today, today)
         if daily:
             metrics = [
@@ -1730,6 +1736,13 @@ class GymApp:
                 "Drag and drop planned sets to reorder before using them.",
             ]
         )
+        today = datetime.date.today().isoformat()
+        overdue = [
+            p for p in self.planned_workouts.fetch_all(end_date=today)
+            if p[1] < today
+        ]
+        if overdue:
+            st.warning(f"{len(overdue)} planned workouts are overdue!")
         with st.expander("AI Planner", expanded=False):
             ai_date = st.date_input(
                 "Plan Date", datetime.date.today(), key="ai_plan_date"
@@ -4575,24 +4588,24 @@ class GymApp:
 
         (
             gen_tab,
+            tag_tab,
             eq_tab,
+            cust_tab,
             mus_tab,
             ex_tab,
-            cust_tab,
             bw_tab,
             hr_tab,
-            tag_tab,
             auto_tab,
         ) = st.tabs(
             [
                 "General",
+                "Workout Tags",
                 "Equipment",
+                "Exercise Management",
                 "Muscles",
                 "Exercise Aliases",
-                "Exercise Management",
                 "Body Weight Logs",
                 "Heart Rate Logs",
-                "Workout Tags",
                 "Autoplanner Status",
             ]
         )
