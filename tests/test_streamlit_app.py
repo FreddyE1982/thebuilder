@@ -5,6 +5,7 @@ import unittest
 import warnings
 import shutil
 import subprocess
+import datetime
 from altair.utils.deprecation import AltairDeprecationWarning
 import yaml
 
@@ -796,16 +797,63 @@ class StreamlitFullGUITest(unittest.TestCase):
         labels = [t.label for t in tab.tabs]
         for name in [
             "General",
+            "Workout Tags",
             "Equipment",
+            "Exercise Management",
             "Muscles",
             "Exercise Aliases",
-            "Exercise Management",
             "Body Weight Logs",
             "Heart Rate Logs",
-            "Workout Tags",
             "Autoplanner Status",
         ]:
             self.assertIn(name, labels)
+
+    def test_settings_tab_order(self) -> None:
+        self.at.query_params["tab"] = "settings"
+        self.at.run()
+        tab = self._get_tab("Settings")
+        labels = [t.label for t in tab.tabs]
+        self.assertEqual(
+            labels[:6],
+            [
+                "Settings",
+                "General",
+                "Workout Tags",
+                "Equipment",
+                "Exercise Management",
+                "Muscles",
+            ],
+        )
+
+    def test_overdue_plan_warning(self) -> None:
+        conn = self._connect()
+        cur = conn.cursor()
+        yest = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
+        cur.execute(
+            "INSERT INTO planned_workouts (date, training_type) VALUES (?, 'strength');",
+            (yest,),
+        )
+        conn.commit()
+        conn.close()
+        self.at.query_params["tab"] = "plan"
+        self.at.run()
+        warnings = [w.body for w in self.at.warning]
+        self.assertTrue(any("overdue" in w for w in warnings))
+
+    def test_planned_summary(self) -> None:
+        conn = self._connect()
+        cur = conn.cursor()
+        tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
+        cur.execute(
+            "INSERT INTO planned_workouts (date, training_type) VALUES (?, 'strength');",
+            (tomorrow,),
+        )
+        conn.commit()
+        conn.close()
+        self.at.query_params["tab"] = "workouts"
+        self.at.run()
+        exp_idx = _find_by_label(self.at.expander, "Upcoming Planned Workouts")
+        self.assertIsNotNone(self.at.expander[exp_idx])
 
 
 class StreamlitAdditionalGUITest(unittest.TestCase):
