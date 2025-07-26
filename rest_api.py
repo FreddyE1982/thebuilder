@@ -631,6 +631,17 @@ class GymAPI:
                 },
             )
 
+        @self.app.get("/workouts/{workout_id}/export_json")
+        def export_workout_json(workout_id: int):
+            data = self.sets.export_workout_json(workout_id)
+            return Response(
+                content=data,
+                media_type="application/json",
+                headers={
+                    "Content-Disposition": f"attachment; filename=workout_{workout_id}.json"
+                },
+            )
+
         @self.app.put("/workouts/{workout_id}/type")
         def update_workout_type(workout_id: int, training_type: str):
             self.workouts.set_training_type(workout_id, training_type)
@@ -2017,6 +2028,7 @@ class GymAPI:
             ml_injury_prediction_enabled: bool = None,
             hide_preconfigured_equipment: bool = None,
             hide_preconfigured_exercises: bool = None,
+            compact_mode: bool = None,
         ):
             if body_weight is not None:
                 self.settings.set_float("body_weight", body_weight)
@@ -2088,6 +2100,8 @@ class GymAPI:
                 self.settings.set_bool(
                     "hide_preconfigured_exercises", hide_preconfigured_exercises
                 )
+            if compact_mode is not None:
+                self.settings.set_bool("compact_mode", compact_mode)
             return {"status": "updated"}
 
         @self.app.post("/settings/delete_all")

@@ -3,6 +3,7 @@ import csv
 import os
 import io
 import datetime
+import json
 from contextlib import contextmanager
 from typing import List, Tuple, Optional, Iterable, Set
 
@@ -617,6 +618,7 @@ class Database:
             "ml_goal_prediction_enabled": "1",
             "ml_injury_training_enabled": "1",
             "ml_injury_prediction_enabled": "1",
+            "compact_mode": "0",
         }
         with self._connection() as conn:
             for key, value in defaults.items():
@@ -1107,6 +1109,23 @@ class SetRepository(BaseRepository):
             )
         return output.getvalue()
 
+    def export_workout_json(self, workout_id: int) -> str:
+        """Return sets for a workout as a JSON string."""
+        rows = self.fetch_for_workout(workout_id)
+        data = [
+            {
+                "exercise": name,
+                "equipment": eq,
+                "reps": int(reps),
+                "weight": float(weight),
+                "rpe": int(rpe),
+                "start": start,
+                "end": end,
+            }
+            for name, eq, reps, weight, rpe, start, end in rows
+        ]
+        return json.dumps(data)
+
     def workout_summary(self, workout_id: int) -> dict:
         rows = self.fetch_for_workout(workout_id)
         volume = 0.0
@@ -1554,6 +1573,7 @@ class SettingsRepository(BaseRepository):
             "ml_injury_prediction_enabled",
             "hide_preconfigured_equipment",
             "hide_preconfigured_exercises",
+            "compact_mode",
         }
         for k, v in rows:
             if k in bool_keys:
@@ -1589,6 +1609,7 @@ class SettingsRepository(BaseRepository):
                 "ml_injury_prediction_enabled",
                 "hide_preconfigured_equipment",
                 "hide_preconfigured_exercises",
+                "compact_mode",
             }
             for key, value in data.items():
                 val = str(value)
@@ -1665,6 +1686,7 @@ class SettingsRepository(BaseRepository):
             "ml_injury_prediction_enabled",
             "hide_preconfigured_equipment",
             "hide_preconfigured_exercises",
+            "compact_mode",
         }
         for k in bool_keys:
             if k in data:
