@@ -668,6 +668,8 @@ class WorkoutRepository(BaseRepository):
         self,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
+        sort_by: str = "id",
+        descending: bool = True,
     ) -> List[
         Tuple[int, str, Optional[str], Optional[str], str, Optional[str], Optional[int]]
     ]:
@@ -679,7 +681,11 @@ class WorkoutRepository(BaseRepository):
         if end_date:
             query += " AND date <= ?" if start_date else " WHERE date <= ?"
             params.append(end_date)
-        query += " ORDER BY id DESC;"
+        allowed = {"id", "date", "start_time", "end_time", "training_type", "rating"}
+        if sort_by not in allowed:
+            sort_by = "id"
+        order = "DESC" if descending else "ASC"
+        query += f" ORDER BY {sort_by} {order};"
         return self.fetch_all(query, tuple(params))
 
     def set_start_time(self, workout_id: int, timestamp: str) -> None:
@@ -1176,6 +1182,8 @@ class PlannedWorkoutRepository(BaseRepository):
         self,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
+        sort_by: str = "id",
+        descending: bool = True,
     ) -> List[Tuple[int, str, str]]:
         query = "SELECT id, date, training_type FROM planned_workouts WHERE 1=1"
         params: list[str] = []
@@ -1185,7 +1193,11 @@ class PlannedWorkoutRepository(BaseRepository):
         if end_date:
             query += " AND date <= ?"
             params.append(end_date)
-        query += " ORDER BY id DESC;"
+        allowed = {"id", "date", "training_type"}
+        if sort_by not in allowed:
+            sort_by = "id"
+        order = "DESC" if descending else "ASC"
+        query += f" ORDER BY {sort_by} {order};"
         return super().fetch_all(query, tuple(params))
 
     def fetch_detail(self, plan_id: int) -> Tuple[int, str, str]:

@@ -119,3 +119,21 @@ class PlannerService:
             if self.log_repo is not None:
                 self.log_repo.log_error(str(e))
             raise
+
+    def copy_workout_to_template(
+        self, workout_id: int, name: str | None = None
+    ) -> int:
+        """Create a template from an existing workout."""
+        _wid, _date, _s, _e, t_type, _notes, _loc, _rating = self.workouts.fetch_detail(
+            workout_id
+        )
+        if name is None:
+            name = f"Workout {workout_id}"
+        template_id = self.templates.create(name, t_type)
+        exercises = self.exercises.fetch_for_workout(workout_id)
+        for ex_id, ex_name, eq, _note in exercises:
+            t_ex_id = self.template_exercises.add(template_id, ex_name, eq)
+            sets = self.sets.fetch_for_exercise(ex_id)
+            for _sid, reps, weight, rpe, _st, _et, _warm in sets:
+                self.template_sets.add(t_ex_id, reps, weight, rpe)
+        return template_id

@@ -37,7 +37,9 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"id": 1})
 
-        response = self.client.get("/workouts")
+        response = self.client.get(
+            "/workouts", params={"sort_by": "id", "descending": True}
+        )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), [{"id": 1, "date": today}])
 
@@ -124,6 +126,20 @@ class APITestCase(unittest.TestCase):
         response = self.client.get("/workouts")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), [])
+
+    def test_workout_sorting(self) -> None:
+        d1 = "2024-01-01"
+        d2 = "2024-01-02"
+        self.client.post("/workouts", params={"date": d2})
+        self.client.post("/workouts", params={"date": d1})
+        resp = self.client.get(
+            "/workouts",
+            params={"sort_by": "date", "descending": False},
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data[0]["date"], d1)
+        self.assertEqual(data[1]["date"], d2)
 
     def test_delete_endpoints(self) -> None:
         plan_date = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
@@ -2698,6 +2714,23 @@ class APITestCase(unittest.TestCase):
 
         list_resp = self.client.get("/favorites/workouts")
         self.assertNotIn(1, list_resp.json())
+
+    def test_copy_workout_to_template(self) -> None:
+        self.client.post("/workouts")
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8},
+        )
+        resp = self.client.post("/workouts/1/copy_to_template")
+        self.assertEqual(resp.status_code, 200)
+        tid = resp.json()["id"]
+        detail = self.client.get(f"/templates/{tid}/exercises")
+        self.assertEqual(detail.status_code, 200)
+        self.assertEqual(len(detail.json()), 1)
 
     def test_rating_history_and_stats(self) -> None:
         d1 = "2023-01-01"

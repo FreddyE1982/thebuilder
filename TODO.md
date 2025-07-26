@@ -19,7 +19,7 @@
 - [x] 19. Implement status badges for machine learning models showing training state.
 - [x] 20. Use icons next to each menu item to aid quick recognition.
  - [x] 21. Add optional compact mode with reduced padding on desktop for large data tables.
-- [ ] 22. Enable sorting on all tables through the REST endpoints and reflect in the GUI.
+- [x] 22. Enable sorting on all tables through the REST endpoints and reflect in the GUI.
  - [x] 23. Highlight personal records in workout history using a distinctive color.
 - [x] 24. Provide a dashboard subtab summarizing recent workouts, body weight and readiness.
 - [x] 25. Reorder items in Settings so commonly used options appear first.
@@ -35,7 +35,7 @@
  - [x] 35. Add color themes beyond light/dark and remember preference in settings.
 - [ ] 36. Include a collapsible history of automatic recommendations in the Planner tab.
 - [x] 37. Show an alert when planned workouts are overdue.
-- [ ] 38. Add an interactive calendar view for planned and logged workouts.
+- [x] 38. Add an interactive calendar view for planned and logged workouts.
 - [ ] 39. Provide bulk editing tools for sets across different workouts.
 - [ ] 40. Add a quick report generator with preset date ranges like last week or last month.
 - [x] 41. Surface recently used muscles and equipment in dropdowns for convenience.
@@ -56,7 +56,7 @@
 - [ ] 56. Break down the Settings tab into categories like Display, Data Management and Integrations using expanders.
 - [ ] 57. Show progress indicators when syncing settings with `settings.yaml`.
 - [ ] 58. Add avatar and profile management with an image upload field in settings.
-- [ ] 59. Provide a summary banner after logging a workout with key statistics.
+- [x] 59. Provide a summary banner after logging a workout with key statistics.
 - [ ] 60. Implement optional email export of weekly reports triggered via settings.
 - [ ] 61. Consolidate progress charts into a carousel for easier comparison.
 - [ ] 62. Add haptic feedback on mobile when logging sets.
@@ -68,7 +68,7 @@
 - [ ] 68. Offer automatic backup and restore options in settings.
 - [ ] 69. Include a timer widget for rest periods between sets.
 - [ ] 70. Introduce color coding for workout types across the app.
-- [ ] 71. Add a mini calendar widget showing upcoming planned workouts.
+- [x] 71. Add a mini calendar widget showing upcoming planned workouts.
 - [ ] 72. Provide quick filter chips for common date ranges in history views.
 - [ ] 73. Implement a unified notification center for alerts and reminders.
 - [ ] 74. Allow users to collapse the header on scroll for more screen space.
@@ -93,7 +93,7 @@
 - [ ] 93. Add a slide-out panel with quick tips relevant to the current tab.
 - [ ] 94. Support automatic scrolling to today's date in calendar views.
 - [ ] 95. Display a running timer when logging active workouts.
-- [ ] 96. Allow copying an existing workout as a template with one click.
+- [x] 96. Allow copying an existing workout as a template with one click.
 - [ ] 97. Provide optional large-font mode for accessibility.
 - [ ] 98. Add split buttons for logging warm-up versus working sets.
 - [ ] 99. Introduce keyboard navigation hints in footer tooltips.

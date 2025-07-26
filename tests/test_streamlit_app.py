@@ -131,6 +131,28 @@ class StreamlitAppTest(unittest.TestCase):
         self.assertIsNotNone(end_time)
         conn.close()
 
+    def test_finish_summary_banner(self) -> None:
+        idx_new = _find_by_label(
+            self.at.button,
+            "New Workout",
+            key="FormSubmitter:new_workout_form-New Workout",
+        )
+        self.at.button[idx_new].click().run()
+        idx_ex = _find_by_label(self.at.selectbox, "Exercise", "Barbell Bench Press")
+        self.at.selectbox[idx_ex].select("Barbell Bench Press").run()
+        idx_eq = _find_by_label(self.at.selectbox, "Equipment Name", "Olympic Barbell")
+        self.at.selectbox[idx_eq].select("Olympic Barbell").run()
+        idx_add_ex = _find_by_label(self.at.button, "Add Exercise", key="add_ex_btn")
+        self.at.button[idx_add_ex].click().run()
+        self.at.number_input[0].set_value(5).run()
+        self.at.number_input[1].set_value(100.0).run()
+        idx_add_set = _find_by_label(self.at.button, "Add Set", key="add_set_1")
+        self.at.button[idx_add_set].click().run()
+        finish_idx = _find_by_label(self.at.button, "Finish Workout")
+        self.at.button[finish_idx].click().run()
+        messages = [s.body for s in self.at.success]
+        self.assertTrue(any("Logged" in m for m in messages))
+
     def test_no_workouts_message(self) -> None:
         exp_idx = _find_by_label(self.at.expander, "Existing Workouts")
         exp = self.at.expander[exp_idx]
@@ -855,6 +877,7 @@ class StreamlitFullGUITest(unittest.TestCase):
         self.at.run()
         exp_idx = _find_by_label(self.at.expander, "Upcoming Planned Workouts")
         self.assertIsNotNone(self.at.expander[exp_idx])
+
 
 
 class StreamlitAdditionalGUITest(unittest.TestCase):

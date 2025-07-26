@@ -546,8 +546,15 @@ class GymAPI:
             return {"id": workout_id}
 
         @self.app.get("/workouts")
-        def list_workouts(start_date: str = None, end_date: str = None):
-            workouts = self.workouts.fetch_all_workouts(start_date, end_date)
+        def list_workouts(
+            start_date: str = None,
+            end_date: str = None,
+            sort_by: str = "id",
+            descending: bool = True,
+        ):
+            workouts = self.workouts.fetch_all_workouts(
+                start_date, end_date, sort_by, descending
+            )
             return [{"id": wid, "date": date} for wid, date, *_ in workouts]
 
         @self.app.get("/workouts/search")
@@ -769,8 +776,15 @@ class GymAPI:
             return {"id": plan_id}
 
         @self.app.get("/planned_workouts")
-        def list_planned_workouts():
-            plans = self.planned_workouts.fetch_all()
+        def list_planned_workouts(
+            start_date: str = None,
+            end_date: str = None,
+            sort_by: str = "id",
+            descending: bool = True,
+        ):
+            plans = self.planned_workouts.fetch_all(
+                start_date, end_date, sort_by, descending
+            )
             return [
                 {"id": pid, "date": date, "training_type": t} for pid, date, t in plans
             ]
@@ -803,6 +817,14 @@ class GymAPI:
             try:
                 new_id = self.planner.duplicate_plan(plan_id, date)
                 return {"id": new_id}
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
+        @self.app.post("/workouts/{workout_id}/copy_to_template")
+        def copy_workout_to_template(workout_id: int, name: str = None):
+            try:
+                tid = self.planner.copy_workout_to_template(workout_id, name)
+                return {"id": tid}
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
 
