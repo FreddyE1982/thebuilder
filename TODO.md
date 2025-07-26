@@ -18,9 +18,9 @@
 - [x] 18. Move wellness logging to its own subtab under Progress for visibility.
 - [x] 19. Implement status badges for machine learning models showing training state.
 - [x] 20. Use icons next to each menu item to aid quick recognition.
-- [ ] 21. Add optional compact mode with reduced padding on desktop for large data tables.
+ - [x] 21. Add optional compact mode with reduced padding on desktop for large data tables.
 - [ ] 22. Enable sorting on all tables through the REST endpoints and reflect in the GUI.
-- [ ] 23. Highlight personal records in workout history using a distinctive color.
+ - [x] 23. Highlight personal records in workout history using a distinctive color.
 - [ ] 24. Provide a dashboard subtab summarizing recent workouts, body weight and readiness.
 - [x] 25. Reorder items in Settings so commonly used options appear first.
 - [ ] 26. Add progress bars to indicate long‑running operations like model training.
@@ -46,7 +46,7 @@
 - [ ] 46. Offer step‑by‑step tutorial for advanced analytics features.
 - [ ] 47. Implement collapsible lists for tags, goals and equipment to avoid long scrolls.
 - [ ] 48. Create a unified progress summary tab combining charts and gamification points.
-- [ ] 49. Add export options for workouts to CSV and JSON from the Workouts tab.
+ - [x] 49. Add export options for workouts to CSV and JSON from the Workouts tab.
 - [ ] 50. Provide micro‑animations for adding items to improve responsiveness.
 - [ ] 51. Integrate responsive tables that collapse columns on small screens with a details view.
 - [ ] 52. Provide user customization for metric display units (kg/lb) and time format.

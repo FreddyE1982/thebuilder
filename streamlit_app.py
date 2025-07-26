@@ -162,6 +162,7 @@ class GymApp:
                     alt.themes.enable = _noop_theme
         self.settings_repo = SettingsRepository(db_path, yaml_path)
         self.theme = self.settings_repo.get_text("theme", "light")
+        self.compact_mode = self.settings_repo.get_bool("compact_mode", False)
         self.training_options = sorted(
             [
                 "strength",
@@ -1059,6 +1060,18 @@ class GymApp:
             """,
             unsafe_allow_html=True,
         )
+        if self.compact_mode and not st.session_state.get("is_mobile", False):
+            st.markdown(
+                """
+                <style>
+                div[data-testid='stTable'] th,
+                div[data-testid='stTable'] td {
+                    padding: 0.25rem 0.5rem;
+                }
+                </style>
+                """,
+                unsafe_allow_html=True,
+            )
 
     def _apply_theme(self) -> None:
         if self.theme == "dark":
@@ -1930,6 +1943,14 @@ class GymApp:
                     file_name=f"workout_{selected}.csv",
                     mime="text/csv",
                     key=f"export_{selected}",
+                )
+                json_data = self.sets.export_workout_json(int(selected))
+                st.download_button(
+                    label="Export JSON",
+                    data=json_data,
+                    file_name=f"workout_{selected}.json",
+                    mime="application/json",
+                    key=f"export_json_{selected}",
                 )
                 if st.button("Delete Workout", key=f"del_workout_{selected}"):
                     self._confirm_delete_workout(int(selected))
@@ -3667,8 +3688,12 @@ class GymApp:
                     {n for _, n in self.tags_repo.fetch_for_workout(w[0])}
                 )
             ]
+        pr_dates = {r["date"] for r in self.stats.personal_records()}
         for wid, date, _s, _e, training_type, *_ in workouts:
-            with st.expander(f"{date} ({training_type})", expanded=False):
+            label = f"{date} ({training_type})"
+            if date in pr_dates:
+                label = f"**{label}**"
+            with st.expander(label, expanded=False):
                 summary = self.sets.workout_summary(wid)
                 st.markdown(
                     f"**Volume:** {summary['volume']} | **Sets:** {summary['sets']} | **Avg RPE:** {summary['avg_rpe']}"
@@ -3681,6 +3706,11 @@ class GymApp:
 
     def _workout_details_dialog(self, workout_id: int) -> None:
         exercises = self.exercises.fetch_for_workout(workout_id)
+        records = {
+            (r["exercise"], r["date"], r["reps"], r["weight"]): True
+            for r in self.stats.personal_records()
+        }
+        w_date = self.workouts.fetch_detail(workout_id)[1]
 
         def _content() -> None:
             for ex_id, name, eq, note in exercises:
@@ -3695,7 +3725,13 @@ class GymApp:
                             line += f" start: {stime}"
                         if etime:
                             line += f" end: {etime}"
-                        st.write(line)
+                        if (name, w_date, reps, weight) in records:
+                            st.markdown(
+                                f"<span style='color: var(--accent-color); font-weight:bold'>{line} - PR</span>",
+                                unsafe_allow_html=True,
+                            )
+                        else:
+                            st.write(line)
 
         self._show_dialog("Workout Details", _content)
 
@@ -4637,6 +4673,10 @@ class GymApp:
                     themes,
                     index=themes.index(self.theme),
                 )
+                compact = st.checkbox(
+                    "Compact Mode",
+                    value=self.compact_mode,
+                )
             with st.expander("Gamification", expanded=True):
                 game_enabled = st.checkbox(
                     "Enable Gamification",
@@ -4739,6 +4779,9 @@ class GymApp:
                 self.settings_repo.set_text("theme", theme_opt)
                 self.theme = theme_opt
                 self._apply_theme()
+                self.settings_repo.set_bool("compact_mode", compact)
+                self.compact_mode = compact
+                self._inject_responsive_css()
                 self.gamification.enable(game_enabled)
                 self.settings_repo.set_bool("ml_all_enabled", ml_global)
                 self.settings_repo.set_bool("ml_training_enabled", ml_train)

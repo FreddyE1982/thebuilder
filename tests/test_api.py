@@ -95,6 +95,12 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(csv_text[0], "Exercise,Equipment,Reps,Weight,RPE,Start,End")
         self.assertIn("Bench Press", csv_text[1])
 
+        response = self.client.get("/workouts/1/export_json")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["exercise"], "Bench Press")
+
         response = self.client.delete("/sets/1")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"status": "deleted"})
@@ -180,6 +186,7 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(data["height"], 1.75)
         self.assertEqual(data["months_active"], 1.0)
         self.assertEqual(data["theme"], "light")
+        self.assertFalse(data["compact_mode"])
         self.assertFalse(data["game_enabled"])
         self.assertIn("ml_all_enabled", data)
 
@@ -191,6 +198,7 @@ class APITestCase(unittest.TestCase):
                 "months_active": 6.0,
                 "theme": "dark",
                 "ml_all_enabled": False,
+                "compact_mode": True,
             },
         )
         self.assertEqual(resp.status_code, 200)
@@ -210,6 +218,7 @@ class APITestCase(unittest.TestCase):
             "theme": "light",
             "game_enabled": "0",
             "ml_all_enabled": "0",
+            "compact_mode": "1",
         }
         with open(self.yaml_path, "w", encoding="utf-8") as f:
             yaml.safe_dump(new_data, f)
@@ -223,6 +232,7 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(data["theme"], "light")
         self.assertFalse(data["game_enabled"])
         self.assertFalse(data["ml_all_enabled"])
+        self.assertTrue(data["compact_mode"])
 
     def test_ml_toggle(self) -> None:
         resp = self.client.post("/settings/general", params={"ml_all_enabled": False})
