@@ -60,6 +60,7 @@ class GymAPI:
     def __init__(
         self, db_path: str = "workout.db", yaml_path: str = "settings.yaml"
     ) -> None:
+        self.db_path = db_path
         self.workouts = WorkoutRepository(db_path)
         self.exercises = ExerciseRepository(db_path)
         self.sets = SetRepository(db_path)
@@ -2224,6 +2225,22 @@ class GymAPI:
                 return {"status": "pulled", "output": output}
             except Exception as e:
                 raise HTTPException(status_code=500, detail=str(e))
+
+        @self.app.get("/settings/backup")
+        def backup_db():
+            with open(self.db_path, "rb") as f:
+                data = f.read()
+            return Response(
+                content=data,
+                media_type="application/octet-stream",
+                headers={"Content-Disposition": "attachment; filename=backup.db"},
+            )
+
+        @self.app.post("/settings/restore")
+        def restore_db(file: bytes = Body(...)):
+            with open(self.db_path, "wb") as f:
+                f.write(file)
+            return {"status": "restored"}
 
         @self.app.post("/reports/email_weekly")
         def send_weekly_email(address: str = None):
