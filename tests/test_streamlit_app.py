@@ -1013,8 +1013,9 @@ class StreamlitAdditionalGUITest(unittest.TestCase):
     def test_mobile_bottom_nav(self) -> None:
         self.at.query_params["mode"] = "mobile"
         self.at.run()
-        nav_present = any("bottom-nav" in m.body for m in self.at.markdown)
-        self.assertTrue(nav_present)
+        nav_markup = [m.body for m in self.at.markdown if "bottom-nav" in m.body]
+        self.assertTrue(nav_markup)
+        self.assertIn("data-tooltip", nav_markup[0])
 
     def test_scroll_top_button(self) -> None:
         self.at.query_params["mode"] = "mobile"

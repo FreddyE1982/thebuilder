@@ -99,7 +99,7 @@
 - [x] 96. Allow copying an existing workout as a template with one click.
  - [x] 97. Provide optional large-font mode for accessibility.
 - [ ] 98. Add split buttons for logging warm-up versus working sets.
-- [ ] 99. Introduce keyboard navigation hints in footer tooltips.
+- [x] 99. Introduce keyboard navigation hints in footer tooltips.
 - [ ] 100. Enable exporting analytics charts as images from the GUI.
 - [ ] 101. Add dynamic breadcrumbs to show navigation context on mobile.
 - [ ] 102. Allow pinning important stats to the header for constant visibility.

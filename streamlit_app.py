@@ -95,7 +95,9 @@ class LayoutManager:
     def close_content(self) -> None:
         st.markdown("</main>", unsafe_allow_html=True)
 
-    def _render_nav(self, container_class: str, selected_tab: int) -> None:
+    def _render_nav(
+        self, container_class: str, selected_tab: int, tab_keys: list[str]
+    ) -> None:
         labels = ["workouts", "library", "progress", "settings"]
         icons = {
             "workouts": "🏋️",
@@ -107,8 +109,9 @@ class LayoutManager:
         html = (
             f'<nav class="{container_class}" role="tablist" aria-label="Main Navigation">'
             + "".join(
-                f'<button role="tab" title="{label.title()}" '
+                f'<button role="tab" title="{label.title()} (Alt+{tab_keys[idx]})" '
                 f'aria-label="{label.title()} Tab" '
+                f'data-tooltip="Alt+{tab_keys[idx]}" '
                 f'aria-selected="{str(selected_tab == idx).lower()}" '
                 f'{"aria-current=\"page\" " if selected_tab == idx else ""}'
                 f'tabindex="0" '
@@ -122,16 +125,16 @@ class LayoutManager:
         )
         st.markdown(html, unsafe_allow_html=True)
 
-    def bottom_nav(self, selected_tab: int) -> None:
+    def bottom_nav(self, selected_tab: int, tab_keys: list[str]) -> None:
         if not self.is_mobile:
             return
-        self._render_nav("bottom-nav", selected_tab)
+        self._render_nav("bottom-nav", selected_tab, tab_keys)
         self.scroll_top_button()
 
-    def top_nav(self, selected_tab: int) -> None:
+    def top_nav(self, selected_tab: int, tab_keys: list[str]) -> None:
         if self.is_mobile:
             return
-        self._render_nav("top-nav", selected_tab)
+        self._render_nav("top-nav", selected_tab, tab_keys)
 
     def scroll_top_button(self) -> None:
         st.markdown(
@@ -480,6 +483,23 @@ class GymApp:
                     });
                 });
             }
+            function persistTabs() {
+                const containers = document.querySelectorAll('div[data-testid="stTabs"]');
+                containers.forEach((cont, cidx) => {
+                    const buttons = Array.from(cont.querySelectorAll('button[role="tab"]'));
+                    const key = cont.dataset.tabsKey || `tabs-${cidx}`;
+                    cont.dataset.tabsKey = key;
+                    const saved = sessionStorage.getItem(key);
+                    if (saved !== null && buttons[saved]) {
+                        buttons[saved].click();
+                    }
+                    buttons.forEach((btn, idx) => {
+                        btn.addEventListener('click', () => {
+                            sessionStorage.setItem(key, idx);
+                        });
+                    });
+                });
+            }
             window.addEventListener('resize', handleResize);
             window.addEventListener('orientationchange', handleResize);
             if (window.visualViewport) {
@@ -495,9 +515,11 @@ class GymApp:
                 const y = sessionStorage.getItem('scrollY');
                 if (y) window.scrollTo(0, parseInt(y));
                 persistExpanders();
+                persistTabs();
             });
             document.addEventListener('streamlit:rendered', () => {
                 persistExpanders();
+                persistTabs();
                 const y = sessionStorage.getItem('scrollY');
                 if (y) window.scrollTo(0, parseInt(y));
             });
@@ -1224,6 +1246,29 @@ class GymApp:
                 cursor: pointer;
                 z-index: 1000;
             }
+            [data-tooltip] {
+                position: relative;
+            }
+            [data-tooltip]::after {
+                content: attr(data-tooltip);
+                position: absolute;
+                bottom: 125%;
+                left: 50%;
+                transform: translateX(-50%);
+                background: var(--header-bg);
+                color: #000;
+                padding: 0.2rem 0.4rem;
+                border-radius: 0.25rem;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                font-size: 0.65rem;
+                white-space: nowrap;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.2s;
+            }
+            [data-tooltip]:hover::after {
+                opacity: 1;
+            }
             .fab-container {
                 position: fixed;
                 right: 0.75rem;
@@ -1426,12 +1471,14 @@ class GymApp:
     def _render_nav(self, container_class: str) -> None:
         """Render navigation bar using LayoutManager."""
         selected = st.session_state.get("main_tab", 0)
-        self.layout._render_nav(container_class, selected)
+        keys = self.tab_keys.split(",")
+        self.layout._render_nav(container_class, selected, keys)
 
     def _bottom_nav(self) -> None:
         """Render bottom navigation on mobile devices."""
         selected = st.session_state.get("main_tab", 0)
-        self.layout.bottom_nav(selected)
+        keys = self.tab_keys.split(",")
+        self.layout.bottom_nav(selected, keys)
 
     def _scroll_top_button(self) -> None:
         self.layout.scroll_top_button()
@@ -1526,7 +1573,8 @@ class GymApp:
     def _top_nav(self) -> None:
         """Render top navigation on desktop."""
         selected = st.session_state.get("main_tab", 0)
-        self.layout.top_nav(selected)
+        keys = self.tab_keys.split(",")
+        self.layout.top_nav(selected, keys)
 
     def _switch_tab(self, label: str) -> None:
         mode = "mobile" if st.session_state.is_mobile else "desktop"
@@ -2084,12 +2132,7 @@ class GymApp:
             progress_tab,
             settings_tab,
         ) = st.tabs(
-            [
-                "Workouts",
-                "Library",
-                "Progress",
-                "Settings",
-            ]
+            ["Workouts", "Library", "Progress", "Settings"]
         )
         with workouts_tab:
             log_sub, plan_sub = st.tabs(["Log", "Plan"])
