@@ -367,6 +367,7 @@ class StreamlitAppTest(unittest.TestCase):
         idx_ex = _find_by_label(ex_tab.button, "Reset Filters", key="lib_ex_reset")
         self.assertIsNotNone(idx_ex)
 
+
     def test_custom_exercise_and_logs(self) -> None:
         self.at.query_params["tab"] = "settings"
         self.at.run()

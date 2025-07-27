@@ -87,7 +87,7 @@
 - [ ] 84. Introduce a split view on tablets to show history and logging side by side.
 - [ ] 85. Add persistent toolbars within expanders for common actions.
 - [ ] 86. Implement fuzzy search for equipment and muscle names.
-- [ ] 87. Surface recently used filters at the top of dropdowns.
+ - [x] 87. Surface recently used filters at the top of dropdowns.
 - [ ] 88. Provide collapsible filter sections to declutter the interface.
 - [ ] 89. Add inline editing for workout notes directly in the history list.
 - [ ] 90. Include a progress ring showing completion percentage of planned sets.

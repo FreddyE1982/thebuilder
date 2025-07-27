@@ -515,6 +515,13 @@ class GymApp:
                     navigator.vibrate(50);
                 }
             });
+            window.addEventListener('beforeunload', () => {
+                sessionStorage.setItem('scrollY', window.scrollY);
+            });
+            window.addEventListener('load', () => {
+                const y = sessionStorage.getItem('scrollY');
+                if (y) window.scrollTo(0, parseInt(y));
+            });
             </script>
             """
             )
@@ -3699,7 +3706,9 @@ class GymApp:
 
     def _equipment_library(self) -> None:
         muscles = self.muscles_repo.fetch_all()
-        types = [""] + self.equipment.fetch_types()
+        recent_mus = self.stats.recent_muscles()
+        muscles = list(dict.fromkeys(recent_mus + muscles))
+        types = ["" ] + self.equipment.fetch_types()
         if st.session_state.is_mobile:
             with st.expander("Filters", expanded=True):
                 sel_type = st.multiselect("Type", types, key="lib_eq_type")
@@ -3712,6 +3721,8 @@ class GymApp:
                 prefix or None,
                 mus_filter or None,
             )
+            recent_eq = self.stats.recent_equipment()
+            names = list(dict.fromkeys(recent_eq + names))
             with st.expander("Equipment List", expanded=False):
                 choice = st.selectbox("Equipment", [""] + names, key="lib_eq_name")
                 if choice and st.button("Details", key="lib_eq_btn"):
@@ -3739,6 +3750,8 @@ class GymApp:
                 prefix or None,
                 mus_filter or None,
             )
+            recent_eq = self.stats.recent_equipment()
+            names = list(dict.fromkeys(recent_eq + names))
             with l_col.expander("Equipment List", expanded=False):
                 choice = st.selectbox("Equipment", [""] + names, key="lib_eq_name")
                 if choice and st.button("Details", key="lib_eq_btn"):
@@ -3757,6 +3770,8 @@ class GymApp:
     def _exercise_catalog_library(self) -> None:
         groups = self.exercise_catalog.fetch_muscle_groups()
         muscles = self.muscles_repo.fetch_all()
+        recent_mus = self.stats.recent_muscles()
+        muscles = list(dict.fromkeys(recent_mus + muscles))
         hide_pre = st.checkbox(
             "Hide Preconfigured Exercises",
             value=self.settings_repo.get_bool("hide_preconfigured_exercises", False),
@@ -3766,7 +3781,9 @@ class GymApp:
             sel_groups = st.multiselect("Muscle Groups", groups, key="lib_ex_groups")
             sel_mus = st.multiselect("Muscles", muscles, key="lib_ex_mus")
             eq_names = self.equipment.fetch_names()
-            sel_eq = st.selectbox("Equipment", [""] + eq_names, key="lib_ex_eq")
+            recent_eq = self.stats.recent_equipment()
+            eq_names = list(dict.fromkeys(recent_eq + eq_names))
+            sel_eq = st.selectbox("Equipment", ["" ] + eq_names, key="lib_ex_eq")
             name_filter = st.text_input("Name Contains", key="lib_ex_prefix")
             if st.button("Reset Filters", key="lib_ex_reset"):
                 self._reset_exercise_filters()
@@ -3822,7 +3839,9 @@ class GymApp:
                     )
                     sel_mus = st.multiselect("Muscles", muscles, key="lib_ex_mus")
                     eq_names = self.equipment.fetch_names()
-                    sel_eq = st.selectbox("Equipment", [""] + eq_names, key="lib_ex_eq")
+                    recent_eq = self.stats.recent_equipment()
+                    eq_names = list(dict.fromkeys(recent_eq + eq_names))
+                    sel_eq = st.selectbox("Equipment", ["" ] + eq_names, key="lib_ex_eq")
                     name_filter = st.text_input("Name Contains", key="lib_ex_prefix")
                     if st.button("Reset Filters", key="lib_ex_reset"):
                         self._reset_exercise_filters()
@@ -5074,7 +5093,12 @@ class GymApp:
                 )
                 .interactive()
             )
+            st.markdown("<div id='calendar_chart'></div>", unsafe_allow_html=True)
             st.altair_chart(chart, use_container_width=True)
+            components.html(
+                "<script>document.getElementById('calendar_chart').scrollIntoView({behavior:'auto',block:'center'});</script>",
+                height=0,
+            )
 
     def _mini_calendar_widget(self) -> None:
         start = datetime.date.today()
