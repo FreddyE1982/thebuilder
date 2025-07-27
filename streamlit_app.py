@@ -468,8 +468,9 @@ class GymApp:
             }
             function persistExpanders() {
                 const exps = Array.from(document.querySelectorAll('details'));
-                exps.forEach((exp, idx) => {
-                    const key = `expander-${idx}`;
+                exps.forEach(exp => {
+                    const label = exp.querySelector('summary')?.innerText.trim() || '';
+                    const key = `expander-${label}`;
                     const saved = sessionStorage.getItem(key);
                     if (saved !== null) exp.open = saved === 'true';
                     exp.addEventListener('toggle', () => {
@@ -1475,6 +1476,35 @@ class GymApp:
         if st.session_state.get("open_help_overlay"):
             self._help_overlay_dialog()
 
+    def _context_menu(self) -> None:
+        menu = """
+        <div id='ctx-menu' style='display:none;position:absolute;z-index:10000;background:#fff;border:1px solid #ccc;'>
+            <button onclick="ctxAct('copy')">Copy to Template</button>
+            <button onclick="ctxAct('delete')">Delete</button>
+        </div>
+        <script>
+        function ctxAct(action){
+            const params=new URLSearchParams(window.location.search);
+            params.set('ctx_action', action);
+            params.set('ctx_id', window.currentCtxId);
+            window.location.search=params.toString();
+        }
+        document.addEventListener('contextmenu',e=>{
+            const t=e.target.closest('[data-workout-id]');
+            if(t){
+                e.preventDefault();
+                window.currentCtxId=t.dataset.workoutId;
+                const m=document.getElementById('ctx-menu');
+                m.style.left=e.pageX+'px';
+                m.style.top=e.pageY+'px';
+                m.style.display='block';
+            }
+        });
+        document.addEventListener('click',()=>{document.getElementById('ctx-menu').style.display='none';});
+        </script>
+        """
+        st.markdown(menu, unsafe_allow_html=True)
+
     def _connection_status(self) -> None:
         """Display connection status for API and database."""
         try:
@@ -1959,7 +1989,9 @@ class GymApp:
                 )
 
     def run(self) -> None:
-        params = st.query_params
+        params = dict(st.query_params)
+        self._handle_context_action(params)
+        params = dict(st.query_params)
         tab_param = params.get("tab")
         tab_map = {
             "workouts": 0,
@@ -2096,6 +2128,7 @@ class GymApp:
         self._close_content()
         self._quick_workout_button()
         self._help_overlay_button()
+        self._context_menu()
         self._bottom_nav()
         self._end_page()
         target = st.session_state.pop("scroll_to", None)
@@ -2258,6 +2291,10 @@ class GymApp:
                     format_func=lambda x: options[x][1],
                 )
                 self._select_workout(int(selected))
+                st.markdown(
+                    f"<div data-workout-id='{selected}' class='workout-detail'>",
+                    unsafe_allow_html=True,
+                )
                 detail = self.workouts.fetch_detail(int(selected))
                 start_time = detail[2]
                 end_time = detail[3]
@@ -2380,6 +2417,7 @@ class GymApp:
                     st.success(f"Template {tid} created")
                 if st.button("Delete Workout", key=f"del_workout_{selected}"):
                     self._confirm_delete_workout(int(selected))
+                st.markdown("</div>", unsafe_allow_html=True)
             else:
                 st.info("No workouts found.")
 
@@ -3203,6 +3241,17 @@ class GymApp:
                 st.rerun()
 
         self._show_dialog("Confirm Delete", _content)
+
+    def _handle_context_action(self, params: dict[str, str]) -> None:
+        action = params.pop("ctx_action", None)
+        wid = params.pop("ctx_id", None)
+        if action and wid:
+            if action == "delete":
+                self._confirm_delete_workout(int(wid))
+            elif action == "copy":
+                tid = self.planner.copy_workout_to_template(int(wid))
+                st.success(f"Template {tid} created")
+            st.experimental_set_query_params(**params)
 
     def _confirm_delete_exercise(self, exercise_id: int) -> None:
         def _content() -> None:

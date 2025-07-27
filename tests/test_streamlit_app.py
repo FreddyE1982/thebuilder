@@ -1075,6 +1075,16 @@ class StreamlitAdditionalGUITest(unittest.TestCase):
         self.at.button[idx].click().run()
         self.assertEqual(self.at.query_params.get("tab"), before)
 
+    def test_workout_context_menu_present(self) -> None:
+        idx_new = _find_by_label(
+            self.at.button,
+            "New Workout",
+            key="FormSubmitter:new_workout_form-New Workout",
+        )
+        self.at.button[idx_new].click().run()
+        markup = [m.body for m in self.at.markdown]
+        self.assertTrue(any("ctx-menu" in m for m in markup))
+
 
 class StreamlitTemplateWorkflowTest(unittest.TestCase):
     def setUp(self) -> None:
