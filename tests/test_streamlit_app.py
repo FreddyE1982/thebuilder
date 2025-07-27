@@ -1028,6 +1028,10 @@ class StreamlitAdditionalGUITest(unittest.TestCase):
         )
         self.assertTrue(css_present)
 
+    def test_notifications_dialog(self) -> None:
+        idx = _find_by_label(self.at.button, "🔔", key="notif_btn")
+        self.assertIsNotNone(self.at.button[idx])
+
     def test_quick_workout_fab(self) -> None:
         idx = _find_by_label(self.at.button, "➕", key="quick_workout_btn")
         self.at.button[idx].click().run()
