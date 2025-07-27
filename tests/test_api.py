@@ -160,6 +160,22 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(data[0]["date"], d1)
         self.assertEqual(data[1]["date"], d2)
 
+    def test_workout_pagination(self) -> None:
+        dates = ["2024-01-01", "2024-01-02", "2024-01-03"]
+        for d in dates:
+            self.client.post("/workouts", params={"date": d})
+        resp = self.client.get(
+            "/workouts",
+            params={"sort_by": "id", "descending": False, "limit": 2, "offset": 0},
+        )
+        self.assertEqual(len(resp.json()), 2)
+        resp2 = self.client.get(
+            "/workouts",
+            params={"sort_by": "id", "descending": False, "limit": 2, "offset": 2},
+        )
+        self.assertEqual(len(resp2.json()), 1)
+        self.assertEqual(resp2.json()[0]["date"], dates[2])
+
     def test_delete_endpoints(self) -> None:
         plan_date = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
 
@@ -3336,3 +3352,30 @@ class APITestCase(unittest.TestCase):
 
         resp = self.client.get("/notifications/unread_count")
         self.assertEqual(resp.json()["count"], 0)
+
+    def test_challenges_crud(self) -> None:
+        resp = self.client.post(
+            "/challenges", params={"name": "30-day", "target": 30}
+        )
+        self.assertEqual(resp.status_code, 200)
+        cid = resp.json()["id"]
+
+        resp = self.client.get("/challenges")
+        self.assertEqual(len(resp.json()), 1)
+        self.assertEqual(resp.json()[0]["progress"], 0)
+
+        resp = self.client.put(
+            f"/challenges/{cid}/progress", params={"progress": 10}
+        )
+        self.assertEqual(resp.status_code, 200)
+
+        resp = self.client.get("/challenges")
+        self.assertEqual(resp.json()[0]["progress"], 10)
+
+        resp = self.client.post(
+            f"/challenges/{cid}/complete", params={"completed": True}
+        )
+        self.assertEqual(resp.status_code, 200)
+
+        resp = self.client.get("/challenges")
+        self.assertTrue(resp.json()[0]["completed"])

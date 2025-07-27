@@ -287,6 +287,16 @@ class Database:
                 );""",
             ["id", "workout_id", "points"],
         ),
+        "challenges": (
+            """CREATE TABLE challenges (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    target INTEGER NOT NULL,
+                    progress INTEGER NOT NULL DEFAULT 0,
+                    completed INTEGER NOT NULL DEFAULT 0
+                );""",
+            ["id", "name", "target", "progress", "completed"],
+        ),
         "ml_models": (
             """CREATE TABLE ml_models (
                     name TEXT PRIMARY KEY,
@@ -706,6 +716,8 @@ class WorkoutRepository(BaseRepository):
         end_date: Optional[str] = None,
         sort_by: str = "id",
         descending: bool = True,
+        limit: int | None = None,
+        offset: int | None = None,
     ) -> List[
         Tuple[int, str, Optional[str], Optional[str], str, Optional[str], Optional[int]]
     ]:
@@ -721,7 +733,16 @@ class WorkoutRepository(BaseRepository):
         if sort_by not in allowed:
             sort_by = "id"
         order = "DESC" if descending else "ASC"
-        query += f" ORDER BY {sort_by} {order};"
+        query += f" ORDER BY {sort_by} {order}"
+        if limit is not None:
+            query += " LIMIT ?"
+            params.append(limit)
+        if offset is not None:
+            if limit is None:
+                query += " LIMIT -1"
+            query += " OFFSET ?"
+            params.append(offset)
+        query += ";"
         return self.fetch_all(query, tuple(params))
 
     def set_start_time(self, workout_id: int, timestamp: str) -> None:
@@ -2459,6 +2480,43 @@ class GamificationRepository(BaseRepository):
             "GROUP BY workout_id ORDER BY workout_id;"
         )
         return [(int(wid), float(pts or 0.0)) for wid, pts in rows]
+
+
+class ChallengeRepository(BaseRepository):
+    """Repository for tracking challenges."""
+
+    def add(self, name: str, target: int) -> int:
+        return self.execute(
+            "INSERT INTO challenges (name, target) VALUES (?, ?);",
+            (name, target),
+        )
+
+    def update_progress(self, challenge_id: int, progress: int) -> None:
+        rows = super().fetch_all(
+            "SELECT id FROM challenges WHERE id = ?;",
+            (challenge_id,),
+        )
+        if not rows:
+            raise ValueError("challenge not found")
+        self.execute(
+            "UPDATE challenges SET progress = ? WHERE id = ?;",
+            (progress, challenge_id),
+        )
+
+    def set_completed(self, challenge_id: int, completed: bool = True) -> None:
+        self.execute(
+            "UPDATE challenges SET completed = ? WHERE id = ?;",
+            (1 if completed else 0, challenge_id),
+        )
+
+    def fetch_all(self) -> list[tuple[int, str, int, int, int]]:
+        rows = super().fetch_all(
+            "SELECT id, name, target, progress, completed FROM challenges ORDER BY id;"
+        )
+        return [
+            (int(cid), n, int(t), int(p), int(c))
+            for cid, n, t, p, c in rows
+        ]
 
 
 class MLModelRepository(BaseRepository):

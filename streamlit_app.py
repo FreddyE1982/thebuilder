@@ -47,6 +47,7 @@ from db import (
     TagRepository,
     GoalRepository,
     NotificationRepository,
+    ChallengeRepository,
 )
 from planner_service import PlannerService
 from recommendation_service import RecommendationService
@@ -226,6 +227,7 @@ class GymApp:
         self.favorite_workouts_repo = FavoriteWorkoutRepository(db_path)
         self.tags_repo = TagRepository(db_path)
         self.goals_repo = GoalRepository(db_path)
+        self.challenges_repo = ChallengeRepository(db_path)
         self.pyramid_tests = PyramidTestRepository(db_path)
         self.pyramid_entries = PyramidEntryRepository(db_path)
         self.game_repo = GamificationRepository(db_path)
@@ -2207,6 +2209,7 @@ class GymApp:
                     rep_sub,
                     risk_sub,
                     game_sub,
+                    challenges_sub,
                     tests_sub,
                     goals_sub,
                 ) = st.tabs(
@@ -2223,6 +2226,7 @@ class GymApp:
                         "Reports",
                         "Risk",
                         "Gamification",
+                        "Challenges",
                         "Tests",
                         "Goals",
                     ]
@@ -2251,6 +2255,8 @@ class GymApp:
                     self._risk_tab()
                 with game_sub:
                     self._gamification_tab()
+                with challenges_sub:
+                    self._challenges_tab()
                 with tests_sub:
                     self._tests_tab()
                 with goals_sub:
@@ -4485,7 +4491,14 @@ class GymApp:
             sel_tags = st.multiselect("Tags", tag_names, key="hist_tags")
             start_str = start.isoformat()
             end_str = end.isoformat()
-        workouts = self.workouts.fetch_all_workouts(start_str, end_str)
+        load_more = st.session_state.pop("load_more_hist", False)
+        if "hist_offset" not in st.session_state or not load_more:
+            st.session_state.hist_offset = 0
+        limit = 10
+        offset = st.session_state.hist_offset
+        workouts = self.workouts.fetch_all_workouts(
+            start_str, end_str, "date", True, limit, offset
+        )
         if ttype:
             workouts = [w for w in workouts if w[4] == ttype]
         if sel_tags:
@@ -4512,6 +4525,11 @@ class GymApp:
                     st.markdown("**Tags:** " + ", ".join(tags))
                 if st.button("Details", key=f"hist_det_{wid}"):
                     self._workout_details_dialog(wid)
+        if len(workouts) == limit:
+            if st.button("Load More", key="hist_more"):
+                st.session_state.hist_offset += limit
+                st.session_state.load_more_hist = True
+                st.rerun()
 
     def _workout_details_dialog(self, workout_id: int) -> None:
         exercises = self.exercises.fetch_for_workout(workout_id)
@@ -5150,6 +5168,37 @@ class GymApp:
                     ("Record Streak", streak["record"]),
                 ]
             )
+
+    def _challenges_tab(self) -> None:
+        st.header("Challenges")
+        active = [c for c in self.challenges_repo.fetch_all() if not c[4]]
+        with st.expander("Ongoing", expanded=True):
+            for cid, name, target, prog, _ in active:
+                st.write(f"{name}: {prog}/{target}")
+                st.progress(min(prog / target, 1.0))
+                val = st.number_input(
+                    "Progress",
+                    value=prog,
+                    min_value=0,
+                    max_value=target,
+                    step=1,
+                    key=f"ch_prog_{cid}",
+                )
+                if st.button("Update", key=f"ch_upd_{cid}"):
+                    self.challenges_repo.update_progress(cid, int(val))
+                    if val >= target:
+                        self.challenges_repo.set_completed(cid, True)
+                    st.rerun()
+        completed = [c for c in self.challenges_repo.fetch_all() if c[4]]
+        with st.expander("Achievements", expanded=False):
+            for _cid, name, _t, _p, _ in completed:
+                st.write(f"✅ {name}")
+        with st.expander("New Challenge", expanded=False):
+            name = st.text_input("Name", key="new_ch_name")
+            target = st.number_input("Target", min_value=1, step=1, key="new_ch_target")
+            if st.button("Add Challenge", key="add_ch_btn") and name:
+                self.challenges_repo.add(name, int(target))
+                st.rerun()
 
     def _tests_tab(self) -> None:
         st.header("Pyramid Test")
