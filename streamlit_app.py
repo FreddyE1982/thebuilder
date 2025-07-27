@@ -1312,6 +1312,17 @@ class GymApp:
             st.session_state.lib_eq_name = ""
         if "lib_ex_name" not in st.session_state:
             st.session_state.lib_ex_name = ""
+        for _k, _default in {
+            "lib_eq_type": [],
+            "lib_eq_prefix": "",
+            "lib_eq_mus": [],
+            "lib_ex_groups": [],
+            "lib_ex_mus": [],
+            "lib_ex_eq": "",
+            "lib_ex_prefix": "",
+        }.items():
+            if _k not in st.session_state:
+                st.session_state[_k] = _default
 
     def _create_sidebar(self) -> None:
         if self.side_nav and not st.session_state.get("is_mobile", False):
@@ -2474,6 +2485,7 @@ class GymApp:
                     start_time,
                     end_time,
                     warm,
+                    _position,
                 ) in enumerate(sets, start=1):
                     detail = self.sets.fetch_detail(set_id)
                     registered = start_time is not None and end_time is not None

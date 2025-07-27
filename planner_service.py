@@ -134,6 +134,6 @@ class PlannerService:
         for ex_id, ex_name, eq, _note in exercises:
             t_ex_id = self.template_exercises.add(template_id, ex_name, eq)
             sets = self.sets.fetch_for_exercise(ex_id)
-            for _sid, reps, weight, rpe, _st, _et, _warm in sets:
+            for _sid, reps, weight, rpe, _st, _et, _warm, _pos in sets:
                 self.template_sets.add(t_ex_id, reps, weight, rpe)
         return template_id
