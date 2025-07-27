@@ -1863,3 +1863,36 @@ class StatisticsService:
         avg_gap = sum(gaps) / len(gaps)
         cv = MathTools.coefficient_of_variation(gaps)
         return {"consistency": round(cv, 2), "average_gap": round(avg_gap, 2)}
+
+    def weekly_streak(self) -> dict[str, int]:
+        """Return current and best weekly workout streaks."""
+        if self.workouts is None:
+            return {"current": 0, "best": 0}
+        rows = self.workouts.fetch_all("SELECT date FROM workouts ORDER BY date;")
+        if not rows:
+            return {"current": 0, "best": 0}
+        weeks = sorted(
+            {
+                datetime.date.fromisoformat(d).isocalendar()[:2]
+                for (d,) in rows
+            }
+        )
+        best = cur = 1
+        for prev, nxt in zip(weeks, weeks[1:]):
+            if (nxt[0] == prev[0] and nxt[1] == prev[1] + 1) or (
+                nxt[0] == prev[0] + 1 and prev[1] >= 52 and nxt[1] == 1
+            ):
+                cur += 1
+            else:
+                best = max(best, cur)
+                cur = 1
+        best = max(best, cur)
+        current = 1
+        for prev, nxt in zip(reversed(weeks[:-1]), reversed(weeks[1:])):
+            if (nxt[0] == prev[0] and nxt[1] == prev[1] + 1) or (
+                nxt[0] == prev[0] + 1 and prev[1] >= 52 and nxt[1] == 1
+            ):
+                current += 1
+            else:
+                break
+        return {"current": current, "best": best}

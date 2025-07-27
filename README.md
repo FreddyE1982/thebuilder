@@ -39,6 +39,7 @@ The Builder is a full featured workout planner, logger and analytics platform bu
 - Evaluate exercise frequency per week with `/stats/exercise_frequency`.
 - Evaluate workout schedule consistency with `/stats/workout_consistency` displayed in Reports.
 - Analyze week-over-week volume change with `/stats/weekly_volume_change` displayed in the Reports tab.
+- Track weekly workout streaks with `/stats/weekly_streak` and view metrics in Progress Summary.
 - Track body weight over time using `/body_weight` endpoints and `/stats/weight_stats`.
 - Forecast future body weight trends with `/stats/weight_forecast`.
 - View weight history, BMI charts and forecasts in the Progress tab's new "Body Weight" section.

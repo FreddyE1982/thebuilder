@@ -645,6 +645,7 @@ class Database:
             "weekly_report_email": "",
             "weight_unit": "kg",
             "time_format": "24h",
+            "quick_weights": "20,40,60,80,100",
         }
         with self._connection() as conn:
             for key, value in defaults.items():
