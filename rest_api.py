@@ -927,6 +927,18 @@ class GymAPI:
                 for tid, name, t in templates
             ]
 
+        @self.app.post("/templates/order")
+        def reorder_templates(order: str):
+            try:
+                ids = [int(i) for i in order.split(",") if i]
+            except ValueError:
+                raise HTTPException(status_code=400, detail="invalid ids")
+            try:
+                self.template_workouts.reorder(ids)
+                return {"status": "updated"}
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
         @self.app.put("/templates/{template_id}")
         def update_template(
             template_id: int,
