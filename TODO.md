@@ -75,7 +75,7 @@
 - [x] 72. Provide quick filter chips for common date ranges in history views.
 - [x] 73. Implement a unified notification center for alerts and reminders.
 - [x] 74. Allow users to collapse the header on scroll for more screen space.
-- [ ] 75. Create a dedicated analytics landing page with shortcuts to reports.
+- [x] 75. Create a dedicated analytics landing page with shortcuts to reports.
 - [x] 76. Add gesture support to close dialogs on mobile by swiping down.
 - [x] 77. Provide an option to auto-open the last viewed workout on startup.
 - [ ] 78. Implement lazy loading for long tables to improve performance.

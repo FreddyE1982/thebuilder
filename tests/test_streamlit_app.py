@@ -282,7 +282,9 @@ class StreamlitAppTest(unittest.TestCase):
     def test_quick_add_favorite(self) -> None:
         self.at.query_params["tab"] = "library"
         self.at.run()
-        fav_tab = next(e for e in self._get_tab("Library").expander if e.label == "Favorites")
+        fav_tab = next(
+            e for e in self._get_tab("Library").expander if e.label == "Favorites"
+        )
         idx = _find_by_label(
             fav_tab.selectbox, "Add Favorite", "Barbell Bench Press", key="fav_add_name"
         )
@@ -367,7 +369,6 @@ class StreamlitAppTest(unittest.TestCase):
         idx_ex = _find_by_label(ex_tab.button, "Reset Filters", key="lib_ex_reset")
         self.assertIsNotNone(idx_ex)
 
-
     def test_custom_exercise_and_logs(self) -> None:
         self.at.query_params["tab"] = "settings"
         self.at.run()
@@ -418,8 +419,6 @@ class StreamlitAppTest(unittest.TestCase):
         bw_tab = next(t for t in settings_tab.tabs if t.label == "Body Weight Logs")
         cur.execute("SELECT weight FROM body_weight_logs;")
         self.assertAlmostEqual(cur.fetchone()[0], 80.5)
-
-
 
         # Tag
         tag_tab = next(t for t in settings_tab.tabs if t.label == "Workout Tags")
@@ -766,9 +765,9 @@ class StreamlitFullGUITest(unittest.TestCase):
             if tab.label == label:
                 return tab
         self.fail(f"Tab {label} not found")
+
     def _connect(self) -> sqlite3.Connection:
         return sqlite3.connect(self.db_path)
-
 
     def test_calendar_tab(self) -> None:
         tab = self._get_tab("Calendar")
@@ -789,6 +788,21 @@ class StreamlitFullGUITest(unittest.TestCase):
         tab = self._get_tab("Dashboard")
         self.assertEqual(tab.header[0].value, "Dashboard")
         self.assertGreaterEqual(len(tab.metric), 8)
+
+    def test_analytics_hub_tab(self) -> None:
+        tab = self._get_tab("Analytics Hub")
+        self.assertEqual(tab.header[0].value, "Analytics Hub")
+        labels = [b.label for b in tab.button]
+        self.assertIn("Dashboard", labels)
+
+    def test_hub_button_sets_param(self) -> None:
+        tab = self._get_tab("Analytics Hub")
+        idx = _find_by_label(tab.button, "Dashboard", key="hub_dashboard")
+        tab.button[idx].click().run()
+        sub = self.at.query_params.get("sub")
+        if isinstance(sub, list):
+            sub = sub[0]
+        self.assertEqual(sub, "dashboard")
 
     def test_stats_tab_subtabs(self) -> None:
         tab = self._get_tab("Exercise Stats")
@@ -970,7 +984,6 @@ class StreamlitFullGUITest(unittest.TestCase):
         self.assertIsNotNone(self.at.expander[exp_idx])
 
 
-
 class StreamlitAdditionalGUITest(unittest.TestCase):
     def setUp(self) -> None:
         self.db_path = "test_gui_add.db"
@@ -1097,6 +1110,26 @@ class StreamlitAdditionalGUITest(unittest.TestCase):
         idx_add_set = _find_by_label(self.at.button, "Add Set", key="add_set_1")
         self.at.button[idx_add_set].click().run()
         self.assertEqual(self.at.query_params.get("tab"), before)
+
+    def test_expander_persistence_on_add_set(self) -> None:
+        exp_idx = _find_by_label(self.at.expander, "Existing Workouts")
+        self.assertTrue(self.at.expander[exp_idx].proto.expanded)
+        idx_new = _find_by_label(
+            self.at.button,
+            "New Workout",
+            key="FormSubmitter:new_workout_form-New Workout",
+        )
+        self.at.button[idx_new].click().run()
+        idx_ex = _find_by_label(self.at.selectbox, "Exercise", "Barbell Bench Press")
+        self.at.selectbox[idx_ex].select("Barbell Bench Press").run()
+        idx_eq = _find_by_label(self.at.selectbox, "Equipment Name", "Olympic Barbell")
+        self.at.selectbox[idx_eq].select("Olympic Barbell").run()
+        idx_add_ex = _find_by_label(self.at.button, "Add Exercise", key="add_ex_btn")
+        self.at.button[idx_add_ex].click().run()
+        idx_add_set = _find_by_label(self.at.button, "Add Set", key="add_set_1")
+        self.at.button[idx_add_set].click().run()
+        exp_idx = _find_by_label(self.at.expander, "Existing Workouts")
+        self.assertTrue(self.at.expander[exp_idx].proto.expanded)
 
     def test_workout_context_menu_present(self) -> None:
         idx_new = _find_by_label(
@@ -1317,7 +1350,6 @@ class RecommendationIntegrationTest(unittest.TestCase):
         os.environ["TEST_MODE"] = "0"
         app = GymApp(self.db_path, self.yaml_path)
         self.assertIsNotNone(app.recommender.goals)
-
 
 
 if __name__ == "__main__":
