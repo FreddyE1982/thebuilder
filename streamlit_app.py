@@ -1636,6 +1636,15 @@ class GymApp:
                   dlg.setAttribute('tabindex','0');
                   const focusable = dlg.querySelector('input,textarea,select,button');
                   if (focusable) { focusable.focus(); }
+                  let startY = 0;
+                  dlg.addEventListener('touchstart', e => { startY = e.touches[0].clientY; });
+                  dlg.addEventListener('touchend', e => {
+                    const dy = e.changedTouches[0].clientY - startY;
+                    if (dy > 50) {
+                      const close = dlg.querySelector('button[aria-label="Close"]');
+                      if (close) close.click();
+                    }
+                  });
                 }
                 </script>
                 """,
