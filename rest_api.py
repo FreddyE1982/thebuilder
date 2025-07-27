@@ -2074,6 +2074,7 @@ class GymAPI:
             hide_preconfigured_equipment: bool = None,
             hide_preconfigured_exercises: bool = None,
             compact_mode: bool = None,
+            auto_dark_mode: bool = None,
         ):
             if body_weight is not None:
                 self.settings.set_float("body_weight", body_weight)
@@ -2149,6 +2150,8 @@ class GymAPI:
                 )
             if compact_mode is not None:
                 self.settings.set_bool("compact_mode", compact_mode)
+            if auto_dark_mode is not None:
+                self.settings.set_bool("auto_dark_mode", auto_dark_mode)
             return {"status": "updated"}
 
         @self.app.post("/settings/delete_all")
