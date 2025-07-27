@@ -1673,7 +1673,7 @@ class GymApp:
 
         self._show_dialog("Quick New Workout", _content)
 
-    def _dashboard_tab(self) -> None:
+    def _dashboard_tab(self, prefix: str = "dash") -> None:
         if os.environ.get("TEST_MODE") == "1":
             return
         with self._section("Dashboard"):
@@ -1682,26 +1682,30 @@ class GymApp:
                     start = st.date_input(
                         "Start",
                         datetime.date.today() - datetime.timedelta(days=30),
-                        key="dash_start",
+                        key=f"{prefix}_start_m",
                     )
-                    end = st.date_input("End", datetime.date.today(), key="dash_end")
+                    end = st.date_input("End", datetime.date.today(), key=f"{prefix}_end_m")
                 else:
                     col1, col2 = st.columns(2)
                     with col1:
                         start = st.date_input(
                             "Start",
                             datetime.date.today() - datetime.timedelta(days=30),
-                            key="dash_start",
+                            key=f"{prefix}_start_d",
                         )
                     with col2:
                         end = st.date_input(
-                            "End", datetime.date.today(), key="dash_end"
+                            "End", datetime.date.today(), key=f"{prefix}_end_d"
                         )
-                if st.button("Reset", key="dash_reset"):
-                    st.session_state.dash_start = (
+                if st.button("Reset", key=f"{prefix}_reset"):
+                    st.session_state[f"{prefix}_start_d"] = (
                         datetime.date.today() - datetime.timedelta(days=30)
                     )
-                    st.session_state.dash_end = datetime.date.today()
+                    st.session_state[f"{prefix}_end_d"] = datetime.date.today()
+                    st.session_state[f"{prefix}_start_m"] = (
+                        datetime.date.today() - datetime.timedelta(days=30)
+                    )
+                    st.session_state[f"{prefix}_end_m"] = datetime.date.today()
                     st.rerun()
         stats = self.stats.overview(start.isoformat(), end.isoformat())
         w_stats = self.stats.weight_stats(start.isoformat(), end.isoformat())
@@ -1734,7 +1738,7 @@ class GymApp:
                     st.line_chart(df_dur["duration"], use_container_width=True)
                 exercises = [""] + self.exercise_names_repo.fetch_all()
                 ex_choice = st.selectbox(
-                    "Exercise Progression", exercises, key="dash_ex"
+                    "Exercise Progression", exercises, key=f"{prefix}_ex"
                 )
                 if ex_choice:
                     prog = self.stats.progression(
@@ -1753,7 +1757,7 @@ class GymApp:
                         st.line_chart(df_daily["volume"], use_container_width=True)
                     exercises = [""] + self.exercise_names_repo.fetch_all()
                     ex_choice = st.selectbox(
-                        "Exercise Progression", exercises, key="dash_ex"
+                        "Exercise Progression", exercises, key=f"{prefix}_ex"
                     )
                     if ex_choice:
                         prog = self.stats.progression(
@@ -1797,7 +1801,7 @@ class GymApp:
 
     def _summary_tab(self) -> None:
         with self._section("Summary"):
-            self._dashboard_tab()
+            self._dashboard_tab(prefix="sumdash")
             with st.expander("Gamification", expanded=True):
                 self._metric_grid([("Total Points", self.gamification.total_points())])
 
