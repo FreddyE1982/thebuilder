@@ -39,7 +39,7 @@
 - [x] 36. Include a collapsible history of automatic recommendations in the Planner tab.
 - [x] 37. Show an alert when planned workouts are overdue.
 - [x] 38. Add an interactive calendar view for planned and logged workouts.
-- [ ] 39. Provide bulk editing tools for sets across different workouts.
+- [x] 39. Provide bulk editing tools for sets across different workouts.
  - [x] 40. Add a quick report generator with preset date ranges like last week or last month.
 - [x] 41. Surface recently used muscles and equipment in dropdowns for convenience.
 - [x] 42. Include inline validation messages next to each form field when data is invalid.

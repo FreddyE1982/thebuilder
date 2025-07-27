@@ -1,5 +1,6 @@
 import datetime
-from fastapi import FastAPI, HTTPException, Response
+from typing import List, Dict
+from fastapi import FastAPI, HTTPException, Response, Body
 from db import (
     WorkoutRepository,
     ExerciseRepository,
@@ -1062,6 +1063,14 @@ class GymAPI:
                     pass
                 ids.append(sid)
             return {"added": len(ids), "ids": ids}
+
+        @self.app.put("/sets/bulk_update")
+        def bulk_update_sets(updates: List[Dict] = Body(...)):
+            try:
+                self.sets.bulk_update(updates)
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=str(e))
+            return {"updated": len(updates)}
 
         @self.app.put("/sets/{set_id}")
         def update_set(

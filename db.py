@@ -939,6 +939,17 @@ class SetRepository(BaseRepository):
         params.append(set_id)
         self.execute(query, tuple(params))
 
+    def bulk_update(self, updates: Iterable[dict]) -> None:
+        """Update multiple sets in one transaction."""
+        for upd in updates:
+            sid = int(upd.get("id"))
+            reps = int(upd.get("reps"))
+            weight = float(upd.get("weight"))
+            rpe = int(upd.get("rpe"))
+            warmup_val = upd.get("warmup")
+            warm = bool(warmup_val) if warmup_val is not None else None
+            self.update(sid, reps, weight, rpe, warm)
+
     def remove(self, set_id: int) -> None:
         self.execute("DELETE FROM sets WHERE id = ?;", (set_id,))
 
