@@ -80,7 +80,7 @@
 - [ ] 80. Add undo/redo controls for workout editing actions.
 - [ ] 81. Provide customizable quick-add weight values for faster input.
 - [ ] 82. Show weekly streak counters on the Progress tab.
-- [ ] 83. Offer automatic dark mode based on system preferences.
+ - [x] 83. Offer automatic dark mode based on system preferences.
 - [ ] 84. Introduce a split view on tablets to show history and logging side by side.
 - [ ] 85. Add persistent toolbars within expanders for common actions.
 - [ ] 86. Implement fuzzy search for equipment and muscle names.

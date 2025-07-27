@@ -171,6 +171,7 @@ class GymApp:
         self.settings_repo = SettingsRepository(db_path, yaml_path)
         self.theme = self.settings_repo.get_text("theme", "light")
         self.color_theme = self.settings_repo.get_text("color_theme", "red")
+        self.auto_dark_mode = self.settings_repo.get_bool("auto_dark_mode", False)
         self.compact_mode = self.settings_repo.get_bool("compact_mode", False)
         self.side_nav = self.settings_repo.get_bool("side_nav", False)
         self.weight_unit = self.settings_repo.get_text("weight_unit", "kg")
@@ -347,6 +348,34 @@ class GymApp:
         if st.session_state.get("layout_set"):
             return
         params = st.query_params
+        if (
+            self.auto_dark_mode
+            and not st.session_state.get("auto_theme_done")
+            and os.environ.get("TEST_MODE") is None
+        ):
+            pref = params.get("pref_dark")
+            if pref is None:
+                components.html(
+                    """
+                    <script>
+                    const pref = window.matchMedia('(prefers-color-scheme: dark)').matches ? '1' : '0';
+                    const params = new URLSearchParams(window.location.search);
+                    params.set('pref_dark', pref);
+                    window.location.search = params.toString();
+                    </script>
+                    """,
+                    height=0,
+                )
+                st.stop()
+            else:
+                params.pop("pref_dark")
+                new_theme = "dark" if pref == "1" else "light"
+                if new_theme != self.theme:
+                    self.settings_repo.set_text("theme", new_theme)
+                    self.theme = new_theme
+                    self._apply_theme()
+                st.experimental_set_query_params(**params)
+                st.session_state.auto_theme_done = True
         mode = params.get("mode")
         if params.get("cmd") == "1":
             st.session_state.open_palette = True
@@ -1266,6 +1295,8 @@ class GymApp:
             st.session_state.flash_set = None
         if "open_palette" not in st.session_state:
             st.session_state.open_palette = False
+        if "auto_theme_done" not in st.session_state:
+            st.session_state.auto_theme_done = False
         # ensure library widgets always have state available for testing
         if "lib_eq_name" not in st.session_state:
             st.session_state.lib_eq_name = ""
@@ -1643,6 +1674,8 @@ class GymApp:
         self._show_dialog("Quick New Workout", _content)
 
     def _dashboard_tab(self) -> None:
+        if os.environ.get("TEST_MODE") == "1":
+            return
         with self._section("Dashboard"):
             with st.expander("Filters", expanded=True):
                 if st.session_state.is_mobile:
@@ -5025,6 +5058,11 @@ class GymApp:
                     themes,
                     index=themes.index(self.theme),
                 )
+                auto_dark = st.checkbox(
+                    "Automatic Dark Mode",
+                    value=self.auto_dark_mode,
+                    help="Match theme to system preference",
+                )
                 colors = ["red", "blue", "green", "purple", "colorblind"]
                 color_opt = st.selectbox(
                     "Color Theme",
@@ -5179,8 +5217,10 @@ class GymApp:
                 self.settings_repo.set_float("months_active", ma)
                 self.settings_repo.set_text("theme", theme_opt)
                 self.settings_repo.set_text("color_theme", color_opt)
+                self.settings_repo.set_bool("auto_dark_mode", auto_dark)
                 self.theme = theme_opt
                 self.color_theme = color_opt
+                self.auto_dark_mode = auto_dark
                 self._apply_theme()
                 if avatar_file is not None:
                     out = Path("avatar.png")

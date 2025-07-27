@@ -203,6 +203,7 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(data["months_active"], 1.0)
         self.assertEqual(data["theme"], "light")
         self.assertFalse(data["compact_mode"])
+        self.assertFalse(data["auto_dark_mode"])
         self.assertFalse(data["game_enabled"])
         self.assertIn("ml_all_enabled", data)
 
@@ -215,6 +216,7 @@ class APITestCase(unittest.TestCase):
                 "theme": "dark",
                 "ml_all_enabled": False,
                 "compact_mode": True,
+                "auto_dark_mode": True,
             },
         )
         self.assertEqual(resp.status_code, 200)
@@ -226,6 +228,7 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(float(data["height"]), 1.8)
         self.assertEqual(float(data["months_active"]), 6.0)
         self.assertEqual(data["theme"], "dark")
+        self.assertEqual(data["auto_dark_mode"], True)
 
         new_data = {
             "body_weight": 90.0,
@@ -235,6 +238,7 @@ class APITestCase(unittest.TestCase):
             "game_enabled": "0",
             "ml_all_enabled": "0",
             "compact_mode": "1",
+            "auto_dark_mode": "1",
         }
         with open(self.yaml_path, "w", encoding="utf-8") as f:
             yaml.safe_dump(new_data, f)
@@ -249,6 +253,7 @@ class APITestCase(unittest.TestCase):
         self.assertFalse(data["game_enabled"])
         self.assertFalse(data["ml_all_enabled"])
         self.assertTrue(data["compact_mode"])
+        self.assertTrue(data["auto_dark_mode"])
 
     def test_ml_toggle(self) -> None:
         resp = self.client.post("/settings/general", params={"ml_all_enabled": False})

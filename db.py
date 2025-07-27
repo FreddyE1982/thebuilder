@@ -603,6 +603,7 @@ class Database:
             "months_active": "1",
             "theme": "light",
             "color_theme": "red",
+            "auto_dark_mode": "0",
             "game_enabled": "0",
             "ml_all_enabled": "1",
             "ml_training_enabled": "1",
@@ -1608,6 +1609,7 @@ class SettingsRepository(BaseRepository):
             "hide_preconfigured_equipment",
             "hide_preconfigured_exercises",
             "compact_mode",
+            "auto_dark_mode",
         }
         for k, v in rows:
             if k in bool_keys:
@@ -1644,6 +1646,7 @@ class SettingsRepository(BaseRepository):
                 "hide_preconfigured_equipment",
                 "hide_preconfigured_exercises",
                 "compact_mode",
+                "auto_dark_mode",
             }
             for key, value in data.items():
                 val = str(value)
@@ -1721,6 +1724,7 @@ class SettingsRepository(BaseRepository):
             "hide_preconfigured_equipment",
             "hide_preconfigured_exercises",
             "compact_mode",
+            "auto_dark_mode",
         }
         for k in bool_keys:
             if k in data:
