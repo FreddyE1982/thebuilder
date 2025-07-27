@@ -33,6 +33,7 @@ class MobileCSSTest(unittest.TestCase):
         self.assertIn(".scroll-top", content)
         self.assertIn(".metric-card", content)
         self.assertIn("handleTouchStart", content)
+        self.assertIn("scrollY", content)
 
 if __name__ == "__main__":
     unittest.main()
