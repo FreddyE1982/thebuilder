@@ -63,7 +63,7 @@
 - [x] 60. Implement optional email export of weekly reports triggered via settings.
 - [x] 61. Consolidate progress charts into a carousel for easier comparison.
 - [x] 62. Add haptic feedback on mobile when logging sets.
-- [ ] 63. Create contextual menus on right click for quick actions on workouts.
+- [x] 63. Create contextual menus on right click for quick actions on workouts.
 - [x] 64. Provide an overview page with widgets summarizing current goals.
 - [x] 65. Add a resizable sidebar for customizing visible metrics.
 - [ ] 66. Support drag and drop to reorder workout templates.
