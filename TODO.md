@@ -60,7 +60,7 @@
 - [x] 57. Show progress indicators when syncing settings with `settings.yaml`.
 - [x] 58. Add avatar and profile management with an image upload field in settings.
 - [x] 59. Provide a summary banner after logging a workout with key statistics.
-- [ ] 60. Implement optional email export of weekly reports triggered via settings.
+- [x] 60. Implement optional email export of weekly reports triggered via settings.
 - [ ] 61. Consolidate progress charts into a carousel for easier comparison.
 - [x] 62. Add haptic feedback on mobile when logging sets.
 - [ ] 63. Create contextual menus on right click for quick actions on workouts.

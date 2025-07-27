@@ -7,6 +7,7 @@ import shutil
 import subprocess
 from fastapi.testclient import TestClient
 import yaml
+import json
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from rest_api import GymAPI
@@ -3222,3 +3223,31 @@ class APITestCase(unittest.TestCase):
         resp = self.client.get("/health")
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json()["status"], "ok")
+
+    def test_email_weekly_report(self) -> None:
+        # create data within last week
+        today = datetime.date.today().isoformat()
+        self.client.post("/workouts", params={"date": today})
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8},
+        )
+        self.client.post(
+            "/settings/general",
+            params={"email_weekly_enabled": True, "weekly_report_email": "user@example.com"},
+        )
+
+        resp = self.client.post("/reports/email_weekly")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["status"], "sent")
+
+        logs = self.client.get("/reports/email_logs").json()
+        self.assertEqual(len(logs), 1)
+        log = logs[0]
+        self.assertEqual(log["address"], "user@example.com")
+        summary = json.loads(log["summary"])
+        self.assertIn("workouts", summary)
