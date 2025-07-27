@@ -77,7 +77,7 @@
 - [ ] 74. Allow users to collapse the header on scroll for more screen space.
 - [ ] 75. Create a dedicated analytics landing page with shortcuts to reports.
 - [ ] 76. Add gesture support to close dialogs on mobile by swiping down.
-- [ ] 77. Provide an option to auto-open the last viewed workout on startup.
+- [x] 77. Provide an option to auto-open the last viewed workout on startup.
 - [ ] 78. Implement lazy loading for long tables to improve performance.
 - [ ] 79. Include a widget to display ongoing challenges and achievements.
 - [ ] 80. Add undo/redo controls for workout editing actions.

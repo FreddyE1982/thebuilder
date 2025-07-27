@@ -2097,6 +2097,8 @@ class GymAPI:
             hide_preconfigured_exercises: bool = None,
             compact_mode: bool = None,
             auto_dark_mode: bool = None,
+            show_onboarding: bool = None,
+            auto_open_last_workout: bool = None,
         ):
             if body_weight is not None:
                 self.settings.set_float("body_weight", body_weight)
@@ -2174,6 +2176,10 @@ class GymAPI:
                 self.settings.set_bool("compact_mode", compact_mode)
             if auto_dark_mode is not None:
                 self.settings.set_bool("auto_dark_mode", auto_dark_mode)
+            if show_onboarding is not None:
+                self.settings.set_bool("show_onboarding", show_onboarding)
+            if auto_open_last_workout is not None:
+                self.settings.set_bool("auto_open_last_workout", auto_open_last_workout)
             return {"status": "updated"}
 
         @self.app.post("/settings/delete_all")

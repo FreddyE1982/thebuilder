@@ -1249,5 +1249,6 @@ class RecommendationIntegrationTest(unittest.TestCase):
         self.assertIsNotNone(app.recommender.goals)
 
 
+
 if __name__ == "__main__":
     unittest.main()
