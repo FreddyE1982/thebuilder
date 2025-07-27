@@ -4,6 +4,7 @@ import os
 import io
 import datetime
 import json
+import difflib
 from contextlib import contextmanager
 from typing import List, Tuple, Optional, Iterable, Set
 
@@ -1420,6 +1421,11 @@ class MuscleRepository(BaseRepository):
         rows = super().fetch_all("SELECT name FROM muscles ORDER BY name;")
         return [r[0] for r in rows]
 
+    def fuzzy_search(self, query: str, limit: int = 5) -> List[str]:
+        """Return muscle names closest to the query."""
+        names = self.fetch_all()
+        return difflib.get_close_matches(query, names, n=limit, cutoff=0.3)
+
     def canonical(self, name: str) -> str:
         rows = super().fetch_all(
             "SELECT canonical_name FROM muscles WHERE name = ?;", (name,)
@@ -2018,6 +2024,11 @@ class EquipmentRepository(BaseRepository):
             for m in row[0].split("|"):
                 muscles.add(self.muscles.canonical(m))
         return sorted(muscles)
+
+    def fuzzy_search(self, query: str, limit: int = 5) -> List[str]:
+        """Return equipment names closest to the query."""
+        names = self.fetch_names()
+        return difflib.get_close_matches(query, names, n=limit, cutoff=0.3)
 
     def add(self, equipment_type: str, name: str, muscles: List[str]) -> int:
         existing = self.fetch_all(
