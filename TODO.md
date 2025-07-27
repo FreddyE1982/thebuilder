@@ -51,7 +51,7 @@
  - [x] 48. Create a unified progress summary tab combining charts and gamification points.
  - [x] 49. Add export options for workouts to CSV and JSON from the Workouts tab.
  - [x] 50. Provide micro‑animations for adding items to improve responsiveness.
-- [ ] 51. Integrate responsive tables that collapse columns on small screens with a details view.
+- [x] 51. Integrate responsive tables that collapse columns on small screens with a details view.
 - [x] 52. Provide user customization for metric display units (kg/lb) and time format.
 - [x] 53. Add quick links to recent analytics directly from workout detail pages.
 - [x] 54. Introduce a command palette (Ctrl+K) for power users to run any action.

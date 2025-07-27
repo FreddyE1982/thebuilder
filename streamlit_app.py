@@ -1491,6 +1491,17 @@ class GymApp:
         )
         st.altair_chart(chart, use_container_width=True)
 
+    def _responsive_table(self, data: list[dict] | pd.DataFrame) -> None:
+        """Render a table that collapses into expanders on mobile."""
+        df = pd.DataFrame(data)
+        if self.layout.is_mobile:
+            for _, row in df.iterrows():
+                label = str(row.iloc[0])
+                with st.expander(label):
+                    st.table(pd.DataFrame(row).T)
+        else:
+            st.table(df)
+
     def _show_dialog(self, title: str, content_fn: Callable[[], None]) -> None:
         """Display a modal dialog using the decorator API."""
 
@@ -1822,7 +1833,7 @@ class GymApp:
             )
             if records:
                 with st.expander("Personal Records", expanded=False):
-                    st.table(records[:5])
+                    self._responsive_table(records[:5])
             if not st.session_state.is_mobile:
                 top_ex = self.stats.exercise_summary(
                     None, start.isoformat(), end.isoformat()
@@ -1830,7 +1841,7 @@ class GymApp:
                 top_ex.sort(key=lambda x: x["volume"], reverse=True)
                 if top_ex:
                     with st.expander("Top Exercises", expanded=False):
-                        st.table(top_ex[:5])
+                        self._responsive_table(top_ex[:5])
 
     def _summary_tab(self) -> None:
         with self._section("Summary"):
@@ -2254,7 +2265,7 @@ class GymApp:
                 )
                 if start_time and end_time:
                     link = f"?mode={'mobile' if self.layout.is_mobile else 'desktop'}&tab=progress&start={start_time}&end={end_time}"
-                    st.link_button("View Analytics", link, key=f'analytics_{selected}')
+                    st.link_button("View Analytics", link)
                 if st.button("Copy to Template", key=f"copy_tpl_{selected}"):
                     tid = self.planner.copy_workout_to_template(int(selected))
                     st.success(f"Template {tid} created")
@@ -2421,7 +2432,7 @@ class GymApp:
             logs = self.heart_rates.fetch_for_workout(workout_id)
             if logs:
                 df = pd.DataFrame(logs, columns=["id", "timestamp", "heart_rate"])
-                st.table(df[["timestamp", "heart_rate"]])
+                self._responsive_table(df[["timestamp", "heart_rate"]])
                 values = [int(r[2]) for r in logs]
                 metrics = [
                     ("Avg", round(sum(values) / len(values), 2)),
@@ -2732,7 +2743,7 @@ class GymApp:
             hist = self.stats.exercise_history(name)
             if hist:
                 with st.expander("History (last 5)"):
-                    st.table(hist[-5:][::-1])
+                    self._responsive_table(hist[-5:][::-1])
                 with st.expander("Weight Progress"):
                     self._line_chart(
                         {"Weight": [h["weight"] for h in hist]},
@@ -4209,7 +4220,7 @@ class GymApp:
             ]
         )
         with over_tab:
-            st.table(summary)
+            self._responsive_table(summary)
             daily = self.stats.daily_volume(start_str, end_str)
             if daily:
                 self._line_chart(
@@ -4217,11 +4228,11 @@ class GymApp:
                     [d["date"] for d in daily],
                 )
             equip_stats = self.stats.equipment_usage(start_str, end_str)
-            st.table(equip_stats)
+            self._responsive_table(equip_stats)
             eff_stats = self.stats.session_efficiency(start_str, end_str)
             if eff_stats:
                 with st.expander("Session Efficiency", expanded=False):
-                    st.table(eff_stats)
+                    self._responsive_table(eff_stats)
                     self._line_chart(
                         {"Efficiency": [e["efficiency"] for e in eff_stats]},
                         [e["date"] for e in eff_stats],
@@ -4288,7 +4299,7 @@ class GymApp:
                 end_str,
             )
             if records:
-                st.table(records)
+                self._responsive_table(records)
         with tsb_tab:
             tsb = self.stats.stress_balance(start_str, end_str)
             if tsb:
@@ -4594,15 +4605,15 @@ class GymApp:
             data = self.stats.exercise_summary(None, start_str, end_str)
             data.sort(key=lambda x: x["volume"], reverse=True)
             if data:
-                st.table(data[:5])
+                self._responsive_table(data[:5])
         with st.expander("Exercise Frequency", expanded=True):
             freq = self.stats.exercise_frequency(None, start_str, end_str)
             if freq:
-                st.table(freq)
+                self._responsive_table(freq)
         with st.expander("Equipment Usage", expanded=True):
             eq_stats = self.stats.equipment_usage(start_str, end_str)
             if eq_stats:
-                st.table(eq_stats)
+                self._responsive_table(eq_stats)
                 self._bar_chart(
                     {"Volume": [e["volume"] for e in eq_stats]},
                     [e["equipment"] for e in eq_stats],
@@ -4624,7 +4635,7 @@ class GymApp:
         with st.expander("Weekly Volume Change", expanded=False):
             wvc = self.stats.weekly_volume_change(start_str, end_str)
             if wvc:
-                st.table(wvc)
+                self._responsive_table(wvc)
                 self._line_chart(
                     {"Change": [v["change"] for v in wvc]},
                     [v["week"] for v in wvc],
@@ -4632,7 +4643,7 @@ class GymApp:
         with st.expander("Session Duration", expanded=False):
             duration = self.stats.session_duration(start_str, end_str)
             if duration:
-                st.table(duration)
+                self._responsive_table(duration)
                 self._line_chart(
                     {"Duration": [d["duration"] for d in duration]},
                     [d["date"] for d in duration],
@@ -4640,7 +4651,7 @@ class GymApp:
         with st.expander("Session Density", expanded=False):
             density = self.stats.session_density(start_str, end_str)
             if density:
-                st.table(density)
+                self._responsive_table(density)
                 self._line_chart(
                     {"Density": [d["density"] for d in density]},
                     [d["date"] for d in density],
@@ -4648,7 +4659,7 @@ class GymApp:
         with st.expander("Set Pace", expanded=False):
             pace = self.stats.set_pace(start_str, end_str)
             if pace:
-                st.table(pace)
+                self._responsive_table(pace)
                 self._line_chart(
                     {"Pace": [p["pace"] for p in pace]},
                     [p["date"] for p in pace],
@@ -4656,7 +4667,7 @@ class GymApp:
         with st.expander("Average Rest Times", expanded=False):
             rests = self.stats.rest_times(start_str, end_str)
             if rests:
-                st.table(rests)
+                self._responsive_table(rests)
                 self._bar_chart(
                     {"Rest": [r["avg_rest"] for r in rests]},
                     [str(r["workout_id"]) for r in rests],
@@ -4664,7 +4675,7 @@ class GymApp:
         with st.expander("Exercise Diversity", expanded=False):
             div = self.stats.exercise_diversity(start_str, end_str)
             if div:
-                st.table(div)
+                self._responsive_table(div)
                 self._line_chart(
                     {"Diversity": [d["diversity"] for d in div]},
                     [d["date"] for d in div],
@@ -4672,7 +4683,7 @@ class GymApp:
         with st.expander("Time Under Tension", expanded=False):
             tut = self.stats.time_under_tension(start_str, end_str)
             if tut:
-                st.table(tut)
+                self._responsive_table(tut)
                 self._line_chart(
                     {"TUT": [t["tut"] for t in tut]},
                     [t["date"] for t in tut],
@@ -4680,11 +4691,11 @@ class GymApp:
         with st.expander("Location Summary", expanded=False):
             loc_stats = self.stats.location_summary(start_str, end_str)
             if loc_stats:
-                st.table(loc_stats)
+                self._responsive_table(loc_stats)
         with st.expander("Training Type Summary", expanded=False):
             tt_stats = self.stats.training_type_summary(start_str, end_str)
             if tt_stats:
-                st.table(tt_stats)
+                self._responsive_table(tt_stats)
         with st.expander("Workout Consistency", expanded=False):
             consistency = self.stats.workout_consistency(start_str, end_str)
             metrics = [
@@ -4889,7 +4900,7 @@ class GymApp:
                     {"date": d, "weights": "|".join([str(w) for w in ws])}
                     for _tid, d, ws in history
                 ]
-                st.table(display)
+                self._responsive_table(display)
 
         with st.expander("Warmup Calculator", expanded=False):
             tgt = st.number_input(
@@ -4901,7 +4912,7 @@ class GymApp:
             if st.button("Calculate Warmup", key="warmup_calc"):
                 try:
                     weights = MathTools.warmup_weights(float(tgt), int(count))
-                    st.table(
+                    self._responsive_table(
                         [{"set": i + 1, "weight": w} for i, w in enumerate(weights)]
                     )
                 except ValueError as e:
@@ -5649,7 +5660,9 @@ class GymApp:
                         rows,
                         columns=["id", "workout_id", "timestamp", "heart_rate"],
                     )
-                    st.table(df[["timestamp", "heart_rate", "workout_id"]])
+                    self._responsive_table(
+                        df[["timestamp", "heart_rate", "workout_id"]]
+                    )
                 else:
                     st.write("No logs")
 
