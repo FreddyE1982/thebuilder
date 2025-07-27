@@ -1490,6 +1490,10 @@ class GymAPI:
         ):
             return self.statistics.workout_consistency(start_date, end_date)
 
+        @self.app.get("/stats/weekly_streak")
+        def stats_weekly_streak():
+            return self.statistics.weekly_streak()
+
         @self.app.get("/stats/volume_forecast")
         def stats_volume_forecast(
             days: int = 7,

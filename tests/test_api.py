@@ -1868,6 +1868,21 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(data[0]["week"], d2)
         self.assertAlmostEqual(data[0]["change"], 100.0, places=2)
 
+    def test_weekly_streak_endpoint(self) -> None:
+        dates = [
+            "2024-01-01",
+            "2024-01-08",
+            "2024-01-15",
+            "2024-02-05",
+        ]
+        for d in dates:
+            self.client.post("/workouts", params={"date": d})
+        resp = self.client.get("/stats/weekly_streak")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data["current"], 1)
+        self.assertEqual(data["best"], 3)
+
     def test_set_velocity_and_history(self) -> None:
         self.client.post("/workouts")
         self.client.post(

@@ -179,6 +179,13 @@ class GymApp:
         self.auto_open_last_workout = self.settings_repo.get_bool("auto_open_last_workout", False)
         self.weight_unit = self.settings_repo.get_text("weight_unit", "kg")
         self.time_format = self.settings_repo.get_text("time_format", "24h")
+        self.quick_weights = [
+            float(v)
+            for v in self.settings_repo.get_text(
+                "quick_weights", "20,40,60,80,100"
+            ).split(",")
+            if v
+        ]
         self.add_set_key = self.settings_repo.get_text("hotkey_add_set", "a")
         self.tab_keys = self.settings_repo.get_text(
             "hotkey_tab_keys", "1,2,3,4"
@@ -1848,6 +1855,14 @@ class GymApp:
             self._dashboard_tab(prefix="sumdash")
             with st.expander("Gamification", expanded=True):
                 self._metric_grid([("Total Points", self.gamification.total_points())])
+            with st.expander("Weekly Streak", expanded=True):
+                streak = self.stats.weekly_streak()
+                self._metric_grid(
+                    [
+                        ("Current Weekly Streak", streak["current"]),
+                        ("Best Weekly Streak", streak["best"]),
+                    ]
+                )
 
     def run(self) -> None:
         params = st.query_params
@@ -2801,6 +2816,9 @@ class GymApp:
             self._rest_timer()
 
     def _add_set_form(self, exercise_id: int, with_button: bool = True) -> None:
+        qkey = f"qw_set_{exercise_id}"
+        if qkey in st.session_state:
+            st.session_state[f"new_weight_{exercise_id}"] = st.session_state.pop(qkey)
         reps = st.number_input(
             "Reps",
             min_value=1,
@@ -2816,6 +2834,13 @@ class GymApp:
             step=0.5,
             key=f"new_weight_{exercise_id}",
         )
+        if self.quick_weights:
+            cols = st.columns(len(self.quick_weights))
+            for idx, val in enumerate(self.quick_weights):
+                label = self._format_weight(val)
+                if cols[idx].button(label, key=f"qw_{exercise_id}_{idx}"):
+                    st.session_state[qkey] = val
+                    st.rerun()
         if errs.get("weight"):
             st.error("Weight required")
         rpe = st.selectbox(
@@ -5231,6 +5256,11 @@ class GymApp:
                     value=self.tab_keys,
                     help="Comma separated keys for Workouts, Library, Progress, Settings",
                 )
+                qw_in = st.text_input(
+                    "Quick Add Weights",
+                    value=",".join(str(int(w)) for w in self.quick_weights),
+                    help="Comma separated weight values",
+                )
             with st.expander("Gamification", expanded=True):
                 game_enabled = st.checkbox(
                     "Enable Gamification",
@@ -5372,8 +5402,10 @@ class GymApp:
                 self.auto_open_last_workout = auto_open_opt
                 self.settings_repo.set_text("hotkey_add_set", add_key_in or 'a')
                 self.settings_repo.set_text("hotkey_tab_keys", tab_keys_in or '1,2,3,4')
+                self.settings_repo.set_text("quick_weights", qw_in)
                 self.add_set_key = add_key_in or 'a'
                 self.tab_keys = tab_keys_in or '1,2,3,4'
+                self.quick_weights = [float(v) for v in qw_in.split(',') if v]
                 self._inject_responsive_css()
                 self.gamification.enable(game_enabled)
                 self.settings_repo.set_bool("ml_all_enabled", ml_global)
