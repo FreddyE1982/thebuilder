@@ -1,4 +1,5 @@
 import datetime
+import json
 from typing import List, Dict
 from fastapi import FastAPI, HTTPException, Response, Body
 from db import (
@@ -27,6 +28,7 @@ from db import (
     MLModelStatusRepository,
     AutoPlannerLogRepository,
     ExercisePrescriptionLogRepository,
+    EmailLogRepository,
     BodyWeightRepository,
     WellnessRepository,
     HeartRateRepository,
@@ -87,6 +89,7 @@ class GymAPI:
         self.ml_status = MLModelStatusRepository(db_path)
         self.autoplan_logs = AutoPlannerLogRepository(db_path)
         self.prescription_logs = ExercisePrescriptionLogRepository(db_path)
+        self.email_logs = EmailLogRepository(db_path)
         self.body_weights = BodyWeightRepository(db_path)
         self.wellness = WellnessRepository(db_path)
         self.heart_rates = HeartRateRepository(db_path)
@@ -2099,6 +2102,8 @@ class GymAPI:
             auto_dark_mode: bool = None,
             show_onboarding: bool = None,
             auto_open_last_workout: bool = None,
+            email_weekly_enabled: bool = None,
+            weekly_report_email: str = None,
         ):
             if body_weight is not None:
                 self.settings.set_float("body_weight", body_weight)
@@ -2180,6 +2185,10 @@ class GymAPI:
                 self.settings.set_bool("show_onboarding", show_onboarding)
             if auto_open_last_workout is not None:
                 self.settings.set_bool("auto_open_last_workout", auto_open_last_workout)
+            if email_weekly_enabled is not None:
+                self.settings.set_bool("email_weekly_enabled", email_weekly_enabled)
+            if weekly_report_email is not None:
+                self.settings.set_text("weekly_report_email", weekly_report_email)
             return {"status": "updated"}
 
         @self.app.post("/settings/delete_all")
@@ -2211,6 +2220,26 @@ class GymAPI:
                 return {"status": "pulled", "output": output}
             except Exception as e:
                 raise HTTPException(status_code=500, detail=str(e))
+
+        @self.app.post("/reports/email_weekly")
+        def send_weekly_email(address: str = None):
+            addr = address or self.settings.get_text("weekly_report_email", "")
+            if not addr:
+                raise HTTPException(status_code=400, detail="address required")
+            end = datetime.date.today()
+            start = end - datetime.timedelta(days=7)
+            summary = self.statistics.overview(start.isoformat(), end.isoformat())
+            self.email_logs.add(
+                addr,
+                f"{start.isoformat()} to {end.isoformat()}",
+                json.dumps(summary),
+                True,
+            )
+            return {"status": "sent"}
+
+        @self.app.get("/reports/email_logs")
+        def list_email_logs():
+            return self.email_logs.fetch_all_logs()
 
 
 api = GymAPI()

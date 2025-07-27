@@ -416,6 +416,24 @@ class Database:
                 );""",
             ["id", "timestamp", "status", "message"],
         ),
+        "email_logs": (
+            """CREATE TABLE email_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp TEXT NOT NULL,
+                    address TEXT NOT NULL,
+                    report_range TEXT NOT NULL,
+                    summary TEXT NOT NULL,
+                    success INTEGER NOT NULL
+                );""",
+            [
+                "id",
+                "timestamp",
+                "address",
+                "report_range",
+                "summary",
+                "success",
+            ],
+        ),
         "ml_model_status": (
             """CREATE TABLE ml_model_status (
                     name TEXT PRIMARY KEY,
@@ -623,6 +641,8 @@ class Database:
             "ml_injury_training_enabled": "1",
             "ml_injury_prediction_enabled": "1",
             "compact_mode": "0",
+            "email_weekly_enabled": "0",
+            "weekly_report_email": "",
             "weight_unit": "kg",
             "time_format": "24h",
         }
@@ -1650,6 +1670,7 @@ class SettingsRepository(BaseRepository):
             "large_font_mode",
             "show_onboarding",
             "auto_open_last_workout",
+            "email_weekly_enabled",
         }
         for k, v in rows:
             if k in bool_keys:
@@ -1690,6 +1711,7 @@ class SettingsRepository(BaseRepository):
                 "large_font_mode",
                 "show_onboarding",
                 "auto_open_last_workout",
+                "email_weekly_enabled",
             }
             for key, value in data.items():
                 val = str(value)
@@ -1780,6 +1802,7 @@ class SettingsRepository(BaseRepository):
             "large_font_mode",
             "show_onboarding",
             "auto_open_last_workout",
+            "email_weekly_enabled",
         }
         for k in bool_keys:
             if k in data:
@@ -3072,6 +3095,40 @@ class ExercisePrescriptionLogRepository(BaseRepository):
             (limit,),
         )
         return [(r[0], r[1]) for r in rows]
+
+
+class EmailLogRepository(BaseRepository):
+    """Repository for email report logs."""
+
+    def add(self, address: str, report_range: str, summary: str, success: bool) -> int:
+        return self.execute(
+            "INSERT INTO email_logs (timestamp, address, report_range, summary, success) VALUES (?, ?, ?, ?, ?);",
+            (
+                datetime.datetime.now().isoformat(),
+                address,
+                report_range,
+                summary,
+                1 if success else 0,
+            ),
+        )
+
+    def fetch_all_logs(self) -> list[dict[str, object]]:
+        rows = self.fetch_all(
+            "SELECT id, timestamp, address, report_range, summary, success FROM email_logs ORDER BY id;"
+        )
+        result: list[dict[str, object]] = []
+        for r in rows:
+            result.append(
+                {
+                    "id": r[0],
+                    "timestamp": r[1],
+                    "address": r[2],
+                    "report_range": r[3],
+                    "summary": r[4],
+                    "success": bool(r[5]),
+                }
+            )
+        return result
 
 
 class MLModelStatusRepository(BaseRepository):
