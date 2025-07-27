@@ -76,7 +76,7 @@
 - [ ] 73. Implement a unified notification center for alerts and reminders.
 - [x] 74. Allow users to collapse the header on scroll for more screen space.
 - [ ] 75. Create a dedicated analytics landing page with shortcuts to reports.
-- [ ] 76. Add gesture support to close dialogs on mobile by swiping down.
+- [x] 76. Add gesture support to close dialogs on mobile by swiping down.
 - [x] 77. Provide an option to auto-open the last viewed workout on startup.
 - [ ] 78. Implement lazy loading for long tables to improve performance.
 - [ ] 79. Include a widget to display ongoing challenges and achievements.
@@ -88,7 +88,7 @@
 - [ ] 85. Add persistent toolbars within expanders for common actions.
 - [ ] 86. Implement fuzzy search for equipment and muscle names.
  - [x] 87. Surface recently used filters at the top of dropdowns.
-- [ ] 88. Provide collapsible filter sections to declutter the interface.
+- [x] 88. Provide collapsible filter sections to declutter the interface.
 - [ ] 89. Add inline editing for workout notes directly in the history list.
 - [ ] 90. Include a progress ring showing completion percentage of planned sets.
 - [ ] 91. Offer bookmarking of favorite analytics views in settings.

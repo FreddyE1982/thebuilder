@@ -1636,6 +1636,15 @@ class GymApp:
                   dlg.setAttribute('tabindex','0');
                   const focusable = dlg.querySelector('input,textarea,select,button');
                   if (focusable) { focusable.focus(); }
+                  let startY = 0;
+                  dlg.addEventListener('touchstart', e => { startY = e.touches[0].clientY; });
+                  dlg.addEventListener('touchend', e => {
+                    const dy = e.changedTouches[0].clientY - startY;
+                    if (dy > 50) {
+                      const close = dlg.querySelector('button[aria-label="Close"]');
+                      if (close) close.click();
+                    }
+                  });
                 }
                 </script>
                 """,
@@ -1854,7 +1863,7 @@ class GymApp:
         if os.environ.get("TEST_MODE") == "1":
             return
         with self._section("Dashboard"):
-            with st.expander("Filters", expanded=True):
+            with st.expander("Filters", expanded=False):
                 if st.session_state.is_mobile:
                     start = st.date_input(
                         "Start",
@@ -3814,7 +3823,7 @@ class GymApp:
         muscles = list(dict.fromkeys(recent_mus + muscles))
         types = ["" ] + self.equipment.fetch_types()
         if st.session_state.is_mobile:
-            with st.expander("Filters", expanded=True):
+            with st.expander("Filters", expanded=False):
                 sel_type = st.multiselect("Type", types, key="lib_eq_type")
                 prefix = st.text_input("Name Contains", key="lib_eq_prefix")
                 mus_filter = st.multiselect("Muscles", muscles, key="lib_eq_mus")
@@ -3843,7 +3852,7 @@ class GymApp:
                         self._show_dialog("Equipment Details", _content)
         else:
             f_col, l_col = st.columns([1, 2], gap="large")
-            with f_col.expander("Filters", expanded=True):
+            with f_col.expander("Filters", expanded=False):
                 sel_type = st.multiselect("Type", types, key="lib_eq_type")
                 prefix = st.text_input("Name Contains", key="lib_eq_prefix")
                 mus_filter = st.multiselect("Muscles", muscles, key="lib_eq_mus")
@@ -3937,7 +3946,7 @@ class GymApp:
         else:
             f_col, l_col = st.columns([1, 2], gap="large")
             with f_col:
-                with st.expander("Filters", expanded=True):
+                with st.expander("Filters", expanded=False):
                     sel_groups = st.multiselect(
                         "Muscle Groups", groups, key="lib_ex_groups"
                     )
@@ -4296,7 +4305,7 @@ class GymApp:
             if st.button("Add Favorite", key="fav_wk_add_btn") and add_choice:
                 self.favorite_workouts_repo.add(int(add_choice))
                 st.rerun()
-        with st.expander("Filters", expanded=True):
+        with st.expander("Filters", expanded=False):
             col1, col2 = st.columns(2)
             with col1:
                 start = st.date_input(
@@ -4398,7 +4407,7 @@ class GymApp:
 
     def _stats_tab(self) -> None:
         st.header("Statistics")
-        with st.expander("Filters", expanded=True):
+        with st.expander("Filters", expanded=False):
             exercises = [""] + self.exercise_names_repo.fetch_all()
             ex_choice = st.selectbox("Exercise", exercises, key="stats_ex")
             col1, col2 = st.columns(2)
@@ -4554,7 +4563,7 @@ class GymApp:
     def _insights_tab(self) -> None:
         st.header("Insights")
         exercises = [""] + self.exercise_names_repo.fetch_all()
-        with st.expander("Filters", expanded=True):
+        with st.expander("Filters", expanded=False):
             ex_choice = st.selectbox("Exercise", exercises, key="insights_ex")
             col1, col2 = st.columns(2)
             with col1:
@@ -4934,7 +4943,7 @@ class GymApp:
     def _risk_tab(self) -> None:
         st.header("Risk & Readiness")
         exercises = [""] + self.exercise_names_repo.fetch_all()
-        with st.expander("Filters", expanded=True):
+        with st.expander("Filters", expanded=False):
             ex_choice = st.selectbox("Exercise for Momentum", exercises, key="risk_ex")
             col1, col2 = st.columns(2)
             with col1:
