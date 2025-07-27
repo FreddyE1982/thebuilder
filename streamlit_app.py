@@ -180,7 +180,9 @@ class GymApp:
         self.large_font = self.settings_repo.get_bool("large_font_mode", False)
         self.side_nav = self.settings_repo.get_bool("side_nav", False)
         self.show_onboarding = self.settings_repo.get_bool("show_onboarding", False)
-        self.auto_open_last_workout = self.settings_repo.get_bool("auto_open_last_workout", False)
+        self.auto_open_last_workout = self.settings_repo.get_bool(
+            "auto_open_last_workout", False
+        )
         self.weight_unit = self.settings_repo.get_text("weight_unit", "kg")
         self.time_format = self.settings_repo.get_text("time_format", "24h")
         self.quick_weights = [
@@ -191,9 +193,7 @@ class GymApp:
             if v
         ]
         self.add_set_key = self.settings_repo.get_text("hotkey_add_set", "a")
-        self.tab_keys = self.settings_repo.get_text(
-            "hotkey_tab_keys", "1,2,3,4"
-        )
+        self.tab_keys = self.settings_repo.get_text("hotkey_tab_keys", "1,2,3,4")
         self.sidebar_width = self.settings_repo.get_float("sidebar_width", 18.0)
         self.training_options = sorted(
             [
@@ -341,7 +341,9 @@ class GymApp:
             st.session_state.pop("rest_start", None)
             st.info("Rest over!")
             return
-        st.markdown(f"<div id='rest-timer'>Rest: {remaining}s</div>", unsafe_allow_html=True)
+        st.markdown(
+            f"<div id='rest-timer'>Rest: {remaining}s</div>", unsafe_allow_html=True
+        )
         if os.environ.get("TEST_MODE") != "1":
             components.html(
                 "<script>setTimeout(()=>window.location.reload(),1000);</script>",
@@ -358,7 +360,11 @@ class GymApp:
         """Return time formatted per user preference."""
         if isinstance(ts, str):
             ts = datetime.datetime.fromisoformat(ts)
-        return ts.strftime("%I:%M %p") if self.time_format == "12h" else ts.strftime("%H:%M")
+        return (
+            ts.strftime("%I:%M %p")
+            if self.time_format == "12h"
+            else ts.strftime("%H:%M")
+        )
 
     def _configure_page(self) -> None:
         if st.session_state.get("layout_set"):
@@ -490,13 +496,26 @@ class GymApp:
                     const buttons = Array.from(cont.querySelectorAll('button[role="tab"]'));
                     const key = cont.dataset.tabsKey || `tabs-${cidx}`;
                     cont.dataset.tabsKey = key;
-                    const saved = sessionStorage.getItem(key);
+                    const params = new URLSearchParams(window.location.search);
+                    let saved = sessionStorage.getItem(key);
+                    if (cidx === 0 && params.get('tab') === 'progress') {
+                        const sub = params.get('sub');
+                        if (sub) {
+                            const idx = buttons.findIndex(b => b.innerText.trim().toLowerCase().replace(/\s+/g, '_') === sub);
+                            if (idx !== -1) saved = idx.toString();
+                        }
+                    }
                     if (saved !== null && buttons[saved]) {
                         buttons[saved].click();
                     }
                     buttons.forEach((btn, idx) => {
                         btn.addEventListener('click', () => {
                             sessionStorage.setItem(key, idx);
+                            const params = new URLSearchParams(window.location.search);
+                            if (cidx === 0 && params.get('tab') === 'progress') {
+                                params.set('sub', btn.innerText.trim().toLowerCase().replace(/\s+/g,'_'));
+                                window.history.replaceState({}, '', '?' + params.toString());
+                            }
                         });
                     });
                 });
@@ -576,8 +595,8 @@ class GymApp:
             </script>
             """
             )
-            .replace('%TAB_KEYS%', json.dumps(self.tab_keys.split(',')))
-            .replace('%ADD_KEY%', self.add_set_key),
+            .replace("%TAB_KEYS%", json.dumps(self.tab_keys.split(",")))
+            .replace("%ADD_KEY%", self.add_set_key),
             height=0,
         )
 
@@ -1815,7 +1834,7 @@ class GymApp:
             st.button("Close", key="help_overlay_close")
 
         self._show_dialog("Help", _content)
-        
+
     def _about_dialog(self) -> None:
         def _content() -> None:
             st.markdown("## About The Builder")
@@ -1881,9 +1900,9 @@ class GymApp:
             for n in notes:
                 cols = st.columns([6, 1])
                 cols[0].markdown(f"{n['timestamp'][:10]} - {n['message']}")
-                if not n['read']:
+                if not n["read"]:
                     if cols[1].button("Read", key=f"read_{n['id']}"):
-                        self.notifications_repo.mark_read(n['id'])
+                        self.notifications_repo.mark_read(n["id"])
                         st.rerun()
             if st.button("Close", key="notif_close"):
                 st.session_state.open_notifications = False
@@ -1940,7 +1959,9 @@ class GymApp:
                         datetime.date.today() - datetime.timedelta(days=30),
                         key=f"{prefix}_start_m",
                     )
-                    end = st.date_input("End", datetime.date.today(), key=f"{prefix}_end_m")
+                    end = st.date_input(
+                        "End", datetime.date.today(), key=f"{prefix}_end_m"
+                    )
                 else:
                     col1, col2 = st.columns(2)
                     with col1:
@@ -2069,11 +2090,30 @@ class GymApp:
                     ]
                 )
 
+    def _analytics_hub_tab(self) -> None:
+        with self._section("Analytics Hub"):
+            st.write("Jump to detailed analytics views:")
+            cols = st.columns(4)
+            links = {
+                "Dashboard": "dashboard",
+                "Reports": "reports",
+                "Risk": "risk",
+                "Gamification": "gamification",
+            }
+            for (label, sub), col in zip(links.items(), cols):
+                if col.button(label, key=f"hub_{sub}"):
+                    params = st.query_params
+                    params["tab"] = "progress"
+                    params["sub"] = sub
+                    st.experimental_set_query_params(**params)
+                    st.rerun()
+
     def run(self) -> None:
         params = dict(st.query_params)
         self._handle_context_action(params)
         params = dict(st.query_params)
         tab_param = params.get("tab")
+        sub_param = params.get("sub")
         tab_map = {
             "workouts": 0,
             "library": 1,
@@ -2082,8 +2122,13 @@ class GymApp:
         }
         if tab_param in tab_map:
             st.session_state["main_tab"] = tab_map[tab_param]
+        if sub_param:
+            st.session_state["progress_sub"] = sub_param
         self._start_page()
-        if self.auto_open_last_workout and st.session_state.get("selected_workout") is None:
+        if (
+            self.auto_open_last_workout
+            and st.session_state.get("selected_workout") is None
+        ):
             wid = self.settings_repo.get_int("last_workout_id", 0)
             if wid:
                 try:
@@ -2134,9 +2179,7 @@ class GymApp:
             library_tab,
             progress_tab,
             settings_tab,
-        ) = st.tabs(
-            ["Workouts", "Library", "Progress", "Settings"]
-        )
+        ) = st.tabs(["Workouts", "Library", "Progress", "Settings"])
         with workouts_tab:
             log_sub, plan_sub = st.tabs(["Log", "Plan"])
             with log_sub:
@@ -2148,6 +2191,7 @@ class GymApp:
         with progress_tab:
             if not test_mode:
                 (
+                    hub_sub,
                     summary_sub,
                     calendar_sub,
                     history_sub,
@@ -2163,6 +2207,7 @@ class GymApp:
                     goals_sub,
                 ) = st.tabs(
                     [
+                        "Analytics Hub",
                         "Summary",
                         "Calendar",
                         "History",
@@ -2178,6 +2223,8 @@ class GymApp:
                         "Goals",
                     ]
                 )
+                with hub_sub:
+                    self._analytics_hub_tab()
                 with summary_sub:
                     self._summary_tab()
                 with calendar_sub:
@@ -2272,8 +2319,7 @@ class GymApp:
         )
         today = datetime.date.today().isoformat()
         overdue = [
-            p for p in self.planned_workouts.fetch_all(end_date=today)
-            if p[1] < today
+            p for p in self.planned_workouts.fetch_all(end_date=today) if p[1] < today
         ]
         if overdue:
             st.warning(f"{len(overdue)} planned workouts are overdue!")
@@ -2843,13 +2889,18 @@ class GymApp:
                         if del_col.button("Delete", key=f"del_{set_id}"):
                             self._confirm_delete_set(set_id)
                             continue
-                        if up_col.button("Move Up", key=f"move_up_{set_id}") and idx > 1:
+                        if (
+                            up_col.button("Move Up", key=f"move_up_{set_id}")
+                            and idx > 1
+                        ):
                             pos = order.index(set_id)
                             if pos > 0:
                                 order[pos - 1], order[pos] = order[pos], order[pos - 1]
                                 self.sets.reorder_sets(exercise_id, order)
                                 st.rerun()
-                        if down_col.button("Move Down", key=f"move_down_{set_id}") and idx < len(order):
+                        if down_col.button(
+                            "Move Down", key=f"move_down_{set_id}"
+                        ) and idx < len(order):
                             pos = order.index(set_id)
                             if pos < len(order) - 1:
                                 order[pos], order[pos + 1] = order[pos + 1], order[pos]
@@ -2871,7 +2922,8 @@ class GymApp:
                         )
                         with exp:
                             st.markdown(
-                                f"<div class='set-row {row_class}'>", unsafe_allow_html=True
+                                f"<div class='set-row {row_class}'>",
+                                unsafe_allow_html=True,
                             )
                             cols = st.columns(16)
                             with cols[0]:
@@ -2948,13 +3000,18 @@ class GymApp:
                         if cols[12].button("Delete", key=f"del_{set_id}"):
                             self._confirm_delete_set(set_id)
                             continue
-                        if cols[13].button("Move Up", key=f"move_up_{set_id}") and idx > 1:
+                        if (
+                            cols[13].button("Move Up", key=f"move_up_{set_id}")
+                            and idx > 1
+                        ):
                             pos = order.index(set_id)
                             if pos > 0:
                                 order[pos - 1], order[pos] = order[pos], order[pos - 1]
                                 self.sets.reorder_sets(exercise_id, order)
                                 st.rerun()
-                        if cols[14].button("Move Down", key=f"move_down_{set_id}") and idx < len(order):
+                        if cols[14].button(
+                            "Move Down", key=f"move_down_{set_id}"
+                        ) and idx < len(order):
                             pos = order.index(set_id)
                             if pos < len(order) - 1:
                                 order[pos], order[pos + 1] = order[pos + 1], order[pos]
@@ -3179,7 +3236,7 @@ class GymApp:
             <button onclick='saveOrder()'>Save</button>
             """
             components.html(html, height=300)
-            st.button("Close", key=f'reorder_close_{exercise_id}')
+            st.button("Close", key=f"reorder_close_{exercise_id}")
 
         self._show_dialog("Reorder Sets", _content)
 
@@ -3209,7 +3266,7 @@ class GymApp:
             <button onclick='saveOrder()'>Save</button>
             """
             components.html(html, height=300)
-            st.button("Close", key='tpl_order_close')
+            st.button("Close", key="tpl_order_close")
 
         self._show_dialog("Reorder Templates", _content)
 
@@ -3893,7 +3950,7 @@ class GymApp:
         muscles = self.muscles_repo.fetch_all()
         recent_mus = self.stats.recent_muscles()
         muscles = list(dict.fromkeys(recent_mus + muscles))
-        types = ["" ] + self.equipment.fetch_types()
+        types = [""] + self.equipment.fetch_types()
         if st.session_state.is_mobile:
             with st.expander("Filters", expanded=False):
                 sel_type = st.multiselect("Type", types, key="lib_eq_type")
@@ -3968,7 +4025,7 @@ class GymApp:
             eq_names = self.equipment.fetch_names()
             recent_eq = self.stats.recent_equipment()
             eq_names = list(dict.fromkeys(recent_eq + eq_names))
-            sel_eq = st.selectbox("Equipment", ["" ] + eq_names, key="lib_ex_eq")
+            sel_eq = st.selectbox("Equipment", [""] + eq_names, key="lib_ex_eq")
             name_filter = st.text_input("Name Contains", key="lib_ex_prefix")
             if st.button("Reset Filters", key="lib_ex_reset"):
                 self._reset_exercise_filters()
@@ -4026,7 +4083,7 @@ class GymApp:
                     eq_names = self.equipment.fetch_names()
                     recent_eq = self.stats.recent_equipment()
                     eq_names = list(dict.fromkeys(recent_eq + eq_names))
-                    sel_eq = st.selectbox("Equipment", ["" ] + eq_names, key="lib_ex_eq")
+                    sel_eq = st.selectbox("Equipment", [""] + eq_names, key="lib_ex_eq")
                     name_filter = st.text_input("Name Contains", key="lib_ex_prefix")
                     if st.button("Reset Filters", key="lib_ex_reset"):
                         self._reset_exercise_filters()
@@ -4389,15 +4446,21 @@ class GymApp:
                 end = st.date_input("End", datetime.date.today(), key="hist_end")
             chip_cols = st.columns(3)
             if chip_cols[0].button("Last 7d", key="hist_7d"):
-                st.session_state.hist_start = datetime.date.today() - datetime.timedelta(days=7)
+                st.session_state.hist_start = (
+                    datetime.date.today() - datetime.timedelta(days=7)
+                )
                 st.session_state.hist_end = datetime.date.today()
                 st.rerun()
             if chip_cols[1].button("Last 30d", key="hist_30d"):
-                st.session_state.hist_start = datetime.date.today() - datetime.timedelta(days=30)
+                st.session_state.hist_start = (
+                    datetime.date.today() - datetime.timedelta(days=30)
+                )
                 st.session_state.hist_end = datetime.date.today()
                 st.rerun()
             if chip_cols[2].button("Last 90d", key="hist_90d"):
-                st.session_state.hist_start = datetime.date.today() - datetime.timedelta(days=90)
+                st.session_state.hist_start = (
+                    datetime.date.today() - datetime.timedelta(days=90)
+                )
                 st.session_state.hist_end = datetime.date.today()
                 st.rerun()
             if st.button("Reset", key="hist_reset"):
@@ -4565,24 +4628,32 @@ class GymApp:
             if ex_choice:
                 prog = self.stats.progression(ex_choice, start_str, end_str)
                 vel_hist = self.stats.velocity_history(ex_choice, start_str, end_str)
-                rel_power = self.stats.relative_power_history(ex_choice, start_str, end_str)
+                rel_power = self.stats.relative_power_history(
+                    ex_choice, start_str, end_str
+                )
 
                 charts: list[Callable[[], None]] = []
                 if prog:
-                    charts.append(lambda prog=prog: self._line_chart(
-                        {"1RM": [p["est_1rm"] for p in prog]},
-                        [p["date"] for p in prog],
-                    ))
+                    charts.append(
+                        lambda prog=prog: self._line_chart(
+                            {"1RM": [p["est_1rm"] for p in prog]},
+                            [p["date"] for p in prog],
+                        )
+                    )
                 if vel_hist:
-                    charts.append(lambda vel_hist=vel_hist: self._line_chart(
-                        {"Velocity": [v["velocity"] for v in vel_hist]},
-                        [v["date"] for v in vel_hist],
-                    ))
+                    charts.append(
+                        lambda vel_hist=vel_hist: self._line_chart(
+                            {"Velocity": [v["velocity"] for v in vel_hist]},
+                            [v["date"] for v in vel_hist],
+                        )
+                    )
                 if rel_power:
-                    charts.append(lambda rel_power=rel_power: self._line_chart(
-                        {"Power/Weight": [p["relative_power"] for p in rel_power]},
-                        [p["date"] for p in rel_power],
-                    ))
+                    charts.append(
+                        lambda rel_power=rel_power: self._line_chart(
+                            {"Power/Weight": [p["relative_power"] for p in rel_power]},
+                            [p["date"] for p in rel_power],
+                        )
+                    )
                 self._chart_carousel(charts, "prog_car")
                 self._progress_forecast_section(ex_choice)
             self._volume_forecast_section(start_str, end_str)
@@ -4867,14 +4938,14 @@ class GymApp:
                 end = st.date_input("End", datetime.date.today(), key="rep_end")
             qcol1, qcol2 = st.columns(2)
             if qcol1.button("Last Week", key="rep_last_week"):
-                st.session_state.rep_start = (
-                    datetime.date.today() - datetime.timedelta(days=7)
+                st.session_state.rep_start = datetime.date.today() - datetime.timedelta(
+                    days=7
                 )
                 st.session_state.rep_end = datetime.date.today()
                 st.rerun()
             if qcol2.button("Last Month", key="rep_last_month"):
-                st.session_state.rep_start = (
-                    datetime.date.today() - datetime.timedelta(days=30)
+                st.session_state.rep_start = datetime.date.today() - datetime.timedelta(
+                    days=30
                 )
                 st.session_state.rep_end = datetime.date.today()
                 st.rerun()
@@ -5266,7 +5337,16 @@ class GymApp:
                 .mark_rect()
                 .encode(
                     x=alt.X(
-                        "weekday", sort=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+                        "weekday",
+                        sort=[
+                            "Monday",
+                            "Tuesday",
+                            "Wednesday",
+                            "Thursday",
+                            "Friday",
+                            "Saturday",
+                            "Sunday",
+                        ],
                     ),
                     y="week:O",
                     color=alt.condition(
@@ -5292,9 +5372,7 @@ class GymApp:
         if not rows:
             st.info("No upcoming plans")
             return
-        df = pd.DataFrame(
-            [{"date": d, "type": t} for _pid, d, t in rows]
-        )
+        df = pd.DataFrame([{"date": d, "type": t} for _pid, d, t in rows])
         df["date"] = pd.to_datetime(df["date"])
         chart = (
             alt.Chart(df)
@@ -5344,8 +5422,8 @@ class GymApp:
                             "Exercise",
                             names,
                             index=names.index(exn),
-                        key=f"goal_ex_{gid}",
-                    )
+                            key=f"goal_ex_{gid}",
+                        )
                     name_e = st.text_input("Name", gname, key=f"goal_name_{gid}")
                     val_e = st.number_input(
                         "Target Value",
@@ -5511,7 +5589,9 @@ class GymApp:
                     colors,
                     index=colors.index(self.color_theme),
                 )
-                avatar_file = st.file_uploader("Avatar", type=["png", "jpg"], key="avatar_upload")
+                avatar_file = st.file_uploader(
+                    "Avatar", type=["png", "jpg"], key="avatar_upload"
+                )
                 current_avatar = self.settings_repo.get_text("avatar", "")
                 if current_avatar and Path(current_avatar).exists():
                     st.image(current_avatar, width=100)
@@ -5664,7 +5744,9 @@ class GymApp:
                     for i, (sid, ex_id, reps, weight, rpe) in enumerate(rows, start=1):
                         name = self.exercises.fetch_detail(ex_id)[1]
                         prev_rpe = prev.get(ex_id, rpe)
-                        self.ml_service.train(name, int(reps), float(weight), int(rpe), prev_rpe)
+                        self.ml_service.train(
+                            name, int(reps), float(weight), int(rpe), prev_rpe
+                        )
                         prev[ex_id] = int(rpe)
                         progress.progress(i / total)
                     st.success("Model trained")
@@ -5706,12 +5788,12 @@ class GymApp:
                 self.show_onboarding = show_onboard_opt
                 self.settings_repo.set_bool("auto_open_last_workout", auto_open_opt)
                 self.auto_open_last_workout = auto_open_opt
-                self.settings_repo.set_text("hotkey_add_set", add_key_in or 'a')
-                self.settings_repo.set_text("hotkey_tab_keys", tab_keys_in or '1,2,3,4')
+                self.settings_repo.set_text("hotkey_add_set", add_key_in or "a")
+                self.settings_repo.set_text("hotkey_tab_keys", tab_keys_in or "1,2,3,4")
                 self.settings_repo.set_text("quick_weights", qw_in)
-                self.add_set_key = add_key_in or 'a'
-                self.tab_keys = tab_keys_in or '1,2,3,4'
-                self.quick_weights = [float(v) for v in qw_in.split(',') if v]
+                self.add_set_key = add_key_in or "a"
+                self.tab_keys = tab_keys_in or "1,2,3,4"
+                self.quick_weights = [float(v) for v in qw_in.split(",") if v]
                 self.settings_repo.set_float("sidebar_width", sb_width)
                 self.sidebar_width = sb_width
                 self._inject_responsive_css()
@@ -6085,10 +6167,13 @@ class GymApp:
                     f"Training {badge(train_flag)} Prediction {badge(pred_flag)}",
                     unsafe_allow_html=True,
                 )
-                load = status['last_loaded'] or 'never'
-                train_time = status['last_train'] or 'never'
-                pred_time = status['last_predict'] or 'never'
-                st.markdown(f"Loaded: <span class='badge warning'>{load}</span>", unsafe_allow_html=True)
+                load = status["last_loaded"] or "never"
+                train_time = status["last_train"] or "never"
+                pred_time = status["last_predict"] or "never"
+                st.markdown(
+                    f"Loaded: <span class='badge warning'>{load}</span>",
+                    unsafe_allow_html=True,
+                )
                 st.markdown(
                     f"Last Train: <span class='badge warning'>{train_time}</span>",
                     unsafe_allow_html=True,
