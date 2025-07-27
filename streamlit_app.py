@@ -591,6 +591,10 @@ class GymApp:
             });
             document.addEventListener('input', saveScroll, true);
             document.addEventListener('change', saveScroll, true);
+            document.addEventListener('submit', saveScroll, true);
+            document.addEventListener('keydown', e => {
+                if (e.key === 'Enter') saveScroll();
+            }, true);
             window.addEventListener('beforeunload', saveScroll);
             </script>
             """
