@@ -175,6 +175,8 @@ class GymApp:
         self.compact_mode = self.settings_repo.get_bool("compact_mode", False)
         self.large_font = self.settings_repo.get_bool("large_font_mode", False)
         self.side_nav = self.settings_repo.get_bool("side_nav", False)
+        self.show_onboarding = self.settings_repo.get_bool("show_onboarding", False)
+        self.auto_open_last_workout = self.settings_repo.get_bool("auto_open_last_workout", False)
         self.weight_unit = self.settings_repo.get_text("weight_unit", "kg")
         self.time_format = self.settings_repo.get_text("time_format", "24h")
         self.add_set_key = self.settings_repo.get_text("hotkey_add_set", "a")
@@ -1338,7 +1340,7 @@ class GymApp:
                 None,
                 None,
             )
-            st.session_state.selected_workout = wid
+            self._select_workout(wid)
             st.sidebar.success(f"Created workout {wid}")
         if st.sidebar.button("Toggle Theme", key="toggle_theme"):
             new_theme = "dark" if self.theme == "light" else "light"
@@ -1381,7 +1383,7 @@ class GymApp:
                 "Results", list(options.keys()), key=f"{prefix}_search_sel"
             )
             if st.button("Open", key=f"{prefix}_search_open"):
-                st.session_state.selected_workout = options[choice]
+                self._select_workout(options[choice])
                 self._switch_tab("workouts")
 
     def _quick_workout_button(self) -> None:
@@ -1668,6 +1670,14 @@ class GymApp:
     def _close_quick_workout(self) -> None:
         st.session_state.open_quick_workout = False
 
+    def _select_workout(self, workout_id: int) -> None:
+        try:
+            self.workouts.fetch_detail(workout_id)
+        except Exception:
+            return
+        st.session_state.selected_workout = workout_id
+        self.settings_repo.set_int("last_workout_id", workout_id)
+
     def _new_workout_dialog(self) -> None:
         def _content() -> None:
             with st.form("quick_workout_form"):
@@ -1689,7 +1699,7 @@ class GymApp:
                         new_loc or None,
                         None,
                     )
-                    st.session_state.selected_workout = wid
+                    self._select_workout(wid)
                     st.session_state.open_quick_workout = False
                     st.rerun()
             st.button("Close", on_click=self._close_quick_workout)
@@ -1840,7 +1850,19 @@ class GymApp:
         if tab_param in tab_map:
             st.session_state["main_tab"] = tab_map[tab_param]
         self._start_page()
-        if os.environ.get("TEST_MODE") is None and not self.settings_repo.get_bool("onboarding_complete", False):
+        if self.auto_open_last_workout and st.session_state.get("selected_workout") is None:
+            wid = self.settings_repo.get_int("last_workout_id", 0)
+            if wid:
+                try:
+                    self.workouts.fetch_detail(wid)
+                    st.session_state.selected_workout = wid
+                except Exception:
+                    pass
+        if (
+            os.environ.get("TEST_MODE") is None
+            and self.show_onboarding
+            and not self.settings_repo.get_bool("onboarding_complete", False)
+        ):
             self._onboarding_wizard()
         self._open_header()
         st.markdown("<div class='title-section'>", unsafe_allow_html=True)
@@ -1988,7 +2010,7 @@ class GymApp:
                 )
                 if selected and st.button("Use Plan"):
                     new_id = self.planner.create_workout_from_plan(int(selected))
-                    st.session_state.selected_workout = new_id
+                    self._select_workout(new_id)
 
         daily = self.stats.daily_volume(today, today)
         if daily:
@@ -2093,7 +2115,7 @@ class GymApp:
                         new_location or None,
                         None,
                     )
-                    st.session_state.selected_workout = new_id
+                    self._select_workout(new_id)
 
     def _existing_workout_form(self, training_options: list[str]) -> None:
         with st.expander("Existing Workouts", expanded=True):
@@ -2115,7 +2137,7 @@ class GymApp:
                     list(options.keys()),
                     format_func=lambda x: options[x][1],
                 )
-                st.session_state.selected_workout = int(selected)
+                self._select_workout(int(selected))
                 detail = self.workouts.fetch_detail(int(selected))
                 start_time = detail[2]
                 end_time = detail[3]
@@ -5180,6 +5202,14 @@ class GymApp:
                     "Enable Side Navigation",
                     value=self.side_nav,
                 )
+                show_onboard_opt = st.checkbox(
+                    "Show Onboarding Wizard",
+                    value=self.show_onboarding,
+                )
+                auto_open_opt = st.checkbox(
+                    "Auto-Open Last Workout",
+                    value=self.auto_open_last_workout,
+                )
                 add_key_in = st.text_input(
                     "Add Set Hotkey",
                     value=self.add_set_key,
@@ -5325,6 +5355,10 @@ class GymApp:
                 self.large_font = large_font
                 self.settings_repo.set_bool("side_nav", side_nav_opt)
                 self.side_nav = side_nav_opt
+                self.settings_repo.set_bool("show_onboarding", show_onboard_opt)
+                self.show_onboarding = show_onboard_opt
+                self.settings_repo.set_bool("auto_open_last_workout", auto_open_opt)
+                self.auto_open_last_workout = auto_open_opt
                 self.settings_repo.set_text("hotkey_add_set", add_key_in or 'a')
                 self.settings_repo.set_text("hotkey_tab_keys", tab_keys_in or '1,2,3,4')
                 self.add_set_key = add_key_in or 'a'

@@ -1648,6 +1648,8 @@ class SettingsRepository(BaseRepository):
             "compact_mode",
             "auto_dark_mode",
             "large_font_mode",
+            "show_onboarding",
+            "auto_open_last_workout",
         }
         for k, v in rows:
             if k in bool_keys:
@@ -1686,6 +1688,8 @@ class SettingsRepository(BaseRepository):
                 "compact_mode",
                 "auto_dark_mode",
                 "large_font_mode",
+                "show_onboarding",
+                "auto_open_last_workout",
             }
             for key, value in data.items():
                 val = str(value)
@@ -1721,6 +1725,12 @@ class SettingsRepository(BaseRepository):
         rows = self.fetch_all("SELECT value FROM settings WHERE key = ?;", (key,))
         return rows[0][0] if rows else default
 
+    def get_int(self, key: str, default: int) -> int:
+        try:
+            return int(self.get_text(key, str(default)))
+        except ValueError:
+            return default
+
     def set_text(self, key: str, value: str) -> None:
         self.execute(
             "INSERT INTO settings (key, value) VALUES (?, ?) "
@@ -1728,6 +1738,9 @@ class SettingsRepository(BaseRepository):
             (key, value),
         )
         self._sync_to_yaml()
+
+    def set_int(self, key: str, value: int) -> None:
+        self.set_text(key, str(value))
 
     def get_bool(self, key: str, default: bool) -> bool:
         return self.get_text(key, "1" if default else "0") in {
@@ -1765,10 +1778,14 @@ class SettingsRepository(BaseRepository):
             "compact_mode",
             "auto_dark_mode",
             "large_font_mode",
+            "show_onboarding",
+            "auto_open_last_workout",
         }
         for k in bool_keys:
             if k in data:
                 data[k] = bool(data[k])
+            else:
+                data[k] = False
         return data
 
 
