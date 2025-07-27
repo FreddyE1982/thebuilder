@@ -104,6 +104,47 @@ class StreamlitAppTest(unittest.TestCase):
         self.assertIn((5, 100.0), rows)
         conn.close()
 
+    def test_set_reordering_buttons(self) -> None:
+        idx_new = _find_by_label(
+            self.at.button,
+            "New Workout",
+            key="FormSubmitter:new_workout_form-New Workout",
+        )
+        self.at.button[idx_new].click().run()
+        idx_ex = _find_by_label(self.at.selectbox, "Exercise", "Barbell Bench Press")
+        self.at.selectbox[idx_ex].select("Barbell Bench Press").run()
+        idx_eq = _find_by_label(self.at.selectbox, "Equipment Name", "Olympic Barbell")
+        self.at.selectbox[idx_eq].select("Olympic Barbell").run()
+        idx_add_ex = _find_by_label(self.at.button, "Add Exercise", key="add_ex_btn")
+        self.at.button[idx_add_ex].click().run()
+        self.at.number_input[0].set_value(5).run()
+        self.at.number_input[1].set_value(100.0).run()
+        idx_add_set = _find_by_label(self.at.button, "Add Set", key="add_set_1")
+        self.at.button[idx_add_set].click().run()
+        self.at.number_input[0].set_value(3).run()
+        self.at.number_input[1].set_value(90.0).run()
+        self.at.button[idx_add_set].click().run()
+
+        conn = self._connect()
+        cur = conn.cursor()
+        cur.execute("SELECT id FROM sets ORDER BY position;")
+        ids = [r[0] for r in cur.fetchall()]
+        conn.close()
+
+        ex_idx = _find_by_label(
+            self.at.expander, "Barbell Bench Press (Olympic Barbell)"
+        )
+        exp = self.at.expander[ex_idx]
+        btn_idx = _find_by_label(exp.button, "Move Down", key=f"move_down_{ids[0]}")
+        exp.button[btn_idx].click().run()
+
+        conn = self._connect()
+        cur = conn.cursor()
+        cur.execute("SELECT id FROM sets ORDER BY position;")
+        new_order = [r[0] for r in cur.fetchall()]
+        conn.close()
+        self.assertEqual(new_order, [ids[1], ids[0], ids[2]])
+
     def test_workout_metadata(self) -> None:
         idx_new = _find_by_label(
             self.at.button,
