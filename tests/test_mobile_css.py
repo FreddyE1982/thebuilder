@@ -36,6 +36,10 @@ class MobileCSSTest(unittest.TestCase):
         self.assertIn("scrollY", content)
         self.assertIn("addEventListener('input', saveScroll", content)
         self.assertIn("addEventListener('change', saveScroll", content)
+        self.assertIn("addEventListener('click', saveScroll", content)
+        self.assertIn("persistExpanders()", content)
+        self.assertIn("dlg.addEventListener('touchstart'", content)
+        self.assertIn("dlg.addEventListener('touchend'", content)
 
 if __name__ == "__main__":
     unittest.main()

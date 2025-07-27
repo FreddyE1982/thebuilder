@@ -1075,6 +1075,24 @@ class StreamlitAdditionalGUITest(unittest.TestCase):
         self.at.button[idx].click().run()
         self.assertEqual(self.at.query_params.get("tab"), before)
 
+    def test_tab_persistence_on_add_set(self) -> None:
+        before = self.at.query_params.get("tab")
+        idx_new = _find_by_label(
+            self.at.button,
+            "New Workout",
+            key="FormSubmitter:new_workout_form-New Workout",
+        )
+        self.at.button[idx_new].click().run()
+        idx_ex = _find_by_label(self.at.selectbox, "Exercise", "Barbell Bench Press")
+        self.at.selectbox[idx_ex].select("Barbell Bench Press").run()
+        idx_eq = _find_by_label(self.at.selectbox, "Equipment Name", "Olympic Barbell")
+        self.at.selectbox[idx_eq].select("Olympic Barbell").run()
+        idx_add_ex = _find_by_label(self.at.button, "Add Exercise", key="add_ex_btn")
+        self.at.button[idx_add_ex].click().run()
+        idx_add_set = _find_by_label(self.at.button, "Add Set", key="add_set_1")
+        self.at.button[idx_add_set].click().run()
+        self.assertEqual(self.at.query_params.get("tab"), before)
+
     def test_workout_context_menu_present(self) -> None:
         idx_new = _find_by_label(
             self.at.button,
