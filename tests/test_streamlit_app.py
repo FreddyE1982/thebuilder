@@ -1021,6 +1021,12 @@ class StreamlitAdditionalGUITest(unittest.TestCase):
         btn_present = any("scroll-top" in m.body for m in self.at.markdown)
         self.assertTrue(btn_present)
 
+    def test_header_collapse_css(self) -> None:
+        css_present = any(
+            "header-wrapper.collapsed" in m.body for m in self.at.markdown
+        )
+        self.assertTrue(css_present)
+
     def test_quick_workout_fab(self) -> None:
         idx = _find_by_label(self.at.button, "➕", key="quick_workout_btn")
         self.at.button[idx].click().run()
