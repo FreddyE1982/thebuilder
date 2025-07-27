@@ -1069,6 +1069,12 @@ class StreamlitAdditionalGUITest(unittest.TestCase):
         exp = self.at.sidebar.expander[exp_idx]
         self.assertEqual(exp.button[0].label, "Search")
 
+    def test_tab_persistence_on_refresh(self) -> None:
+        before = self.at.query_params.get("tab")
+        idx = _find_by_label(self.at.button, "Refresh")
+        self.at.button[idx].click().run()
+        self.assertEqual(self.at.query_params.get("tab"), before)
+
 
 class StreamlitTemplateWorkflowTest(unittest.TestCase):
     def setUp(self) -> None:
