@@ -75,6 +75,10 @@ class LayoutManager:
     def is_mobile(self) -> bool:
         return st.session_state.get("is_mobile", False)
 
+    @property
+    def is_tablet(self) -> bool:
+        return st.session_state.get("is_tablet", False)
+
     def start_page(self) -> None:
         st.markdown("<div class='page-wrapper'>", unsafe_allow_html=True)
 
@@ -409,7 +413,8 @@ class GymApp:
             components.html(
                 """
                 <script>
-                const mode = Math.min(window.innerWidth, window.innerHeight) < 768 ? 'mobile' : 'desktop';
+                const w = Math.min(window.innerWidth, window.innerHeight);
+                const mode = w < 768 ? 'mobile' : (w < 1024 ? 'tablet' : 'desktop');
                 const params = new URLSearchParams(window.location.search);
                 params.set('mode', mode);
                 window.location.search = params.toString();
@@ -426,12 +431,14 @@ class GymApp:
         )
         st.session_state.layout_set = True
         st.session_state.is_mobile = mode == "mobile"
+        st.session_state.is_tablet = mode == "tablet"
         components.html(
             (
                 """
             <script>
             function setMode() {
-                const mode = Math.min(window.innerWidth, window.innerHeight) < 768 ? 'mobile' : 'desktop';
+                const w = Math.min(window.innerWidth, window.innerHeight);
+                const mode = w < 768 ? 'mobile' : (w < 1024 ? 'tablet' : 'desktop');
                 const params = new URLSearchParams(window.location.search);
                 const cur = params.get('mode');
                 if (mode !== cur) {
@@ -1112,6 +1119,7 @@ class GymApp:
             }
             .order-list { list-style: none; padding: 0; margin: 0; }
             .order-list li { padding: 0.25rem 0.5rem; border: 1px solid var(--border-color); margin-bottom: 0.25rem; background: var(--section-bg); cursor: grab; }
+            .toolbar { position: sticky; top: 0; background: var(--header-bg); padding: 0.25rem; z-index: 2; border-bottom: 1px solid var(--border-color); }
             .metric-card {
                 background: var(--section-bg);
                 border-radius: 0.5rem;
@@ -2316,9 +2324,18 @@ class GymApp:
         if st.session_state.selected_workout:
             sections.append("Exercises")
         self._jump_to_section(sections, "log_jump")
-        self._workout_section()
-        if st.session_state.selected_workout:
-            self._exercise_section()
+        if self.layout.is_tablet:
+            left, right = st.columns(2)
+            with left:
+                self._workout_section()
+                if st.session_state.selected_workout:
+                    self._exercise_section()
+            with right:
+                self._history_tab()
+        else:
+            self._workout_section()
+            if st.session_state.selected_workout:
+                self._exercise_section()
 
     def _plan_tab(self) -> None:
         self._tab_tips(
@@ -2646,6 +2663,13 @@ class GymApp:
         with self._section("Exercises"):
             workout_id = st.session_state.selected_workout
             with st.expander("Exercise Management", expanded=True):
+                st.markdown("<div class='toolbar'>", unsafe_allow_html=True)
+                ucol, rcol = st.columns(2)
+                if ucol.button("Undo", disabled=not st.session_state.get("undo_stack")):
+                    self._undo_action()
+                if rcol.button("Redo", disabled=not st.session_state.get("redo_stack")):
+                    self._redo_action()
+                st.markdown("</div>", unsafe_allow_html=True)
                 if st.button("Add Exercise", key="open_add_ex_btn"):
                     st.session_state.open_add_ex_flag = True
                     st.session_state.scroll_to = "add_ex_form"
@@ -3315,6 +3339,9 @@ class GymApp:
 
     def _update_set(self, set_id: int) -> None:
         """Update set values based on current widget state."""
+        prev = self.sets.fetch_detail(set_id)
+        st.session_state.setdefault("undo_stack", []).append(("update_set", prev))
+        st.session_state["redo_stack"] = []
         reps_val = st.session_state.get(f"reps_{set_id}")
         weight_val = st.session_state.get(f"weight_{set_id}")
         rpe_val = st.session_state.get(f"rpe_{set_id}")
@@ -3348,6 +3375,36 @@ class GymApp:
     def _update_workout_rating(self, workout_id: int) -> None:
         val = st.session_state.get(f"rating_{workout_id}")
         self.workouts.set_rating(workout_id, int(val) if val is not None else None)
+        st.rerun()
+
+    def _undo_action(self) -> None:
+        stack = st.session_state.get("undo_stack", [])
+        if not stack:
+            return
+        action, data = stack.pop()
+        st.session_state.setdefault("redo_stack", []).append((action, self.sets.fetch_detail(data["id"])))
+        if action == "update_set":
+            self.sets.update(data["id"], int(data["reps"]), float(data["weight"]), int(data["rpe"]), data.get("warmup"))
+            self.sets.update_note(data["id"], data.get("note"))
+            if data.get("start_time"):
+                self.sets.set_start_time(data["id"], data["start_time"])
+            if data.get("end_time"):
+                self.sets.set_end_time(data["id"], data["end_time"])
+        st.rerun()
+
+    def _redo_action(self) -> None:
+        stack = st.session_state.get("redo_stack", [])
+        if not stack:
+            return
+        action, data = stack.pop()
+        st.session_state.setdefault("undo_stack", []).append((action, self.sets.fetch_detail(data["id"])))
+        if action == "update_set":
+            self.sets.update(data["id"], int(data["reps"]), float(data["weight"]), int(data["rpe"]), data.get("warmup"))
+            self.sets.update_note(data["id"], data.get("note"))
+            if data.get("start_time"):
+                self.sets.set_start_time(data["id"], data["start_time"])
+            if data.get("end_time"):
+                self.sets.set_end_time(data["id"], data["end_time"])
         st.rerun()
 
     def _update_workout_tags(self, workout_id: int) -> None:
@@ -4523,6 +4580,14 @@ class GymApp:
                 tags = [n for _, n in self.tags_repo.fetch_for_workout(wid)]
                 if tags:
                     st.markdown("**Tags:** " + ", ".join(tags))
+                note_val = self.workouts.fetch_detail(wid)[5] or ""
+                st.text_input(
+                    "Notes",
+                    value=note_val,
+                    key=f"hist_note_{wid}",
+                    on_change=self._update_workout_notes,
+                    args=(wid,),
+                )
                 if st.button("Details", key=f"hist_det_{wid}"):
                     self._workout_details_dialog(wid)
         if len(workouts) == limit:

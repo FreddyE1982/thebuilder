@@ -80,16 +80,16 @@
 - [x] 77. Provide an option to auto-open the last viewed workout on startup.
  - [x] 78. Implement lazy loading for long tables to improve performance.
  - [x] 79. Include a widget to display ongoing challenges and achievements.
-- [ ] 80. Add undo/redo controls for workout editing actions.
+- [x] 80. Add undo/redo controls for workout editing actions.
 - [x] 81. Provide customizable quick-add weight values for faster input.
 - [x] 82. Show weekly streak counters on the Progress tab.
  - [x] 83. Offer automatic dark mode based on system preferences.
-- [ ] 84. Introduce a split view on tablets to show history and logging side by side.
-- [ ] 85. Add persistent toolbars within expanders for common actions.
-- [ ] 86. Implement fuzzy search for equipment and muscle names.
+- [x] 84. Introduce a split view on tablets to show history and logging side by side.
+- [x] 85. Add persistent toolbars within expanders for common actions.
+- [x] 86. Implement fuzzy search for equipment and muscle names.
  - [x] 87. Surface recently used filters at the top of dropdowns.
 - [x] 88. Provide collapsible filter sections to declutter the interface.
-- [ ] 89. Add inline editing for workout notes directly in the history list.
+- [x] 89. Add inline editing for workout notes directly in the history list.
 - [ ] 90. Include a progress ring showing completion percentage of planned sets.
 - [ ] 91. Offer bookmarking of favorite analytics views in settings.
 - [ ] 92. Integrate emoji reactions for workouts in the history feed.

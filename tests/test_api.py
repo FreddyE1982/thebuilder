@@ -3379,3 +3379,13 @@ class APITestCase(unittest.TestCase):
 
         resp = self.client.get("/challenges")
         self.assertTrue(resp.json()[0]["completed"])
+
+    def test_fuzzy_equipment_search(self) -> None:
+        resp = self.client.get("/equipment/search", params={"query": "olympic barbel"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("Olympic Barbell", resp.json())
+
+    def test_fuzzy_muscle_search(self) -> None:
+        resp = self.client.get("/muscles/search", params={"query": "pectorls"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("Pectoralis Major", resp.json())

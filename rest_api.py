@@ -200,6 +200,10 @@ class GymAPI:
         def recent_equipment(limit: int = 5):
             return self.statistics.recent_equipment(limit)
 
+        @self.app.get("/equipment/search")
+        def search_equipment(query: str, limit: int = 5):
+            return self.equipment.fuzzy_search(query, limit)
+
         @self.app.get("/equipment/{name}")
         def get_equipment(name: str):
             muscles = self.equipment.fetch_muscles(name)
@@ -224,6 +228,10 @@ class GymAPI:
         @self.app.get("/muscles/recent")
         def recent_muscles(limit: int = 5):
             return self.statistics.recent_muscles(limit)
+
+        @self.app.get("/muscles/search")
+        def search_muscles(query: str, limit: int = 5):
+            return self.muscles.fuzzy_search(query, limit)
 
         @self.app.post("/muscles")
         def add_muscle(name: str):
