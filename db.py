@@ -198,6 +198,7 @@ class Database:
                     reps INTEGER NOT NULL,
                     weight REAL NOT NULL,
                     rpe INTEGER NOT NULL,
+                    position INTEGER NOT NULL,
                     planned_set_id INTEGER,
                     diff_reps INTEGER NOT NULL DEFAULT 0,
                     diff_weight REAL NOT NULL DEFAULT 0,
@@ -215,6 +216,7 @@ class Database:
                 "reps",
                 "weight",
                 "rpe",
+                "position",
                 "planned_set_id",
                 "diff_reps",
                 "diff_weight",
@@ -872,9 +874,14 @@ class SetRepository(BaseRepository):
             raise ValueError("weight must be non-negative")
         if rpe < 0 or rpe > 10:
             raise ValueError("rpe must be between 0 and 10")
+        rows = self.fetch_all(
+            "SELECT COALESCE(MAX(position), 0) + 1 FROM sets WHERE exercise_id = ?;",
+            (exercise_id,),
+        )
+        position = int(rows[0][0]) if rows else 1
         return self.execute(
-            "INSERT INTO sets (exercise_id, reps, weight, rpe, note, planned_set_id, diff_reps, diff_weight, diff_rpe, warmup) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+            "INSERT INTO sets (exercise_id, reps, weight, rpe, note, planned_set_id, diff_reps, diff_weight, diff_rpe, warmup, position) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
             (
                 exercise_id,
                 reps,
@@ -886,6 +893,7 @@ class SetRepository(BaseRepository):
                 diff_weight,
                 diff_rpe,
                 int(warmup),
+                position,
             ),
         )
 
@@ -934,6 +942,22 @@ class SetRepository(BaseRepository):
     def remove(self, set_id: int) -> None:
         self.execute("DELETE FROM sets WHERE id = ?;", (set_id,))
 
+    def reorder_sets(self, exercise_id: int, order: list[int]) -> None:
+        existing = [
+            row[0]
+            for row in self.fetch_all(
+                "SELECT id FROM sets WHERE exercise_id = ? ORDER BY position;",
+                (exercise_id,),
+            )
+        ]
+        if set(order) != set(existing) or len(order) != len(existing):
+            raise ValueError("invalid order")
+        for pos, sid in enumerate(order, start=1):
+            self.execute(
+                "UPDATE sets SET position = ? WHERE id = ?;",
+                (pos, sid),
+            )
+
     def set_start_time(self, set_id: int, timestamp: str) -> None:
         self.execute(
             "UPDATE sets SET start_time = ? WHERE id = ?;",
@@ -977,13 +1001,13 @@ class SetRepository(BaseRepository):
         self, exercise_id: int
     ) -> List[Tuple[int, int, float, int, Optional[str], Optional[str], int]]:
         return self.fetch_all(
-            "SELECT id, reps, weight, rpe, start_time, end_time, warmup FROM sets WHERE exercise_id = ?;",
+            "SELECT id, reps, weight, rpe, start_time, end_time, warmup FROM sets WHERE exercise_id = ? ORDER BY position;",
             (exercise_id,),
         )
 
     def fetch_detail(self, set_id: int) -> dict:
         rows = self.fetch_all(
-            "SELECT id, reps, weight, rpe, note, planned_set_id, diff_reps, diff_weight, diff_rpe, start_time, end_time, warmup FROM sets WHERE id = ?;",
+            "SELECT id, reps, weight, rpe, note, planned_set_id, diff_reps, diff_weight, diff_rpe, start_time, end_time, warmup, position FROM sets WHERE id = ?;",
             (set_id,),
         )
         (
@@ -999,6 +1023,7 @@ class SetRepository(BaseRepository):
             start_time,
             end_time,
             warmup,
+            position,
         ) = rows[0]
         velocity = self._velocity(int(reps), start_time, end_time)
         return {
@@ -1014,6 +1039,7 @@ class SetRepository(BaseRepository):
             "end_time": end_time,
             "note": note,
             "warmup": bool(warmup),
+            "position": position,
             "velocity": velocity,
         }
 
@@ -1086,7 +1112,7 @@ class SetRepository(BaseRepository):
             "SELECT e.name, e.equipment_name, s.reps, s.weight, s.rpe,"
             " s.start_time, s.end_time "
             "FROM sets s JOIN exercises e ON s.exercise_id = e.id "
-            "WHERE e.workout_id = ? ORDER BY e.id, s.id;",
+            "WHERE e.workout_id = ? ORDER BY e.id, s.position;",
             (workout_id,),
         )
 

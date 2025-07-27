@@ -1160,6 +1160,18 @@ class GymAPI:
                 result.append(entry)
             return result
 
+        @self.app.post("/exercises/{exercise_id}/set_order")
+        def reorder_sets(exercise_id: int, order: str):
+            try:
+                ids = [int(i) for i in order.split(",") if i]
+            except ValueError:
+                raise HTTPException(status_code=400, detail="invalid ids")
+            try:
+                self.sets.reorder_sets(exercise_id, ids)
+                return {"status": "updated"}
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
         @self.app.post("/exercises/{exercise_id}/recommend_next")
         def recommend_next(exercise_id: int):
             try:

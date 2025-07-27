@@ -75,7 +75,16 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.json(),
-            [{"id": 1, "reps": 10, "weight": 100.0, "rpe": 8, "warmup": False}],
+            [
+                {
+                    "id": 1,
+                    "reps": 10,
+                    "weight": 100.0,
+                    "rpe": 8,
+                    "warmup": False,
+                    "position": 1,
+                }
+            ],
         )
 
         response = self.client.put(
@@ -88,7 +97,16 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.json(),
-            [{"id": 1, "reps": 12, "weight": 105.0, "rpe": 9, "warmup": False}],
+            [
+                {
+                    "id": 1,
+                    "reps": 12,
+                    "weight": 105.0,
+                    "rpe": 9,
+                    "warmup": False,
+                    "position": 1,
+                }
+            ],
         )
 
         response = self.client.get("/workouts/1/export_csv")
@@ -389,7 +407,16 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.json(),
-            [{"id": 1, "reps": 5, "weight": 150.0, "rpe": 8, "warmup": False}],
+            [
+                {
+                    "id": 1,
+                    "reps": 5,
+                    "weight": 150.0,
+                    "rpe": 8,
+                    "warmup": False,
+                    "position": 1,
+                }
+            ],
         )
 
         response = self.client.put(
@@ -416,6 +443,7 @@ class APITestCase(unittest.TestCase):
                 "note": None,
                 "warmup": False,
                 "velocity": 0.0,
+                "position": 1,
             },
         )
 
@@ -578,6 +606,26 @@ class APITestCase(unittest.TestCase):
         data = self.client.get("/exercises/1/sets").json()
         self.assertEqual(len(data), 2)
 
+    def test_set_reordering(self) -> None:
+        self.client.post("/workouts")
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        for r in [(5, 100.0, 8), (6, 105.0, 9), (4, 95.0, 7)]:
+            self.client.post(
+                "/exercises/1/sets",
+                params={"reps": r[0], "weight": r[1], "rpe": r[2]},
+            )
+        resp = self.client.post(
+            "/exercises/1/set_order",
+            params={"order": "3,1,2"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        sets = self.client.get("/exercises/1/sets").json()
+        ids = [s["id"] for s in sets]
+        self.assertEqual(ids, [3, 1, 2])
+
     def test_invalid_set_values(self) -> None:
         self.client.post("/workouts")
         self.client.post(
@@ -616,6 +664,7 @@ class APITestCase(unittest.TestCase):
                     reps INTEGER NOT NULL,
                     weight REAL NOT NULL,
                     rpe INTEGER NOT NULL,
+                    position INTEGER NOT NULL,
                     FOREIGN KEY(exercise_id) REFERENCES exercises(id) ON DELETE CASCADE
                 );"""
         )
@@ -623,7 +672,7 @@ class APITestCase(unittest.TestCase):
         cur.execute("INSERT INTO workouts (date) VALUES (?);", (today,))
         cur.execute("INSERT INTO exercises (workout_id, name) VALUES (1, 'Legacy Ex');")
         cur.execute(
-            "INSERT INTO sets (exercise_id, reps, weight, rpe) VALUES (1, 8, 80.0, 7);"
+            "INSERT INTO sets (exercise_id, reps, weight, rpe, position) VALUES (1, 8, 80.0, 7, 1);"
         )
         conn.commit()
         conn.close()
@@ -635,7 +684,16 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(
             resp.json(),
-            [{"id": 1, "reps": 8, "weight": 80.0, "rpe": 7, "warmup": False}],
+            [
+                {
+                    "id": 1,
+                    "reps": 8,
+                    "weight": 80.0,
+                    "rpe": 7,
+                    "warmup": False,
+                    "position": 1,
+                }
+            ],
         )
 
         resp = client.get("/sets/1")
