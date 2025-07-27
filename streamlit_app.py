@@ -1000,6 +1000,8 @@ class GymApp:
             .metric-grid > div[data-testid="metric-container"] {
                 width: 100%;
             }
+            .order-list { list-style: none; padding: 0; margin: 0; }
+            .order-list li { padding: 0.25rem 0.5rem; border: 1px solid var(--border-color); margin-bottom: 0.25rem; background: var(--section-bg); cursor: grab; }
             .metric-card {
                 background: var(--section-bg);
                 border-radius: 0.5rem;
@@ -2477,6 +2479,7 @@ class GymApp:
                         self.exercises.update_name(exercise_id, v)
                         st.rerun()
             with st.expander("Sets", expanded=True):
+                order = [s[0] for s in sets]
                 for idx, (
                     set_id,
                     reps,
@@ -2572,20 +2575,32 @@ class GymApp:
                                         timespec="seconds"
                                     ),
                                 )
+                            st.rerun()
+                        del_col, up_col, down_col = st.columns(3)
+                        if del_col.button("Delete", key=f"del_{set_id}"):
+                            self._confirm_delete_set(set_id)
+                            continue
+                        if up_col.button("Move Up", key=f"move_up_{set_id}") and idx > 1:
+                            pos = order.index(set_id)
+                            if pos > 0:
+                                order[pos - 1], order[pos] = order[pos], order[pos - 1]
+                                self.sets.reorder_sets(exercise_id, order)
                                 st.rerun()
-                            del_col, _ = st.columns(2)
-                            if del_col.button("Delete", key=f"del_{set_id}"):
-                                self._confirm_delete_set(set_id)
-                                continue
-                            if start_time:
-                                st.write(self._format_time(start_time))
-                            if end_time:
-                                st.write(self._format_time(end_time))
-                            if registered:
-                                st.markdown(
-                                    "<div class='set-status'>registered</div>",
-                                    unsafe_allow_html=True,
-                                )
+                        if down_col.button("Move Down", key=f"move_down_{set_id}") and idx < len(order):
+                            pos = order.index(set_id)
+                            if pos < len(order) - 1:
+                                order[pos], order[pos + 1] = order[pos + 1], order[pos]
+                                self.sets.reorder_sets(exercise_id, order)
+                                st.rerun()
+                        if start_time:
+                            st.write(self._format_time(start_time))
+                        if end_time:
+                            st.write(self._format_time(end_time))
+                        if registered:
+                            st.markdown(
+                                "<div class='set-status'>registered</div>",
+                                unsafe_allow_html=True,
+                            )
                             st.markdown("</div>", unsafe_allow_html=True)
                     else:
                         exp = st.expander(
@@ -2595,7 +2610,7 @@ class GymApp:
                             st.markdown(
                                 f"<div class='set-row {row_class}'>", unsafe_allow_html=True
                             )
-                            cols = st.columns(14)
+                            cols = st.columns(16)
                             with cols[0]:
                                 st.write(f"Set {idx}")
                         reps_val = cols[1].number_input(
@@ -2670,12 +2685,24 @@ class GymApp:
                         if cols[12].button("Delete", key=f"del_{set_id}"):
                             self._confirm_delete_set(set_id)
                             continue
+                        if cols[13].button("Move Up", key=f"move_up_{set_id}") and idx > 1:
+                            pos = order.index(set_id)
+                            if pos > 0:
+                                order[pos - 1], order[pos] = order[pos], order[pos - 1]
+                                self.sets.reorder_sets(exercise_id, order)
+                                st.rerun()
+                        if cols[14].button("Move Down", key=f"move_down_{set_id}") and idx < len(order):
+                            pos = order.index(set_id)
+                            if pos < len(order) - 1:
+                                order[pos], order[pos + 1] = order[pos + 1], order[pos]
+                                self.sets.reorder_sets(exercise_id, order)
+                                st.rerun()
                         if start_time:
                             cols[10].write(self._format_time(start_time))
                         if end_time:
                             cols[11].write(self._format_time(end_time))
                         if registered:
-                            cols[13].markdown(
+                            cols[15].markdown(
                                 "<div class='set-status'>registered</div>",
                                 unsafe_allow_html=True,
                             )
@@ -2736,6 +2763,8 @@ class GymApp:
                 self._bulk_add_sets_dialog(exercise_id)
             if st.button("Warmup Plan", key=f"warmup_plan_{exercise_id}"):
                 self._warmup_plan_dialog(exercise_id)
+            if st.button("Reorder Sets", key=f"reorder_{exercise_id}"):
+                self._reorder_sets_dialog(exercise_id)
             self._rest_timer()
 
     def _add_set_form(self, exercise_id: int, with_button: bool = True) -> None:
@@ -2850,6 +2879,36 @@ class GymApp:
             st.button("Close", key=f"plan_close_{exercise_id}")
 
         self._show_dialog("Warmup Plan", _content)
+
+    def _reorder_sets_dialog(self, exercise_id: int) -> None:
+        def _content() -> None:
+            st.markdown("Drag sets to reorder and save")
+            sets = self.sets.fetch_for_exercise(exercise_id)
+            items = "".join(
+                f"<li data-id='{sid}'>{i+1}: {r}x{self._format_weight(w)} RPE {rp}</li>"
+                for i, (sid, r, w, rp, *_rest) in enumerate(sets)
+            )
+            html = f"""
+            <ul id='order_{exercise_id}' class='order-list'>{items}</ul>
+            <script src='https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js'></script>
+            <script>
+            const list = document.getElementById('order_{exercise_id}');
+            if(list && !list.dataset.init){{
+                list.dataset.init='1';
+                new Sortable(list, {{animation:150}});
+            }}
+            function saveOrder(){{
+                const ids = Array.from(list.children).map(c=>c.dataset.id).join(',');
+                fetch('/exercises/{exercise_id}/set_order?order='+ids, {{method:'POST'}})
+                    .then(()=>window.location.reload());
+            }}
+            </script>
+            <button onclick='saveOrder()'>Save</button>
+            """
+            components.html(html, height=300)
+            st.button("Close", key=f'reorder_close_{exercise_id}')
+
+        self._show_dialog("Reorder Sets", _content)
 
     def _submit_set(
         self,

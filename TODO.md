@@ -15,8 +15,8 @@
 - [x] 15. Add confirmation dialogs when deleting workouts or exercises to prevent mistakes.
 - [x] 16.1 Add backend support for reordering sets via a position column.
 - [x] 16.2 Expose API endpoint to update set order.
-- [ ] 16.3 Update GUI to allow drag and drop reordering.
-- [ ] 16.4 Add tests for GUI reordering interactions.
+- [x] 16.3 Update GUI to allow drag and drop reordering.
+- [x] 16.4 Add tests for GUI reordering interactions.
  - [x] 17. Introduce filter chips for tags and equipment in the Library tab for faster browsing.
 - [x] 18. Move wellness logging to its own subtab under Progress for visibility.
 - [x] 19. Implement status badges for machine learning models showing training state.
