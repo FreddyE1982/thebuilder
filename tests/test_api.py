@@ -3266,3 +3266,19 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(log["address"], "user@example.com")
         summary = json.loads(log["summary"])
         self.assertIn("workouts", summary)
+
+    def test_backup_and_restore(self) -> None:
+        self.client.post("/workouts")
+        resp = self.client.get("/settings/backup")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.content
+        os.remove(self.db_path)
+        resp = self.client.post(
+            "/settings/restore",
+            content=data,
+            headers={"Content-Type": "application/octet-stream"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), {"status": "restored"})
+        resp = self.client.get("/workouts")
+        self.assertEqual(len(resp.json()), 1)

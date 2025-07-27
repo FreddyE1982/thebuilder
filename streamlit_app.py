@@ -190,6 +190,7 @@ class GymApp:
         self.tab_keys = self.settings_repo.get_text(
             "hotkey_tab_keys", "1,2,3,4"
         )
+        self.sidebar_width = self.settings_repo.get_float("sidebar_width", 18.0)
         self.training_options = sorted(
             [
                 "strength",
@@ -510,17 +511,17 @@ class GymApp:
         )
 
     def _inject_responsive_css(self) -> None:
-        st.markdown(
-            """
+        css = """
             <style>
-            :root {
+            :root {{
                 --section-bg: #fafafa;
                 --accent-color: #ff4b4b;
                 --header-bg: #ffffff;
                 --border-color: #cccccc;
                 --safe-bottom: 0px;
                 --base-font-size: 16px;
-            }
+                --sidebar-width: WIDTHrem;
+            }}
             html {
                 font-size: var(--base-font-size);
             }
@@ -1060,6 +1061,12 @@ class GymApp:
                     grid-template-columns: 1fr;
                 }
             }
+            @media screen and (min-width: 768px) {
+                div[data-testid="stSidebar"] {
+                    width: var(--sidebar-width) !important;
+                    flex-basis: var(--sidebar-width) !important;
+                }
+            }
             @media screen and (min-width: 1025px) {
                 .metric-grid {
                     grid-template-columns: repeat(4, 1fr);
@@ -1233,8 +1240,9 @@ class GymApp:
                 }
             }
             </style>
-            """,
-            unsafe_allow_html=True,
+            """
+        st.markdown(
+            css.replace("WIDTH", str(self.sidebar_width)), unsafe_allow_html=True
         )
         if self.large_font:
             st.markdown(
@@ -1379,11 +1387,22 @@ class GymApp:
     def _quick_search(self, prefix: str) -> None:
         """Search workouts by notes or location and open them."""
         query = st.text_input("Search", key=f"{prefix}_search")
+        suggestions = (
+            self.workouts.search(query)[:5] if query and len(query) >= 2 else []
+        )
         if st.button("Search", key=f"{prefix}_search_btn"):
             st.session_state[f"{prefix}_search_results"] = (
                 self.workouts.search(query) if query else []
             )
         results = st.session_state.get(f"{prefix}_search_results", [])
+        if suggestions:
+            opt_map = {f"{wid} - {date}": wid for wid, date in suggestions}
+            pick = st.selectbox(
+                "Suggestions", list(opt_map.keys()), key=f"{prefix}_suggest"
+            )
+            if st.button("Open", key=f"{prefix}_suggest_open"):
+                self._select_workout(opt_map[pick])
+                self._switch_tab("workouts")
         if results:
             options = {f"{wid} - {date}": wid for wid, date in results}
             choice = st.selectbox(
@@ -1498,6 +1517,23 @@ class GymApp:
         )
         st.altair_chart(chart, use_container_width=True)
 
+    def _chart_carousel(self, charts: list[Callable[[], None]], key: str) -> None:
+        """Display charts in a simple carousel."""
+        if not charts:
+            return
+        idx = st.session_state.get(key, 0)
+        cols = st.columns([1, 6, 1])
+        with cols[0]:
+            if st.button("◀", key=f"{key}_prev"):
+                idx = (idx - 1) % len(charts)
+                st.session_state[key] = idx
+        with cols[1]:
+            charts[idx]()
+        with cols[2]:
+            if st.button("▶", key=f"{key}_next"):
+                idx = (idx + 1) % len(charts)
+                st.session_state[key] = idx
+
     def _responsive_table(self, data: list[dict] | pd.DataFrame) -> None:
         """Render a table that collapses into expanders on mobile."""
         df = pd.DataFrame(data)
@@ -1515,6 +1551,19 @@ class GymApp:
         @st.dialog(title)
         def _dlg() -> None:
             content_fn()
+            st.markdown(
+                """
+                <script>
+                const dlg = document.querySelector('div[data-testid="stDialog"]');
+                if (dlg) {
+                  dlg.setAttribute('tabindex','0');
+                  const focusable = dlg.querySelector('input,textarea,select,button');
+                  if (focusable) { focusable.focus(); }
+                }
+                </script>
+                """,
+                unsafe_allow_html=True,
+            )
 
         _dlg()
 
@@ -4294,27 +4343,26 @@ class GymApp:
         with prog_tab:
             if ex_choice:
                 prog = self.stats.progression(ex_choice, start_str, end_str)
+                vel_hist = self.stats.velocity_history(ex_choice, start_str, end_str)
+                rel_power = self.stats.relative_power_history(ex_choice, start_str, end_str)
+
+                charts: list[Callable[[], None]] = []
                 if prog:
-                    self._line_chart(
+                    charts.append(lambda prog=prog: self._line_chart(
                         {"1RM": [p["est_1rm"] for p in prog]},
                         [p["date"] for p in prog],
-                    )
-                vel_hist = self.stats.velocity_history(ex_choice, start_str, end_str)
+                    ))
                 if vel_hist:
-                    with st.expander("Velocity History", expanded=False):
-                        self._line_chart(
-                            {"Velocity": [v["velocity"] for v in vel_hist]},
-                            [v["date"] for v in vel_hist],
-                        )
-                rel_power = self.stats.relative_power_history(
-                    ex_choice, start_str, end_str
-                )
+                    charts.append(lambda vel_hist=vel_hist: self._line_chart(
+                        {"Velocity": [v["velocity"] for v in vel_hist]},
+                        [v["date"] for v in vel_hist],
+                    ))
                 if rel_power:
-                    with st.expander("Relative Power History", expanded=False):
-                        self._line_chart(
-                            {"Power/Weight": [p["relative_power"] for p in rel_power]},
-                            [p["date"] for p in rel_power],
-                        )
+                    charts.append(lambda rel_power=rel_power: self._line_chart(
+                        {"Power/Weight": [p["relative_power"] for p in rel_power]},
+                        [p["date"] for p in rel_power],
+                    ))
+                self._chart_carousel(charts, "prog_car")
                 self._progress_forecast_section(ex_choice)
             self._volume_forecast_section(start_str, end_str)
         with rec_tab:
@@ -5031,43 +5079,45 @@ class GymApp:
 
     def _goals_tab(self) -> None:
         st.header("Goals")
-        with st.expander("Add Goal"):
-            ex_names = [""] + self.exercise_names_repo.fetch_all()
-            ex_choice = st.selectbox("Exercise", ex_names, key="goal_ex")
-            name = st.text_input("Name", key="goal_name")
-            value = st.number_input(
-                "Target Value", min_value=0.0, step=0.1, key="goal_value"
-            )
-            unit = st.text_input("Unit", key="goal_unit")
-            start_d = st.date_input(
-                "Start Date", datetime.date.today(), key="goal_start"
-            )
-            target_d = st.date_input(
-                "Target Date", datetime.date.today(), key="goal_target"
-            )
-            if st.button("Create Goal", key="goal_add"):
-                if name and unit and ex_choice:
-                    self.goals_repo.add(
-                        ex_choice,
-                        name,
-                        float(value),
-                        unit,
-                        start_d.isoformat(),
-                        target_d.isoformat(),
-                    )
-                    st.success("Added")
-                else:
-                    st.warning("Exercise, name and unit required")
-        with st.expander("Existing Goals", expanded=False):
-            rows = self.goals_repo.fetch_all()
-            for gid, exn, gname, gval, gunit, sdate, tdate, ach in rows:
-                exp = st.expander(f"{gname} - {gval}{gunit}")
-                with exp:
-                    names = self.exercise_names_repo.fetch_all()
-                    ex_e = st.selectbox(
-                        "Exercise",
-                        names,
-                        index=names.index(exn),
+        overview_tab, manage_tab = st.tabs(["Overview", "Manage"])
+        with manage_tab:
+            with st.expander("Add Goal"):
+                ex_names = [""] + self.exercise_names_repo.fetch_all()
+                ex_choice = st.selectbox("Exercise", ex_names, key="goal_ex")
+                name = st.text_input("Name", key="goal_name")
+                value = st.number_input(
+                    "Target Value", min_value=0.0, step=0.1, key="goal_value"
+                )
+                unit = st.text_input("Unit", key="goal_unit")
+                start_d = st.date_input(
+                    "Start Date", datetime.date.today(), key="goal_start"
+                )
+                target_d = st.date_input(
+                    "Target Date", datetime.date.today(), key="goal_target"
+                )
+                if st.button("Create Goal", key="goal_add"):
+                    if name and unit and ex_choice:
+                        self.goals_repo.add(
+                            ex_choice,
+                            name,
+                            float(value),
+                            unit,
+                            start_d.isoformat(),
+                            target_d.isoformat(),
+                        )
+                        st.success("Added")
+                    else:
+                        st.warning("Exercise, name and unit required")
+            with st.expander("Existing Goals", expanded=False):
+                rows = self.goals_repo.fetch_all()
+                for gid, exn, gname, gval, gunit, sdate, tdate, ach in rows:
+                    exp = st.expander(f"{gname} - {gval}{gunit}")
+                    with exp:
+                        names = self.exercise_names_repo.fetch_all()
+                        ex_e = st.selectbox(
+                            "Exercise",
+                            names,
+                            index=names.index(exn),
                         key=f"goal_ex_{gid}",
                     )
                     name_e = st.text_input("Name", gname, key=f"goal_name_{gid}")
@@ -5104,9 +5154,21 @@ class GymApp:
                             ach_e,
                         )
                         st.success("Updated")
-                    if cols[1].button("Delete", key=f"goal_del_{gid}"):
-                        self.goals_repo.delete(gid)
-                        st.success("Deleted")
+                        if cols[1].button("Delete", key=f"goal_del_{gid}"):
+                            self.goals_repo.delete(gid)
+                            st.success("Deleted")
+        with overview_tab:
+            rows = self.goals_repo.fetch_all()
+            if not rows:
+                st.info("No goals defined.")
+            else:
+                metrics = []
+                for _gid, exn, gname, gval, gunit, sdate, _tdate, _ach in rows:
+                    prog = self.stats.progression(exn, sdate)
+                    current = prog[-1]["est_1rm"] if prog else 0
+                    pct = (current / gval * 100) if gval else 0
+                    metrics.append((gname, f"{pct:.1f}%"))
+                self._metric_grid(metrics)
 
     def _settings_tab(self) -> None:
         st.header("Settings")
@@ -5126,6 +5188,17 @@ class GymApp:
                 st.session_state.delete_target = "logged"
             if st.button("Delete All Planned Workouts"):
                 st.session_state.delete_target = "planned"
+            with open(self.workouts._db_path, "rb") as f:
+                st.download_button(
+                    "Backup Database",
+                    f.read(),
+                    file_name="backup.db",
+                    mime="application/octet-stream",
+                )
+            up = st.file_uploader("Restore Backup", type=["db"], key="restore_db")
+            if up and st.button("Restore", key="restore_btn"):
+                Path(self.workouts._db_path).write_bytes(up.getvalue())
+                st.success("Database restored")
 
         target = st.session_state.get("delete_target")
         if target:
@@ -5237,6 +5310,13 @@ class GymApp:
                 side_nav_opt = st.checkbox(
                     "Enable Side Navigation",
                     value=self.side_nav,
+                )
+                sb_width = st.slider(
+                    "Sidebar Width (rem)",
+                    12.0,
+                    30.0,
+                    value=self.sidebar_width,
+                    step=1.0,
                 )
                 show_onboard_opt = st.checkbox(
                     "Show Onboarding Wizard",
@@ -5406,6 +5486,8 @@ class GymApp:
                 self.add_set_key = add_key_in or 'a'
                 self.tab_keys = tab_keys_in or '1,2,3,4'
                 self.quick_weights = [float(v) for v in qw_in.split(',') if v]
+                self.settings_repo.set_float("sidebar_width", sb_width)
+                self.sidebar_width = sb_width
                 self._inject_responsive_css()
                 self.gamification.enable(game_enabled)
                 self.settings_repo.set_bool("ml_all_enabled", ml_global)
