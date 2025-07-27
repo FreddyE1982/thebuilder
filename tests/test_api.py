@@ -1194,6 +1194,41 @@ class APITestCase(unittest.TestCase):
         data = self.client.get(f"/sets/{set_id}").json()
         self.assertEqual(data["note"], "easy")
 
+    def test_bulk_update_sets(self) -> None:
+        self.client.post("/workouts")
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8},
+        )
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 6, "weight": 105.0, "rpe": 8},
+        )
+        self.client.post("/workouts")
+        self.client.post(
+            "/workouts/2/exercises",
+            params={"name": "Squat", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/exercises/2/sets",
+            params={"reps": 8, "weight": 150.0, "rpe": 7},
+        )
+        updates = [
+            {"id": 1, "reps": 5, "weight": 110.0, "rpe": 9},
+            {"id": 3, "reps": 10, "weight": 160.0, "rpe": 8},
+        ]
+        resp = self.client.put("/sets/bulk_update", json=updates)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), {"updated": 2})
+        set1 = self.client.get("/sets/1").json()
+        set3 = self.client.get("/sets/3").json()
+        self.assertEqual(set1["weight"], 110.0)
+        self.assertEqual(set3["reps"], 10)
+
     def test_backdated_workout(self) -> None:
         past_date = (datetime.date.today() - datetime.timedelta(days=3)).isoformat()
         resp = self.client.post(
