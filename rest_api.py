@@ -38,6 +38,7 @@ from db import (
     FavoriteWorkoutRepository,
     TagRepository,
     GoalRepository,
+    ChallengeRepository,
 )
 from planner_service import PlannerService
 from recommendation_service import RecommendationService
@@ -97,6 +98,7 @@ class GymAPI:
         self.wellness = WellnessRepository(db_path)
         self.heart_rates = HeartRateRepository(db_path)
         self.goals = GoalRepository(db_path)
+        self.challenges = ChallengeRepository(db_path)
         self.gamification = GamificationService(
             self.game_repo,
             self.exercises,
@@ -568,9 +570,11 @@ class GymAPI:
             end_date: str = None,
             sort_by: str = "id",
             descending: bool = True,
+            limit: int | None = None,
+            offset: int | None = None,
         ):
             workouts = self.workouts.fetch_all_workouts(
-                start_date, end_date, sort_by, descending
+                start_date, end_date, sort_by, descending, limit, offset
             )
             return [{"id": wid, "date": date} for wid, date, *_ in workouts]
 
@@ -1567,6 +1571,37 @@ class GymAPI:
         @self.app.get("/gamification/streak")
         def gamification_streak():
             return self.gamification.workout_streak()
+
+        @self.app.get("/challenges")
+        def list_challenges():
+            return [
+                {
+                    "id": cid,
+                    "name": name,
+                    "target": target,
+                    "progress": progress,
+                    "completed": bool(comp),
+                }
+                for cid, name, target, progress, comp in self.challenges.fetch_all()
+            ]
+
+        @self.app.post("/challenges")
+        def add_challenge(name: str, target: int):
+            cid = self.challenges.add(name, target)
+            return {"id": cid}
+
+        @self.app.put("/challenges/{cid}/progress")
+        def update_challenge_progress(cid: int, progress: int):
+            try:
+                self.challenges.update_progress(cid, progress)
+                return {"status": "updated"}
+            except ValueError as e:
+                raise HTTPException(status_code=404, detail=str(e))
+
+        @self.app.post("/challenges/{cid}/complete")
+        def complete_challenge(cid: int, completed: bool = True):
+            self.challenges.set_completed(cid, completed)
+            return {"status": "updated"}
 
         @self.app.get("/utils/warmup_weights")
         def utils_warmup_weights(target_weight: float, sets: int = 3):

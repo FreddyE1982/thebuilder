@@ -871,6 +871,11 @@ class StreamlitFullGUITest(unittest.TestCase):
         self.assertEqual(tab.header[0].value, "Gamification Stats")
         self.assertGreaterEqual(len(tab.metric), 2)
 
+    def test_challenges_tab(self) -> None:
+        tab = self._get_tab("Challenges")
+        self.assertEqual(tab.header[0].value, "Challenges")
+        self.assertGreater(len(tab.expander), 0)
+
     def test_tests_tab(self) -> None:
         tab = self._get_tab("Tests")
         self.assertEqual(tab.header[0].value, "Pyramid Test")

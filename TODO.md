@@ -78,8 +78,8 @@
 - [x] 75. Create a dedicated analytics landing page with shortcuts to reports.
 - [x] 76. Add gesture support to close dialogs on mobile by swiping down.
 - [x] 77. Provide an option to auto-open the last viewed workout on startup.
-- [ ] 78. Implement lazy loading for long tables to improve performance.
-- [ ] 79. Include a widget to display ongoing challenges and achievements.
+ - [x] 78. Implement lazy loading for long tables to improve performance.
+ - [x] 79. Include a widget to display ongoing challenges and achievements.
 - [ ] 80. Add undo/redo controls for workout editing actions.
 - [x] 81. Provide customizable quick-add weight values for faster input.
 - [x] 82. Show weekly streak counters on the Progress tab.
