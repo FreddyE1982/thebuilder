@@ -38,6 +38,7 @@ class MobileCSSTest(unittest.TestCase):
         self.assertIn("addEventListener('change', saveScroll", content)
         self.assertIn("addEventListener('click', saveScroll", content)
         self.assertIn("persistExpanders()", content)
+        self.assertIn("dataset.expKey", content)
         self.assertIn("dlg.addEventListener('touchstart'", content)
         self.assertIn("dlg.addEventListener('touchend'", content)
 
