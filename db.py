@@ -165,9 +165,10 @@ class Database:
             """CREATE TABLE workout_templates (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT NOT NULL,
-                    training_type TEXT NOT NULL DEFAULT 'strength'
+                    training_type TEXT NOT NULL DEFAULT 'strength',
+                    position INTEGER NOT NULL DEFAULT 0
                 );""",
-            ["id", "name", "training_type"],
+            ["id", "name", "training_type", "position"],
         ),
         "template_exercises": (
             """CREATE TABLE template_exercises (
@@ -2764,14 +2765,18 @@ class TemplateWorkoutRepository(BaseRepository):
     """Repository for workout templates."""
 
     def create(self, name: str, training_type: str = "strength") -> int:
+        rows = super().fetch_all(
+            "SELECT COALESCE(MAX(position), 0) + 1 FROM workout_templates;"
+        )
+        position = int(rows[0][0]) if rows else 1
         return self.execute(
-            "INSERT INTO workout_templates (name, training_type) VALUES (?, ?);",
-            (name, training_type),
+            "INSERT INTO workout_templates (name, training_type, position) VALUES (?, ?, ?);",
+            (name, training_type, position),
         )
 
     def fetch_all(self) -> list[tuple[int, str, str]]:
         return super().fetch_all(
-            "SELECT id, name, training_type FROM workout_templates ORDER BY id DESC;"
+            "SELECT id, name, training_type FROM workout_templates ORDER BY position;"
         )
 
     def fetch_detail(self, template_id: int) -> tuple[int, str, str]:
@@ -2811,6 +2816,21 @@ class TemplateWorkoutRepository(BaseRepository):
         if not rows:
             raise ValueError("template not found")
         self.execute("DELETE FROM workout_templates WHERE id = ?;", (template_id,))
+
+    def reorder(self, order: list[int]) -> None:
+        existing = [
+            row[0]
+            for row in super().fetch_all(
+                "SELECT id FROM workout_templates ORDER BY position;"
+            )
+        ]
+        if set(order) != set(existing) or len(order) != len(existing):
+            raise ValueError("invalid order")
+        for pos, tid in enumerate(order, start=1):
+            self.execute(
+                "UPDATE workout_templates SET position = ? WHERE id = ?;",
+                (pos, tid),
+            )
 
 
 class TemplateExerciseRepository(BaseRepository):

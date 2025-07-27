@@ -679,6 +679,16 @@ class APITestCase(unittest.TestCase):
                     FOREIGN KEY(exercise_id) REFERENCES exercises(id) ON DELETE CASCADE
                 );"""
         )
+        cur.execute(
+            """CREATE TABLE workout_templates (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    training_type TEXT NOT NULL DEFAULT 'strength'
+                );"""
+        )
+        cur.execute(
+            "INSERT INTO workout_templates (name, training_type) VALUES ('Legacy Template','strength');"
+        )
         today = datetime.date.today().isoformat()
         cur.execute("INSERT INTO workouts (date) VALUES (?);", (today,))
         cur.execute("INSERT INTO exercises (workout_id, name) VALUES (1, 'Legacy Ex');")
@@ -712,6 +722,13 @@ class APITestCase(unittest.TestCase):
         data = resp.json()
         self.assertIn("planned_set_id", data)
         self.assertIn("diff_reps", data)
+
+        conn = sqlite3.connect(self.db_path)
+        cur = conn.cursor()
+        cur.execute("PRAGMA table_info(workout_templates);")
+        cols = [r[1] for r in cur.fetchall()]
+        self.assertIn("position", cols)
+        conn.close()
 
     def test_exercise_catalog_endpoints(self) -> None:
         resp = self.client.get("/exercise_catalog/muscle_groups")
@@ -2855,6 +2872,24 @@ class APITestCase(unittest.TestCase):
         detail = self.client.get(f"/templates/{tid}/exercises")
         self.assertEqual(detail.status_code, 200)
         self.assertEqual(len(detail.json()), 1)
+
+    def test_template_reordering(self) -> None:
+        tids = []
+        for name in ["T1", "T2", "T3"]:
+            resp = self.client.post(
+                "/templates",
+                params={"name": name, "training_type": "strength"},
+            )
+            self.assertEqual(resp.status_code, 200)
+            tids.append(resp.json()["id"])
+
+        order = ",".join(map(str, [tids[1], tids[2], tids[0]]))
+        resp = self.client.post("/templates/order", params={"order": order})
+        self.assertEqual(resp.status_code, 200)
+
+        resp = self.client.get("/templates")
+        ids = [t["id"] for t in resp.json()]
+        self.assertEqual(ids, [tids[1], tids[2], tids[0]])
 
     def test_rating_history_and_stats(self) -> None:
         d1 = "2023-01-01"

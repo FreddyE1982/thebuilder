@@ -3100,6 +3100,36 @@ class GymApp:
 
         self._show_dialog("Reorder Sets", _content)
 
+    def _reorder_templates_dialog(self) -> None:
+        def _content() -> None:
+            st.markdown("Drag templates to reorder and save")
+            templates = self.template_workouts.fetch_all()
+            items = "".join(
+                f"<li data-id='{tid}'>{i+1}: {name}</li>"
+                for i, (tid, name, _t) in enumerate(templates)
+            )
+            html = f"""
+            <ul id='tpl_order' class='order-list'>{items}</ul>
+            <script src='https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js'></script>
+            <script>
+            const list = document.getElementById('tpl_order');
+            if(list && !list.dataset.init){{
+                list.dataset.init='1';
+                new Sortable(list, {{animation:150}});
+            }}
+            function saveOrder(){{
+                const ids = Array.from(list.children).map(c=>c.dataset.id).join(',');
+                fetch('/templates/order?order='+ids, {{method:'POST'}})
+                    .then(()=>window.location.reload());
+            }}
+            </script>
+            <button onclick='saveOrder()'>Save</button>
+            """
+            components.html(html, height=300)
+            st.button("Close", key='tpl_order_close')
+
+        self._show_dialog("Reorder Templates", _content)
+
     def _submit_set(
         self,
         exercise_id: int,
@@ -3536,6 +3566,8 @@ class GymApp:
                 if st.button("Add Favorite", key="fav_tpl_add_btn") and add_choice:
                     self.favorite_templates_repo.add(int(add_choice))
                     st.rerun()
+                if st.button("Reorder Templates", key="reorder_templates_btn"):
+                    self._reorder_templates_dialog()
             with st.expander("Create New Template"):
                 name = st.text_input("Name", key="tmpl_name")
                 t_type = st.selectbox(
