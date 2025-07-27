@@ -97,7 +97,7 @@
 - [ ] 94. Support automatic scrolling to today's date in calendar views.
 - [ ] 95. Display a running timer when logging active workouts.
 - [x] 96. Allow copying an existing workout as a template with one click.
-- [ ] 97. Provide optional large-font mode for accessibility.
+ - [x] 97. Provide optional large-font mode for accessibility.
 - [ ] 98. Add split buttons for logging warm-up versus working sets.
 - [ ] 99. Introduce keyboard navigation hints in footer tooltips.
 - [ ] 100. Enable exporting analytics charts as images from the GUI.

@@ -999,9 +999,9 @@ class SetRepository(BaseRepository):
 
     def fetch_for_exercise(
         self, exercise_id: int
-    ) -> List[Tuple[int, int, float, int, Optional[str], Optional[str], int]]:
+    ) -> List[Tuple[int, int, float, int, Optional[str], Optional[str], int, int]]:
         return self.fetch_all(
-            "SELECT id, reps, weight, rpe, start_time, end_time, warmup FROM sets WHERE exercise_id = ? ORDER BY position;",
+            "SELECT id, reps, weight, rpe, start_time, end_time, warmup, position FROM sets WHERE exercise_id = ? ORDER BY position;",
             (exercise_id,),
         )
 
@@ -1636,6 +1636,7 @@ class SettingsRepository(BaseRepository):
             "hide_preconfigured_exercises",
             "compact_mode",
             "auto_dark_mode",
+            "large_font_mode",
         }
         for k, v in rows:
             if k in bool_keys:
@@ -1673,6 +1674,7 @@ class SettingsRepository(BaseRepository):
                 "hide_preconfigured_exercises",
                 "compact_mode",
                 "auto_dark_mode",
+                "large_font_mode",
             }
             for key, value in data.items():
                 val = str(value)
@@ -1751,6 +1753,7 @@ class SettingsRepository(BaseRepository):
             "hide_preconfigured_exercises",
             "compact_mode",
             "auto_dark_mode",
+            "large_font_mode",
         }
         for k in bool_keys:
             if k in data:

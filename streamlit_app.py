@@ -173,6 +173,7 @@ class GymApp:
         self.color_theme = self.settings_repo.get_text("color_theme", "red")
         self.auto_dark_mode = self.settings_repo.get_bool("auto_dark_mode", False)
         self.compact_mode = self.settings_repo.get_bool("compact_mode", False)
+        self.large_font = self.settings_repo.get_bool("large_font_mode", False)
         self.side_nav = self.settings_repo.get_bool("side_nav", False)
         self.weight_unit = self.settings_repo.get_text("weight_unit", "kg")
         self.time_format = self.settings_repo.get_text("time_format", "24h")
@@ -509,6 +510,10 @@ class GymApp:
                 --header-bg: #ffffff;
                 --border-color: #cccccc;
                 --safe-bottom: 0px;
+                --base-font-size: 16px;
+            }
+            html {
+                font-size: var(--base-font-size);
             }
             html, body {
                 max-width: 100%;
@@ -1220,6 +1225,11 @@ class GymApp:
             """,
             unsafe_allow_html=True,
         )
+        if self.large_font:
+            st.markdown(
+                "<style>:root{--base-font-size:18px;}</style>",
+                unsafe_allow_html=True,
+            )
         if self.compact_mode and not st.session_state.get("is_mobile", False):
             st.markdown(
                 """
@@ -5091,6 +5101,10 @@ class GymApp:
                     "Compact Mode",
                     value=self.compact_mode,
                 )
+                large_font = st.checkbox(
+                    "Large Font Mode",
+                    value=self.large_font,
+                )
                 side_nav_opt = st.checkbox(
                     "Enable Side Navigation",
                     value=self.side_nav,
@@ -5236,6 +5250,8 @@ class GymApp:
                 self.time_format = time_fmt_opt
                 self.settings_repo.set_bool("compact_mode", compact)
                 self.compact_mode = compact
+                self.settings_repo.set_bool("large_font_mode", large_font)
+                self.large_font = large_font
                 self.settings_repo.set_bool("side_nav", side_nav_opt)
                 self.side_nav = side_nav_opt
                 self.settings_repo.set_text("hotkey_add_set", add_key_in or 'a')
