@@ -473,9 +473,10 @@ class GymApp:
             }
             function persistExpanders() {
                 const exps = Array.from(document.querySelectorAll('details'));
-                exps.forEach(exp => {
+                exps.forEach((exp, idx) => {
                     const label = exp.querySelector('summary')?.innerText.trim() || '';
-                    const key = `expander-${label}`;
+                    const key = exp.dataset.expKey || `expander-${label}-${idx}`;
+                    exp.dataset.expKey = key;
                     const saved = sessionStorage.getItem(key);
                     if (saved !== null) exp.open = saved === 'true';
                     exp.addEventListener('toggle', () => {
@@ -505,6 +506,10 @@ class GymApp:
             if (window.visualViewport) {
                 window.visualViewport.addEventListener('resize', handleResize);
             }
+            function restoreScroll() {
+                const y = sessionStorage.getItem('scrollY');
+                if (y) setTimeout(() => window.scrollTo(0, parseInt(y)), 0);
+            }
             window.addEventListener('scroll', () => {
                 toggleScrollTopButton();
                 handleHeaderCollapse();
@@ -512,16 +517,14 @@ class GymApp:
             });
             window.addEventListener('DOMContentLoaded', () => {
                 handleResize();
-                const y = sessionStorage.getItem('scrollY');
-                if (y) window.scrollTo(0, parseInt(y));
+                restoreScroll();
                 persistExpanders();
                 persistTabs();
             });
             document.addEventListener('streamlit:rendered', () => {
                 persistExpanders();
                 persistTabs();
-                const y = sessionStorage.getItem('scrollY');
-                if (y) window.scrollTo(0, parseInt(y));
+                restoreScroll();
             });
             document.addEventListener('click', saveScroll, true);
             handleResize();
