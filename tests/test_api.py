@@ -3317,3 +3317,22 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(resp.json(), {"status": "restored"})
         resp = self.client.get("/workouts")
         self.assertEqual(len(resp.json()), 1)
+
+    def test_notifications_crud(self) -> None:
+        resp = self.client.post("/notifications", json="Test note")
+        self.assertEqual(resp.status_code, 200)
+        nid = resp.json()["id"]
+
+        resp = self.client.get("/notifications")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(len(resp.json()), 1)
+        self.assertFalse(resp.json()[0]["read"])
+
+        resp = self.client.put(f"/notifications/{nid}/read")
+        self.assertEqual(resp.status_code, 200)
+
+        resp = self.client.get("/notifications", params={"unread_only": True})
+        self.assertEqual(resp.json(), [])
+
+        resp = self.client.get("/notifications/unread_count")
+        self.assertEqual(resp.json()["count"], 0)

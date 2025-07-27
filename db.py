@@ -444,6 +444,15 @@ class Database:
                 );""",
             ["name", "last_loaded", "last_train", "last_predict"],
         ),
+        "notifications": (
+            """CREATE TABLE notifications (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp TEXT NOT NULL,
+                    message TEXT NOT NULL,
+                    read INTEGER NOT NULL DEFAULT 0
+                );""",
+            ["id", "timestamp", "message", "read"],
+        ),
     }
 
     def __init__(self, db_path: str = "workout.db") -> None:
@@ -3189,4 +3198,41 @@ class MLModelStatusRepository(BaseRepository):
             "last_train": r[1],
             "last_predict": r[2],
         }
+
+
+class NotificationRepository(BaseRepository):
+    """Repository for user notifications."""
+
+    def add(self, message: str) -> int:
+        return self.execute(
+            "INSERT INTO notifications (timestamp, message, read) VALUES (?, ?, 0);",
+            (datetime.datetime.now().isoformat(), message),
+        )
+
+    def fetch_all(self, unread_only: bool = False) -> list[dict[str, object]]:
+        sql = "SELECT id, timestamp, message, read FROM notifications"
+        if unread_only:
+            sql += " WHERE read=0"
+        sql += " ORDER BY id;"
+        rows = super().fetch_all(sql)
+        result: list[dict[str, object]] = []
+        for r in rows:
+            result.append(
+                {
+                    "id": r[0],
+                    "timestamp": r[1],
+                    "message": r[2],
+                    "read": bool(r[3]),
+                }
+            )
+        return result
+
+    def mark_read(self, nid: int) -> None:
+        self.execute("UPDATE notifications SET read=1 WHERE id=?;", (nid,))
+
+    def unread_count(self) -> int:
+        rows = super().fetch_all(
+            "SELECT COUNT(*) FROM notifications WHERE read=0;"
+        )
+        return rows[0][0] if rows else 0
 

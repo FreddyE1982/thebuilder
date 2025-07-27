@@ -73,7 +73,7 @@
 - [x] 70. Introduce color coding for workout types across the app.
 - [x] 71. Add a mini calendar widget showing upcoming planned workouts.
 - [x] 72. Provide quick filter chips for common date ranges in history views.
-- [ ] 73. Implement a unified notification center for alerts and reminders.
+- [x] 73. Implement a unified notification center for alerts and reminders.
 - [x] 74. Allow users to collapse the header on scroll for more screen space.
 - [ ] 75. Create a dedicated analytics landing page with shortcuts to reports.
 - [x] 76. Add gesture support to close dialogs on mobile by swiping down.

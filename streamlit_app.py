@@ -46,6 +46,7 @@ from db import (
     FavoriteWorkoutRepository,
     TagRepository,
     GoalRepository,
+    NotificationRepository,
 )
 from planner_service import PlannerService
 from recommendation_service import RecommendationService
@@ -228,6 +229,7 @@ class GymApp:
         self.ml_models = MLModelRepository(db_path)
         self.ml_logs = MLLogRepository(db_path)
         self.ml_status = MLModelStatusRepository(db_path)
+        self.notifications_repo = NotificationRepository(db_path)
         self.autoplan_logs = AutoPlannerLogRepository(db_path)
         self.prescription_logs = ExercisePrescriptionLogRepository(db_path)
         self.body_weights_repo = BodyWeightRepository(db_path)
@@ -1372,6 +1374,8 @@ class GymApp:
             st.session_state.flash_set = None
         if "open_palette" not in st.session_state:
             st.session_state.open_palette = False
+        if "open_notifications" not in st.session_state:
+            st.session_state.open_notifications = False
         if "auto_theme_done" not in st.session_state:
             st.session_state.auto_theme_done = False
         # ensure library widgets always have state available for testing
@@ -1820,6 +1824,21 @@ class GymApp:
 
         self._show_dialog("Welcome", _content)
 
+    def _notifications_dialog(self) -> None:
+        def _content() -> None:
+            notes = self.notifications_repo.fetch_all()
+            for n in notes:
+                cols = st.columns([6, 1])
+                cols[0].markdown(f"{n['timestamp'][:10]} - {n['message']}")
+                if not n['read']:
+                    if cols[1].button("Read", key=f"read_{n['id']}"):
+                        self.notifications_repo.mark_read(n['id'])
+                        st.rerun()
+            if st.button("Close", key="notif_close"):
+                st.session_state.open_notifications = False
+
+        self._show_dialog("Notifications", _content)
+
     def _close_quick_workout(self) -> None:
         st.session_state.open_quick_workout = False
 
@@ -2029,7 +2048,7 @@ class GymApp:
             self._onboarding_wizard()
         self._open_header()
         st.markdown("<div class='title-section'>", unsafe_allow_html=True)
-        cols = st.columns([3, 1, 1, 3])
+        cols = st.columns([3, 1, 1, 1, 3])
         with cols[0]:
             st.title("Workout Logger")
         with cols[1]:
@@ -2043,6 +2062,11 @@ class GymApp:
             if st.button("Help", key="help_button_header"):
                 self._help_dialog()
         with cols[3]:
+            unread = self.notifications_repo.unread_count()
+            label = f"🔔 ({unread})" if unread else "🔔"
+            if st.button(label, key="notif_btn"):
+                st.session_state.open_notifications = True
+        with cols[4]:
             with st.expander("Quick Search", expanded=False):
                 self._quick_search("header")
         self._connection_status()
@@ -2139,6 +2163,8 @@ class GymApp:
         self._close_content()
         self._quick_workout_button()
         self._help_overlay_button()
+        if st.session_state.get("open_notifications"):
+            self._notifications_dialog()
         self._context_menu()
         self._bottom_nav()
         self._end_page()

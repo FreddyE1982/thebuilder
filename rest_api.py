@@ -26,6 +26,7 @@ from db import (
     MLModelRepository,
     MLLogRepository,
     MLModelStatusRepository,
+    NotificationRepository,
     AutoPlannerLogRepository,
     ExercisePrescriptionLogRepository,
     EmailLogRepository,
@@ -88,6 +89,7 @@ class GymAPI:
         self.ml_models = MLModelRepository(db_path)
         self.ml_logs = MLLogRepository(db_path)
         self.ml_status = MLModelStatusRepository(db_path)
+        self.notifications = NotificationRepository(db_path)
         self.autoplan_logs = AutoPlannerLogRepository(db_path)
         self.prescription_logs = ExercisePrescriptionLogRepository(db_path)
         self.email_logs = EmailLogRepository(db_path)
@@ -2273,6 +2275,24 @@ class GymAPI:
         @self.app.get("/reports/email_logs")
         def list_email_logs():
             return self.email_logs.fetch_all_logs()
+
+        @self.app.post("/notifications")
+        def create_notification(message: str = Body(...)):
+            nid = self.notifications.add(message)
+            return {"id": nid}
+
+        @self.app.get("/notifications")
+        def get_notifications(unread_only: bool = False):
+            return self.notifications.fetch_all(unread_only)
+
+        @self.app.put("/notifications/{nid}/read")
+        def mark_notification_read(nid: int):
+            self.notifications.mark_read(nid)
+            return {"status": "read"}
+
+        @self.app.get("/notifications/unread_count")
+        def unread_count():
+            return {"count": self.notifications.unread_count()}
 
 
 api = GymAPI()
