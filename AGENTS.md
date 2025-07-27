@@ -28,6 +28,8 @@ The agent is to always follow there rules:
 11. Fix ALL warnings that occur during any tests by correcting app code
 12. if the user asks the agent to roll back the last merged PR then the agent is allowed to do so...even if the rollback violates ANY rules.
 13. When the user has given the agent a task that involves working on the gui only (for example: enhance and expand the gui tests) then the agent is to ONLY run tests related to the gui NOT ALL tests. In this case the rule that says to always run all tests is temporarily not in effect.
+14. When testing, any failed tests should be logged into
+a FAILEDTESTS.md that is persisted. 
 
 ## Muscle linking
 
