@@ -463,15 +463,42 @@ class GymApp:
                 setHeaderHeight();
                 toggleScrollTopButton();
             }
+            function saveScroll() {
+                sessionStorage.setItem('scrollY', window.scrollY);
+            }
+            function persistExpanders() {
+                const exps = Array.from(document.querySelectorAll('details'));
+                exps.forEach((exp, idx) => {
+                    const key = `expander-${idx}`;
+                    const saved = sessionStorage.getItem(key);
+                    if (saved !== null) exp.open = saved === 'true';
+                    exp.addEventListener('toggle', () => {
+                        sessionStorage.setItem(key, exp.open);
+                    });
+                });
+            }
             window.addEventListener('resize', handleResize);
             window.addEventListener('orientationchange', handleResize);
             if (window.visualViewport) {
                 window.visualViewport.addEventListener('resize', handleResize);
             }
-            window.addEventListener('scroll', toggleScrollTopButton);
-            window.addEventListener('scroll', handleHeaderCollapse);
-            window.addEventListener('DOMContentLoaded', handleResize);
-            window.addEventListener('load', handleResize);
+            window.addEventListener('scroll', () => {
+                toggleScrollTopButton();
+                handleHeaderCollapse();
+                saveScroll();
+            });
+            window.addEventListener('DOMContentLoaded', () => {
+                handleResize();
+                const y = sessionStorage.getItem('scrollY');
+                if (y) window.scrollTo(0, parseInt(y));
+                persistExpanders();
+            });
+            document.addEventListener('streamlit:rendered', () => {
+                persistExpanders();
+                const y = sessionStorage.getItem('scrollY');
+                if (y) window.scrollTo(0, parseInt(y));
+            });
+            document.addEventListener('click', saveScroll, true);
             handleResize();
             const tabKeys = JSON.parse('%TAB_KEYS%');
             const addSetKey = '%ADD_KEY%'.toLowerCase();
@@ -515,13 +542,7 @@ class GymApp:
                     navigator.vibrate(50);
                 }
             });
-            window.addEventListener('beforeunload', () => {
-                sessionStorage.setItem('scrollY', window.scrollY);
-            });
-            window.addEventListener('load', () => {
-                const y = sessionStorage.getItem('scrollY');
-                if (y) window.scrollTo(0, parseInt(y));
-            });
+            window.addEventListener('beforeunload', saveScroll);
             </script>
             """
             )
