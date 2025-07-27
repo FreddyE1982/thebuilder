@@ -1145,13 +1145,14 @@ class GymAPI:
         def list_sets(exercise_id: int):
             sets = self.sets.fetch_for_exercise(exercise_id)
             result = []
-            for sid, reps, weight, rpe, start_time, end_time, warm in sets:
+            for sid, reps, weight, rpe, start_time, end_time, warm, pos in sets:
                 entry = {
                     "id": sid,
                     "reps": reps,
                     "weight": weight,
                     "rpe": rpe,
                     "warmup": bool(warm),
+                    "position": pos,
                 }
                 if start_time is not None:
                     entry["start_time"] = start_time

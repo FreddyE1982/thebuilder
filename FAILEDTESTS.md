@@ -1,0 +1,1 @@
+- tests/test_streamlit_app.py::StreamlitAllInteractionsTest::test_all_visible_widgets
