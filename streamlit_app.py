@@ -444,6 +444,18 @@ class GymApp:
                     btn.style.display = window.pageYOffset > window.innerHeight * 0.2 ? 'flex' : 'none';
                 }
             }
+            let lastScrollY = 0;
+            function handleHeaderCollapse() {
+                const header = document.querySelector('.header-wrapper');
+                if (!header) return;
+                const cur = window.pageYOffset;
+                if (cur > lastScrollY && cur > header.offsetHeight) {
+                    header.classList.add('collapsed');
+                } else {
+                    header.classList.remove('collapsed');
+                }
+                lastScrollY = cur;
+            }
             function handleResize() {
                 setMode();
                 setVh();
@@ -457,6 +469,7 @@ class GymApp:
                 window.visualViewport.addEventListener('resize', handleResize);
             }
             window.addEventListener('scroll', toggleScrollTopButton);
+            window.addEventListener('scroll', handleHeaderCollapse);
             window.addEventListener('DOMContentLoaded', handleResize);
             window.addEventListener('load', handleResize);
             handleResize();
@@ -549,6 +562,10 @@ class GymApp:
             }
             .header-wrapper {
                 width: 100%;
+                transition: transform 0.3s ease-in-out;
+            }
+            .header-wrapper.collapsed {
+                transform: translateY(-100%);
             }
             .header-inner {
                 display: flex;
