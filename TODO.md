@@ -66,7 +66,7 @@
 - [x] 63. Create contextual menus on right click for quick actions on workouts.
 - [x] 64. Provide an overview page with widgets summarizing current goals.
 - [x] 65. Add a resizable sidebar for customizing visible metrics.
-- [ ] 66. Support drag and drop to reorder workout templates.
+- [x] 66. Support drag and drop to reorder workout templates.
 - [x] 67. Implement search suggestions as users type in dropdown filters.
 - [x] 68. Offer automatic backup and restore options in settings.
 - [x] 69. Include a timer widget for rest periods between sets.
