@@ -543,6 +543,8 @@ class GymApp:
                     navigator.vibrate(50);
                 }
             });
+            document.addEventListener('input', saveScroll, true);
+            document.addEventListener('change', saveScroll, true);
             window.addEventListener('beforeunload', saveScroll);
             </script>
             """

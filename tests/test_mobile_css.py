@@ -34,6 +34,8 @@ class MobileCSSTest(unittest.TestCase):
         self.assertIn(".metric-card", content)
         self.assertIn("handleTouchStart", content)
         self.assertIn("scrollY", content)
+        self.assertIn("addEventListener('input', saveScroll", content)
+        self.assertIn("addEventListener('change', saveScroll", content)
 
 if __name__ == "__main__":
     unittest.main()
