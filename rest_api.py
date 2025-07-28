@@ -3,8 +3,13 @@ import json
 import time
 import threading
 import asyncio
+import os
+import base64
+import hashlib
+import hmac
+import secrets
 from typing import List, Dict
-from fastapi import FastAPI, HTTPException, Response, Body, APIRouter, Request, WebSocket
+from fastapi import FastAPI, HTTPException, Response, Body, APIRouter, Request, WebSocket, Header
 from db import (
     WorkoutRepository,
     ExerciseRepository,
@@ -47,6 +52,8 @@ from db import (
     GoalRepository,
     ChallengeRepository,
     StatsCacheRepository,
+    UserRepository,
+    AuthTokenRepository,
 )
 from planner_service import PlannerService
 from recommendation_service import RecommendationService
@@ -169,6 +176,8 @@ class GymAPI:
         self.wellness = WellnessRepository(db_path)
         self.heart_rates = HeartRateRepository(db_path)
         self.stats_cache = StatsCacheRepository(db_path)
+        self.users = UserRepository(db_path)
+        self.tokens = AuthTokenRepository(db_path)
         self.goals = GoalRepository(db_path)
         self.challenges = ChallengeRepository(db_path)
         self.watchers: list[WebSocket] = []
@@ -318,6 +327,17 @@ class GymAPI:
             prefix="/muscle_groups", tags=["Muscle Groups"]
         )
 
+        def _hash_password(password: str) -> str:
+            salt = os.urandom(16)
+            digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 100000)
+            return base64.b64encode(salt + digest).decode()
+
+        def _verify_password(stored: str, password: str) -> bool:
+            data = base64.b64decode(stored.encode())
+            salt, digest = data[:16], data[16:]
+            new_digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 100000)
+            return hmac.compare_digest(digest, new_digest)
+
         @self.app.get(
             "/health",
             summary="Health check",
@@ -344,6 +364,25 @@ class GymAPI:
             finally:
                 if ws in self.watchers:
                     self.watchers.remove(ws)
+
+        @self.app.post("/users/register")
+        def register_user(username: str = Body(...), password: str = Body(...)):
+            try:
+                pwd = _hash_password(password)
+                uid = self.users.register(username, pwd)
+                return {"id": uid}
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
+        @self.app.post("/token")
+        def login(username: str = Body(...), password: str = Body(...)):
+            rec = self.users.get_by_username(username)
+            if not rec or not _verify_password(rec[2], password):
+                raise HTTPException(status_code=401, detail="invalid credentials")
+            token = secrets.token_hex(16)
+            expiry = (datetime.datetime.now() + datetime.timedelta(hours=1)).isoformat()
+            self.tokens.create(token, rec[0], expiry)
+            return {"token": token}
 
         @equipment_router.get("/types")
         def list_equipment_types():
