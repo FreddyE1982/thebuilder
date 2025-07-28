@@ -36,6 +36,7 @@ from db import (
     FavoriteExerciseRepository,
     FavoriteTemplateRepository,
     FavoriteWorkoutRepository,
+    ReactionRepository,
     TagRepository,
     GoalRepository,
     ChallengeRepository,
@@ -83,6 +84,7 @@ class GymAPI:
         self.favorites = FavoriteExerciseRepository(db_path)
         self.favorite_templates = FavoriteTemplateRepository(db_path)
         self.favorite_workouts = FavoriteWorkoutRepository(db_path)
+        self.reactions = ReactionRepository(db_path)
         self.tags = TagRepository(db_path)
         self.pyramid_tests = PyramidTestRepository(db_path)
         self.pyramid_entries = PyramidEntryRepository(db_path)
@@ -686,6 +688,21 @@ class GymAPI:
                 },
             )
 
+        @self.app.get("/workouts/{workout_id}/calories")
+        def workout_calories(workout_id: int):
+            cal = self.statistics.workout_calories(workout_id)
+            return {"calories": cal}
+
+        @self.app.post("/workouts/{workout_id}/reactions")
+        def add_reaction(workout_id: int, emoji: str = Body(...)):
+            self.reactions.react(workout_id, emoji)
+            return {"status": "recorded"}
+
+        @self.app.get("/workouts/{workout_id}/reactions")
+        def list_reactions(workout_id: int):
+            data = self.reactions.fetch_all(workout_id)
+            return [{"emoji": e, "count": c} for e, c in data]
+
         @self.app.put("/workouts/{workout_id}/type")
         def update_workout_type(workout_id: int, training_type: str):
             self.workouts.set_training_type(workout_id, training_type)
@@ -927,6 +944,11 @@ class GymAPI:
         def use_planned_workout(plan_id: int):
             workout_id = self.planner.create_workout_from_plan(plan_id)
             return {"id": workout_id}
+
+        @self.app.get("/planned_workouts/{plan_id}/progress")
+        def planned_progress(plan_id: int):
+            pct = self.sets.planned_completion(plan_id)
+            return {"percent": pct}
 
         @self.app.post("/templates")
         def create_template(name: str, training_type: str = "strength"):
@@ -2166,6 +2188,7 @@ class GymAPI:
             auto_open_last_workout: bool = None,
             email_weekly_enabled: bool = None,
             weekly_report_email: str = None,
+            hide_completed_plans: bool = None,
         ):
             if body_weight is not None:
                 self.settings.set_float("body_weight", body_weight)
@@ -2251,6 +2274,18 @@ class GymAPI:
                 self.settings.set_bool("email_weekly_enabled", email_weekly_enabled)
             if weekly_report_email is not None:
                 self.settings.set_text("weekly_report_email", weekly_report_email)
+            if hide_completed_plans is not None:
+                self.settings.set_bool("hide_completed_plans", hide_completed_plans)
+            return {"status": "updated"}
+
+        @self.app.get("/settings/bookmarks")
+        def get_bookmarks():
+            return {"views": self.settings.get_list("bookmarked_views")}
+
+        @self.app.post("/settings/bookmarks")
+        def set_bookmarks(views: str = Body(...)):
+            items = [v for v in views.split(",") if v]
+            self.settings.set_list("bookmarked_views", items)
             return {"status": "updated"}
 
         @self.app.post("/settings/delete_all")

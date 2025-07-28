@@ -371,6 +371,16 @@ class Database:
                 );""",
             ["workout_id"],
         ),
+        "workout_reactions": (
+            """CREATE TABLE workout_reactions (
+                    workout_id INTEGER NOT NULL,
+                    emoji TEXT NOT NULL,
+                    count INTEGER NOT NULL DEFAULT 0,
+                    PRIMARY KEY(workout_id, emoji),
+                    FOREIGN KEY(workout_id) REFERENCES workouts(id) ON DELETE CASCADE
+                );""",
+            ["workout_id", "emoji", "count"],
+        ),
         "tags": (
             """CREATE TABLE tags (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -667,6 +677,8 @@ class Database:
             "weight_unit": "kg",
             "time_format": "24h",
             "quick_weights": "20,40,60,80,100",
+            "bookmarked_views": "",
+            "hide_completed_plans": "0",
         }
         with self._connection() as conn:
             for key, value in defaults.items():
@@ -775,6 +787,20 @@ class WorkoutRepository(BaseRepository):
             "UPDATE workouts SET rating = ? WHERE id = ?;",
             (rating, workout_id),
         )
+
+    def workout_duration(self, workout_id: int) -> float | None:
+        rows = self.fetch_all(
+            "SELECT start_time, end_time FROM workouts WHERE id = ?;",
+            (workout_id,),
+        )
+        if not rows:
+            return None
+        start, end = rows[0]
+        if not start or not end:
+            return None
+        t0 = datetime.datetime.fromisoformat(start)
+        t1 = datetime.datetime.fromisoformat(end)
+        return (t1 - t0).total_seconds()
 
     def fetch_ratings(
         self,
@@ -1241,6 +1267,21 @@ class SetRepository(BaseRepository):
             "sets": count,
             "avg_rpe": round(avg_rpe, 2),
         }
+
+    def planned_completion(self, plan_id: int) -> float:
+        total_rows = self.fetch_all(
+            "SELECT COUNT(*) FROM planned_sets ps JOIN planned_exercises pe ON ps.planned_exercise_id = pe.id WHERE pe.planned_workout_id = ?;",
+            (plan_id,),
+        )
+        total = int(total_rows[0][0]) if total_rows else 0
+        if total == 0:
+            return 0.0
+        logged_rows = self.fetch_all(
+            "SELECT COUNT(*) FROM sets s JOIN planned_sets ps ON s.planned_set_id = ps.id JOIN planned_exercises pe ON ps.planned_exercise_id = pe.id WHERE pe.planned_workout_id = ?;",
+            (plan_id,),
+        )
+        logged = int(logged_rows[0][0]) if logged_rows else 0
+        return round(100 * logged / total, 2)
 
     def recent_equipment(self, limit: int = 5) -> list[str]:
         """Return recently used equipment names ordered by recency."""
@@ -1709,6 +1750,7 @@ class SettingsRepository(BaseRepository):
             "show_onboarding",
             "auto_open_last_workout",
             "email_weekly_enabled",
+            "hide_completed_plans",
         }
         for k, v in rows:
             if k in bool_keys:
@@ -1750,6 +1792,7 @@ class SettingsRepository(BaseRepository):
                 "show_onboarding",
                 "auto_open_last_workout",
                 "email_weekly_enabled",
+                "hide_completed_plans",
             }
             for key, value in data.items():
                 val = str(value)
@@ -1802,6 +1845,13 @@ class SettingsRepository(BaseRepository):
     def set_int(self, key: str, value: int) -> None:
         self.set_text(key, str(value))
 
+    def get_list(self, key: str) -> list[str]:
+        val = self.get_text(key, "")
+        return [v for v in val.split(",") if v]
+
+    def set_list(self, key: str, items: list[str]) -> None:
+        self.set_text(key, ",".join(items))
+
     def get_bool(self, key: str, default: bool) -> bool:
         return self.get_text(key, "1" if default else "0") in {
             "1",
@@ -1841,6 +1891,7 @@ class SettingsRepository(BaseRepository):
             "show_onboarding",
             "auto_open_last_workout",
             "email_weekly_enabled",
+            "hide_completed_plans",
         }
         for k in bool_keys:
             if k in data:
@@ -2837,6 +2888,34 @@ class FavoriteWorkoutRepository(BaseRepository):
             "SELECT workout_id FROM favorite_workouts ORDER BY workout_id;"
         )
         return [int(r[0]) for r in rows]
+
+
+class ReactionRepository(BaseRepository):
+    """Repository for storing emoji reactions to workouts."""
+
+    def react(self, workout_id: int, emoji: str) -> None:
+        row = self.fetch_all(
+            "SELECT count FROM workout_reactions WHERE workout_id = ? AND emoji = ?;",
+            (workout_id, emoji),
+        )
+        if row:
+            new_count = int(row[0][0]) + 1
+            self.execute(
+                "UPDATE workout_reactions SET count = ? WHERE workout_id = ? AND emoji = ?;",
+                (new_count, workout_id, emoji),
+            )
+        else:
+            self.execute(
+                "INSERT INTO workout_reactions (workout_id, emoji, count) VALUES (?, ?, 1);",
+                (workout_id, emoji),
+            )
+
+    def fetch_all(self, workout_id: int) -> list[tuple[str, int]]:
+        rows = super().fetch_all(
+            "SELECT emoji, count FROM workout_reactions WHERE workout_id = ? ORDER BY emoji;",
+            (workout_id,),
+        )
+        return [(r[0], int(r[1])) for r in rows]
 
 
 class TemplateWorkoutRepository(BaseRepository):

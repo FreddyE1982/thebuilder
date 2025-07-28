@@ -44,6 +44,7 @@ from db import (
     FavoriteExerciseRepository,
     FavoriteTemplateRepository,
     FavoriteWorkoutRepository,
+    ReactionRepository,
     TagRepository,
     GoalRepository,
     NotificationRepository,
@@ -197,6 +198,8 @@ class GymApp:
             ).split(",")
             if v
         ]
+        self.bookmarks = self.settings_repo.get_list("bookmarked_views")
+        self.hide_completed_plans = self.settings_repo.get_bool("hide_completed_plans", False)
         self.add_set_key = self.settings_repo.get_text("hotkey_add_set", "a")
         self.tab_keys = self.settings_repo.get_text("hotkey_tab_keys", "1,2,3,4")
         self.sidebar_width = self.settings_repo.get_float("sidebar_width", 18.0)
@@ -229,6 +232,7 @@ class GymApp:
         self.favorites_repo = FavoriteExerciseRepository(db_path)
         self.favorite_templates_repo = FavoriteTemplateRepository(db_path)
         self.favorite_workouts_repo = FavoriteWorkoutRepository(db_path)
+        self.reactions = ReactionRepository(db_path)
         self.tags_repo = TagRepository(db_path)
         self.goals_repo = GoalRepository(db_path)
         self.challenges_repo = ChallengeRepository(db_path)
@@ -1134,6 +1138,7 @@ class GymApp:
                 font-size: 0.75rem;
             }
             .training-badge { padding: 0.1rem 0.4rem; border-radius: 0.25rem; color: #fff; font-size: 0.75rem; }
+            .progress-ring { width: 40px; height: 40px; border-radius: 50%; background: conic-gradient(var(--accent-color) calc(var(--val)*1%), #e0e0e0 0); }
             .tt-strength { background: #4caf50; }
             .tt-hypertrophy { background: #9c27b0; }
             .tt-highintensity { background: #f39c12; }
@@ -2510,6 +2515,9 @@ class GymApp:
                     )
                 if start_time:
                     st.write(f"Start: {self._format_time(start_time)}")
+                    if not end_time:
+                        elapsed = (datetime.datetime.now() - datetime.datetime.fromisoformat(start_time)).total_seconds()
+                        st.write(f"Time: {int(elapsed)}s")
                 if end_time:
                     st.write(f"End: {self._format_time(end_time)}")
                 st.markdown("<div class='form-grid'>", unsafe_allow_html=True)
@@ -2620,7 +2628,10 @@ class GymApp:
                 )
                 st.session_state.selected_planned_workout = int(selected)
                 for pid, pdate, ptype in plans:
+                    prog = self.sets.planned_completion(pid)
+                    ring = f"<div class='progress-ring' style='--val:{prog};'></div>"
                     with st.expander(f"{pdate} (ID {pid})", expanded=False):
+                        st.markdown(ring, unsafe_allow_html=True)
                         st.markdown("<div class='form-grid'>", unsafe_allow_html=True)
                         edit_date = st.date_input(
                             "New Date",
@@ -2727,11 +2738,13 @@ class GymApp:
                     for ex_id, name, eq_name, note in exercises:
                         self._exercise_card(ex_id, name, eq_name, note)
                 summary = self.sets.workout_summary(workout_id)
+                cal = self.stats.workout_calories(workout_id)
                 with st.expander("Workout Summary", expanded=True):
                     metrics = [
                         ("Volume", summary["volume"]),
                         ("Sets", summary["sets"]),
                         ("Avg RPE", summary["avg_rpe"]),
+                        ("Calories", cal),
                     ]
                     self._metric_grid(metrics)
                 self._heart_rate_section(workout_id)
@@ -3169,7 +3182,25 @@ class GymApp:
                 st.session_state[f"new_reps_{exercise_id}"] = int(l[1])
                 st.session_state[f"new_weight_{exercise_id}"] = float(l[2])
                 st.session_state[f"new_rpe_{exercise_id}"] = int(l[3])
-        if with_button and st.button("Add Set", key=f"add_set_{exercise_id}"):
+        if with_button:
+            cols = st.columns(2)
+            if cols[0].button("Add Working Set", key=f"add_set_{exercise_id}"):
+                btn_warm = False
+            elif cols[1].button("Add Warmup Set", key=f"add_warm_{exercise_id}"):
+                btn_warm = True
+            else:
+                btn_warm = None
+            if btn_warm is not None:
+                errors = {}
+                if reps < 1:
+                    errors["reps"] = "required"
+                if weight <= 0:
+                    errors["weight"] = "required"
+                if errors:
+                    st.session_state[f"set_errors_{exercise_id}"] = errors
+                else:
+                    st.session_state.pop(f"set_errors_{exercise_id}", None)
+                    self._submit_set(exercise_id, reps, weight, rpe, note, duration, btn_warm)
             errors = {}
             if reps < 1:
                 errors["reps"] = "required"
@@ -4577,6 +4608,15 @@ class GymApp:
                 st.markdown(
                     f"**Volume:** {summary['volume']} | **Sets:** {summary['sets']} | **Avg RPE:** {summary['avg_rpe']}"
                 )
+                reacts = self.reactions.fetch_all(wid)
+                mapping = {e: c for e, c in reacts}
+                emjs = ["👍", "🔥", "💯", "🤢"]
+                rcols = st.columns(len(emjs))
+                for idx, em in enumerate(emjs):
+                    label = f"{em} {mapping.get(em,0)}"
+                    if rcols[idx].button(label, key=f"react_{wid}_{idx}"):
+                        self.reactions.react(wid, em)
+                        st.experimental_rerun()
                 tags = [n for _, n in self.tags_repo.fetch_for_workout(wid)]
                 if tags:
                     st.markdown("**Tags:** " + ", ".join(tags))
@@ -4629,6 +4669,8 @@ class GymApp:
 
     def _stats_tab(self) -> None:
         st.header("Statistics")
+        if self.bookmarks:
+            st.markdown("**Bookmarks:** " + ", ".join(self.bookmarks))
         with st.expander("Filters", expanded=False):
             exercises = [""] + self.exercise_names_repo.fetch_all()
             ex_choice = st.selectbox("Exercise", exercises, key="stats_ex")
@@ -5425,6 +5467,8 @@ class GymApp:
             end_str = end.isoformat()
         logged = self.workouts.fetch_all_workouts(start_str, end_str)
         planned = self.planned_workouts.fetch_all(start_str, end_str)
+        if self.settings_repo.get_bool("hide_completed_plans", False):
+            planned = [p for p in planned if self.sets.planned_completion(p[0]) < 100]
         rows = []
         for wid, date, _s, _e, t_type, _notes, _rating in logged:
             rows.append(
@@ -5487,6 +5531,8 @@ class GymApp:
         start = datetime.date.today()
         end = start + datetime.timedelta(days=30)
         rows = self.planned_workouts.fetch_all(start.isoformat(), end.isoformat())
+        if self.settings_repo.get_bool("hide_completed_plans", False):
+            rows = [r for r in rows if self.sets.planned_completion(r[0]) < 100]
         if not rows:
             st.info("No upcoming plans")
             return
@@ -5765,6 +5811,15 @@ class GymApp:
                     value=",".join(str(int(w)) for w in self.quick_weights),
                     help="Comma separated weight values",
                 )
+                bookmark_in = st.text_input(
+                    "Bookmarked Analytics",
+                    value=",".join(self.settings_repo.get_list("bookmarked_views")),
+                    help="Comma separated analytics view names",
+                )
+                hide_completed_opt = st.checkbox(
+                    "Hide Completed Plans",
+                    value=self.settings_repo.get_bool("hide_completed_plans", False),
+                )
             with st.expander("Gamification", expanded=True):
                 game_enabled = st.checkbox(
                     "Enable Gamification",
@@ -5909,9 +5964,13 @@ class GymApp:
                 self.settings_repo.set_text("hotkey_add_set", add_key_in or "a")
                 self.settings_repo.set_text("hotkey_tab_keys", tab_keys_in or "1,2,3,4")
                 self.settings_repo.set_text("quick_weights", qw_in)
+                self.settings_repo.set_list("bookmarked_views", [v for v in bookmark_in.split(",") if v])
+                self.settings_repo.set_bool("hide_completed_plans", hide_completed_opt)
                 self.add_set_key = add_key_in or "a"
                 self.tab_keys = tab_keys_in or "1,2,3,4"
                 self.quick_weights = [float(v) for v in qw_in.split(",") if v]
+                self.bookmarks = [v for v in bookmark_in.split(",") if v]
+                self.hide_completed_plans = hide_completed_opt
                 self.settings_repo.set_float("sidebar_width", sb_width)
                 self.sidebar_width = sb_width
                 self._inject_responsive_css()

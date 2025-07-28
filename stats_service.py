@@ -1659,6 +1659,21 @@ class StatisticsService:
             "max": max(ratings),
         }
 
+    def workout_calories(self, workout_id: int) -> float:
+        """Estimate calories burned for a workout."""
+        if self.workouts is None:
+            return 0.0
+        summary = self.sets.workout_summary(workout_id)
+        duration = self.workouts.workout_duration(workout_id)
+        if duration is None:
+            duration = summary["sets"] * 90
+        weight = 80.0
+        if self.settings is not None:
+            weight = self.settings.get_float("body_weight", 80.0)
+        cals = (summary["volume"] / weight) * 0.1
+        cals += (duration / 60.0) * 6
+        return round(cals, 2)
+
     def bmi(self) -> float:
         """Return current BMI using latest weight and height setting."""
         if self.settings is None:

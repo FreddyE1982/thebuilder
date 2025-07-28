@@ -90,15 +90,15 @@
  - [x] 87. Surface recently used filters at the top of dropdowns.
 - [x] 88. Provide collapsible filter sections to declutter the interface.
 - [x] 89. Add inline editing for workout notes directly in the history list.
-- [ ] 90. Include a progress ring showing completion percentage of planned sets.
-- [ ] 91. Offer bookmarking of favorite analytics views in settings.
-- [ ] 92. Integrate emoji reactions for workouts in the history feed.
+- [x] 90. Include a progress ring showing completion percentage of planned sets.
+- [x] 91. Offer bookmarking of favorite analytics views in settings.
+- [x] 92. Integrate emoji reactions for workouts in the history feed.
 - [ ] 93. Add a slide-out panel with quick tips relevant to the current tab.
 - [ ] 94. Support automatic scrolling to today's date in calendar views.
-- [ ] 95. Display a running timer when logging active workouts.
+- [x] 95. Display a running timer when logging active workouts.
 - [x] 96. Allow copying an existing workout as a template with one click.
- - [x] 97. Provide optional large-font mode for accessibility.
-- [ ] 98. Add split buttons for logging warm-up versus working sets.
+- [x] 97. Provide optional large-font mode for accessibility.
+- [x] 98. Add split buttons for logging warm-up versus working sets.
 - [x] 99. Introduce keyboard navigation hints in footer tooltips.
 - [ ] 100. Enable exporting analytics charts as images from the GUI.
 - [ ] 101. Add dynamic breadcrumbs to show navigation context on mobile.
@@ -108,6 +108,6 @@
 - [ ] 105. Add quick actions for sharing workouts via social media.
 - [ ] 106. Offer per-user customization for which tabs appear in the nav bar.
 - [ ] 107. Include example workouts for new users accessible from onboarding.
-- [ ] 108. Display estimated calories burned per workout in the summary.
-- [ ] 109. Add option to hide completed planned workouts from the calendar.
+- [x] 108. Display estimated calories burned per workout in the summary.
+- [x] 109. Add option to hide completed planned workouts from the calendar.
 - [ ] 110. Support inline graphs of weight progression within the workout log.
