@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Optional, Generator, Callable
 import streamlit as st
 import streamlit.components.v1 as components
+from streamlit.runtime import scriptrunner
 import altair as alt
 from altair.utils.deprecation import AltairDeprecationWarning
 import warnings
@@ -326,9 +327,17 @@ class GymApp:
         )
         self._state_init()
 
+    def _get_ctx(self) -> scriptrunner.ScriptRunContext | None:
+        """Return the current ScriptRunContext if available."""
+        return scriptrunner.get_script_run_ctx(suppress_warning=True)
+
     def _trigger_refresh(self) -> None:
-        """Trigger a refresh without calling st.rerun."""
-        st.session_state.refresh_counter = st.session_state.get("refresh_counter", 0) + 1
+        """Trigger a refresh by updating session state."""
+        ctx = self._get_ctx()
+        sess = ctx.session_state if ctx else st.session_state
+        if "refresh_counter" not in sess:
+            sess["refresh_counter"] = 0
+        sess["refresh_counter"] += 1
 
     def _refresh(self) -> None:
         """Reload the application state."""
@@ -3294,7 +3303,7 @@ class GymApp:
                 label = self._format_weight(val)
                 if cols[idx].button(label, key=f"qw_{exercise_id}_{idx}"):
                     st.session_state[qkey] = val
-                    st.rerun()
+                    self._trigger_refresh()
         if errs.get("weight"):
             st.error("Weight required")
         rpe = st.selectbox(
