@@ -46,6 +46,32 @@ The Builder is a full featured workout planner, logger and analytics platform bu
 - Review workout ratings via `/stats/rating_history` and `/stats/rating_stats`.
 - Analyze heart rate zone distribution with `/stats/heart_rate_zones`.
 
+## Database Schema
+
+All data is stored in a local SQLite database. The key tables are:
+
+| Table | Purpose |
+|-------|---------|
+| `workouts` | Logged workout sessions |
+| `exercises` | Exercises within a workout |
+| `sets` | Individual sets for an exercise |
+| `planned_workouts` | Future planned sessions |
+| `planned_exercises` | Exercises in a planned workout |
+| `planned_sets` | Planned sets for a planned exercise |
+| `workout_templates` | Saved workout templates |
+| `template_exercises` | Exercises belonging to templates |
+| `template_sets` | Sets for a template exercise |
+| `equipment` | Available equipment items |
+| `muscles` | Muscle names and aliases |
+| `exercise_catalog` | Master list of exercises |
+| `body_weight_logs` | Logged body weight entries |
+| `wellness_logs` | Daily wellness metrics |
+| `heart_rate_logs` | Heart rate measurements |
+| `tags` | User-defined workout tags |
+| `ml_models` | Stored machine learning model states |
+| `ml_logs` | Predictions with confidence values |
+
+
 ## Installation
 
 Python 3.9+ is required. Install the dependencies with:
