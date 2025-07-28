@@ -688,6 +688,16 @@ class GymAPI:
                 },
             )
 
+        @self.app.get("/workouts/{workout_id}/share")
+        def share_workout(workout_id: int):
+            wid, date, *_ = self.workouts.fetch_detail(workout_id)
+            lines = [f"Workout on {date}"]
+            for ex_id, name, _eq, _note in self.exercises.fetch_for_workout(workout_id):
+                sets = self.sets.fetch_for_exercise(ex_id)
+                sstr = ", ".join(f"{r}x{w}" for _sid, r, w, _rp, *_rest in sets)
+                lines.append(f"{name}: {sstr}")
+            return {"text": "\n".join(lines)}
+
         @self.app.get("/workouts/{workout_id}/calories")
         def workout_calories(workout_id: int):
             cal = self.statistics.workout_calories(workout_id)
