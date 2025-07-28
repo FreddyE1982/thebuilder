@@ -164,15 +164,22 @@ class GymAPI:
             self.workouts,
             self.heart_rates,
         )
-        self.app = FastAPI()
+        self.app = FastAPI(
+            title="Gym API",
+            description="REST API for workout logging and analytics",
+        )
         self._setup_routes()
 
     def _setup_routes(self) -> None:
-        equipment_router = APIRouter(prefix="/equipment")
-        muscles_router = APIRouter(prefix="/muscles")
-        muscle_groups_router = APIRouter(prefix="/muscle_groups")
+        equipment_router = APIRouter(prefix="/equipment", tags=["Equipment"])
+        muscles_router = APIRouter(prefix="/muscles", tags=["Muscles"])
+        muscle_groups_router = APIRouter(prefix="/muscle_groups", tags=["Muscle Groups"])
 
-        @self.app.get("/health")
+        @self.app.get(
+            "/health",
+            summary="Health check",
+            description="Verify API and database connectivity.",
+        )
         def health():
             """Return API and database connection status."""
             try:
@@ -558,7 +565,11 @@ class GymAPI:
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
 
-        @self.app.post("/workouts")
+        @self.app.post(
+            "/workouts",
+            summary="Create workout",
+            description="Create a new workout session.",
+        )
         def create_workout(
             date: str = None,
             training_type: str = "strength",
@@ -573,7 +584,10 @@ class GymAPI:
                     else datetime.date.fromisoformat(date)
                 )
             except ValueError:
-                raise HTTPException(status_code=400, detail="invalid date format")
+                raise HTTPException(
+                    status_code=400,
+                    detail="date must be in YYYY-MM-DD format",
+                )
             if workout_date > datetime.date.today():
                 raise HTTPException(
                     status_code=400, detail="date cannot be in the future"
@@ -587,7 +601,11 @@ class GymAPI:
             )
             return {"id": workout_id}
 
-        @self.app.get("/workouts")
+        @self.app.get(
+            "/workouts",
+            summary="List workouts",
+            description="Retrieve logged workouts optionally filtered by date range.",
+        )
         def list_workouts(
             start_date: str = None,
             end_date: str = None,
@@ -606,7 +624,11 @@ class GymAPI:
             rows = self.workouts.search(query)
             return [{"id": wid, "date": date} for wid, date in rows]
 
-        @self.app.get("/workouts/history")
+        @self.app.get(
+            "/workouts/history",
+            summary="Workout history",
+            description="Detailed workout list with volume and RPE summary.",
+        )
         def workout_history(
             start_date: str,
             end_date: str,
@@ -997,12 +1019,19 @@ class GymAPI:
                 for tid, name, t in templates
             ]
 
-        @self.app.post("/templates/order")
+        @self.app.post(
+            "/templates/order",
+            summary="Reorder templates",
+            description="Update the display order of templates using comma-separated ids.",
+        )
         def reorder_templates(order: str):
             try:
                 ids = [int(i) for i in order.split(",") if i]
             except ValueError:
-                raise HTTPException(status_code=400, detail="invalid ids")
+                raise HTTPException(
+                    status_code=400,
+                    detail="invalid order parameter; expected comma-separated ids",
+                )
             try:
                 self.template_workouts.reorder(ids)
                 return {"status": "updated"}
@@ -1068,7 +1097,11 @@ class GymAPI:
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
 
-        @self.app.post("/exercises/{exercise_id}/sets")
+        @self.app.post(
+            "/exercises/{exercise_id}/sets",
+            summary="Add set",
+            description="Record a new set for the specified exercise.",
+        )
         def add_set(
             exercise_id: int,
             reps: int,
@@ -1104,7 +1137,11 @@ class GymAPI:
             self.recommender.record_result(set_id, reps, weight, rpe)
             return {"id": set_id}
 
-        @self.app.post("/exercises/{exercise_id}/bulk_sets")
+        @self.app.post(
+            "/exercises/{exercise_id}/bulk_sets",
+            summary="Bulk add sets",
+            description="Add multiple sets separated by '|' in 'reps,weight,rpe' format.",
+        )
         def bulk_add_sets(exercise_id: int, sets: str):
             lines = [l.strip() for l in sets.split("|") if l.strip()]
             entries: list[tuple[int, float, int]] = []
@@ -1113,7 +1150,10 @@ class GymAPI:
                     r_s, w_s, rpe_s = [p.strip() for p in line.split(",")]
                     entries.append((int(r_s), float(w_s), int(rpe_s)))
                 except Exception:
-                    raise HTTPException(status_code=400, detail="invalid format")
+                    raise HTTPException(
+                        status_code=400,
+                        detail="invalid sets format; expected 'reps,weight,rpe|...'",
+                    )
             try:
                 ids = self.sets.bulk_add(exercise_id, entries)
             except ValueError as e:
@@ -1256,12 +1296,19 @@ class GymAPI:
                 result.append(entry)
             return result
 
-        @self.app.post("/exercises/{exercise_id}/set_order")
+        @self.app.post(
+            "/exercises/{exercise_id}/set_order",
+            summary="Reorder sets",
+            description="Update set order using comma-separated ids",
+        )
         def reorder_sets(exercise_id: int, order: str):
             try:
                 ids = [int(i) for i in order.split(",") if i]
             except ValueError:
-                raise HTTPException(status_code=400, detail="invalid ids")
+                raise HTTPException(
+                    status_code=400,
+                    detail="invalid order parameter; expected comma-separated ids",
+                )
             try:
                 self.sets.reorder_sets(exercise_id, ids)
                 return {"status": "updated"}
@@ -1773,7 +1820,10 @@ class GymAPI:
                     else datetime.date.fromisoformat(date)
                 )
             except ValueError:
-                raise HTTPException(status_code=400, detail="invalid date format")
+                raise HTTPException(
+                    status_code=400,
+                    detail="date must be in YYYY-MM-DD format",
+                )
             values = [float(w) for w in weights.split("|") if w]
             if not values:
                 raise HTTPException(status_code=400, detail="weights required")
@@ -1795,7 +1845,10 @@ class GymAPI:
                 "nutrition_quality": nutrition_quality,
             }
             if not ExercisePrescription._validate_pyramid_test(data):
-                raise HTTPException(status_code=400, detail="invalid pyramid test")
+                raise HTTPException(
+                    status_code=400,
+                    detail="invalid pyramid test data; check weights and metadata",
+                )
             tid = self.pyramid_tests.create(
                 test_date.isoformat(),
                 exercise_name=exercise_name,
@@ -1875,7 +1928,10 @@ class GymAPI:
                     else datetime.date.fromisoformat(date)
                 )
             except ValueError:
-                raise HTTPException(status_code=400, detail="invalid date format")
+                raise HTTPException(
+                    status_code=400,
+                    detail="date must be in YYYY-MM-DD format",
+                )
             wid = self.body_weights.log(log_date.isoformat(), weight)
             return {"id": wid}
 
@@ -1929,7 +1985,10 @@ class GymAPI:
                     else datetime.date.fromisoformat(date)
                 )
             except ValueError:
-                raise HTTPException(status_code=400, detail="invalid date format")
+                raise HTTPException(
+                    status_code=400,
+                    detail="date must be in YYYY-MM-DD format",
+                )
             try:
                 wid = self.wellness.log(
                     log_date.isoformat(),
