@@ -6,17 +6,17 @@
 4. Document API endpoints with OpenAPI descriptions.
 5. Add user authentication and authorization for workout editing.
 [complete] 6. Implement pagination on workout history API.
-7. Create CLI to export workouts to CSV and JSON.
+[complete] 7. Create CLI to export workouts to CSV and JSON.
 8. Add scheduling for regular email reports.
 9. Improve planner_service with goal-based plan suggestions.
-10. Validate YAML settings via schema on startup.
-11. Add backup/restore commands for the SQLite database.
-12. Add continuous integration workflow running tests on push.
+[complete] 10. Validate YAML settings via schema on startup.
+[complete] 11. Add backup/restore commands for the SQLite database.
+[complete] 12. Add continuous integration workflow running tests on push.
 13. Expand statistics to include per-muscle progress charts.
 [complete] 14. Add endpoint for editing wellness logs.
-15. Create responsive mobile layout tests for each GUI tab.
-16. Include weight unit conversion support in stats_service.
-17. Add dark/light theme switch stored in settings.
+[complete] 15. Create responsive mobile layout tests for each GUI tab.
+[complete] 16. Include weight unit conversion support in stats_service.
+[complete] 17. Add dark/light theme switch stored in settings.
 18. Implement two-factor authentication for new user login.
 19. Add localization framework for multi-language UI.
 20. Refactor database layer to async for FastAPI performance.
@@ -38,8 +38,8 @@
 36. Add voice command support in the GUI.
 37. Add voice feedback for timer events using STT.
 [complete] 38. Refactor tools.py to separate math utilities from CLI utilities.
-39. Add coverage reporting to tests.
-40. Document environment variables for deployment in README.
+[complete] 39. Add coverage reporting to tests.
+[complete] 40. Document environment variables for deployment in README.
 41. Add support for external database like PostgreSQL.
 42. Add repository pattern for ml_service states.
 43. Add progress bar to Streamlit when uploading CSV files.
@@ -76,7 +76,7 @@
 74. Document database schema in README.
 75. Add `--demo` mode for generating fake data.
 76. Encrypt sensitive settings in YAML with keyring.
-77. Add endpoint to clear cached statistics.
+[complete] 77. Add endpoint to clear cached statistics.
 78. Provide gender-neutral avatar images in GUI.
 79. Implement plugin architecture for custom ML models.
 80. Add data migration script for schema changes.
@@ -85,7 +85,7 @@
 83. Provide user-friendly onboarding wizard in GUI.
 84. Add long-term trend analytics (moving averages).
 85. Support per-workout timezone handling.
-86. Implement automatic database vacuuming.
+[complete] 86. Implement automatic database vacuuming.
 87. Add drag-and-drop reordering for workout templates.
 88. Integrate speech recognition for quick set entry.
 89. Create official REST client library in Python.

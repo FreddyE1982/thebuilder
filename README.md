@@ -70,6 +70,16 @@ uvicorn rest_api:app --reload
 
 Data is stored in `workout.db` and settings in `settings.yaml` in the current directory.
 
+### Environment Variables
+
+The following variables control runtime paths:
+
+| Variable  | Description                      | Default        |
+|-----------|----------------------------------|----------------|
+| `DB_PATH` | Path to the SQLite database file | `workout.db`   |
+| `YAML_PATH` | Path to the settings YAML       | `settings.yaml`|
+| `TEST_MODE` | Enable simplified test behaviour | `0` |
+
 ### Deleting Data
 
 Send the parameter `confirmation=Yes, I confirm` to any of the endpoints below:
@@ -83,7 +93,7 @@ Send the parameter `confirmation=Yes, I confirm` to any of the endpoints below:
 After installing the requirements you can run the automated tests with:
 
 ```bash
-pytest -q
+pytest --cov=.
 ```
 
 The tests exercise the entire REST API including machine learning features and a long‑term usage simulation covering six months of activity.

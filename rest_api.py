@@ -2097,8 +2097,17 @@ class GymAPI:
                 raise HTTPException(status_code=404, detail=str(e))
 
         @self.app.get("/stats/weight_stats")
-        def stats_weight_stats(start_date: str = None, end_date: str = None):
-            return self.statistics.weight_stats(start_date, end_date)
+        def stats_weight_stats(
+            start_date: str = None,
+            end_date: str = None,
+            unit: str = "kg",
+        ):
+            return self.statistics.weight_stats(start_date, end_date, unit)
+
+        @self.app.post("/stats/cache/clear")
+        def stats_cache_clear():
+            self.statistics.clear_cache()
+            return {"status": "cleared"}
 
         @self.app.get("/stats/readiness_stats")
         def stats_readiness_stats(start_date: str = None, end_date: str = None):
