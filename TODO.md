@@ -55,7 +55,7 @@
 53. Add route to mark challenges as completed automatically.
 54. Implement search for exercises by tags in GUI.
 55. Support uploading heart rate monitor data in bulk.
-56. Extend rest_api tests to cover error conditions.
+[complete] 56. Extend rest_api tests to cover error conditions.
 57. Add dynamic equipment suggestion using ML predictions.
 [complete] 58. Provide sample data seeding script.
 [complete] 59. Add instructions for customizing CSS in README.
@@ -74,7 +74,7 @@
 72. Add rating distribution chart in Stats tab.
 [complete] 73. Validate equipment type names to avoid duplicates.
 [complete] 74. Document database schema in README.
-75. Add `--demo` mode for generating fake data.
+[complete] 75. Add `--demo` mode for generating fake data.
 76. Encrypt sensitive settings in YAML with keyring.
 [complete] 77. Add endpoint to clear cached statistics.
 78. Provide gender-neutral avatar images in GUI.
