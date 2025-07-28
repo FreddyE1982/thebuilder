@@ -9,7 +9,17 @@ import hashlib
 import hmac
 import secrets
 from typing import List, Dict
-from fastapi import FastAPI, HTTPException, Response, Body, APIRouter, Request, WebSocket, Header
+from fastapi import (
+    FastAPI,
+    HTTPException,
+    Response,
+    Body,
+    APIRouter,
+    Request,
+    WebSocket,
+    Header,
+    Depends,
+)
 from db import (
     WorkoutRepository,
     ExerciseRepository,
@@ -383,6 +393,16 @@ class GymAPI:
             expiry = (datetime.datetime.now() + datetime.timedelta(hours=1)).isoformat()
             self.tokens.create(token, rec[0], expiry)
             return {"token": token}
+
+        def _require_auth(request: Request) -> int:
+            """Return user id for valid auth token or raise."""
+            token = request.headers.get("Authorization")
+            if not token:
+                raise HTTPException(status_code=401, detail="missing token")
+            uid = self.tokens.get_user(token)
+            if uid is None:
+                raise HTTPException(status_code=401, detail="invalid token")
+            return uid
 
         @equipment_router.get("/types")
         def list_equipment_types():
@@ -795,6 +815,7 @@ class GymAPI:
             rating: int | None = None,
             mood_before: int | None = None,
             mood_after: int | None = None,
+            user_id: int = Depends(_require_auth),
         ):
             try:
                 workout_date = (
@@ -819,6 +840,7 @@ class GymAPI:
                 rating,
                 mood_before,
                 mood_after,
+                user_id,
             )
             self._broadcast_event({"type": "workout_added", "id": workout_id})
             return {"id": workout_id}
@@ -835,9 +857,16 @@ class GymAPI:
             descending: bool = True,
             limit: int | None = None,
             offset: int | None = None,
+            user_id: int = Depends(_require_auth),
         ):
             workouts = self.workouts.fetch_all_workouts(
-                start_date, end_date, sort_by, descending, limit, offset
+                start_date,
+                end_date,
+                user_id,
+                sort_by,
+                descending,
+                limit,
+                offset,
             )
             return [{"id": wid, "date": date} for wid, date, *_ in workouts]
 
@@ -859,10 +888,12 @@ class GymAPI:
             descending: bool = True,
             limit: int | None = None,
             offset: int | None = None,
+            user_id: int = Depends(_require_auth),
         ):
             workouts = self.workouts.fetch_all_workouts(
                 start_date,
                 end_date,
+                user_id,
                 sort_by=sort_by,
                 descending=descending,
                 limit=limit,
@@ -886,8 +917,8 @@ class GymAPI:
             return result
 
         @self.app.get("/calendar")
-        def calendar(start_date: str, end_date: str):
-            logged = self.workouts.fetch_all_workouts(start_date, end_date)
+        def calendar(start_date: str, end_date: str, user_id: int = Depends(_require_auth)):
+            logged = self.workouts.fetch_all_workouts(start_date, end_date, user_id)
             planned = self.planned_workouts.fetch_all(start_date, end_date)
             result = []
             for wid, date, _s, _e, t_type, _notes, _rating, *_ in logged:
@@ -912,7 +943,7 @@ class GymAPI:
             return result
 
         @self.app.get("/workouts/{workout_id}")
-        def get_workout(workout_id: int):
+        def get_workout(workout_id: int, user_id: int = Depends(_require_auth)):
             (
                 wid,
                 date,
@@ -1012,37 +1043,61 @@ class GymAPI:
             return [{"id": cid, "timestamp": ts, "comment": c} for cid, ts, c in rows]
 
         @self.app.put("/workouts/{workout_id}/type")
-        def update_workout_type(workout_id: int, training_type: str):
+        def update_workout_type(
+            workout_id: int,
+            training_type: str,
+            user_id: int = Depends(_require_auth),
+        ):
             self.workouts.set_training_type(workout_id, training_type)
             return {"status": "updated"}
 
         @self.app.put("/workouts/{workout_id}/note")
-        def update_workout_note(workout_id: int, notes: str = None):
+        def update_workout_note(
+            workout_id: int,
+            notes: str = None,
+            user_id: int = Depends(_require_auth),
+        ):
             self.workouts.set_note(workout_id, notes)
             return {"status": "updated"}
 
         @self.app.put("/workouts/{workout_id}/location")
-        def update_workout_location(workout_id: int, location: str = None):
+        def update_workout_location(
+            workout_id: int,
+            location: str = None,
+            user_id: int = Depends(_require_auth),
+        ):
             self.workouts.set_location(workout_id, location)
             return {"status": "updated"}
 
         @self.app.put("/workouts/{workout_id}/rating")
-        def update_workout_rating(workout_id: int, rating: int | None = None):
+        def update_workout_rating(
+            workout_id: int,
+            rating: int | None = None,
+            user_id: int = Depends(_require_auth),
+        ):
             self.workouts.set_rating(workout_id, rating)
             return {"status": "updated"}
 
         @self.app.put("/workouts/{workout_id}/mood_before")
-        def update_mood_before(workout_id: int, mood: int | None = None):
+        def update_mood_before(
+            workout_id: int,
+            mood: int | None = None,
+            user_id: int = Depends(_require_auth),
+        ):
             self.workouts.set_mood_before(workout_id, mood)
             return {"status": "updated"}
 
         @self.app.put("/workouts/{workout_id}/mood_after")
-        def update_mood_after(workout_id: int, mood: int | None = None):
+        def update_mood_after(
+            workout_id: int,
+            mood: int | None = None,
+            user_id: int = Depends(_require_auth),
+        ):
             self.workouts.set_mood_after(workout_id, mood)
             return {"status": "updated"}
 
         @self.app.delete("/workouts/{workout_id}")
-        def delete_workout(workout_id: int):
+        def delete_workout(workout_id: int, user_id: int = Depends(_require_auth)):
             try:
                 self.workouts.delete(workout_id)
                 return {"status": "deleted"}
@@ -1050,13 +1105,13 @@ class GymAPI:
                 raise HTTPException(status_code=404, detail=str(e))
 
         @self.app.post("/workouts/{workout_id}/start")
-        def start_workout(workout_id: int):
+        def start_workout(workout_id: int, user_id: int = Depends(_require_auth)):
             timestamp = datetime.datetime.now().isoformat(timespec="seconds")
             self.workouts.set_start_time(workout_id, timestamp)
             return {"status": "started", "timestamp": timestamp}
 
         @self.app.post("/workouts/{workout_id}/finish")
-        def finish_workout(workout_id: int):
+        def finish_workout(workout_id: int, user_id: int = Depends(_require_auth)):
             timestamp = datetime.datetime.now().isoformat(timespec="seconds")
             self.workouts.set_end_time(workout_id, timestamp)
             if (
@@ -1090,7 +1145,11 @@ class GymAPI:
 
         @self.app.post("/workouts/{workout_id}/exercises")
         def add_exercise(
-            workout_id: int, name: str, equipment: str, note: str | None = None
+            workout_id: int,
+            name: str,
+            equipment: str,
+            note: str | None = None,
+            user_id: int = Depends(_require_auth),
         ):
             if not equipment:
                 raise HTTPException(status_code=400, detail="equipment required")
@@ -1098,7 +1157,7 @@ class GymAPI:
             return {"id": ex_id}
 
         @self.app.delete("/exercises/{exercise_id}")
-        def delete_exercise(exercise_id: int):
+        def delete_exercise(exercise_id: int, user_id: int = Depends(_require_auth)):
             self.exercises.remove(exercise_id)
             return {"status": "deleted"}
 
@@ -1117,12 +1176,20 @@ class GymAPI:
                 raise HTTPException(status_code=404, detail=str(e))
 
         @self.app.put("/exercises/{exercise_id}/note")
-        def update_exercise_note(exercise_id: int, note: str | None = None):
+        def update_exercise_note(
+            exercise_id: int,
+            note: str | None = None,
+            user_id: int = Depends(_require_auth),
+        ):
             self.exercises.update_note(exercise_id, note)
             return {"status": "updated"}
 
         @self.app.put("/exercises/{exercise_id}/name")
-        def update_exercise_name(exercise_id: int, name: str):
+        def update_exercise_name(
+            exercise_id: int,
+            name: str,
+            user_id: int = Depends(_require_auth),
+        ):
             self.exercises.update_name(exercise_id, name)
             return {"status": "updated"}
 
@@ -1393,6 +1460,7 @@ class GymAPI:
             rpe: int,
             note: str | None = None,
             warmup: bool = False,
+            user_id: int = Depends(_require_auth),
         ):
             prev = self.sets.last_rpe(exercise_id)
             try:
@@ -1427,7 +1495,11 @@ class GymAPI:
             summary="Bulk add sets",
             description="Add multiple sets separated by '|' in 'reps,weight,rpe' format.",
         )
-        def bulk_add_sets(exercise_id: int, sets: str):
+        def bulk_add_sets(
+            exercise_id: int,
+            sets: str,
+            user_id: int = Depends(_require_auth),
+        ):
             lines = [l.strip() for l in sets.split("|") if l.strip()]
             entries: list[tuple[int, float, int]] = []
             for line in lines:
@@ -1453,6 +1525,7 @@ class GymAPI:
             target_weight: float,
             target_reps: int,
             sets: int = 3,
+            user_id: int = Depends(_require_auth),
         ):
             try:
                 plan = MathTools.warmup_plan(target_weight, target_reps, sets)
@@ -1478,7 +1551,7 @@ class GymAPI:
             return {"added": len(ids), "ids": ids}
 
         @self.app.put("/sets/bulk_update")
-        def bulk_update_sets(updates: List[Dict] = Body(...)):
+        def bulk_update_sets(updates: List[Dict] = Body(...), user_id: int = Depends(_require_auth)):
             try:
                 self.sets.bulk_update(updates)
             except Exception as e:
@@ -1487,7 +1560,12 @@ class GymAPI:
 
         @self.app.put("/sets/{set_id}")
         def update_set(
-            set_id: int, reps: int, weight: float, rpe: int, warmup: bool | None = None
+            set_id: int,
+            reps: int,
+            weight: float,
+            rpe: int,
+            warmup: bool | None = None,
+            user_id: int = Depends(_require_auth),
         ):
             prev = self.sets.previous_rpe(set_id)
             try:
@@ -1512,17 +1590,17 @@ class GymAPI:
             return {"status": "updated"}
 
         @self.app.put("/sets/{set_id}/note")
-        def update_set_note(set_id: int, note: str | None = None):
+        def update_set_note(set_id: int, note: str | None = None, user_id: int = Depends(_require_auth)):
             self.sets.update_note(set_id, note)
             return {"status": "updated"}
 
         @self.app.delete("/sets/{set_id}")
-        def delete_set(set_id: int):
+        def delete_set(set_id: int, user_id: int = Depends(_require_auth)):
             self.sets.remove(set_id)
             return {"status": "deleted"}
 
         @self.app.post("/sets/{set_id}/start")
-        def start_set(set_id: int, timestamp: str | None = None):
+        def start_set(set_id: int, timestamp: str | None = None, user_id: int = Depends(_require_auth)):
             ts = (
                 datetime.datetime.now().isoformat(timespec="seconds")
                 if timestamp is None
@@ -1532,7 +1610,11 @@ class GymAPI:
             return {"status": "started", "timestamp": ts}
 
         @self.app.post("/sets/{set_id}/finish")
-        def finish_set(set_id: int, timestamp: str | None = None):
+        def finish_set(
+            set_id: int,
+            timestamp: str | None = None,
+            user_id: int = Depends(_require_auth),
+        ):
             ts = (
                 datetime.datetime.now().isoformat(timespec="seconds")
                 if timestamp is None
@@ -1542,7 +1624,12 @@ class GymAPI:
             return {"status": "finished", "timestamp": ts}
 
         @self.app.post("/sets/{set_id}/duration")
-        def set_duration(set_id: int, seconds: float, end: str | None = None):
+        def set_duration(
+            set_id: int,
+            seconds: float,
+            end: str | None = None,
+            user_id: int = Depends(_require_auth),
+        ):
             try:
                 self.sets.set_duration(set_id, seconds, end)
             except ValueError as e:
@@ -1588,7 +1675,11 @@ class GymAPI:
             summary="Reorder sets",
             description="Update set order using comma-separated ids",
         )
-        def reorder_sets(exercise_id: int, order: str):
+        def reorder_sets(
+            exercise_id: int,
+            order: str,
+            user_id: int = Depends(_require_auth),
+        ):
             try:
                 ids = [int(i) for i in order.split(",") if i]
             except ValueError:
@@ -1603,7 +1694,10 @@ class GymAPI:
                 raise HTTPException(status_code=400, detail=str(e))
 
         @self.app.post("/exercises/{exercise_id}/recommend_next")
-        def recommend_next(exercise_id: int):
+        def recommend_next(
+            exercise_id: int,
+            user_id: int = Depends(_require_auth),
+        ):
             try:
                 return self.recommender.recommend_next_set(exercise_id)
             except ValueError as e:
