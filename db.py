@@ -19,6 +19,7 @@ class Database:
         "workouts": (
             """CREATE TABLE workouts (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
                     date TEXT NOT NULL,
                     start_time TEXT,
                     end_time TEXT,
@@ -27,10 +28,12 @@ class Database:
                     location TEXT,
                     rating INTEGER,
                     mood_before INTEGER,
-                    mood_after INTEGER
+                    mood_after INTEGER,
+                    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
                 );""",
             [
                 "id",
+                "user_id",
                 "date",
                 "start_time",
                 "end_time",
@@ -519,6 +522,23 @@ class Database:
                 );""",
             ["start_date", "end_date", "unit", "avg", "min", "max"],
         ),
+        "users": (
+            """CREATE TABLE users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT NOT NULL UNIQUE,
+                    password_hash TEXT NOT NULL
+                );""",
+            ["id", "username", "password_hash"],
+        ),
+        "auth_tokens": (
+            """CREATE TABLE auth_tokens (
+                    token TEXT PRIMARY KEY,
+                    user_id INTEGER NOT NULL,
+                    expires_at TEXT NOT NULL,
+                    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+                );""",
+            ["token", "user_id", "expires_at"],
+        ),
     }
 
     def __init__(self, db_path: str = "workout.db") -> None:
@@ -575,12 +595,31 @@ class Database:
 
         conn.execute(f"ALTER TABLE {table} RENAME TO {table}_old;")
         conn.execute(sql)
+
         common = [c for c in existing_cols if c in columns]
         if common:
             cols = ", ".join(common)
-            conn.execute(
-                f"INSERT INTO {table} ({cols}) SELECT {cols} FROM {table}_old;"
-            )
+            missing = [c for c in columns if c not in existing_cols]
+            if missing:
+                def default_val(col: str) -> str:
+                    if col == "user_id":
+                        return "1"
+                    if col == "training_type":
+                        return "'strength'"
+                    if col == "position":
+                        return "0"
+                    if col in ("diff_reps", "diff_weight", "diff_rpe", "warmup"):
+                        return "0"
+                    return "NULL"
+
+                defaults = ", ".join(default_val(c) for c in missing)
+                conn.execute(
+                    f"INSERT INTO {table} ({cols}, {', '.join(missing)}) SELECT {cols}, {defaults} FROM {table}_old;"
+                )
+            else:
+                conn.execute(
+                    f"INSERT INTO {table} ({cols}) SELECT {cols} FROM {table}_old;"
+                )
         conn.execute(f"DROP TABLE {table}_old;")
 
     def _import_equipment_data(self) -> None:
@@ -782,10 +821,20 @@ class WorkoutRepository(BaseRepository):
         rating: Optional[int] = None,
         mood_before: Optional[int] = None,
         mood_after: Optional[int] = None,
+        user_id: int = 1,
     ) -> int:
         return self.execute(
-            "INSERT INTO workouts (date, training_type, notes, location, rating, mood_before, mood_after) VALUES (?, ?, ?, ?, ?, ?, ?);",
-            (date, training_type, notes, location, rating, mood_before, mood_after),
+            "INSERT INTO workouts (date, training_type, notes, location, rating, mood_before, mood_after, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?);",
+            (
+                date,
+                training_type,
+                notes,
+                location,
+                rating,
+                mood_before,
+                mood_after,
+                user_id,
+            ),
         )
 
     def fetch_all_workouts(
@@ -3629,4 +3678,54 @@ class StatsCacheRepository(BaseRepository):
 
     def clear(self) -> None:
         self._delete_all("weight_stats_cache")
+
+
+class UserRepository(BaseRepository):
+    """Repository for user accounts."""
+
+    def register(self, username: str, password_hash: str) -> int:
+        rows = super().fetch_all(
+            "SELECT id FROM users WHERE username = ?;",
+            (username,),
+        )
+        if rows:
+            raise ValueError("username exists")
+        return self.execute(
+            "INSERT INTO users (username, password_hash) VALUES (?, ?);",
+            (username, password_hash),
+        )
+
+    def get_by_username(self, username: str) -> tuple[int, str, str] | None:
+        rows = super().fetch_all(
+            "SELECT id, username, password_hash FROM users WHERE username = ?;",
+            (username,),
+        )
+        return rows[0] if rows else None
+
+
+class AuthTokenRepository(BaseRepository):
+    """Repository managing authentication tokens."""
+
+    def create(self, token: str, user_id: int, expires_at: str) -> None:
+        self.execute(
+            "INSERT INTO auth_tokens (token, user_id, expires_at) VALUES (?, ?, ?);",
+            (token, user_id, expires_at),
+        )
+
+    def get_user(self, token: str) -> int | None:
+        rows = super().fetch_all(
+            "SELECT user_id, expires_at FROM auth_tokens WHERE token = ?;",
+            (token,),
+        )
+        if not rows:
+            return None
+        user_id, expiry = rows[0]
+        if datetime.datetime.fromisoformat(expiry) < datetime.datetime.now():
+            self.execute("DELETE FROM auth_tokens WHERE token = ?;", (token,))
+            return None
+        return int(user_id)
+
+    def delete(self, token: str) -> None:
+        self.execute("DELETE FROM auth_tokens WHERE token = ?;", (token,))
+
 

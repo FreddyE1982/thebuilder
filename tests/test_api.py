@@ -36,6 +36,21 @@ class APITestCase(unittest.TestCase):
         if os.path.exists(self.yaml_path):
             os.remove(self.yaml_path)
 
+    def test_user_registration_and_login(self) -> None:
+        resp = self.client.post(
+            "/users/register",
+            json={"username": "alice", "password": "wonder"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        uid = resp.json()["id"]
+        self.assertEqual(uid, 1)
+        login = self.client.post(
+            "/token",
+            json={"username": "alice", "password": "wonder"},
+        )
+        self.assertEqual(login.status_code, 200)
+        self.assertIn("token", login.json())
+
     def test_full_workflow(self) -> None:
         today = datetime.date.today().isoformat()
 

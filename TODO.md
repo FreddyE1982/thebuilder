@@ -4,7 +4,9 @@
 [complete] 2. Add tests for GUI components described in streamlittestinghowto.md.
 [complete] 3. Refactor rest_api.py to group routes by resource using APIRouter.
 [complete] 4. Document API endpoints with OpenAPI descriptions.
-5. Add user authentication and authorization for workout editing.
+[complete] 5a. Add user and token tables with registration/login endpoints.
+5b. Associate workouts with user accounts.
+5c. Enforce authentication for workout editing.
 [complete] 6. Implement pagination on workout history API.
 [complete] 7. Create CLI to export workouts to CSV and JSON.
 [complete] 8. Add scheduling for regular email reports.
