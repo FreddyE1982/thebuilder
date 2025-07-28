@@ -9,6 +9,7 @@ from contextlib import contextmanager
 from typing import List, Tuple, Optional, Iterable, Set
 
 from config import YamlConfig
+from settings_schema import validate_settings
 
 
 class Database:
@@ -484,6 +485,7 @@ class Database:
         self._sync_muscles()
         self._sync_exercise_names()
         self._init_settings()
+        self.vacuum()
 
     @contextmanager
     def _connection(self) -> sqlite3.Connection:
@@ -687,6 +689,11 @@ class Database:
                     "INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?);",
                     (key, value),
                 )
+
+    def vacuum(self) -> None:
+        """Run SQLite VACUUM to reduce database size."""
+        with self._connection() as conn:
+            conn.execute("VACUUM;")
 
 
 class BaseRepository(Database):
@@ -1784,6 +1791,7 @@ class SettingsRepository(BaseRepository):
         data = self._yaml.load()
         if not data:
             return
+        validate_settings(data)
         with self._connection() as conn:
             bool_keys = {
                 "game_enabled",

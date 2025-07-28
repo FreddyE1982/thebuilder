@@ -10,5 +10,6 @@ pywavelets
 scikit-learn
 torch
 pyyaml
+pydantic
 altair
 altair_saver

@@ -2138,7 +2138,9 @@ class GymApp:
                     st.session_state[f"{prefix}_end_m"] = datetime.date.today()
                     self._trigger_refresh()
         stats = self.stats.overview(start.isoformat(), end.isoformat())
-        w_stats = self.stats.weight_stats(start.isoformat(), end.isoformat())
+        w_stats = self.stats.weight_stats(
+            start.isoformat(), end.isoformat(), unit=self.weight_unit
+        )
         r_stats = self.stats.readiness_stats(start.isoformat(), end.isoformat())
         with st.expander("Overview Metrics", expanded=True):
             metrics = [
@@ -5092,7 +5094,7 @@ class GymApp:
                 self._trigger_refresh()
             start_str = start.isoformat()
             end_str = end.isoformat()
-        stats = self.stats.weight_stats(start_str, end_str)
+        stats = self.stats.weight_stats(start_str, end_str, unit=self.weight_unit)
         with st.expander("Statistics", expanded=True):
             metrics = [
                 ("Average", stats["avg"]),
