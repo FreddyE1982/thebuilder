@@ -3389,3 +3389,51 @@ class APITestCase(unittest.TestCase):
         resp = self.client.get("/muscles/search", params={"query": "pectorls"})
         self.assertEqual(resp.status_code, 200)
         self.assertIn("Pectoralis Major", resp.json())
+
+    def test_plan_progress(self) -> None:
+        resp = self.client.post(
+            "/planned_workouts",
+            params={"date": "2024-01-01", "training_type": "strength"},
+        )
+        pid = resp.json()["id"]
+        self.client.post(
+            f"/planned_workouts/{pid}/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            f"/planned_exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8},
+        )
+        resp = self.client.get(f"/planned_workouts/{pid}/progress")
+        self.assertEqual(resp.json()["percent"], 0.0)
+        self.client.post(f"/planned_workouts/{pid}/use")
+        resp = self.client.get(f"/planned_workouts/{pid}/progress")
+        self.assertEqual(resp.json()["percent"], 100.0)
+
+    def test_workout_reactions(self) -> None:
+        wid = self.client.post("/workouts").json()["id"]
+        resp = self.client.post(f"/workouts/{wid}/reactions", json="👍")
+        self.assertEqual(resp.status_code, 200)
+        resp = self.client.get(f"/workouts/{wid}/reactions")
+        self.assertIn({"emoji": "👍", "count": 1}, resp.json())
+
+    def test_workout_calories(self) -> None:
+        wid = self.client.post("/workouts").json()["id"]
+        self.client.post(
+            f"/workouts/{wid}/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 10, "weight": 100.0, "rpe": 8},
+        )
+        self.client.post(f"/workouts/{wid}/start")
+        self.client.post(f"/workouts/{wid}/finish")
+        resp = self.client.get(f"/workouts/{wid}/calories")
+        self.assertGreater(resp.json()["calories"], 0)
+
+    def test_bookmarks_setting(self) -> None:
+        resp = self.client.post("/settings/bookmarks", json="overview,progress")
+        self.assertEqual(resp.status_code, 200)
+        resp = self.client.get("/settings/bookmarks")
+        self.assertEqual(resp.json()["views"], ["overview", "progress"])
