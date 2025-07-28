@@ -537,7 +537,7 @@ class GymApp:
                     if (cidx === 0 && params.get('tab') === 'progress') {
                         const sub = params.get('sub');
                         if (sub) {
-                            const idx = buttons.findIndex(b => b.innerText.trim().toLowerCase().replace(/\s+/g, '_') === sub);
+                            const idx = buttons.findIndex(b => b.innerText.trim().toLowerCase().replace(/\\s+/g, '_') === sub);
                             if (idx !== -1) saved = idx.toString();
                         }
                     }
@@ -549,7 +549,7 @@ class GymApp:
                             sessionStorage.setItem(key, idx);
                             const params = new URLSearchParams(window.location.search);
                             if (cidx === 0 && params.get('tab') === 'progress') {
-                                params.set('sub', btn.innerText.trim().toLowerCase().replace(/\s+/g,'_'));
+                                params.set('sub', btn.innerText.trim().toLowerCase().replace(/\\s+/g,'_'));
                                 window.history.replaceState({}, '', '?' + params.toString());
                             }
                         });
