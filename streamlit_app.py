@@ -2990,14 +2990,20 @@ class GymApp:
                         iclass = "intensity-medium"
                     else:
                         iclass = "intensity-low"
-                    badge = f"<span class='badge {iclass}'>{int(ratio*100)}%</span>"
+                    intensity = int(ratio * 100)
+                    badge = f"<span class='badge {iclass}'>{intensity}%</span>"
                     registered = start_time is not None and end_time is not None
                     row_class = "set-registered" if registered else "set-unregistered"
                     if st.session_state.get("flash_set") == set_id:
                         row_class += " flash"
                         st.session_state.flash_set = None
                     if st.session_state.is_mobile:
-                        with st.expander(f"Set {idx} {badge}"):
+                        exp_label = f"Set {idx} ({intensity}%)"
+                        with st.expander(
+                            exp_label,
+                            expanded=st.session_state.pop(f"open_set_{set_id}", False),
+                        ):
+                            st.markdown(badge, unsafe_allow_html=True)
                             st.markdown(
                                 f"<div class='set-row {row_class}'>",
                                 unsafe_allow_html=True,
@@ -3108,10 +3114,15 @@ class GymApp:
                             )
                             st.markdown("</div>", unsafe_allow_html=True)
                     else:
+                        exp_label = (
+                            f"Set {idx} - {reps}x{weight}{self.weight_unit} RPE {rpe} ({intensity}%)"
+                        )
                         exp = st.expander(
-                            f"Set {idx} - {reps}x{weight}kg RPE {rpe} {badge}", expanded=False
+                            exp_label,
+                            expanded=st.session_state.pop(f"open_set_{set_id}", False),
                         )
                         with exp:
+                            st.markdown(badge, unsafe_allow_html=True)
                             st.markdown(
                                 f"<div class='set-row {row_class}'>",
                                 unsafe_allow_html=True,
@@ -3517,6 +3528,7 @@ class GymApp:
         prev = self.sets.fetch_detail(set_id)
         st.session_state.setdefault("undo_stack", []).append(("update_set", prev))
         st.session_state["redo_stack"] = []
+        st.session_state[f"open_set_{set_id}"] = True
         reps_val = st.session_state.get(f"reps_{set_id}")
         weight_val = st.session_state.get(f"weight_{set_id}")
         rpe_val = st.session_state.get(f"rpe_{set_id}")

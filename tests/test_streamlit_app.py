@@ -403,6 +403,35 @@ class StreamlitAppTest(unittest.TestCase):
         html = "".join(m.body for m in self.at.markdown)
         self.assertIn("intensity-high", html)
 
+    def test_set_edit_keeps_open(self) -> None:
+        idx_new = _find_by_label(
+            self.at.button,
+            "New Workout",
+            key="FormSubmitter:new_workout_form-New Workout",
+        )
+        self.at.button[idx_new].click().run()
+        idx_ex = _find_by_label(self.at.selectbox, "Exercise", "Barbell Bench Press")
+        self.at.selectbox[idx_ex].select("Barbell Bench Press").run()
+        idx_eq = _find_by_label(self.at.selectbox, "Equipment Name", "Olympic Barbell")
+        self.at.selectbox[idx_eq].select("Olympic Barbell").run()
+        idx_add_ex = _find_by_label(self.at.button, "Add Exercise", key="add_ex_btn")
+        self.at.button[idx_add_ex].click().run()
+        self.at.number_input[0].set_value(5).run()
+        self.at.number_input[1].set_value(100.0).run()
+        idx_add_set = _find_by_label(self.at.button, "Add Set", key="add_set_1")
+        self.at.button[idx_add_set].click().run()
+
+        ex_idx = _find_by_label(
+            self.at.expander, "Barbell Bench Press (Olympic Barbell)"
+        )
+        ex_exp = self.at.expander[ex_idx]
+        set_exp = next(e for e in ex_exp.expander if e.label.startswith("Set 1"))
+        set_exp.number_input[1].set_value(110.0).run()
+
+        ex_exp = self.at.expander[ex_idx]
+        set_exp = next(e for e in ex_exp.expander if e.label.startswith("Set 1"))
+        self.assertTrue(set_exp.proto.expanded)
+
     def test_custom_exercise_and_logs(self) -> None:
         self.at.query_params["tab"] = "settings"
         self.at.run()
