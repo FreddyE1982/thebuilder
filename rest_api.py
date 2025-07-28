@@ -1,7 +1,7 @@
 import datetime
 import json
 from typing import List, Dict
-from fastapi import FastAPI, HTTPException, Response, Body
+from fastapi import FastAPI, HTTPException, Response, Body, APIRouter
 from db import (
     WorkoutRepository,
     ExerciseRepository,
@@ -168,6 +168,10 @@ class GymAPI:
         self._setup_routes()
 
     def _setup_routes(self) -> None:
+        equipment_router = APIRouter(prefix="/equipment")
+        muscles_router = APIRouter(prefix="/muscles")
+        muscle_groups_router = APIRouter(prefix="/muscle_groups")
+
         @self.app.get("/health")
         def health():
             """Return API and database connection status."""
@@ -178,11 +182,11 @@ class GymAPI:
             except Exception as e:  # pragma: no cover - connectivity failure
                 raise HTTPException(status_code=500, detail=str(e))
 
-        @self.app.get("/equipment/types")
+        @equipment_router.get("/types")
         def list_equipment_types():
             return self.equipment.fetch_types()
 
-        @self.app.post("/equipment/types")
+        @equipment_router.post("/types")
         def add_equipment_type(name: str):
             try:
                 tid = self.equipment_types.add(name)
@@ -190,7 +194,7 @@ class GymAPI:
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
 
-        @self.app.get("/equipment")
+        @equipment_router.get("")
         def list_equipment(
             equipment_type: str = None,
             prefix: str = None,
@@ -199,15 +203,15 @@ class GymAPI:
             muscs = muscles.split("|") if muscles else None
             return self.equipment.fetch_names(equipment_type, prefix, muscs)
 
-        @self.app.get("/equipment/recent")
+        @equipment_router.get("/recent")
         def recent_equipment(limit: int = 5):
             return self.statistics.recent_equipment(limit)
 
-        @self.app.get("/equipment/search")
+        @equipment_router.get("/search")
         def search_equipment(query: str, limit: int = 5):
             return self.equipment.fuzzy_search(query, limit)
 
-        @self.app.get("/equipment/{name}")
+        @equipment_router.get("/{name}")
         def get_equipment(name: str):
             muscles = self.equipment.fetch_muscles(name)
             rows = self.equipment.fetch_all(
@@ -216,7 +220,7 @@ class GymAPI:
             eq_type = rows[0][0] if rows else None
             return {"name": name, "type": eq_type, "muscles": muscles}
 
-        @self.app.post("/equipment")
+        @equipment_router.post("")
         def add_equipment(equipment_type: str, name: str, muscles: str):
             try:
                 eid = self.equipment.add(equipment_type, name, muscles.split("|"))
@@ -224,19 +228,19 @@ class GymAPI:
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
 
-        @self.app.get("/muscles")
+        @muscles_router.get("")
         def list_muscles():
             return self.muscles.fetch_all()
 
-        @self.app.get("/muscles/recent")
+        @muscles_router.get("/recent")
         def recent_muscles(limit: int = 5):
             return self.statistics.recent_muscles(limit)
 
-        @self.app.get("/muscles/search")
+        @muscles_router.get("/search")
         def search_muscles(query: str, limit: int = 5):
             return self.muscles.fuzzy_search(query, limit)
 
-        @self.app.post("/muscles")
+        @muscles_router.post("")
         def add_muscle(name: str):
             try:
                 self.muscles.add(name)
@@ -244,21 +248,21 @@ class GymAPI:
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
 
-        @self.app.post("/muscles/link")
+        @muscles_router.post("/link")
         def link_muscles(name1: str, name2: str):
             self.muscles.link(name1, name2)
             return {"status": "linked"}
 
-        @self.app.post("/muscles/alias")
+        @muscles_router.post("/alias")
         def add_alias(new_name: str, existing: str):
             self.muscles.add_alias(new_name, existing)
             return {"status": "added"}
 
-        @self.app.get("/muscle_groups")
+        @muscle_groups_router.get("")
         def list_muscle_groups():
             return self.muscle_groups.fetch_all()
 
-        @self.app.post("/muscle_groups")
+        @muscle_groups_router.post("")
         def add_muscle_group(name: str):
             try:
                 self.muscle_groups.add(name)
@@ -266,7 +270,7 @@ class GymAPI:
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
 
-        @self.app.put("/muscle_groups/{group}")
+        @muscle_groups_router.put("/{group}")
         def rename_muscle_group(group: str, new_name: str):
             try:
                 self.muscle_groups.rename(group, new_name)
@@ -274,7 +278,7 @@ class GymAPI:
             except ValueError as e:
                 raise HTTPException(status_code=404, detail=str(e))
 
-        @self.app.delete("/muscle_groups/{group}")
+        @muscle_groups_router.delete("/{group}")
         def delete_muscle_group(group: str):
             try:
                 self.muscle_groups.delete(group)
@@ -282,11 +286,11 @@ class GymAPI:
             except ValueError as e:
                 raise HTTPException(status_code=404, detail=str(e))
 
-        @self.app.get("/muscle_groups/{group}/muscles")
+        @muscle_groups_router.get("/{group}/muscles")
         def list_group_muscles(group: str):
             return self.muscle_groups.fetch_muscles(group)
 
-        @self.app.post("/muscle_groups/{group}/muscles")
+        @muscle_groups_router.post("/{group}/muscles")
         def assign_muscle_group(group: str, muscle: str):
             try:
                 self.muscle_groups.assign(group, muscle)
@@ -294,7 +298,7 @@ class GymAPI:
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
 
-        @self.app.delete("/muscles/{muscle}/group")
+        @muscles_router.delete("/{muscle}/group")
         def remove_muscle_group(muscle: str):
             self.muscle_groups.remove_assignment(muscle)
             return {"status": "removed"}
@@ -531,7 +535,7 @@ class GymAPI:
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
 
-        @self.app.put("/equipment/{name}")
+        @equipment_router.put("/{name}")
         def update_equipment(
             name: str,
             equipment_type: str,
@@ -546,7 +550,7 @@ class GymAPI:
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
 
-        @self.app.delete("/equipment/{name}")
+        @equipment_router.delete("/{name}")
         def delete_equipment(name: str):
             try:
                 self.equipment.remove(name)
@@ -2424,6 +2428,10 @@ class GymAPI:
         @self.app.get("/notifications/unread_count")
         def unread_count():
             return {"count": self.notifications.unread_count()}
+
+        self.app.include_router(equipment_router)
+        self.app.include_router(muscles_router)
+        self.app.include_router(muscle_groups_router)
 
 
 api = GymAPI()
