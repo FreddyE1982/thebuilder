@@ -1249,6 +1249,28 @@ class StreamlitAdditionalGUITest(unittest.TestCase):
         markup = [m.body for m in self.at.markdown]
         self.assertTrue(any("ctx-menu" in m for m in markup))
 
+    def test_plan_progress_ring(self) -> None:
+        pw_repo = PlannedWorkoutRepository(self.db_path)
+        pe_repo = PlannedExerciseRepository(self.db_path)
+        ps_repo = PlannedSetRepository(self.db_path)
+        workout_repo = WorkoutRepository(self.db_path)
+        ex_repo = ExerciseRepository(self.db_path)
+        set_repo = SetRepository(self.db_path)
+        today = datetime.date.today().isoformat()
+        pid = pw_repo.create(today, "strength")
+        peid = pe_repo.add(pid, "Barbell Bench Press", "Olympic Barbell")
+        sid = ps_repo.add(peid, 5, 100.0, 8)
+        wid = workout_repo.create(today, "strength")
+        eid = ex_repo.add(wid, "Barbell Bench Press", "Olympic Barbell")
+        set_repo.add(eid, 5, 100.0, 8, planned_set_id=sid)
+        self.at.query_params["tab"] = "plan"
+        self.at.run()
+        exp_idx = _find_by_label(self.at.expander, "Existing Plans")
+        plan_exp = self.at.expander[exp_idx].expander[0]
+        html = "".join(m.body for m in plan_exp.markdown)
+        self.assertIn("progress-ring", html)
+        self.assertIn("--val:100.0", html)
+
 
 class StreamlitTemplateWorkflowTest(unittest.TestCase):
     def setUp(self) -> None:

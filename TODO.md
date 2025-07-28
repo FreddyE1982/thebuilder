@@ -1,7 +1,7 @@
 # TODO
 
 [complete] 1. Add integration tests for API endpoints to ensure proper database access.
-2. Add tests for GUI components described in streamlittestinghowto.md.
+[complete] 2. Add tests for GUI components described in streamlittestinghowto.md.
 3. Refactor rest_api.py to group routes by resource using APIRouter.
 4. Document API endpoints with OpenAPI descriptions.
 5. Add user authentication and authorization for workout editing.
@@ -20,12 +20,12 @@
 18. Implement two-factor authentication for new user login.
 19. Add localization framework for multi-language UI.
 20. Refactor database layer to async for FastAPI performance.
-21. Add unit tests for ml_service models.
+[complete] 21. Add unit tests for ml_service models.
 22. Provide interactive charts for power and velocity histories.
 [complete] 23. Add endpoint for exercise alias removal.
 24. Implement caching for statistics queries using SQLite views.
-25. Add Jenkinsfile for automated build.
-26. Add color-blind friendly theme options.
+[complete] 25. Add Jenkinsfile for automated build.
+[complete] 26. Add color-blind friendly theme options.
 27. Implement rate limiting on REST API endpoints.
 28. Add importer from widely-used workout apps (e.g. Strava).
 29. Provide export to generic training XML format.
@@ -60,7 +60,7 @@
 [complete] 58. Provide sample data seeding script.
 [complete] 59. Add instructions for customizing CSS in README.
 [complete] 60. Ensure StatsService returns sorted results consistently.
-61. Add REST endpoint for editing exercise catalog entries.
+[complete] 61. Add REST endpoint for editing exercise catalog entries.
 62. Provide ability to share workout templates via link.
 63. Add feature flag support for experimental models.
 64. Implement timeline view of workout history in GUI.
@@ -73,7 +73,7 @@
 71. Provide endpoint to add comments to workouts.
 72. Add rating distribution chart in Stats tab.
 [complete] 73. Validate equipment type names to avoid duplicates.
-74. Document database schema in README.
+[complete] 74. Document database schema in README.
 75. Add `--demo` mode for generating fake data.
 76. Encrypt sensitive settings in YAML with keyring.
 [complete] 77. Add endpoint to clear cached statistics.
