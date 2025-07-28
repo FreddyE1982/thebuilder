@@ -93,21 +93,21 @@
 - [x] 90. Include a progress ring showing completion percentage of planned sets.
 - [x] 91. Offer bookmarking of favorite analytics views in settings.
 - [x] 92. Integrate emoji reactions for workouts in the history feed.
-- [ ] 93. Add a slide-out panel with quick tips relevant to the current tab.
-- [ ] 94. Support automatic scrolling to today's date in calendar views.
+- [x] 93. Add a slide-out panel with quick tips relevant to the current tab.
+- [x] 94. Support automatic scrolling to today's date in calendar views.
 - [x] 95. Display a running timer when logging active workouts.
 - [x] 96. Allow copying an existing workout as a template with one click.
 - [x] 97. Provide optional large-font mode for accessibility.
 - [x] 98. Add split buttons for logging warm-up versus working sets.
 - [x] 99. Introduce keyboard navigation hints in footer tooltips.
-- [ ] 100. Enable exporting analytics charts as images from the GUI.
-- [ ] 101. Add dynamic breadcrumbs to show navigation context on mobile.
+- [x] 100. Enable exporting analytics charts as images from the GUI.
+- [x] 101. Add dynamic breadcrumbs to show navigation context on mobile.
 - [ ] 102. Allow pinning important stats to the header for constant visibility.
 - [ ] 103. Provide auto-save of set inputs as they are entered.
-- [ ] 104. Implement color-coded badges for workout intensity levels.
+- [x] 104. Implement color-coded badges for workout intensity levels.
 - [ ] 105. Add quick actions for sharing workouts via social media.
 - [ ] 106. Offer per-user customization for which tabs appear in the nav bar.
-- [ ] 107. Include example workouts for new users accessible from onboarding.
+- [x] 107. Include example workouts for new users accessible from onboarding.
 - [x] 108. Display estimated calories burned per workout in the summary.
 - [x] 109. Add option to hide completed planned workouts from the calendar.
 - [ ] 110. Support inline graphs of weight progression within the workout log.
