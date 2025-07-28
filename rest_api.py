@@ -1,7 +1,9 @@
 import datetime
 import json
+import time
+import threading
 from typing import List, Dict
-from fastapi import FastAPI, HTTPException, Response, Body, APIRouter
+from fastapi import FastAPI, HTTPException, Response, Body, APIRouter, Request
 from db import (
     WorkoutRepository,
     ExerciseRepository,
@@ -60,11 +62,61 @@ from tools import ExercisePrescription, MathTools
 from cli_tools import GitTools
 
 
+class RateLimiter:
+    """Simple in-memory rate limiter."""
+
+    def __init__(self, limit: int = 60, window: int = 60) -> None:
+        self.limit = limit
+        self.window = window
+        self.requests: dict[str, list[float]] = {}
+
+    async def __call__(self, request: Request, call_next):
+        ip = request.client.host if request.client else "anon"
+        now = time.time()
+        history = [t for t in self.requests.get(ip, []) if now - t < self.window]
+        if len(history) >= self.limit:
+            return Response("rate limit exceeded", status_code=429)
+        history.append(now)
+        self.requests[ip] = history
+        return await call_next(request)
+
+
+class EmailScheduler(threading.Thread):
+    """Background thread sending weekly email reports."""
+
+    def __init__(self, api: "GymAPI", interval_hours: int = 24) -> None:
+        super().__init__(daemon=True)
+        self.api = api
+        self.interval = interval_hours * 3600
+        self.last_sent: datetime.datetime | None = None
+        self.running = True
+
+    def run(self) -> None:
+        while self.running:
+            try:
+                if self.api.settings.get_bool("email_weekly_enabled", False):
+                    if (
+                        self.last_sent is None
+                        or (datetime.datetime.now() - self.last_sent).days >= 7
+                    ):
+                        self.api.send_weekly_email_report()
+                        self.last_sent = datetime.datetime.now()
+            except Exception:
+                pass
+            time.sleep(self.interval)
+
+
 class GymAPI:
     """Provides REST endpoints for workout logging."""
 
     def __init__(
-        self, db_path: str = "workout.db", yaml_path: str = "settings.yaml"
+        self,
+        db_path: str = "workout.db",
+        yaml_path: str = "settings.yaml",
+        *,
+        start_scheduler: bool = False,
+        rate_limit: int | None = None,
+        rate_window: int = 60,
     ) -> None:
         self.db_path = db_path
         self.workouts = WorkoutRepository(db_path)
@@ -78,7 +130,9 @@ class GymAPI:
         self.template_sets = TemplateSetRepository(db_path)
         self.settings = SettingsRepository(db_path, yaml_path)
         self.equipment_types = EquipmentTypeRepository(db_path, self.settings)
-        self.equipment = EquipmentRepository(db_path, self.settings, self.equipment_types)
+        self.equipment = EquipmentRepository(
+            db_path, self.settings, self.equipment_types
+        )
         self.exercise_catalog = ExerciseCatalogRepository(db_path, self.settings)
         self.muscles = MuscleRepository(db_path)
         self.muscle_groups = MuscleGroupRepository(db_path, self.muscles)
@@ -122,12 +176,22 @@ class GymAPI:
             self.ml_status,
             raw_repo=self.ml_training_raw,
         )
-        self.volume_model = VolumeModelService(self.ml_models, status_repo=self.ml_status)
-        self.readiness_model = ReadinessModelService(self.ml_models, status_repo=self.ml_status)
-        self.progress_model = ProgressModelService(self.ml_models, status_repo=self.ml_status)
+        self.volume_model = VolumeModelService(
+            self.ml_models, status_repo=self.ml_status
+        )
+        self.readiness_model = ReadinessModelService(
+            self.ml_models, status_repo=self.ml_status
+        )
+        self.progress_model = ProgressModelService(
+            self.ml_models, status_repo=self.ml_status
+        )
         self.goal_model = RLGoalModelService(self.ml_models, status_repo=self.ml_status)
-        self.injury_model = InjuryRiskModelService(self.ml_models, status_repo=self.ml_status)
-        self.adaptation_model = AdaptationModelService(self.ml_models, status_repo=self.ml_status)
+        self.injury_model = InjuryRiskModelService(
+            self.ml_models, status_repo=self.ml_status
+        )
+        self.adaptation_model = AdaptationModelService(
+            self.ml_models, status_repo=self.ml_status
+        )
         self.recommender = RecommendationService(
             self.workouts,
             self.exercises,
@@ -171,17 +235,40 @@ class GymAPI:
             self.exercise_catalog,
             self.workouts,
             self.heart_rates,
+            self.goals,
         )
         self.app = FastAPI(
             title="Gym API",
             description="REST API for workout logging and analytics",
         )
+        if rate_limit is not None:
+            limiter = RateLimiter(limit=rate_limit, window=rate_window)
+            self.app.middleware("http")(limiter)
+        if start_scheduler:
+            self.scheduler = EmailScheduler(self)
+            self.scheduler.start()
         self._setup_routes()
+
+    def send_weekly_email_report(self, address: str | None = None) -> None:
+        addr = address or self.settings.get_text("weekly_report_email", "")
+        if not addr:
+            return
+        end = datetime.date.today()
+        start = end - datetime.timedelta(days=7)
+        summary = self.statistics.overview(start.isoformat(), end.isoformat())
+        self.email_logs.add(
+            addr,
+            f"{start.isoformat()} to {end.isoformat()}",
+            json.dumps(summary),
+            True,
+        )
 
     def _setup_routes(self) -> None:
         equipment_router = APIRouter(prefix="/equipment", tags=["Equipment"])
         muscles_router = APIRouter(prefix="/muscles", tags=["Muscles"])
-        muscle_groups_router = APIRouter(prefix="/muscle_groups", tags=["Muscle Groups"])
+        muscle_groups_router = APIRouter(
+            prefix="/muscle_groups", tags=["Muscle Groups"]
+        )
 
         @self.app.get(
             "/health",
@@ -780,9 +867,7 @@ class GymAPI:
         @self.app.get("/workouts/{workout_id}/comments")
         def list_comments(workout_id: int):
             rows = self.comments.fetch_for_workout(workout_id)
-            return [
-                {"id": cid, "timestamp": ts, "comment": c} for cid, ts, c in rows
-            ]
+            return [{"id": cid, "timestamp": ts, "comment": c} for cid, ts, c in rows]
 
         @self.app.put("/workouts/{workout_id}/type")
         def update_workout_type(workout_id: int, training_type: str):
@@ -1223,7 +1308,9 @@ class GymAPI:
                 )
                 self.recommender.record_result(sid, int(reps_i), float(weight_i), 6)
                 try:
-                    self.gamification.record_set(exercise_id, int(reps_i), float(weight_i), 6)
+                    self.gamification.record_set(
+                        exercise_id, int(reps_i), float(weight_i), 6
+                    )
                 except Exception:
                     pass
                 ids.append(sid)
@@ -1596,6 +1683,7 @@ class GymAPI:
                 start_date,
                 end_date,
             )
+
         @self.app.get("/stats/session_density")
         def stats_session_density(
             start_date: str = None,
@@ -1762,16 +1850,10 @@ class GymAPI:
                 raise HTTPException(status_code=400, detail=str(e))
 
         @self.app.get("/utils/warmup_plan")
-        def utils_warmup_plan(
-            target_weight: float, target_reps: int, sets: int = 3
-        ):
+        def utils_warmup_plan(target_weight: float, target_reps: int, sets: int = 3):
             try:
                 plan = MathTools.warmup_plan(target_weight, target_reps, sets)
-                return {
-                    "plan": [
-                        {"reps": r, "weight": w} for r, w in plan
-                    ]
-                }
+                return {"plan": [{"reps": r, "weight": w} for r, w in plan]}
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
 
@@ -1980,9 +2062,7 @@ class GymAPI:
             return [{"id": rid, "date": d, "weight": w} for rid, d, w in rows]
 
         @self.app.get("/body_weight/export_csv")
-        def export_body_weight_csv(
-            start_date: str = None, end_date: str = None
-        ):
+        def export_body_weight_csv(start_date: str = None, end_date: str = None):
             rows = self.body_weights.fetch_history(start_date, end_date)
             lines = ["Date,Weight"]
             for _rid, d, w in rows:
@@ -2195,6 +2275,13 @@ class GymAPI:
             try:
                 self.goals.delete(goal_id)
                 return {"status": "deleted"}
+            except ValueError as e:
+                raise HTTPException(status_code=404, detail=str(e))
+
+        @self.app.get("/goals/{goal_id}/progress")
+        def goal_progress(goal_id: int):
+            try:
+                return self.statistics.goal_progress(goal_id)
             except ValueError as e:
                 raise HTTPException(status_code=404, detail=str(e))
 
@@ -2511,15 +2598,7 @@ class GymAPI:
             addr = address or self.settings.get_text("weekly_report_email", "")
             if not addr:
                 raise HTTPException(status_code=400, detail="address required")
-            end = datetime.date.today()
-            start = end - datetime.timedelta(days=7)
-            summary = self.statistics.overview(start.isoformat(), end.isoformat())
-            self.email_logs.add(
-                addr,
-                f"{start.isoformat()} to {end.isoformat()}",
-                json.dumps(summary),
-                True,
-            )
+            self.send_weekly_email_report(addr)
             return {"status": "sent"}
 
         @self.app.get("/reports/email_logs")

@@ -22,7 +22,12 @@ class APITestCase(unittest.TestCase):
             os.remove(self.db_path)
         if os.path.exists(self.yaml_path):
             os.remove(self.yaml_path)
-        self.api = GymAPI(db_path=self.db_path, yaml_path=self.yaml_path)
+        self.api = GymAPI(
+            db_path=self.db_path,
+            yaml_path=self.yaml_path,
+            start_scheduler=False,
+            rate_limit=None,
+        )
         self.client = TestClient(self.api.app)
 
     def tearDown(self) -> None:
@@ -1656,6 +1661,7 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0]["workout_id"], 1)
         self.assertAlmostEqual(data[0]["efficiency"], round(expected, 2), places=2)
+
     def test_session_density_endpoint(self) -> None:
         self.client.post("/workouts")
         self.client.post(
@@ -1704,7 +1710,6 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(len(out), 1)
         self.assertEqual(out[0]["workout_id"], 1)
         self.assertAlmostEqual(out[0]["pace"], round(expected, 2), places=2)
-
 
     def test_rest_times_endpoint(self) -> None:
         self.client.post("/workouts")
@@ -1820,8 +1825,12 @@ class APITestCase(unittest.TestCase):
             "/workouts/1/exercises",
             params={"name": "Squat", "equipment": "Olympic Barbell"},
         )
-        self.client.post("/exercises/1/sets", params={"reps": 5, "weight": 100.0, "rpe": 8})
-        self.client.post("/exercises/2/sets", params={"reps": 5, "weight": 100.0, "rpe": 8})
+        self.client.post(
+            "/exercises/1/sets", params={"reps": 5, "weight": 100.0, "rpe": 8}
+        )
+        self.client.post(
+            "/exercises/2/sets", params={"reps": 5, "weight": 100.0, "rpe": 8}
+        )
         resp = self.client.get("/stats/exercise_diversity")
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
@@ -2036,7 +2045,9 @@ class APITestCase(unittest.TestCase):
         data = resp.json()
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0]["date"], today)
-        expected = MathTools.estimate_power_from_set(5, 100.0, "2023-01-01T00:00:00", "2023-01-01T00:00:05")
+        expected = MathTools.estimate_power_from_set(
+            5, 100.0, "2023-01-01T00:00:00", "2023-01-01T00:00:05"
+        )
         self.assertAlmostEqual(data[0]["power"], round(expected, 2), places=2)
 
     def test_relative_power_history_endpoint(self) -> None:
@@ -2065,7 +2076,12 @@ class APITestCase(unittest.TestCase):
         data = resp.json()
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0]["date"], today)
-        expected = MathTools.estimate_power_from_set(5, 100.0, "2023-01-01T00:00:00", "2023-01-01T00:00:05") / 80.0
+        expected = (
+            MathTools.estimate_power_from_set(
+                5, 100.0, "2023-01-01T00:00:00", "2023-01-01T00:00:05"
+            )
+            / 80.0
+        )
         self.assertAlmostEqual(data[0]["relative_power"], round(expected, 2), places=2)
 
     def test_set_duration_endpoint(self) -> None:
@@ -2449,7 +2465,9 @@ class APITestCase(unittest.TestCase):
         self.assertIsInstance(first["prediction"], float)
         self.assertIsInstance(first["confidence"], float)
 
-        cv_resp = self.client.get("/ml/cross_validate/performance_model", params={"folds": 2})
+        cv_resp = self.client.get(
+            "/ml/cross_validate/performance_model", params={"folds": 2}
+        )
         self.assertEqual(cv_resp.status_code, 200)
         self.assertIn("mse", cv_resp.json())
 
@@ -2988,7 +3006,9 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(ids, [tids[1], tids[2], tids[0]])
 
     def test_template_share(self) -> None:
-        resp = self.client.post("/templates", params={"name": "Share", "training_type": "strength"})
+        resp = self.client.post(
+            "/templates", params={"name": "Share", "training_type": "strength"}
+        )
         tid = resp.json()["id"]
         self.client.post(
             f"/templates/{tid}/exercises",
@@ -3166,7 +3186,9 @@ class APITestCase(unittest.TestCase):
         )
         self.assertEqual(goal_resp.status_code, 200)
 
-        active = self.api.goals.fetch_active_by_exercise("Squat", today=start.isoformat())
+        active = self.api.goals.fetch_active_by_exercise(
+            "Squat", today=start.isoformat()
+        )
         self.assertEqual(len(active), 1)
         self.assertAlmostEqual(active[0]["target_value"], 150.0)
 
@@ -3415,7 +3437,10 @@ class APITestCase(unittest.TestCase):
         )
         self.client.post(
             "/settings/general",
-            params={"email_weekly_enabled": True, "weekly_report_email": "user@example.com"},
+            params={
+                "email_weekly_enabled": True,
+                "weekly_report_email": "user@example.com",
+            },
         )
 
         resp = self.client.post("/reports/email_weekly")
@@ -3465,9 +3490,7 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(resp.json()["count"], 0)
 
     def test_challenges_crud(self) -> None:
-        resp = self.client.post(
-            "/challenges", params={"name": "30-day", "target": 30}
-        )
+        resp = self.client.post("/challenges", params={"name": "30-day", "target": 30})
         self.assertEqual(resp.status_code, 200)
         cid = resp.json()["id"]
 
@@ -3475,9 +3498,7 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(len(resp.json()), 1)
         self.assertEqual(resp.json()[0]["progress"], 0)
 
-        resp = self.client.put(
-            f"/challenges/{cid}/progress", params={"progress": 10}
-        )
+        resp = self.client.put(f"/challenges/{cid}/progress", params={"progress": 10})
         self.assertEqual(resp.status_code, 200)
 
         resp = self.client.get("/challenges")
@@ -3577,3 +3598,56 @@ class APITestCase(unittest.TestCase):
         resp = self.client.put("/tags/99", params={"name": "x"})
         self.assertEqual(resp.status_code, 404)
         self.assertEqual(resp.json()["detail"], "tag not found")
+
+    def test_goal_progress_endpoint(self) -> None:
+        today = datetime.date.today().isoformat()
+        target = (datetime.date.today() + datetime.timedelta(days=30)).isoformat()
+        self.client.post("/workouts", params={"date": today})
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8},
+        )
+        self.client.post(
+            "/goals",
+            params={
+                "exercise_name": "Bench Press",
+                "name": "Bench",
+                "target_value": 120.0,
+                "unit": "kg",
+                "start_date": today,
+                "target_date": target,
+            },
+        )
+        resp = self.client.get("/goals/1/progress")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(len(data), 1)
+        self.assertIn("progress", data[0])
+
+
+class RateLimitTestCase(unittest.TestCase):
+    def setUp(self) -> None:
+        self.api = GymAPI(
+            db_path="rate.db",
+            yaml_path="rate.yaml",
+            start_scheduler=False,
+            rate_limit=2,
+            rate_window=60,
+        )
+        self.client = TestClient(self.api.app)
+
+    def tearDown(self) -> None:
+        if os.path.exists("rate.db"):
+            os.remove("rate.db")
+        if os.path.exists("rate.yaml"):
+            os.remove("rate.yaml")
+
+    def test_rate_limit(self) -> None:
+        self.client.get("/health")
+        self.client.get("/health")
+        resp = self.client.get("/health")
+        self.assertEqual(resp.status_code, 429)

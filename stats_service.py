@@ -9,6 +9,7 @@ from db import (
     EquipmentRepository,
     WellnessRepository,
     HeartRateRepository,
+    GoalRepository,
 )
 from ml_service import (
     VolumeModelService,
@@ -39,6 +40,7 @@ class StatisticsService:
         catalog_repo: "ExerciseCatalogRepository" | None = None,
         workout_repo: "WorkoutRepository" | None = None,
         heart_rate_repo: "HeartRateRepository" | None = None,
+        goal_repo: "GoalRepository" | None = None,
     ) -> None:
         self.sets = set_repo
         self.exercise_names = name_repo
@@ -54,6 +56,7 @@ class StatisticsService:
         self.catalog = catalog_repo
         self.workouts = workout_repo
         self.heart_rates = heart_rate_repo
+        self.goals = goal_repo
         self._cache: dict[tuple, dict] = {}
 
     def clear_cache(self) -> None:
@@ -388,6 +391,21 @@ class StatisticsService:
 
         return result
 
+    def goal_progress(self, goal_id: int) -> List[Dict[str, float]]:
+        """Return progress percentage for the specified goal."""
+        if self.goals is None:
+            return []
+        goal = self.goals.fetch(goal_id)
+        hist = self.progression(goal["exercise_name"], goal["start_date"])
+        target = float(goal["target_value"])
+        result: List[Dict[str, float]] = []
+        for item in hist:
+            pct = 0.0
+            if target > 0:
+                pct = (item["est_1rm"] / target) * 100.0
+            result.append({"date": item["date"], "progress": round(pct, 2)})
+        return result
+
     def equipment_usage(
         self,
         start_date: Optional[str] = None,
@@ -659,7 +677,9 @@ class StatisticsService:
         )
         by_date: Dict[str, List[float]] = {}
         for reps, weight, _rpe, date, start, end in rows:
-            power = MathTools.estimate_power_from_set(int(reps), float(weight), start, end)
+            power = MathTools.estimate_power_from_set(
+                int(reps), float(weight), start, end
+            )
             by_date.setdefault(date, []).append(power)
         result: List[Dict[str, float]] = []
         for d in sorted(by_date):
@@ -687,7 +707,9 @@ class StatisticsService:
         )
         by_date: Dict[str, List[float]] = {}
         for reps, weight, _rpe, date, start, end in rows:
-            power = MathTools.estimate_power_from_set(int(reps), float(weight), start, end)
+            power = MathTools.estimate_power_from_set(
+                int(reps), float(weight), start, end
+            )
             by_date.setdefault(date, []).append(power / body_weight)
         result: List[Dict[str, float]] = []
         for d in sorted(by_date):
@@ -1078,6 +1100,7 @@ class StatisticsService:
                 }
             )
         return result
+
     def session_density(
         self,
         start_date: Optional[str] = None,
@@ -1107,7 +1130,9 @@ class StatisticsService:
         result: List[Dict[str, float]] = []
         for wid, data in sorted(by_workout.items()):
             density = MathTools.session_density(data["volume"], float(data["dur"]))
-            result.append({"workout_id": wid, "date": data["date"], "density": round(density, 2)})
+            result.append(
+                {"workout_id": wid, "date": data["date"], "density": round(density, 2)}
+            )
         return result
 
     def set_pace(
@@ -1128,9 +1153,7 @@ class StatisticsService:
             return []
         by_workout: Dict[int, Dict[str, object]] = {}
         for _r, _w, _rpe, date, start, end, wid in rows:
-            entry = by_workout.setdefault(
-                wid, {"date": date, "sets": 0, "dur": 0.0}
-            )
+            entry = by_workout.setdefault(wid, {"date": date, "sets": 0, "dur": 0.0})
             entry["sets"] += 1
             if start and end:
                 t0 = datetime.datetime.fromisoformat(start)
@@ -1139,9 +1162,10 @@ class StatisticsService:
         result: List[Dict[str, float]] = []
         for wid, data in sorted(by_workout.items()):
             pace = MathTools.set_pace(int(data["sets"]), float(data["dur"]))
-            result.append({"workout_id": wid, "date": data["date"], "pace": round(pace, 2)})
+            result.append(
+                {"workout_id": wid, "date": data["date"], "pace": round(pace, 2)}
+            )
         return result
-
 
     def rest_times(
         self,
@@ -1333,9 +1357,7 @@ class StatisticsService:
         stats: Dict[str, Dict[str, float | int]] = {}
         for wid, _date, _s, _e, t_type, _notes, _rating in workouts:
             summary = self.sets.workout_summary(wid)
-            entry = stats.setdefault(
-                t_type, {"workouts": 0, "volume": 0.0, "sets": 0}
-            )
+            entry = stats.setdefault(t_type, {"workouts": 0, "volume": 0.0, "sets": 0})
             entry["workouts"] += 1
             entry["volume"] += summary["volume"]
             entry["sets"] += summary["sets"]
@@ -1859,9 +1881,7 @@ class StatisticsService:
         for idx, (lo, hi) in enumerate(zones, start=1):
             lo_val = lo * max_hr
             hi_val = hi * max_hr
-            count = sum(
-                1 for h in history if lo_val <= h["heart_rate"] < hi_val
-            )
+            count = sum(1 for h in history if lo_val <= h["heart_rate"] < hi_val)
             percent = count / total * 100.0 if total else 0.0
             result.append(
                 {
@@ -1936,10 +1956,7 @@ class StatisticsService:
         if not rows:
             return {"current": 0, "best": 0}
         weeks = sorted(
-            {
-                datetime.date.fromisoformat(d).isocalendar()[:2]
-                for (d,) in rows
-            }
+            {datetime.date.fromisoformat(d).isocalendar()[:2] for (d,) in rows}
         )
         best = cur = 1
         for prev, nxt in zip(weeks, weeks[1:]):
