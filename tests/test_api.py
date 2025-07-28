@@ -127,6 +127,10 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0]["exercise"], "Bench Press")
 
+        response = self.client.get("/workouts/1/export_xml")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("<workout", response.text)
+
         response = self.client.delete("/sets/1")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"status": "deleted"})
@@ -1247,6 +1251,26 @@ class APITestCase(unittest.TestCase):
 
         resp = self.client.get(f"/workouts/{wid}")
         self.assertEqual(resp.json()["rating"], 5)
+
+    def test_workout_mood(self) -> None:
+        resp = self.client.post(
+            "/workouts",
+            params={"training_type": "strength", "mood_before": 3},
+        )
+        wid = resp.json()["id"]
+        self.assertEqual(
+            self.client.get(f"/workouts/{wid}").json()["mood_before"], 3
+        )
+        self.client.put(f"/workouts/{wid}/mood_after", params={"mood": 4})
+        self.assertEqual(
+            self.client.get(f"/workouts/{wid}").json()["mood_after"], 4
+        )
+
+    def test_websocket_updates(self) -> None:
+        with self.client.websocket_connect("/ws/updates") as ws:
+            self.client.post("/workouts")
+            data = ws.receive_json()
+            self.assertEqual(data["type"], "workout_added")
 
     def test_set_notes(self) -> None:
         self.client.post("/workouts")

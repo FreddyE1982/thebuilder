@@ -1755,7 +1755,11 @@ class GymApp:
             )
         )
         height = 300 + 20 * max(0, len(data) - 1)
-        st.altair_chart(chart.properties(height=height), use_container_width=True)
+        width = max(300, min(len(x) * 40, 900))
+        st.altair_chart(
+            chart.properties(height=height, width=width),
+            use_container_width=len(x) > 20,
+        )
         png_available = False
         data = b""
         try:
@@ -1808,7 +1812,11 @@ class GymApp:
             )
         )
         height = 300 + 20 * max(0, len(data) - 1)
-        st.altair_chart(chart.properties(height=height), use_container_width=True)
+        width = max(300, min(len(x) * 40, 900))
+        st.altair_chart(
+            chart.properties(height=height, width=width),
+            use_container_width=len(x) > 20,
+        )
 
     def _chart_carousel(self, charts: list[Callable[[], None]], key: str) -> None:
         """Display charts in a simple carousel."""
@@ -2724,6 +2732,26 @@ class GymApp:
                     on_change=self._update_workout_rating,
                     args=(int(selected),),
                 )
+                mb_val = detail[8] if len(detail) > 8 else None
+                ma_val = detail[9] if len(detail) > 9 else None
+                mood_before = st.slider(
+                    "Mood Before",
+                    1,
+                    5,
+                    value=mb_val if mb_val is not None else 3,
+                    key=f"mood_before_{selected}",
+                    on_change=self._update_mood_before,
+                    args=(int(selected),),
+                )
+                mood_after = st.slider(
+                    "Mood After",
+                    1,
+                    5,
+                    value=ma_val if ma_val is not None else 3,
+                    key=f"mood_after_{selected}",
+                    on_change=self._update_mood_after,
+                    args=(int(selected),),
+                )
                 st.markdown("</div>", unsafe_allow_html=True)
                 tags_all = self.tags_repo.fetch_all()
                 current_tags = [
@@ -3611,6 +3639,16 @@ class GymApp:
         self.workouts.set_rating(workout_id, int(val) if val is not None else None)
         self._trigger_refresh()
 
+    def _update_mood_before(self, workout_id: int) -> None:
+        val = st.session_state.get(f"mood_before_{workout_id}")
+        self.workouts.set_mood_before(workout_id, int(val) if val is not None else None)
+        self._trigger_refresh()
+
+    def _update_mood_after(self, workout_id: int) -> None:
+        val = st.session_state.get(f"mood_after_{workout_id}")
+        self.workouts.set_mood_after(workout_id, int(val) if val is not None else None)
+        self._trigger_refresh()
+
     def _load_example_workouts(self) -> None:
         """Populate the database with sample workouts."""
         today = datetime.date.today()
@@ -3623,6 +3661,27 @@ class GymApp:
         )
         ex2 = self.exercises.add(wid2, "Squat", "Olympic Barbell")
         self.sets.add(ex2, 8, 150.0, 7)
+
+    def _import_workout_csv(self, file) -> None:
+        import csv
+        text = file.getvalue().decode("utf-8")
+        reader = csv.DictReader(text.splitlines())
+        required = {"Exercise", "Equipment", "Reps", "Weight", "RPE"}
+        if not required.issubset(reader.fieldnames or []):
+            raise ValueError("invalid columns")
+        wid = self.workouts.create(datetime.date.today().isoformat())
+        progress = st.progress(0.0)
+        rows = list(reader)
+        for i, row in enumerate(rows, start=1):
+            ex = row["Exercise"].strip()
+            eq = row.get("Equipment") or None
+            reps = int(row["Reps"])
+            weight = float(row["Weight"])
+            rpe = int(row["RPE"])
+            ex_id = self.exercises.add(wid, ex, eq)
+            self.sets.add(ex_id, reps, weight, rpe)
+            progress.progress(i / len(rows))
+        st.success("CSV imported")
 
     def _undo_action(self) -> None:
         stack = st.session_state.get("undo_stack", [])
@@ -5936,6 +5995,12 @@ class GymApp:
             if up and st.button("Restore", key="restore_btn"):
                 Path(self.workouts._db_path).write_bytes(up.getvalue())
                 st.success("Database restored")
+            csv_up = st.file_uploader("Import Workout CSV", type=["csv"], key="import_csv")
+            if csv_up and st.button("Import CSV", key="import_btn"):
+                try:
+                    self._import_workout_csv(csv_up)
+                except Exception as e:
+                    st.error(str(e))
 
         target = st.session_state.get("delete_target")
         if target:
