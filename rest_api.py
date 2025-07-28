@@ -54,7 +54,8 @@ from ml_service import (
     InjuryRiskModelService,
     AdaptationModelService,
 )
-from tools import ExercisePrescription, MathTools, GitTools
+from tools import ExercisePrescription, MathTools
+from cli_tools import GitTools
 
 
 class GymAPI:

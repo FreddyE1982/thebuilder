@@ -556,6 +556,9 @@ class APITestCase(unittest.TestCase):
         self.assertIsInstance(add_type.json()["id"], int)
         self.assertIn("MyType", self.client.get("/equipment/types").json())
 
+        dup = self.client.post("/equipment/types", params={"name": "mytype"})
+        self.assertEqual(dup.status_code, 400)
+
         response = self.client.get(
             "/equipment", params={"equipment_type": "Free Weights", "prefix": "Olympic"}
         )
