@@ -27,6 +27,8 @@ from db import (
     MLLogRepository,
     MLModelStatusRepository,
     NotificationRepository,
+    WorkoutCommentRepository,
+    MLTrainingRawRepository,
     AutoPlannerLogRepository,
     ExercisePrescriptionLogRepository,
     EmailLogRepository,
@@ -94,6 +96,8 @@ class GymAPI:
         self.ml_logs = MLLogRepository(db_path)
         self.ml_status = MLModelStatusRepository(db_path)
         self.notifications = NotificationRepository(db_path)
+        self.comments = WorkoutCommentRepository(db_path)
+        self.ml_training_raw = MLTrainingRawRepository(db_path)
         self.autoplan_logs = AutoPlannerLogRepository(db_path)
         self.prescription_logs = ExercisePrescriptionLogRepository(db_path)
         self.email_logs = EmailLogRepository(db_path)
@@ -102,6 +106,9 @@ class GymAPI:
         self.heart_rates = HeartRateRepository(db_path)
         self.goals = GoalRepository(db_path)
         self.challenges = ChallengeRepository(db_path)
+        self.experimental_enabled = self.settings.get_bool(
+            "experimental_models_enabled", False
+        )
         self.gamification = GamificationService(
             self.game_repo,
             self.exercises,
@@ -113,6 +120,7 @@ class GymAPI:
             self.exercise_names,
             self.ml_logs,
             self.ml_status,
+            raw_repo=self.ml_training_raw,
         )
         self.volume_model = VolumeModelService(self.ml_models, status_repo=self.ml_status)
         self.readiness_model = ReadinessModelService(self.ml_models, status_repo=self.ml_status)
@@ -759,6 +767,23 @@ class GymAPI:
             data = self.reactions.list_for_workout(workout_id)
             return [{"emoji": e, "count": c} for e, c in data]
 
+        @self.app.post("/workouts/{workout_id}/comments")
+        def add_comment(workout_id: int, comment: str, timestamp: str | None = None):
+            ts = (
+                datetime.datetime.now().isoformat(timespec="seconds")
+                if timestamp is None
+                else timestamp
+            )
+            cid = self.comments.add(workout_id, comment, ts)
+            return {"id": cid, "timestamp": ts}
+
+        @self.app.get("/workouts/{workout_id}/comments")
+        def list_comments(workout_id: int):
+            rows = self.comments.fetch_for_workout(workout_id)
+            return [
+                {"id": cid, "timestamp": ts, "comment": c} for cid, ts, c in rows
+            ]
+
         @self.app.put("/workouts/{workout_id}/type")
         def update_workout_type(workout_id: int, training_type: str):
             self.workouts.set_training_type(workout_id, training_type)
@@ -1088,6 +1113,20 @@ class GymAPI:
                 {"id": sid, "reps": reps, "weight": weight, "rpe": rpe}
                 for sid, reps, weight, rpe in sets
             ]
+
+        @self.app.get("/templates/{template_id}/share")
+        def share_template(template_id: int):
+            try:
+                _tid, name, t_type = self.template_workouts.fetch_detail(template_id)
+            except ValueError as e:
+                raise HTTPException(status_code=404, detail=str(e))
+            exercises = self.template_exercises.fetch_for_template(template_id)
+            lines = [f"Template: {name} ({t_type})"]
+            for ex_id, ex_name, eq in exercises:
+                sets = self.template_sets.fetch_for_exercise(ex_id)
+                sstr = ", ".join(f"{r}x{w}" for _sid, r, w, _r in sets)
+                lines.append(f"{ex_name}@{eq}: {sstr}")
+            return {"text": "\n".join(lines)}
 
         @self.app.post("/templates/{template_id}/plan")
         def create_plan_from_template(template_id: int, date: str):
@@ -2200,6 +2239,10 @@ class GymAPI:
         def stats_rating_stats(start_date: str = None, end_date: str = None):
             return self.statistics.rating_stats(start_date, end_date)
 
+        @self.app.get("/stats/rating_distribution")
+        def stats_rating_distribution(start_date: str = None, end_date: str = None):
+            return self.statistics.rating_distribution(start_date, end_date)
+
         @self.app.get("/stats/heart_rate_summary")
         def stats_heart_rate_summary(start_date: str = None, end_date: str = None):
             return self.statistics.heart_rate_summary(start_date, end_date)
@@ -2219,6 +2262,13 @@ class GymAPI:
                 }
                 for ts, pred, conf in rows
             ]
+
+        @self.app.get("/ml/cross_validate/{model_name}")
+        def ml_cross_validate(model_name: str, folds: int = 5):
+            if model_name != "performance_model":
+                raise HTTPException(status_code=404, detail="model not found")
+            score = self.ml_service.cross_validate(folds)
+            return {"mse": round(score, 4)}
 
         @self.app.get("/autoplanner/status")
         def autoplan_status():
@@ -2304,6 +2354,7 @@ class GymAPI:
             auto_open_last_workout: bool = None,
             email_weekly_enabled: bool = None,
             weekly_report_email: str = None,
+            experimental_models_enabled: bool = None,
             hide_completed_plans: bool = None,
         ):
             if body_weight is not None:
@@ -2390,6 +2441,11 @@ class GymAPI:
                 self.settings.set_bool("email_weekly_enabled", email_weekly_enabled)
             if weekly_report_email is not None:
                 self.settings.set_text("weekly_report_email", weekly_report_email)
+            if experimental_models_enabled is not None:
+                self.settings.set_bool(
+                    "experimental_models_enabled",
+                    experimental_models_enabled,
+                )
             if hide_completed_plans is not None:
                 self.settings.set_bool("hide_completed_plans", hide_completed_plans)
             return {"status": "updated"}

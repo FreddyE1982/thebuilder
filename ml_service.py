@@ -84,12 +84,14 @@ class PerformanceModelService:
         log_repo: MLLogRepository | None = None,
         status_repo: MLModelStatusRepository | None = None,
         lr: float = 0.1,
+        raw_repo: MLTrainingRawRepository | None = None,
     ) -> None:
         self.repo = repo
         self.names = name_repo
         self.log_repo = log_repo
         self.status_repo = status_repo
         self.lr = lr
+        self.raw_repo = raw_repo
         self.models: dict[str, tuple[RPEModel, torch.optim.Optimizer]] = {}
 
     def _get(self, name: str) -> tuple[RPEModel, torch.optim.Optimizer]:
@@ -122,6 +124,9 @@ class PerformanceModelService:
         loss = 0.5 * ((pred - target) ** 2 / var + torch.log(var))
         loss.backward()
         opt.step()
+        if self.raw_repo is not None:
+            vec = f"{weight}|{reps}|{prev_rpe}"
+            self.raw_repo.add("performance_model", vec, rpe)
         buf = io.BytesIO()
         torch.save(model.state_dict(), buf)
         self.repo.save(self.names.canonical(name), buf.getvalue())
@@ -144,6 +149,37 @@ class PerformanceModelService:
         if self.status_repo is not None:
             self.status_repo.set_prediction("performance_model")
         return value, conf_v
+
+    def cross_validate(self, folds: int = 5) -> float:
+        if self.raw_repo is None:
+            return 0.0
+        data = self.raw_repo.fetch("performance_model")
+        if len(data) < folds or folds < 2:
+            return 0.0
+        fold_size = len(data) // folds
+        errors: list[float] = []
+        for i in range(folds):
+            test = data[i * fold_size : (i + 1) * fold_size]
+            train = data[: i * fold_size] + data[(i + 1) * fold_size :]
+            model = RPEModel()
+            opt = torch.optim.SGD(model.parameters(), lr=self.lr)
+            for inp, tgt in train:
+                x = torch.tensor([inp], dtype=torch.float32)
+                y = torch.tensor([tgt / 10.0], dtype=torch.float32)
+                pred, _ = model(x)
+                var = torch.exp(model.log_var)
+                loss = 0.5 * ((pred - y) ** 2 / var + torch.log(var))
+                loss.backward()
+                opt.step()
+                opt.zero_grad()
+            mse = 0.0
+            for inp, tgt in test:
+                with torch.no_grad():
+                    x = torch.tensor([inp], dtype=torch.float32)
+                    pred, _ = model(x)
+                    mse += float((pred.item() - tgt / 10.0) ** 2)
+            errors.append(mse / len(test))
+        return sum(errors) / len(errors)
 
 
 class VolumePredictor(torch.nn.Module):

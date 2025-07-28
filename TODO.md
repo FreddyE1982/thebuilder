@@ -50,9 +50,9 @@
 [complete] 48. Create docker-compose configuration for local dev.
 49. Add ability to clone templates between users.
 50. Support configurable RPE scale (e.g. 1–5 or 1–10).
-51. Add analytics for training monotony and strain.
+[complete] 51. Add analytics for training monotony and strain.
 52. Provide webhooks for completed workouts notifications.
-53. Add route to mark challenges as completed automatically.
+[complete] 53. Add route to mark challenges as completed automatically.
 54. Implement search for exercises by tags in GUI.
 55. Support uploading heart rate monitor data in bulk.
 [complete] 56. Extend rest_api tests to cover error conditions.
@@ -86,7 +86,7 @@
 84. Add long-term trend analytics (moving averages).
 85. Support per-workout timezone handling.
 [complete] 86. Implement automatic database vacuuming.
-87. Add drag-and-drop reordering for workout templates.
+[complete] 87. Add drag-and-drop reordering for workout templates.
 88. Integrate speech recognition for quick set entry.
 89. Create official REST client library in Python.
 90. Add performance benchmarks for API endpoints.
