@@ -870,6 +870,7 @@ class StatisticsService:
                 }
             )
 
+        results.sort(key=lambda x: x["date"])
         return results
 
     def weekly_load_variability(
@@ -1016,6 +1017,7 @@ class StatisticsService:
                     "tsb": round(v, 2),
                 }
             )
+        result.sort(key=lambda x: x["date"])
         return result
 
     def session_efficiency(

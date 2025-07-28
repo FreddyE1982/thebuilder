@@ -887,6 +887,11 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIn("My Pulls", resp.json())
 
+        del_resp = self.client.delete("/exercise_names/alias/My Pulls")
+        self.assertEqual(del_resp.status_code, 200)
+        names = self.client.get("/exercise_names").json()
+        self.assertNotIn("My Pulls", names)
+
     def test_exercise_variants(self) -> None:
         self.client.post(
             "/exercise_variants/link",
@@ -1325,6 +1330,18 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(history[0]["volume"], 500.0)
         self.assertEqual(history[0]["sets"], 1)
         self.assertEqual(history[0]["avg_rpe"], 8.0)
+
+        paged = self.client.get(
+            "/workouts/history",
+            params={"start_date": d1, "end_date": d2, "limit": 1, "offset": 0},
+        )
+        self.assertEqual(paged.status_code, 200)
+        self.assertEqual(len(paged.json()), 1)
+        paged2 = self.client.get(
+            "/workouts/history",
+            params={"start_date": d1, "end_date": d2, "limit": 1, "offset": 1},
+        )
+        self.assertEqual(len(paged2.json()), 1)
 
     def test_pyramid_tests(self) -> None:
         today = datetime.date.today().isoformat()
@@ -2500,6 +2517,17 @@ class APITestCase(unittest.TestCase):
         resp = self.client.get("/body_weight")
         self.assertEqual(resp.json(), [])
 
+    def test_body_weight_csv_export(self) -> None:
+        d1 = "2023-01-01"
+        d2 = "2023-01-02"
+        self.client.post("/body_weight", params={"weight": 80.0, "date": d1})
+        self.client.post("/body_weight", params={"weight": 82.0, "date": d2})
+        resp = self.client.get("/body_weight/export_csv")
+        self.assertEqual(resp.status_code, 200)
+        lines = resp.text.strip().splitlines()
+        self.assertEqual(lines[0], "Date,Weight")
+        self.assertEqual(len(lines), 3)
+
     def test_bmi_endpoints(self) -> None:
         self.client.post("/body_weight", params={"weight": 80.0, "date": "2023-01-01"})
         self.client.post("/body_weight", params={"weight": 82.0, "date": "2023-01-02"})
@@ -2579,6 +2607,24 @@ class APITestCase(unittest.TestCase):
         self.assertAlmostEqual(summary["avg_sleep"], 7.75)
         self.assertAlmostEqual(summary["avg_quality"], 3.5)
         self.assertAlmostEqual(summary["avg_stress"], 2.5)
+
+    def test_wellness_update(self) -> None:
+        d = "2023-01-01"
+        resp = self.client.post(
+            "/wellness",
+            params={"date": d, "calories": 2000.0, "sleep_hours": 7.0},
+        )
+        self.assertEqual(resp.status_code, 200)
+        wid = resp.json()["id"]
+
+        upd = self.client.put(
+            f"/wellness/{wid}",
+            params={"date": d, "calories": 2100.0, "sleep_hours": 7.5},
+        )
+        self.assertEqual(upd.status_code, 200)
+
+        entry = self.client.get("/wellness").json()[0]
+        self.assertAlmostEqual(entry["calories"], 2100.0)
 
     def test_heart_rate_logging(self) -> None:
         self.client.post("/workouts", params={"date": "2023-01-01"})
