@@ -661,6 +661,40 @@ class GymApp:
             .header-wrapper.collapsed {
                 transform: translateY(-100%);
             }
+            .breadcrumbs {
+                font-size: 0.85rem;
+                padding: 0.25rem 0.5rem;
+            }
+            .tips-btn {
+                position: fixed;
+                bottom: 4rem;
+                right: 1rem;
+                z-index: 1101;
+                border: none;
+                background: var(--accent-color);
+                color: #fff;
+                border-radius: 50%;
+                width: 2.5rem;
+                height: 2.5rem;
+                font-size: 1.25rem;
+            }
+            .tips-panel {
+                position: fixed;
+                top: 0;
+                right: 0;
+                width: 250px;
+                height: 100%;
+                background: var(--header-bg);
+                border-left: 1px solid var(--border-color);
+                transform: translateX(100%);
+                transition: transform 0.3s ease-in-out;
+                z-index: 1100;
+                padding: 1rem;
+                overflow-y: auto;
+            }
+            .tips-panel.open {
+                transform: translateX(0);
+            }
             .header-inner {
                 display: flex;
                 align-items: center;
@@ -1145,6 +1179,9 @@ class GymApp:
             .badge.success { background: #4caf50; }
             .badge.error { background: #e74c3c; }
             .badge.warning { background: #f1c40f; }
+            .badge.intensity-low { background: #4caf50; }
+            .badge.intensity-medium { background: #f1c40f; }
+            .badge.intensity-high { background: #e74c3c; }
             .metric-grid::-webkit-scrollbar {
                 display: none;
             }
@@ -1631,6 +1668,15 @@ class GymApp:
             st.markdown("</div>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
+    def _breadcrumbs(self) -> None:
+        if not self.layout.is_mobile:
+            return
+        params = st.query_params
+        tab = params.get("tab", "workouts").title()
+        sub = params.get("sub")
+        crumb = tab if not sub else f"{tab} › {sub.replace('_', ' ').title()}"
+        st.markdown(f"<div class='breadcrumbs'>{crumb}</div>", unsafe_allow_html=True)
+
     def _line_chart(
         self,
         data: dict[str, list],
@@ -1658,6 +1704,34 @@ class GymApp:
             )
         )
         st.altair_chart(chart, use_container_width=True)
+        try:
+            import altair_saver
+            from io import BytesIO
+
+            buf = BytesIO()
+            chart.save(buf, fmt="png")
+            st.download_button(
+                "Export PNG",
+                data=buf.getvalue(),
+                file_name="chart.png",
+                mime="image/png",
+            )
+        except Exception:
+            pass
+        try:
+            import altair_saver
+            from io import BytesIO
+
+            buf = BytesIO()
+            chart.save(buf, fmt="png")
+            st.download_button(
+                "Export PNG",
+                data=buf.getvalue(),
+                file_name="chart.png",
+                mime="image/png",
+            )
+        except Exception:
+            pass
 
     def _bar_chart(
         self,
@@ -1754,10 +1828,29 @@ class GymApp:
         st.help(_Tooltip)
 
     def _tab_tips(self, tips: list[str]) -> None:
-        """Display a collapsible tips section."""
-        with st.expander("Tips", expanded=False):
-            for tip in tips:
-                st.write(f"- {tip}")
+        """Display tips in a slide-out panel."""
+        st.markdown(
+            "<button class='tips-btn' id='tips-toggle'>💡</button>",
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            "<div id='tips-panel' class='tips-panel'>" +
+            "<h3>Tips</h3>" +
+            "<ul>" + "".join(f"<li>{t}</li>" for t in tips) + "</ul></div>",
+            unsafe_allow_html=True,
+        )
+        components.html(
+            """
+            <script>
+            const btn=document.getElementById('tips-toggle');
+            const panel=document.getElementById('tips-panel');
+            if(btn && panel){
+                btn.addEventListener('click',()=>panel.classList.toggle('open'));
+            }
+            </script>
+            """,
+            height=0,
+        )
 
     def _slugify(self, text: str) -> str:
         """Create a safe slug from a section title."""
@@ -1891,6 +1984,7 @@ class GymApp:
             "Welcome to The Builder! Log and plan your workouts easily.",
             "Add workouts in the Workouts tab and record each set with reps, weight and RPE.",
             "Analyze progress in the Progress tab and adjust settings to your preference.",
+            "Load example workouts to explore features quickly.",
         ]
         step = st.session_state.get("onboarding_step", 0)
 
@@ -1906,6 +2000,10 @@ class GymApp:
                     st.session_state.onboarding_step += 1
                     st.rerun()
             else:
+                if col1.button("Load Examples", key="onboard_examples"):
+                    self._load_example_workouts()
+                    st.session_state.onboarding_step = len(steps) - 1
+                    st.rerun()
                 if col2.button("Finish", key="onboard_finish"):
                     self.settings_repo.set_bool("onboarding_complete", True)
                     st.session_state.pop("onboarding_step", None)
@@ -2187,6 +2285,7 @@ class GymApp:
         self._connection_status()
         st.markdown("</div>", unsafe_allow_html=True)
         self._top_nav()
+        self._breadcrumbs()
         self._close_header()
         self._create_sidebar()
         self._open_content()
@@ -2847,13 +2946,22 @@ class GymApp:
                     _position,
                 ) in enumerate(sets, start=1):
                     detail = self.sets.fetch_detail(set_id)
+                    est = MathTools.epley_1rm(float(weight), int(reps))
+                    ratio = float(weight) / est if est else 0.0
+                    if ratio >= 0.9:
+                        iclass = "intensity-high"
+                    elif ratio >= 0.7:
+                        iclass = "intensity-medium"
+                    else:
+                        iclass = "intensity-low"
+                    badge = f"<span class='badge {iclass}'>{int(ratio*100)}%</span>"
                     registered = start_time is not None and end_time is not None
                     row_class = "set-registered" if registered else "set-unregistered"
                     if st.session_state.get("flash_set") == set_id:
                         row_class += " flash"
                         st.session_state.flash_set = None
                     if st.session_state.is_mobile:
-                        with st.expander(f"Set {idx}"):
+                        with st.expander(f"Set {idx} {badge}"):
                             st.markdown(
                                 f"<div class='set-row {row_class}'>",
                                 unsafe_allow_html=True,
@@ -2965,7 +3073,7 @@ class GymApp:
                             st.markdown("</div>", unsafe_allow_html=True)
                     else:
                         exp = st.expander(
-                            f"Set {idx} - {reps}x{weight}kg RPE {rpe}", expanded=False
+                            f"Set {idx} - {reps}x{weight}kg RPE {rpe} {badge}", expanded=False
                         )
                         with exp:
                             st.markdown(
@@ -3407,6 +3515,17 @@ class GymApp:
         val = st.session_state.get(f"rating_{workout_id}")
         self.workouts.set_rating(workout_id, int(val) if val is not None else None)
         st.rerun()
+
+    def _load_example_workouts(self) -> None:
+        """Populate the database with sample workouts."""
+        today = datetime.date.today()
+        wid = self.workouts.create(today.isoformat(), "strength")
+        ex_id = self.exercises.add(wid, "Bench Press", "Olympic Barbell")
+        self.sets.add(ex_id, 5, 100.0, 8)
+        self.sets.add(ex_id, 5, 105.0, 9)
+        wid2 = self.workouts.create((today - datetime.timedelta(days=1)).isoformat(), "hypertrophy")
+        ex2 = self.exercises.add(wid2, "Squat", "Olympic Barbell")
+        self.sets.add(ex2, 8, 150.0, 7)
 
     def _undo_action(self) -> None:
         stack = st.session_state.get("undo_stack", [])
@@ -5523,7 +5642,22 @@ class GymApp:
             st.markdown("<div id='calendar_chart'></div>", unsafe_allow_html=True)
             st.altair_chart(chart, use_container_width=True)
             components.html(
-                "<script>document.getElementById('calendar_chart').scrollIntoView({behavior:'auto',block:'center'});</script>",
+                f"""
+                <script>
+                const today='{datetime.date.today().isoformat()}';
+                const svg=document.querySelector('#calendar_chart svg');
+                if(svg){{
+                    const rects=svg.querySelectorAll('rect');
+                    for(const r of rects){{
+                        const d=r.__data__?.datum?.date;
+                        if(d===today){{
+                            r.scrollIntoView({{behavior:'auto',block:'center'}});
+                            break;
+                        }}
+                    }}
+                }}
+                </script>
+                """,
                 height=0,
             )
 
