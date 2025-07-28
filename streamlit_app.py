@@ -317,10 +317,14 @@ class GymApp:
         )
         self._state_init()
 
+    def _trigger_refresh(self) -> None:
+        """Trigger a refresh without calling st.rerun."""
+        st.session_state.refresh_counter = st.session_state.get("refresh_counter", 0) + 1
+
     def _refresh(self) -> None:
         """Reload the application state."""
         if st.button("Refresh"):
-            st.rerun()
+            self._trigger_refresh()
 
     def _command_palette(self) -> None:
         if st.session_state.get("open_palette"):
@@ -328,19 +332,19 @@ class GymApp:
                 if st.button("Workouts"):
                     st.session_state.open_palette = False
                     st.experimental_set_query_params(tab="workouts")
-                    st.rerun()
+                    self._trigger_refresh()
                 if st.button("Library"):
                     st.session_state.open_palette = False
                     st.experimental_set_query_params(tab="library")
-                    st.rerun()
+                    self._trigger_refresh()
                 if st.button("Progress"):
                     st.session_state.open_palette = False
                     st.experimental_set_query_params(tab="progress")
-                    st.rerun()
+                    self._trigger_refresh()
                 if st.button("Settings"):
                     st.session_state.open_palette = False
                     st.experimental_set_query_params(tab="settings")
-                    st.rerun()
+                    self._trigger_refresh()
 
     def _rest_timer(self) -> None:
         start = st.session_state.get("rest_start")

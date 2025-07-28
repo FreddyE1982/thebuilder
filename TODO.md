@@ -111,3 +111,7 @@
 - [x] 108. Display estimated calories burned per workout in the summary.
 - [x] 109. Add option to hide completed planned workouts from the calendar.
 - [ ] 110. Support inline graphs of weight progression within the workout log.
+- [ ] 111. Replace explicit st.rerun calls with session state updates to avoid reruns when clicking buttons or entering data.
+  - [ ] 111.1 Introduce _trigger_refresh method toggling a session_state variable.
+  - [ ] 111.2 Apply _trigger_refresh to _refresh and _command_palette.
+  - [ ] 111.3 Review remaining st.rerun usage and replace accordingly.
