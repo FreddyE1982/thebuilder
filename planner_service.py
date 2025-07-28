@@ -124,9 +124,17 @@ class PlannerService:
         self, workout_id: int, name: str | None = None
     ) -> int:
         """Create a template from an existing workout."""
-        _wid, _date, _s, _e, t_type, _notes, _loc, _rating = self.workouts.fetch_detail(
-            workout_id
-        )
+        (
+            _wid,
+            _date,
+            _s,
+            _e,
+            t_type,
+            _notes,
+            _loc,
+            _rating,
+            *_,
+        ) = self.workouts.fetch_detail(workout_id)
         if name is None:
             name = f"Workout {workout_id}"
         template_id = self.templates.create(name, t_type)

@@ -385,6 +385,15 @@ class Database:
                 );""",
             ["workout_id"],
         ),
+        "default_equipment": (
+            """CREATE TABLE default_equipment (
+                    exercise_name TEXT PRIMARY KEY,
+                    equipment_name TEXT NOT NULL,
+                    FOREIGN KEY(exercise_name) REFERENCES exercise_catalog(name) ON DELETE CASCADE,
+                    FOREIGN KEY(equipment_name) REFERENCES equipment(name) ON DELETE CASCADE
+                );""",
+            ["exercise_name", "equipment_name"],
+        ),
         "workout_reactions": (
             """CREATE TABLE workout_reactions (
                     workout_id INTEGER NOT NULL,
@@ -2979,6 +2988,40 @@ class FavoriteWorkoutRepository(BaseRepository):
             "SELECT workout_id FROM favorite_workouts ORDER BY workout_id;"
         )
         return [int(r[0]) for r in rows]
+
+
+class DefaultEquipmentRepository(BaseRepository):
+    """Repository managing default equipment per exercise."""
+
+    def __init__(self, db_path: str = "workout.db", names: Optional[ExerciseNameRepository] = None) -> None:
+        super().__init__(db_path)
+        self.names = names or ExerciseNameRepository(db_path)
+
+    def set(self, exercise_name: str, equipment_name: str) -> None:
+        canonical = self.names.canonical(exercise_name)
+        self.execute(
+            "INSERT INTO default_equipment (exercise_name, equipment_name) VALUES (?, ?) "
+            "ON CONFLICT(exercise_name) DO UPDATE SET equipment_name=excluded.equipment_name;",
+            (canonical, equipment_name),
+        )
+
+    def fetch(self, exercise_name: str) -> Optional[str]:
+        canonical = self.names.canonical(exercise_name)
+        rows = super().fetch_all(
+            "SELECT equipment_name FROM default_equipment WHERE exercise_name = ?;",
+            (canonical,),
+        )
+        return rows[0][0] if rows else None
+
+    def delete(self, exercise_name: str) -> None:
+        canonical = self.names.canonical(exercise_name)
+        self.execute("DELETE FROM default_equipment WHERE exercise_name = ?;", (canonical,))
+
+    def fetch_all(self) -> list[tuple[str, str]]:
+        rows = super().fetch_all(
+            "SELECT exercise_name, equipment_name FROM default_equipment ORDER BY exercise_name;"
+        )
+        return [(r[0], r[1]) for r in rows]
 
 
 class ReactionRepository(BaseRepository):

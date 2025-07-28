@@ -1,4 +1,1 @@
-- tests/test_streamlit_app.py::StreamlitAllInteractionsTest::test_all_visible_widgets
 - tests/test_streamlit_app.py::StreamlitAppTest::test_quick_weight_buttons
-- tests/test_streamlit_app.py::StreamlitAdditionalGUITest::test_plan_progress_ring
-- tests/test_streamlit_app.py::StreamlitHeartRateGUITest::test_compact_mode_toggle
