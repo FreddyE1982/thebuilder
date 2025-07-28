@@ -46,6 +46,7 @@ from db import (
     TagRepository,
     GoalRepository,
     ChallengeRepository,
+    StatsCacheRepository,
 )
 from planner_service import PlannerService
 from recommendation_service import RecommendationService
@@ -167,6 +168,7 @@ class GymAPI:
         self.body_weights = BodyWeightRepository(db_path)
         self.wellness = WellnessRepository(db_path)
         self.heart_rates = HeartRateRepository(db_path)
+        self.stats_cache = StatsCacheRepository(db_path)
         self.goals = GoalRepository(db_path)
         self.challenges = ChallengeRepository(db_path)
         self.watchers: list[WebSocket] = []
@@ -246,6 +248,7 @@ class GymAPI:
             self.workouts,
             self.heart_rates,
             self.goals,
+            cache_repo=self.stats_cache,
         )
         self.app = FastAPI(
             title="Gym API",

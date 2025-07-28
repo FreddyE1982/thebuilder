@@ -507,6 +507,18 @@ class Database:
                 );""",
             ["id", "workout_id", "timestamp", "comment"],
         ),
+        "weight_stats_cache": (
+            """CREATE TABLE weight_stats_cache (
+                    start_date TEXT,
+                    end_date TEXT,
+                    unit TEXT NOT NULL,
+                    avg REAL NOT NULL,
+                    min REAL NOT NULL,
+                    max REAL NOT NULL,
+                    PRIMARY KEY (start_date, end_date, unit)
+                );""",
+            ["start_date", "end_date", "unit", "avg", "min", "max"],
+        ),
     }
 
     def __init__(self, db_path: str = "workout.db") -> None:
@@ -517,6 +529,7 @@ class Database:
         self._sync_muscles()
         self._sync_exercise_names()
         self._init_settings()
+        self._ensure_views()
         self.vacuum()
 
     @contextmanager
@@ -535,6 +548,15 @@ class Database:
             for table, (sql, columns) in self._TABLE_DEFINITIONS.items():
                 self._ensure_table(conn, table, sql, columns)
             cursor.execute("PRAGMA foreign_keys=on;")
+
+    def _ensure_views(self) -> None:
+        """Create required SQLite views for caching."""
+        with self._connection() as conn:
+            conn.execute(
+                "CREATE VIEW IF NOT EXISTS v_weight_stats AS "
+                "SELECT start_date, end_date, unit, avg, min, max "
+                "FROM weight_stats_cache;"
+            )
 
     def _ensure_table(
         self, conn: sqlite3.Connection, table: str, sql: str, columns: List[str]
@@ -3568,4 +3590,43 @@ class MLTrainingRawRepository(BaseRepository):
             values = [float(x) for x in inp.split("|") if x]
             result.append((values, float(tgt)))
         return result
+
+
+class StatsCacheRepository(BaseRepository):
+    """Repository managing cached statistics."""
+
+    def fetch_weight_stats(
+        self, start_date: str | None, end_date: str | None, unit: str
+    ) -> dict[str, float] | None:
+        row = self.fetch_all(
+            "SELECT avg, min, max FROM weight_stats_cache "
+            "WHERE start_date IS ? AND end_date IS ? AND unit=?;",
+            (start_date, end_date, unit),
+        )
+        if row:
+            return {
+                "avg": float(row[0][0]),
+                "min": float(row[0][1]),
+                "max": float(row[0][2]),
+            }
+        return None
+
+    def save_weight_stats(
+        self,
+        start_date: str | None,
+        end_date: str | None,
+        unit: str,
+        avg: float,
+        min_val: float,
+        max_val: float,
+    ) -> None:
+        self.execute(
+            "INSERT OR REPLACE INTO weight_stats_cache "
+            "(start_date, end_date, unit, avg, min, max) "
+            "VALUES (?, ?, ?, ?, ?, ?);",
+            (start_date, end_date, unit, avg, min_val, max_val),
+        )
+
+    def clear(self) -> None:
+        self._delete_all("weight_stats_cache")
 
