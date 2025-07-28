@@ -129,3 +129,14 @@ Machine learning predictions may vary slightly; tests only validate value ranges
 
 Custom styling for responsive layouts can be adjusted in `streamlit_app.py` inside the `_inject_responsive_css` function. Edit the CSS rules there to override fonts, colors or layout tweaks. The function is called on every page load so changes apply immediately when the app reloads.
 
+## Docker Compose
+
+For local development you can run the API and Streamlit app using Docker Compose:
+
+```bash
+docker-compose up
+```
+
+This builds a Python image, installs the requirements and starts both the FastAPI
+backend on port `8000` and the Streamlit frontend on port `8501`.
+

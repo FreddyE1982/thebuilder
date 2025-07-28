@@ -3,7 +3,7 @@
 [complete] 1. Add integration tests for API endpoints to ensure proper database access.
 [complete] 2. Add tests for GUI components described in streamlittestinghowto.md.
 [complete] 3. Refactor rest_api.py to group routes by resource using APIRouter.
-4. Document API endpoints with OpenAPI descriptions.
+[complete] 4. Document API endpoints with OpenAPI descriptions.
 5. Add user authentication and authorization for workout editing.
 [complete] 6. Implement pagination on workout history API.
 [complete] 7. Create CLI to export workouts to CSV and JSON.
@@ -47,7 +47,7 @@
 45. Add 3D visualization of muscle engagement.
 46. Support image upload for exercise demonstration.
 47. Add endpoint for goal progress chart data.
-48. Create docker-compose configuration for local dev.
+[complete] 48. Create docker-compose configuration for local dev.
 49. Add ability to clone templates between users.
 50. Support configurable RPE scale (e.g. 1–5 or 1–10).
 51. Add analytics for training monotony and strain.
@@ -64,7 +64,7 @@
 62. Provide ability to share workout templates via link.
 63. Add feature flag support for experimental models.
 64. Implement timeline view of workout history in GUI.
-65. Improve error messages for invalid API input.
+[complete] 65. Improve error messages for invalid API input.
 66. Store original raw data of ML training sets.
 67. Add cross-validation for ML models to compute accuracy.
 68. Include predicted confidence intervals in API responses.
