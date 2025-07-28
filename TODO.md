@@ -7,7 +7,7 @@
 5. Add user authentication and authorization for workout editing.
 [complete] 6. Implement pagination on workout history API.
 [complete] 7. Create CLI to export workouts to CSV and JSON.
-8. Add scheduling for regular email reports.
+[complete] 8. Add scheduling for regular email reports.
 9. Improve planner_service with goal-based plan suggestions.
 [complete] 10. Validate YAML settings via schema on startup.
 [complete] 11. Add backup/restore commands for the SQLite database.
@@ -21,12 +21,12 @@
 19. Add localization framework for multi-language UI.
 20. Refactor database layer to async for FastAPI performance.
 [complete] 21. Add unit tests for ml_service models.
-22. Provide interactive charts for power and velocity histories.
+[complete] 22. Provide interactive charts for power and velocity histories.
 [complete] 23. Add endpoint for exercise alias removal.
 24. Implement caching for statistics queries using SQLite views.
 [complete] 25. Add Jenkinsfile for automated build.
 [complete] 26. Add color-blind friendly theme options.
-27. Implement rate limiting on REST API endpoints.
+[complete] 27. Implement rate limiting on REST API endpoints.
 28. Add importer from widely-used workout apps (e.g. Strava).
 29. Provide export to generic training XML format.
 30. Add websockets endpoint for real-time workout updates.
@@ -46,7 +46,7 @@
 44. Provide data validation on CSV imports.
 45. Add 3D visualization of muscle engagement.
 46. Support image upload for exercise demonstration.
-47. Add endpoint for goal progress chart data.
+[complete] 47. Add endpoint for goal progress chart data.
 [complete] 48. Create docker-compose configuration for local dev.
 49. Add ability to clone templates between users.
 50. Support configurable RPE scale (e.g. 1–5 or 1–10).
@@ -62,16 +62,16 @@
 [complete] 60. Ensure StatsService returns sorted results consistently.
 [complete] 61. Add REST endpoint for editing exercise catalog entries.
 62. Provide ability to share workout templates via link.
-63. Add feature flag support for experimental models.
+[complete] 63. Add feature flag support for experimental models.
 64. Implement timeline view of workout history in GUI.
 [complete] 65. Improve error messages for invalid API input.
-66. Store original raw data of ML training sets.
-67. Add cross-validation for ML models to compute accuracy.
-68. Include predicted confidence intervals in API responses.
+[complete] 66. Store original raw data of ML training sets.
+[complete] 67. Add cross-validation for ML models to compute accuracy.
+[complete] 68. Include predicted confidence intervals in API responses.
 69. Support dynamic chart resizing depending on metrics.
 70. Implement advanced search filters in planner_service.
-71. Provide endpoint to add comments to workouts.
-72. Add rating distribution chart in Stats tab.
+[complete] 71. Provide endpoint to add comments to workouts.
+[complete] 72. Add rating distribution chart in Stats tab.
 [complete] 73. Validate equipment type names to avoid duplicates.
 [complete] 74. Document database schema in README.
 [complete] 75. Add `--demo` mode for generating fake data.
@@ -82,7 +82,7 @@
 80. Add data migration script for schema changes.
 81. Implement Slack notifications for workout logs.
 82. Add API key management for third-party integrations.
-83. Provide user-friendly onboarding wizard in GUI.
+[complete] 83. Provide user-friendly onboarding wizard in GUI.
 84. Add long-term trend analytics (moving averages).
 85. Support per-workout timezone handling.
 [complete] 86. Implement automatic database vacuuming.

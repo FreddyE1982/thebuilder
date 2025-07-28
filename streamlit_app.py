@@ -211,7 +211,9 @@ class GymApp:
         ]
         self.bookmarks = self.settings_repo.get_list("bookmarked_views")
         self.pinned_stats = self.settings_repo.get_list("pinned_stats")
-        self.hide_completed_plans = self.settings_repo.get_bool("hide_completed_plans", False)
+        self.hide_completed_plans = self.settings_repo.get_bool(
+            "hide_completed_plans", False
+        )
         self.add_set_key = self.settings_repo.get_text("hotkey_add_set", "a")
         self.tab_keys = self.settings_repo.get_text("hotkey_tab_keys", "1,2,3,4")
         self.sidebar_width = self.settings_repo.get_float("sidebar_width", 18.0)
@@ -1572,13 +1574,17 @@ class GymApp:
 
     def _render_nav(self, container_class: str) -> None:
         """Render navigation bar using LayoutManager."""
-        selected = min(st.session_state.get("main_tab", 0), len(self.layout.nav_labels) - 1)
+        selected = min(
+            st.session_state.get("main_tab", 0), len(self.layout.nav_labels) - 1
+        )
         keys = self.tab_keys.split(",")
         self.layout._render_nav(container_class, selected, keys)
 
     def _bottom_nav(self) -> None:
         """Render bottom navigation on mobile devices."""
-        selected = min(st.session_state.get("main_tab", 0), len(self.layout.nav_labels) - 1)
+        selected = min(
+            st.session_state.get("main_tab", 0), len(self.layout.nav_labels) - 1
+        )
         keys = self.tab_keys.split(",")
         self.layout.bottom_nav(selected, keys)
 
@@ -1674,7 +1680,9 @@ class GymApp:
 
     def _top_nav(self) -> None:
         """Render top navigation on desktop."""
-        selected = min(st.session_state.get("main_tab", 0), len(self.layout.nav_labels) - 1)
+        selected = min(
+            st.session_state.get("main_tab", 0), len(self.layout.nav_labels) - 1
+        )
         keys = self.tab_keys.split(",")
         self.layout.top_nav(selected, keys)
 
@@ -1761,13 +1769,14 @@ class GymApp:
         except Exception:
             pass
         import uuid
+
         st.download_button(
             "Export PNG",
             data=data,
             file_name="chart.png",
             mime="image/png",
             disabled=not png_available,
-            key=f"png_{uuid.uuid4()}"
+            key=f"png_{uuid.uuid4()}",
         )
         if not png_available:
             st.button("Export PNG", disabled=True, key=f"png_btn_{uuid.uuid4()}")
@@ -1874,9 +1883,11 @@ class GymApp:
             unsafe_allow_html=True,
         )
         st.markdown(
-            "<div id='tips-panel' class='tips-panel'>" +
-            "<h3>Tips</h3>" +
-            "<ul>" + "".join(f"<li>{t}</li>" for t in tips) + "</ul></div>",
+            "<div id='tips-panel' class='tips-panel'>"
+            + "<h3>Tips</h3>"
+            + "<ul>"
+            + "".join(f"<li>{t}</li>" for t in tips)
+            + "</ul></div>",
             unsafe_allow_html=True,
         )
         components.html(
@@ -2160,16 +2171,26 @@ class GymApp:
         with st.expander("Charts", expanded=True):
             if st.session_state.is_mobile:
                 st.subheader("Daily Volume")
-                vol_data = daily if daily else [{"date": start.isoformat(), "volume": 0}]
+                vol_data = (
+                    daily if daily else [{"date": start.isoformat(), "volume": 0}]
+                )
                 df_daily = pd.DataFrame(vol_data).set_index("date")
-                self._line_chart({"Volume": df_daily["volume"].tolist()}, df_daily.index.tolist())
+                self._line_chart(
+                    {"Volume": df_daily["volume"].tolist()}, df_daily.index.tolist()
+                )
                 duration = self.stats.session_duration(
                     start.isoformat(), end.isoformat()
                 )
                 st.subheader("Session Duration")
-                dur_data = duration if duration else [{"date": start.isoformat(), "duration": 0}]
+                dur_data = (
+                    duration
+                    if duration
+                    else [{"date": start.isoformat(), "duration": 0}]
+                )
                 df_dur = pd.DataFrame(dur_data).set_index("date")
-                self._line_chart({"Duration": df_dur["duration"].tolist()}, df_dur.index.tolist())
+                self._line_chart(
+                    {"Duration": df_dur["duration"].tolist()}, df_dur.index.tolist()
+                )
                 exercises = [""] + self.exercise_names_repo.fetch_all()
                 ex_choice = st.selectbox(
                     "Exercise Progression", exercises, key=f"{prefix}_ex"
@@ -2180,16 +2201,24 @@ class GymApp:
                         ex_choice, start.isoformat(), end.isoformat()
                     )
                     st.subheader("1RM Progression")
-                prog_data = prog if prog else [{"date": start.isoformat(), "est_1rm": 0}]
+                prog_data = (
+                    prog if prog else [{"date": start.isoformat(), "est_1rm": 0}]
+                )
                 df_prog = pd.DataFrame(prog_data).set_index("date")
-                self._line_chart({"1RM": df_prog["est_1rm"].tolist()}, df_prog.index.tolist())
+                self._line_chart(
+                    {"1RM": df_prog["est_1rm"].tolist()}, df_prog.index.tolist()
+                )
             else:
                 left, right = st.columns(2)
                 with left:
                     st.subheader("Daily Volume")
-                    vol_data = daily if daily else [{"date": start.isoformat(), "volume": 0}]
+                    vol_data = (
+                        daily if daily else [{"date": start.isoformat(), "volume": 0}]
+                    )
                     df_daily = pd.DataFrame(vol_data).set_index("date")
-                    self._line_chart({"Volume": df_daily["volume"].tolist()}, df_daily.index.tolist())
+                    self._line_chart(
+                        {"Volume": df_daily["volume"].tolist()}, df_daily.index.tolist()
+                    )
                     exercises = [""] + self.exercise_names_repo.fetch_all()
                     ex_choice = st.selectbox(
                         "Exercise Progression", exercises, key=f"{prefix}_ex"
@@ -2200,17 +2229,27 @@ class GymApp:
                             ex_choice, start.isoformat(), end.isoformat()
                         )
                         st.subheader("1RM Progression")
-                    prog_data = prog if prog else [{"date": start.isoformat(), "est_1rm": 0}]
+                    prog_data = (
+                        prog if prog else [{"date": start.isoformat(), "est_1rm": 0}]
+                    )
                     df_prog = pd.DataFrame(prog_data).set_index("date")
-                    self._line_chart({"1RM": df_prog["est_1rm"].tolist()}, df_prog.index.tolist())
+                    self._line_chart(
+                        {"1RM": df_prog["est_1rm"].tolist()}, df_prog.index.tolist()
+                    )
                 with right:
                     duration = self.stats.session_duration(
                         start.isoformat(), end.isoformat()
                     )
                     st.subheader("Session Duration")
-                    dur_data = duration if duration else [{"date": start.isoformat(), "duration": 0}]
+                    dur_data = (
+                        duration
+                        if duration
+                        else [{"date": start.isoformat(), "duration": 0}]
+                    )
                     df_dur = pd.DataFrame(dur_data).set_index("date")
-                    self._line_chart({"Duration": df_dur["duration"].tolist()}, df_dur.index.tolist())
+                    self._line_chart(
+                        {"Duration": df_dur["duration"].tolist()}, df_dur.index.tolist()
+                    )
                     eq_stats = self.stats.equipment_usage(
                         start.isoformat(), end.isoformat()
                     )
@@ -2654,7 +2693,10 @@ class GymApp:
                 if start_time:
                     st.write(f"Start: {self._format_time(start_time)}")
                     if not end_time:
-                        elapsed = (datetime.datetime.now() - datetime.datetime.fromisoformat(start_time)).total_seconds()
+                        elapsed = (
+                            datetime.datetime.now()
+                            - datetime.datetime.fromisoformat(start_time)
+                        ).total_seconds()
                         st.write(f"Time: {int(elapsed)}s")
                 if end_time:
                     st.write(f"End: {self._format_time(end_time)}")
@@ -3119,9 +3161,7 @@ class GymApp:
                             )
                             st.markdown("</div>", unsafe_allow_html=True)
                     else:
-                        exp_label = (
-                            f"Set {idx} - {reps}x{weight}{self.weight_unit} RPE {rpe} ({intensity}%)"
-                        )
+                        exp_label = f"Set {idx} - {reps}x{weight}{self.weight_unit} RPE {rpe} ({intensity}%)"
                         exp = st.expander(
                             exp_label,
                             expanded=st.session_state.pop(f"open_set_{set_id}", False),
@@ -3360,7 +3400,9 @@ class GymApp:
                     st.session_state[f"set_errors_{exercise_id}"] = errors
                 else:
                     st.session_state.pop(f"set_errors_{exercise_id}", None)
-                    self._submit_set(exercise_id, reps, weight, rpe, note, duration, btn_warm)
+                    self._submit_set(
+                        exercise_id, reps, weight, rpe, note, duration, btn_warm
+                    )
             errors = {}
             if reps < 1:
                 errors["reps"] = "required"
@@ -3576,7 +3618,9 @@ class GymApp:
         ex_id = self.exercises.add(wid, "Bench Press", "Olympic Barbell")
         self.sets.add(ex_id, 5, 100.0, 8)
         self.sets.add(ex_id, 5, 105.0, 9)
-        wid2 = self.workouts.create((today - datetime.timedelta(days=1)).isoformat(), "hypertrophy")
+        wid2 = self.workouts.create(
+            (today - datetime.timedelta(days=1)).isoformat(), "hypertrophy"
+        )
         ex2 = self.exercises.add(wid2, "Squat", "Olympic Barbell")
         self.sets.add(ex2, 8, 150.0, 7)
 
@@ -3585,9 +3629,17 @@ class GymApp:
         if not stack:
             return
         action, data = stack.pop()
-        st.session_state.setdefault("redo_stack", []).append((action, self.sets.fetch_detail(data["id"])))
+        st.session_state.setdefault("redo_stack", []).append(
+            (action, self.sets.fetch_detail(data["id"]))
+        )
         if action == "update_set":
-            self.sets.update(data["id"], int(data["reps"]), float(data["weight"]), int(data["rpe"]), data.get("warmup"))
+            self.sets.update(
+                data["id"],
+                int(data["reps"]),
+                float(data["weight"]),
+                int(data["rpe"]),
+                data.get("warmup"),
+            )
             self.sets.update_note(data["id"], data.get("note"))
             if data.get("start_time"):
                 self.sets.set_start_time(data["id"], data["start_time"])
@@ -3600,9 +3652,17 @@ class GymApp:
         if not stack:
             return
         action, data = stack.pop()
-        st.session_state.setdefault("undo_stack", []).append((action, self.sets.fetch_detail(data["id"])))
+        st.session_state.setdefault("undo_stack", []).append(
+            (action, self.sets.fetch_detail(data["id"]))
+        )
         if action == "update_set":
-            self.sets.update(data["id"], int(data["reps"]), float(data["weight"]), int(data["rpe"]), data.get("warmup"))
+            self.sets.update(
+                data["id"],
+                int(data["reps"]),
+                float(data["weight"]),
+                int(data["rpe"]),
+                data.get("warmup"),
+            )
             self.sets.update_note(data["id"], data.get("note"))
             if data.get("start_time"):
                 self.sets.set_start_time(data["id"], data["start_time"])
@@ -5399,6 +5459,12 @@ class GymApp:
                 ("Max", stats["max"]),
             ]
             self._metric_grid(metrics)
+            dist = self.stats.rating_distribution(start_str, end_str)
+            if dist:
+                self._bar_chart(
+                    {"Count": [d["count"] for d in dist]},
+                    [str(d["rating"]) for d in dist],
+                )
 
     def _risk_tab(self) -> None:
         st.header("Risk & Readiness")
@@ -6179,8 +6245,12 @@ class GymApp:
                 self.settings_repo.set_text("hotkey_tab_keys", tab_keys_in or "1,2,3,4")
                 self.settings_repo.set_text("quick_weights", qw_in)
                 self.settings_repo.set_list("enabled_tabs", enabled_tabs_in)
-                self.settings_repo.set_list("bookmarked_views", [v for v in bookmark_in.split(",") if v])
-                self.settings_repo.set_list("pinned_stats", [v for v in pinned_in.split(",") if v])
+                self.settings_repo.set_list(
+                    "bookmarked_views", [v for v in bookmark_in.split(",") if v]
+                )
+                self.settings_repo.set_list(
+                    "pinned_stats", [v for v in pinned_in.split(",") if v]
+                )
                 self.settings_repo.set_bool("hide_completed_plans", hide_completed_opt)
                 self.add_set_key = add_key_in or "a"
                 self.tab_keys = tab_keys_in or "1,2,3,4"
