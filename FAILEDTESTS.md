@@ -1,1 +1,2 @@
 - tests/test_streamlit_app.py::StreamlitAllInteractionsTest::test_all_visible_widgets
+- tests/test_streamlit_app.py::StreamlitAppTest::test_quick_weight_buttons

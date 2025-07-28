@@ -1666,6 +1666,23 @@ class ExerciseNameRepository(BaseRepository):
                 (new_name, canonical),
             )
 
+    def remove_alias(self, alias: str) -> None:
+        """Delete an alias without affecting the canonical name."""
+        canonical = self.canonical(alias)
+        if alias == canonical:
+            raise ValueError("cannot remove canonical name")
+        with self._connection() as conn:
+            rows = conn.execute(
+                "SELECT name FROM exercise_names WHERE name = ?;",
+                (alias,),
+            ).fetchall()
+            if not rows:
+                raise ValueError("alias not found")
+            conn.execute(
+                "DELETE FROM exercise_names WHERE name = ?;",
+                (alias,),
+            )
+
 
 class ExerciseVariantRepository(BaseRepository):
     """Repository managing exercise variant links."""

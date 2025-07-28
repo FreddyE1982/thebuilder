@@ -312,6 +312,14 @@ class GymAPI:
             self.exercise_names.add_alias(new_name, existing)
             return {"status": "added"}
 
+        @self.app.delete("/exercise_names/alias/{alias}")
+        def delete_exercise_alias(alias: str):
+            try:
+                self.exercise_names.remove_alias(alias)
+                return {"status": "deleted"}
+            except ValueError as e:
+                raise HTTPException(status_code=404, detail=str(e))
+
         @self.app.post("/exercise_variants/link")
         def link_exercise_variant(name: str, variant: str):
             self.exercise_variants.link(name, variant)
@@ -598,8 +606,19 @@ class GymAPI:
             start_date: str,
             end_date: str,
             training_type: str = None,
+            sort_by: str = "id",
+            descending: bool = True,
+            limit: int | None = None,
+            offset: int | None = None,
         ):
-            workouts = self.workouts.fetch_all_workouts(start_date, end_date)
+            workouts = self.workouts.fetch_all_workouts(
+                start_date,
+                end_date,
+                sort_by=sort_by,
+                descending=descending,
+                limit=limit,
+                offset=offset,
+            )
             result = []
             for wid, date, _s, _e, t_type, _notes, _rating in workouts:
                 if training_type and t_type != training_type:
@@ -1859,6 +1878,20 @@ class GymAPI:
         def list_body_weight(start_date: str = None, end_date: str = None):
             rows = self.body_weights.fetch_history(start_date, end_date)
             return [{"id": rid, "date": d, "weight": w} for rid, d, w in rows]
+
+        @self.app.get("/body_weight/export_csv")
+        def export_body_weight_csv(
+            start_date: str = None, end_date: str = None
+        ):
+            rows = self.body_weights.fetch_history(start_date, end_date)
+            lines = ["Date,Weight"]
+            for _rid, d, w in rows:
+                lines.append(f"{d},{w}")
+            return Response(
+                content="\n".join(lines),
+                media_type="text/csv",
+                headers={"Content-Disposition": "attachment; filename=body_weight.csv"},
+            )
 
         @self.app.put("/body_weight/{entry_id}")
         def update_body_weight(entry_id: int, weight: float, date: str):

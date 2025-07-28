@@ -5,7 +5,7 @@
 3. Refactor rest_api.py to group routes by resource using APIRouter.
 4. Document API endpoints with OpenAPI descriptions.
 5. Add user authentication and authorization for workout editing.
-6. Implement pagination on workout history API.
+[complete] 6. Implement pagination on workout history API.
 7. Create CLI to export workouts to CSV and JSON.
 8. Add scheduling for regular email reports.
 9. Improve planner_service with goal-based plan suggestions.
@@ -13,7 +13,7 @@
 11. Add backup/restore commands for the SQLite database.
 12. Add continuous integration workflow running tests on push.
 13. Expand statistics to include per-muscle progress charts.
-14. Add endpoint for editing wellness logs.
+[complete] 14. Add endpoint for editing wellness logs.
 15. Create responsive mobile layout tests for each GUI tab.
 16. Include weight unit conversion support in stats_service.
 17. Add dark/light theme switch stored in settings.
@@ -22,7 +22,7 @@
 20. Refactor database layer to async for FastAPI performance.
 21. Add unit tests for ml_service models.
 22. Provide interactive charts for power and velocity histories.
-23. Add endpoint for exercise alias removal.
+[complete] 23. Add endpoint for exercise alias removal.
 24. Implement caching for statistics queries using SQLite views.
 25. Add Jenkinsfile for automated build.
 26. Add color-blind friendly theme options.
@@ -31,7 +31,7 @@
 29. Provide export to generic training XML format.
 30. Add websockets endpoint for real-time workout updates.
 31. Implement progressive web app features for offline use.
-32. Add endpoint to download body_weight_logs as CSV.
+[complete] 32. Add endpoint to download body_weight_logs as CSV.
 33. Provide monthly summary emails via Cron or Celery.
 34. Add user-defined default equipment per exercise.
 35. Implement privacy settings for shared workouts.
@@ -59,7 +59,7 @@
 57. Add dynamic equipment suggestion using ML predictions.
 58. Provide sample data seeding script.
 59. Add instructions for customizing CSS in README.
-60. Ensure StatsService returns sorted results consistently.
+[complete] 60. Ensure StatsService returns sorted results consistently.
 61. Add REST endpoint for editing exercise catalog entries.
 62. Provide ability to share workout templates via link.
 63. Add feature flag support for experimental models.
