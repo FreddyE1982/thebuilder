@@ -88,3 +88,8 @@ pytest -q
 
 The tests exercise the entire REST API including machine learning features and a long‑term usage simulation covering six months of activity.
 Machine learning predictions may vary slightly; tests only validate value ranges.
+
+## Customizing CSS
+
+Custom styling for responsive layouts can be adjusted in `streamlit_app.py` inside the `_inject_responsive_css` function. Edit the CSS rules there to override fonts, colors or layout tweaks. The function is called on every page load so changes apply immediately when the app reloads.
+

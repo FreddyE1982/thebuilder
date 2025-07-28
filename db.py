@@ -1946,7 +1946,7 @@ class EquipmentTypeRepository(BaseRepository):
 
     def exists(self, name: str) -> bool:
         rows = super().fetch_all(
-            "SELECT id FROM equipment_types WHERE name = ?;",
+            "SELECT id FROM equipment_types WHERE lower(name) = lower(?);",
             (name,),
         )
         return bool(rows)
@@ -1960,6 +1960,8 @@ class EquipmentTypeRepository(BaseRepository):
         )
 
     def update(self, name: str, new_name: str) -> None:
+        if self.exists(new_name):
+            raise ValueError("type exists")
         rows = super().fetch_all(
             "SELECT is_custom FROM equipment_types WHERE name = ?;",
             (name,),

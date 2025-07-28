@@ -62,7 +62,8 @@ from ml_service import (
     ProgressModelService,
     RLGoalModelService,
 )
-from tools import MathTools, GitTools
+from tools import MathTools
+from cli_tools import GitTools
 
 # Preinitialize session state for library widget keys to prevent missing state
 for _k, _default in {"lib_eq_name": "", "lib_ex_name": ""}.items():

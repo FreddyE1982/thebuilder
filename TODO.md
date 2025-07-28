@@ -37,7 +37,7 @@
 35. Implement privacy settings for shared workouts.
 36. Add voice command support in the GUI.
 37. Add voice feedback for timer events using STT.
-38. Refactor tools.py to separate math utilities from CLI utilities.
+[complete] 38. Refactor tools.py to separate math utilities from CLI utilities.
 39. Add coverage reporting to tests.
 40. Document environment variables for deployment in README.
 41. Add support for external database like PostgreSQL.
@@ -57,8 +57,8 @@
 55. Support uploading heart rate monitor data in bulk.
 56. Extend rest_api tests to cover error conditions.
 57. Add dynamic equipment suggestion using ML predictions.
-58. Provide sample data seeding script.
-59. Add instructions for customizing CSS in README.
+[complete] 58. Provide sample data seeding script.
+[complete] 59. Add instructions for customizing CSS in README.
 [complete] 60. Ensure StatsService returns sorted results consistently.
 61. Add REST endpoint for editing exercise catalog entries.
 62. Provide ability to share workout templates via link.
@@ -72,7 +72,7 @@
 70. Implement advanced search filters in planner_service.
 71. Provide endpoint to add comments to workouts.
 72. Add rating distribution chart in Stats tab.
-73. Validate equipment type names to avoid duplicates.
+[complete] 73. Validate equipment type names to avoid duplicates.
 74. Document database schema in README.
 75. Add `--demo` mode for generating fake data.
 76. Encrypt sensitive settings in YAML with keyring.
@@ -99,5 +99,5 @@
 97. Support split view on tablets for side-by-side charts.
 98. Provide API to fetch saved report PDFs.
 99. Add screenshot-based test for mobile layout via playwright.
-100. Document contribution guidelines and code style.
+[complete] 100. Document contribution guidelines and code style.
 
