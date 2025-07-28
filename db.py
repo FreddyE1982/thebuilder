@@ -678,6 +678,7 @@ class Database:
             "time_format": "24h",
             "quick_weights": "20,40,60,80,100",
             "bookmarked_views": "",
+            "pinned_stats": "",
             "hide_completed_plans": "0",
         }
         with self._connection() as conn:
@@ -2894,7 +2895,8 @@ class ReactionRepository(BaseRepository):
     """Repository for storing emoji reactions to workouts."""
 
     def react(self, workout_id: int, emoji: str) -> None:
-        row = self.fetch_all(
+        """Add an emoji reaction for the given workout."""
+        row = super().fetch_all(
             "SELECT count FROM workout_reactions WHERE workout_id = ? AND emoji = ?;",
             (workout_id, emoji),
         )
@@ -2910,7 +2912,8 @@ class ReactionRepository(BaseRepository):
                 (workout_id, emoji),
             )
 
-    def fetch_all(self, workout_id: int) -> list[tuple[str, int]]:
+    def list_for_workout(self, workout_id: int) -> list[tuple[str, int]]:
+        """Return all reactions for ``workout_id`` sorted by emoji."""
         rows = super().fetch_all(
             "SELECT emoji, count FROM workout_reactions WHERE workout_id = ? ORDER BY emoji;",
             (workout_id,),
