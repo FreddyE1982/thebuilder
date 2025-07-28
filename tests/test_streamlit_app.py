@@ -821,6 +821,25 @@ class StreamlitAppTest(unittest.TestCase):
         shutil.rmtree(remote_dir)
         shutil.rmtree(repo_dir)
 
+    def test_compact_mode_toggle(self) -> None:
+        self.at.query_params["tab"] = "settings"
+        self.at.run()
+        settings_tab = self._get_tab("Settings")
+        idx = _find_by_label(settings_tab.checkbox, "Compact Mode")
+        current = settings_tab.checkbox[idx].value
+        if current:
+            settings_tab.checkbox[idx].uncheck().run()
+        else:
+            settings_tab.checkbox[idx].check().run()
+        save_idx = _find_by_label(settings_tab.button, "Save General Settings")
+        settings_tab.button[save_idx].click().run()
+        conn = self._connect()
+        cur = conn.cursor()
+        cur.execute("SELECT value FROM settings WHERE key = 'compact_mode';")
+        val = cur.fetchone()[0]
+        conn.close()
+        self.assertEqual(bool(int(val)), not current)
+
 
 class StreamlitFullGUITest(unittest.TestCase):
     def setUp(self) -> None:
@@ -1350,6 +1369,25 @@ class StreamlitHeartRateGUITest(unittest.TestCase):
         cur.execute("SELECT heart_rate FROM heart_rate_logs WHERE workout_id = 1;")
         self.assertEqual(cur.fetchone()[0], 120)
         conn.close()
+    def test_compact_mode_toggle(self) -> None:
+        self.at.query_params["tab"] = "settings"
+        self.at.run()
+        settings_tab = self._get_tab("Settings")
+        idx = _find_by_label(settings_tab.checkbox, "Compact Mode")
+        current = settings_tab.checkbox[idx].value
+        if current:
+            settings_tab.checkbox[idx].uncheck().run()
+        else:
+            settings_tab.checkbox[idx].check().run()
+        save_idx = _find_by_label(settings_tab.button, "Save General Settings")
+        settings_tab.button[save_idx].click().run()
+        conn = self._connect()
+        cur = conn.cursor()
+        cur.execute("SELECT value FROM settings WHERE key = 'compact_mode';")
+        val = cur.fetchone()[0]
+        conn.close()
+        self.assertEqual(bool(int(val)), not current)
+
 
 
 @unittest.skip("Unstable in CI")

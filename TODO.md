@@ -1,6 +1,6 @@
 # TODO
 
-1. Add integration tests for API endpoints to ensure proper database access.
+[complete] 1. Add integration tests for API endpoints to ensure proper database access.
 2. Add tests for GUI components described in streamlittestinghowto.md.
 3. Refactor rest_api.py to group routes by resource using APIRouter.
 4. Document API endpoints with OpenAPI descriptions.
