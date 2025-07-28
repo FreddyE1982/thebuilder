@@ -3510,3 +3510,19 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         resp = self.client.get("/settings/bookmarks")
         self.assertEqual(resp.json()["views"], ["overview", "progress"])
+
+    def test_create_workout_future_date_error(self) -> None:
+        future = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
+        resp = self.client.post("/workouts", params={"date": future})
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(resp.json()["detail"], "date cannot be in the future")
+
+    def test_exercise_catalog_not_found(self) -> None:
+        resp = self.client.get("/exercise_catalog/Unknown")
+        self.assertEqual(resp.status_code, 404)
+        self.assertEqual(resp.json()["detail"], "not found")
+
+    def test_update_tag_not_found(self) -> None:
+        resp = self.client.put("/tags/99", params={"name": "x"})
+        self.assertEqual(resp.status_code, 404)
+        self.assertEqual(resp.json()["detail"], "tag not found")

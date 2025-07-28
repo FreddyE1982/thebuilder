@@ -1,6 +1,6 @@
 import os
 import unittest
-from cli import export_workouts, backup_db, restore_db
+from cli import export_workouts, backup_db, restore_db, demo_data
 from rest_api import GymAPI
 from fastapi.testclient import TestClient
 
@@ -35,6 +35,12 @@ class CLIToolsTest(unittest.TestCase):
         os.remove(self.db_path)
         restore_db("backup.db", self.db_path)
         self.assertTrue(os.path.exists(self.db_path))
+
+    def test_demo_data(self) -> None:
+        demo_data(self.db_path, self.yaml_path)
+        api2 = GymAPI(db_path=self.db_path, yaml_path=self.yaml_path)
+        workouts = api2.workouts.fetch_all_workouts()
+        self.assertEqual(len(workouts), 1)
 
 if __name__ == "__main__":
     unittest.main()
