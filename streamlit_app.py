@@ -1746,7 +1746,8 @@ class GymApp:
                 ),
             )
         )
-        st.altair_chart(chart, use_container_width=True)
+        height = 300 + 20 * max(0, len(data) - 1)
+        st.altair_chart(chart.properties(height=height), use_container_width=True)
         png_available = False
         data = b""
         try:
@@ -1797,7 +1798,8 @@ class GymApp:
                 ),
             )
         )
-        st.altair_chart(chart, use_container_width=True)
+        height = 300 + 20 * max(0, len(data) - 1)
+        st.altair_chart(chart.properties(height=height), use_container_width=True)
 
     def _chart_carousel(self, charts: list[Callable[[], None]], key: str) -> None:
         """Display charts in a simple carousel."""

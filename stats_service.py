@@ -360,6 +360,9 @@ class StatisticsService:
                 self.progress_model.train(float(idx), rm)
 
         last_idx = len(reps) - 1
+        est_hist = [MathTools.epley_1rm(w, r) for w, r in zip(weights, reps)]
+        slope = ExercisePrescription._linear_regression_slope(times, est_hist)
+        lower, upper = ExercisePrescription._confidence_interval(slope, est_hist, times)
         result: List[Dict[str, float]] = []
         for item in base:
             t_idx = last_idx + item["week"] * workouts_per_week
@@ -372,7 +375,16 @@ class StatisticsService:
             ):
                 ml_pred = self.progress_model.predict(float(t_idx))
             est = (item["est_1rm"] + ml_pred) / 2
-            result.append({"week": item["week"], "est_1rm": round(est, 2)})
+            lo = est + lower * item["week"] * workouts_per_week
+            hi = est + upper * item["week"] * workouts_per_week
+            result.append(
+                {
+                    "week": item["week"],
+                    "est_1rm": round(est, 2),
+                    "lower": round(lo, 2),
+                    "upper": round(hi, 2),
+                }
+            )
 
         return result
 
@@ -1612,6 +1624,7 @@ class StatisticsService:
             and self.settings is not None
             and self.settings.get_bool("ml_all_enabled", True)
             and self.settings.get_bool("ml_prediction_enabled", True)
+            and self.settings.get_bool("experimental_models_enabled", False)
         ):
             score = self.adaptation_model.predict(features, base)
         if (
@@ -1619,6 +1632,7 @@ class StatisticsService:
             and self.settings is not None
             and self.settings.get_bool("ml_all_enabled", True)
             and self.settings.get_bool("ml_training_enabled", True)
+            and self.settings.get_bool("experimental_models_enabled", False)
         ):
             self.adaptation_model.train(features, base)
         return {"adaptation": round(score * 10.0, 2)}
@@ -1681,6 +1695,18 @@ class StatisticsService:
             "min": min(ratings),
             "max": max(ratings),
         }
+
+    def rating_distribution(
+        self, start_date: Optional[str] = None, end_date: Optional[str] = None
+    ) -> List[Dict[str, int]]:
+        if self.workouts is None:
+            return []
+        rows = self.workouts.fetch_ratings(start_date, end_date)
+        dist: Dict[int, int] = {}
+        for _d, rating in rows:
+            key = int(rating)
+            dist[key] = dist.get(key, 0) + 1
+        return [{"rating": r, "count": dist[r]} for r in sorted(dist)]
 
     def workout_calories(self, workout_id: int) -> float:
         """Estimate calories burned for a workout."""

@@ -316,6 +316,15 @@ class Database:
                 );""",
             ["id", "name", "timestamp", "prediction", "confidence"],
         ),
+        "ml_training_raw": (
+            """CREATE TABLE ml_training_raw (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    model_name TEXT NOT NULL,
+                    inputs TEXT NOT NULL,
+                    target REAL NOT NULL
+                );""",
+            ["id", "model_name", "inputs", "target"],
+        ),
         "body_weight_logs": (
             """CREATE TABLE body_weight_logs (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -474,6 +483,16 @@ class Database:
                     read INTEGER NOT NULL DEFAULT 0
                 );""",
             ["id", "timestamp", "message", "read"],
+        ),
+        "workout_comments": (
+            """CREATE TABLE workout_comments (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    workout_id INTEGER NOT NULL,
+                    timestamp TEXT NOT NULL,
+                    comment TEXT NOT NULL,
+                    FOREIGN KEY(workout_id) REFERENCES workouts(id) ON DELETE CASCADE
+                );""",
+            ["id", "workout_id", "timestamp", "comment"],
         ),
     }
 
@@ -673,6 +692,7 @@ class Database:
             "ml_goal_prediction_enabled": "1",
             "ml_injury_training_enabled": "1",
             "ml_injury_prediction_enabled": "1",
+            "experimental_models_enabled": "0",
             "compact_mode": "0",
             "email_weekly_enabled": "0",
             "weekly_report_email": "",
@@ -1767,6 +1787,7 @@ class SettingsRepository(BaseRepository):
             "ml_goal_prediction_enabled",
             "ml_injury_training_enabled",
             "ml_injury_prediction_enabled",
+            "experimental_models_enabled",
             "hide_preconfigured_equipment",
             "hide_preconfigured_exercises",
             "compact_mode",
@@ -1810,6 +1831,7 @@ class SettingsRepository(BaseRepository):
                 "ml_goal_prediction_enabled",
                 "ml_injury_training_enabled",
                 "ml_injury_prediction_enabled",
+                "experimental_models_enabled",
                 "hide_preconfigured_equipment",
                 "hide_preconfigured_exercises",
                 "compact_mode",
@@ -1909,6 +1931,7 @@ class SettingsRepository(BaseRepository):
             "ml_goal_prediction_enabled",
             "ml_injury_training_enabled",
             "ml_injury_prediction_enabled",
+            "experimental_models_enabled",
             "hide_preconfigured_equipment",
             "hide_preconfigured_exercises",
             "compact_mode",
@@ -3413,4 +3436,42 @@ class NotificationRepository(BaseRepository):
             "SELECT COUNT(*) FROM notifications WHERE read=0;"
         )
         return rows[0][0] if rows else 0
+
+
+class WorkoutCommentRepository(BaseRepository):
+    """Repository for workout comments."""
+
+    def add(self, workout_id: int, comment: str, timestamp: str) -> int:
+        return self.execute(
+            "INSERT INTO workout_comments (workout_id, timestamp, comment) VALUES (?, ?, ?);",
+            (workout_id, timestamp, comment),
+        )
+
+    def fetch_for_workout(self, workout_id: int) -> list[tuple[int, str, str]]:
+        rows = self.fetch_all(
+            "SELECT id, timestamp, comment FROM workout_comments WHERE workout_id=? ORDER BY id;",
+            (workout_id,),
+        )
+        return [(int(r[0]), r[1], r[2]) for r in rows]
+
+
+class MLTrainingRawRepository(BaseRepository):
+    """Repository storing raw ML training samples."""
+
+    def add(self, model_name: str, inputs: str, target: float) -> int:
+        return self.execute(
+            "INSERT INTO ml_training_raw (model_name, inputs, target) VALUES (?, ?, ?);",
+            (model_name, inputs, target),
+        )
+
+    def fetch(self, model_name: str) -> list[tuple[list[float], float]]:
+        rows = self.fetch_all(
+            "SELECT inputs, target FROM ml_training_raw WHERE model_name=? ORDER BY id;",
+            (model_name,),
+        )
+        result: list[tuple[list[float], float]] = []
+        for inp, tgt in rows:
+            values = [float(x) for x in inp.split("|") if x]
+            result.append((values, float(tgt)))
+        return result
 

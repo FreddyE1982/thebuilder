@@ -1206,6 +1206,22 @@ class APITestCase(unittest.TestCase):
         resp = self.client.get(f"/workouts/{wid}")
         self.assertEqual(resp.json()["location"], "Gym")
 
+    def test_workout_comments(self) -> None:
+        resp = self.client.post("/workouts")
+        wid = resp.json()["id"]
+        resp = self.client.post(
+            f"/workouts/{wid}/comments",
+            params={"comment": "Great", "timestamp": "2024-01-01T10:00:00"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        cid = resp.json()["id"]
+        resp = self.client.get(f"/workouts/{wid}/comments")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(
+            resp.json(),
+            [{"id": cid, "timestamp": "2024-01-01T10:00:00", "comment": "Great"}],
+        )
+
     def test_workout_rating(self) -> None:
         resp = self.client.post(
             "/workouts",
@@ -2433,6 +2449,10 @@ class APITestCase(unittest.TestCase):
         self.assertIsInstance(first["prediction"], float)
         self.assertIsInstance(first["confidence"], float)
 
+        cv_resp = self.client.get("/ml/cross_validate/performance_model", params={"folds": 2})
+        self.assertEqual(cv_resp.status_code, 200)
+        self.assertIn("mse", cv_resp.json())
+
         # test date filtering
         ts_full = first["timestamp"]
         filtered = self.client.get(
@@ -2967,6 +2987,22 @@ class APITestCase(unittest.TestCase):
         ids = [t["id"] for t in resp.json()]
         self.assertEqual(ids, [tids[1], tids[2], tids[0]])
 
+    def test_template_share(self) -> None:
+        resp = self.client.post("/templates", params={"name": "Share", "training_type": "strength"})
+        tid = resp.json()["id"]
+        self.client.post(
+            f"/templates/{tid}/exercises",
+            params={"name": "Bench", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/template_exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8},
+        )
+        resp = self.client.get(f"/templates/{tid}/share")
+        self.assertEqual(resp.status_code, 200)
+        text = resp.json()["text"]
+        self.assertIn("Bench", text)
+
     def test_rating_history_and_stats(self) -> None:
         d1 = "2023-01-01"
         d2 = "2023-01-02"
@@ -3001,6 +3037,21 @@ class APITestCase(unittest.TestCase):
         self.assertAlmostEqual(stats["avg"], 4.5)
         self.assertEqual(stats["min"], 4)
         self.assertEqual(stats["max"], 5)
+
+    def test_rating_distribution(self) -> None:
+        d1 = "2023-01-01"
+        d2 = "2023-01-02"
+        self.client.post("/workouts", params={"date": d1, "rating": 4})
+        self.client.post("/workouts", params={"date": d2, "rating": 5})
+        resp = self.client.get(
+            "/stats/rating_distribution",
+            params={"start_date": d1, "end_date": d2},
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(
+            resp.json(),
+            [{"rating": 4, "count": 1}, {"rating": 5, "count": 1}],
+        )
 
     def test_calendar_endpoint(self) -> None:
         today = datetime.date.today().isoformat()
