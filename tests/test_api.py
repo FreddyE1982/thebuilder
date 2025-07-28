@@ -2994,6 +2994,28 @@ class APITestCase(unittest.TestCase):
         list_resp = self.client.get("/favorites/workouts")
         self.assertNotIn(1, list_resp.json())
 
+    def test_default_equipment(self) -> None:
+        resp = self.client.post(
+            "/default_equipment",
+            params={"exercise_name": "Bench Press", "equipment_name": "Olympic Barbell"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), {"status": "set"})
+
+        resp = self.client.get("/default_equipment/Bench Press")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), {"equipment_name": "Olympic Barbell"})
+
+        lst = self.client.get("/default_equipment").json()
+        self.assertIn({"exercise_name": "Bench Press", "equipment_name": "Olympic Barbell"}, lst)
+
+        resp = self.client.delete("/default_equipment/Bench Press")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), {"status": "deleted"})
+
+        resp = self.client.get("/default_equipment/Bench Press")
+        self.assertIsNone(resp.json()["equipment_name"])
+
     def test_copy_workout_to_template(self) -> None:
         self.client.post("/workouts")
         self.client.post(

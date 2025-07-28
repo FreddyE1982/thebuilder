@@ -1355,7 +1355,7 @@ class StatisticsService:
             return []
         workouts = self.workouts.fetch_all_workouts(start_date, end_date)
         stats: Dict[str, Dict[str, float | int]] = {}
-        for wid, _date, _s, _e, t_type, _notes, _rating in workouts:
+        for wid, _date, _s, _e, t_type, _notes, _rating, *_ in workouts:
             summary = self.sets.workout_summary(wid)
             entry = stats.setdefault(t_type, {"workouts": 0, "volume": 0.0, "sets": 0})
             entry["workouts"] += 1

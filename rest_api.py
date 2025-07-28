@@ -41,6 +41,7 @@ from db import (
     FavoriteExerciseRepository,
     FavoriteTemplateRepository,
     FavoriteWorkoutRepository,
+    DefaultEquipmentRepository,
     ReactionRepository,
     TagRepository,
     GoalRepository,
@@ -148,6 +149,7 @@ class GymAPI:
         self.favorites = FavoriteExerciseRepository(db_path)
         self.favorite_templates = FavoriteTemplateRepository(db_path)
         self.favorite_workouts = FavoriteWorkoutRepository(db_path)
+        self.default_equipment = DefaultEquipmentRepository(db_path, self.exercise_names)
         self.reactions = ReactionRepository(db_path)
         self.tags = TagRepository(db_path)
         self.pyramid_tests = PyramidTestRepository(db_path)
@@ -539,6 +541,28 @@ class GymAPI:
             self.favorite_workouts.remove(workout_id)
             return {"status": "deleted"}
 
+        @self.app.get("/default_equipment")
+        def list_default_equipment():
+            rows = self.default_equipment.fetch_all()
+            return [
+                {"exercise_name": ex, "equipment_name": eq} for ex, eq in rows
+            ]
+
+        @self.app.get("/default_equipment/{exercise_name}")
+        def get_default_equipment(exercise_name: str):
+            eq = self.default_equipment.fetch(exercise_name)
+            return {"equipment_name": eq}
+
+        @self.app.post("/default_equipment")
+        def set_default_equipment(exercise_name: str, equipment_name: str):
+            self.default_equipment.set(exercise_name, equipment_name)
+            return {"status": "set"}
+
+        @self.app.delete("/default_equipment/{exercise_name}")
+        def delete_default_equipment(exercise_name: str):
+            self.default_equipment.delete(exercise_name)
+            return {"status": "deleted"}
+
         @self.app.get("/tags")
         def list_tags():
             rows = self.tags.fetch_all()
@@ -803,7 +827,7 @@ class GymAPI:
                 offset=offset,
             )
             result = []
-            for wid, date, _s, _e, t_type, _notes, _rating in workouts:
+            for wid, date, _s, _e, t_type, _notes, _rating, *_ in workouts:
                 if training_type and t_type != training_type:
                     continue
                 summary = self.sets.workout_summary(wid)
@@ -824,7 +848,7 @@ class GymAPI:
             logged = self.workouts.fetch_all_workouts(start_date, end_date)
             planned = self.planned_workouts.fetch_all(start_date, end_date)
             result = []
-            for wid, date, _s, _e, t_type, _notes, _rating in logged:
+            for wid, date, _s, _e, t_type, _notes, _rating, *_ in logged:
                 result.append(
                     {
                         "id": wid,

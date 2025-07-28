@@ -33,7 +33,7 @@
 31. Implement progressive web app features for offline use.
 [complete] 32. Add endpoint to download body_weight_logs as CSV.
 [complete] 33. Provide monthly summary emails via Cron or Celery.
-34. Add user-defined default equipment per exercise.
+[complete] 34. Add user-defined default equipment per exercise.
 35. Implement privacy settings for shared workouts.
 36. Add voice command support in the GUI.
 37. Add voice feedback for timer events using STT.
