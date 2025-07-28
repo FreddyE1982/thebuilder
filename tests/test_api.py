@@ -3432,6 +3432,19 @@ class APITestCase(unittest.TestCase):
         resp = self.client.get(f"/workouts/{wid}/calories")
         self.assertGreater(resp.json()["calories"], 0)
 
+    def test_workout_share(self) -> None:
+        wid = self.client.post("/workouts").json()["id"]
+        self.client.post(
+            f"/workouts/{wid}/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8},
+        )
+        resp = self.client.get(f"/workouts/{wid}/share")
+        self.assertIn("Bench Press", resp.json()["text"])
+
     def test_bookmarks_setting(self) -> None:
         resp = self.client.post("/settings/bookmarks", json="overview,progress")
         self.assertEqual(resp.status_code, 200)

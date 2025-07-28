@@ -103,15 +103,15 @@
 - [x] 100. Enable exporting analytics charts as images from the GUI.
 - [x] 101. Add dynamic breadcrumbs to show navigation context on mobile.
 - [x] 102. Allow pinning important stats to the header for constant visibility.
-- [ ] 103. Provide auto-save of set inputs as they are entered.
+ - [x] 103. Provide auto-save of set inputs as they are entered.
 - [x] 104. Implement color-coded badges for workout intensity levels.
-- [ ] 105. Add quick actions for sharing workouts via social media.
-- [ ] 106. Offer per-user customization for which tabs appear in the nav bar.
+ - [x] 105. Add quick actions for sharing workouts via social media.
+ - [x] 106. Offer per-user customization for which tabs appear in the nav bar.
 - [x] 107. Include example workouts for new users accessible from onboarding.
 - [x] 108. Display estimated calories burned per workout in the summary.
 - [x] 109. Add option to hide completed planned workouts from the calendar.
-- [ ] 110. Support inline graphs of weight progression within the workout log.
-- [ ] 111. Replace explicit st.rerun calls with session state updates to avoid reruns when clicking buttons or entering data.
-  - [ ] 111.1 Introduce _trigger_refresh method toggling a session_state variable.
-  - [ ] 111.2 Apply _trigger_refresh to _refresh and _command_palette.
-  - [ ] 111.3 Review remaining st.rerun usage and replace accordingly.
+ - [x] 110. Support inline graphs of weight progression within the workout log.
+ - [x] 111. Replace explicit st.rerun calls with session state updates to avoid reruns when clicking buttons or entering data.
+  - [x] 111.1 Introduce _trigger_refresh method toggling a session_state variable.
+  - [x] 111.2 Apply _trigger_refresh to _refresh and _command_palette.
+  - [x] 111.3 Review remaining st.rerun usage and replace accordingly.

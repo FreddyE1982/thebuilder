@@ -72,6 +72,15 @@ for _k, _default in {"lib_eq_name": "", "lib_ex_name": ""}.items():
 class LayoutManager:
     """Manage top-level page layout and navigation."""
 
+    def __init__(self, settings_repo: SettingsRepository) -> None:
+        self._settings = settings_repo
+
+    @property
+    def nav_labels(self) -> list[str]:
+        default = ["workouts", "library", "progress", "settings"]
+        enabled = self._settings.get_list("enabled_tabs")
+        return [l for l in default if not enabled or l in enabled]
+
     @property
     def is_mobile(self) -> bool:
         return st.session_state.get("is_mobile", False)
@@ -104,7 +113,7 @@ class LayoutManager:
     def _render_nav(
         self, container_class: str, selected_tab: int, tab_keys: list[str]
     ) -> None:
-        labels = ["workouts", "library", "progress", "settings"]
+        labels = self.nav_labels
         icons = {
             "workouts": "🏋️",
             "library": "📚",
@@ -115,9 +124,9 @@ class LayoutManager:
         html = (
             f'<nav class="{container_class}" role="tablist" aria-label="Main Navigation">'
             + "".join(
-                f'<button role="tab" title="{label.title()} (Alt+{tab_keys[idx]})" '
+                f'<button role="tab" title="{label.title()} (Alt+{tab_keys[idx] if idx < len(tab_keys) else ""})" '
                 f'aria-label="{label.title()} Tab" '
-                f'data-tooltip="Alt+{tab_keys[idx]}" '
+                f'data-tooltip="Alt+{tab_keys[idx] if idx < len(tab_keys) else ""}" '
                 f'aria-selected="{str(selected_tab == idx).lower()}" '
                 f'{"aria-current=\"page\" " if selected_tab == idx else ""}'
                 f'tabindex="0" '
@@ -211,10 +220,10 @@ class GymApp:
                 "highintensity",
             ]
         )
+        self.layout = LayoutManager(self.settings_repo)
         self._configure_page()
         self._inject_responsive_css()
         self._apply_theme()
-        self.layout = LayoutManager()
         self.workouts = WorkoutRepository(db_path)
         self.exercises = ExerciseRepository(db_path)
         self.sets = SetRepository(db_path)
@@ -566,13 +575,13 @@ class GymApp:
             document.addEventListener('click', saveScroll, true);
             handleResize();
             const tabKeys = JSON.parse('%TAB_KEYS%');
+            const tabLabels = JSON.parse('%TAB_LABELS%');
             const addSetKey = '%ADD_KEY%'.toLowerCase();
             function handleHotkeys(e) {
                 if (e.altKey && tabKeys.includes(e.key)) {
-                    const labels = ['workouts','library','progress','settings'];
                     const idx = tabKeys.indexOf(e.key);
                     const params = new URLSearchParams(window.location.search);
-                    params.set('tab', labels[idx]);
+                    params.set('tab', tabLabels[idx]);
                     window.location.search = params.toString();
                 } else if (e.altKey && e.key.toLowerCase() === addSetKey) {
                     const btn = Array.from(document.querySelectorAll('button'))
@@ -590,12 +599,11 @@ class GymApp:
             function handleTouchEnd(e) {
                 const dx = e.changedTouches[0].clientX - touchX;
                 if (Math.abs(dx) > 50) {
-                    const labels = ['workouts','library','progress','settings'];
                     const params = new URLSearchParams(window.location.search);
-                    let idx = labels.indexOf(params.get('tab') || 'workouts');
-                    if (dx < 0 && idx < labels.length - 1) idx++;
+                    let idx = tabLabels.indexOf(params.get('tab') || tabLabels[0]);
+                    if (dx < 0 && idx < tabLabels.length - 1) idx++;
                     else if (dx > 0 && idx > 0) idx--;
-                    params.set('tab', labels[idx]);
+                    params.set('tab', tabLabels[idx]);
                     window.location.search = params.toString();
                 }
             }
@@ -618,6 +626,7 @@ class GymApp:
             """
             )
             .replace("%TAB_KEYS%", json.dumps(self.tab_keys.split(",")))
+            .replace("%TAB_LABELS%", json.dumps(self.layout.nav_labels))
             .replace("%ADD_KEY%", self.add_set_key),
             height=0,
         )
@@ -1542,7 +1551,7 @@ class GymApp:
             self.settings_repo.set_text("theme", new_theme)
             self.theme = new_theme
             self._apply_theme()
-            st.rerun()
+            self._trigger_refresh()
         with st.sidebar.expander("Help & About"):
             if st.button("Show Help", key="help_btn"):
                 self._help_dialog()
@@ -1553,13 +1562,13 @@ class GymApp:
 
     def _render_nav(self, container_class: str) -> None:
         """Render navigation bar using LayoutManager."""
-        selected = st.session_state.get("main_tab", 0)
+        selected = min(st.session_state.get("main_tab", 0), len(self.layout.nav_labels) - 1)
         keys = self.tab_keys.split(",")
         self.layout._render_nav(container_class, selected, keys)
 
     def _bottom_nav(self) -> None:
         """Render bottom navigation on mobile devices."""
-        selected = st.session_state.get("main_tab", 0)
+        selected = min(st.session_state.get("main_tab", 0), len(self.layout.nav_labels) - 1)
         keys = self.tab_keys.split(",")
         self.layout.bottom_nav(selected, keys)
 
@@ -1655,14 +1664,14 @@ class GymApp:
 
     def _top_nav(self) -> None:
         """Render top navigation on desktop."""
-        selected = st.session_state.get("main_tab", 0)
+        selected = min(st.session_state.get("main_tab", 0), len(self.layout.nav_labels) - 1)
         keys = self.tab_keys.split(",")
         self.layout.top_nav(selected, keys)
 
     def _switch_tab(self, label: str) -> None:
         mode = "mobile" if st.session_state.is_mobile else "desktop"
         st.query_params.update({"mode": mode, "tab": label})
-        st.rerun()
+        self._trigger_refresh()
 
     def _metric_grid(self, metrics: list[tuple[str, str]]) -> None:
         """Render metrics in a responsive grid."""
@@ -1917,7 +1926,7 @@ class GymApp:
         choice = st.selectbox("Jump to Section", [""] + sections, key=key)
         if choice:
             st.session_state.scroll_to = self._slugify(choice)
-            st.rerun()
+            self._trigger_refresh()
 
     def _reset_equipment_filters(self) -> None:
         """Clear equipment library filter inputs."""
@@ -1925,7 +1934,7 @@ class GymApp:
         st.session_state.lib_eq_prefix = ""
         st.session_state.lib_eq_mus = []
         if os.environ.get("TEST_MODE") != "1":
-            st.rerun()
+            self._trigger_refresh()
 
     def _reset_exercise_filters(self) -> None:
         """Clear exercise library filter inputs."""
@@ -1934,7 +1943,7 @@ class GymApp:
         st.session_state.lib_ex_eq = ""
         st.session_state.lib_ex_prefix = ""
         if os.environ.get("TEST_MODE") != "1":
-            st.rerun()
+            self._trigger_refresh()
 
     def _help_dialog(self) -> None:
         def _content() -> None:
@@ -2013,20 +2022,20 @@ class GymApp:
             if step > 0:
                 if col1.button("Back", key="onboard_back"):
                     st.session_state.onboarding_step -= 1
-                    st.rerun()
+                    self._trigger_refresh()
             if step < len(steps) - 1:
                 if col2.button("Next", key="onboard_next"):
                     st.session_state.onboarding_step += 1
-                    st.rerun()
+                    self._trigger_refresh()
             else:
                 if col1.button("Load Examples", key="onboard_examples"):
                     self._load_example_workouts()
                     st.session_state.onboarding_step = len(steps) - 1
-                    st.rerun()
+                    self._trigger_refresh()
                 if col2.button("Finish", key="onboard_finish"):
                     self.settings_repo.set_bool("onboarding_complete", True)
                     st.session_state.pop("onboarding_step", None)
-                    st.rerun()
+                    self._trigger_refresh()
 
         self._show_dialog("Welcome", _content)
 
@@ -2039,7 +2048,7 @@ class GymApp:
                 if not n["read"]:
                     if cols[1].button("Read", key=f"read_{n['id']}"):
                         self.notifications_repo.mark_read(n["id"])
-                        st.rerun()
+                        self._trigger_refresh()
             if st.button("Close", key="notif_close"):
                 st.session_state.open_notifications = False
 
@@ -2079,7 +2088,7 @@ class GymApp:
                     )
                     self._select_workout(wid)
                     st.session_state.open_quick_workout = False
-                    st.rerun()
+                    self._trigger_refresh()
             st.button("Close", on_click=self._close_quick_workout)
 
         self._show_dialog("Quick New Workout", _content)
@@ -2117,7 +2126,7 @@ class GymApp:
                         datetime.date.today() - datetime.timedelta(days=30)
                     )
                     st.session_state[f"{prefix}_end_m"] = datetime.date.today()
-                    st.rerun()
+                    self._trigger_refresh()
         stats = self.stats.overview(start.isoformat(), end.isoformat())
         w_stats = self.stats.weight_stats(start.isoformat(), end.isoformat())
         r_stats = self.stats.readiness_stats(start.isoformat(), end.isoformat())
@@ -2242,7 +2251,7 @@ class GymApp:
                     params["tab"] = "progress"
                     params["sub"] = sub
                     st.experimental_set_query_params(**params)
-                    st.rerun()
+                    self._trigger_refresh()
 
     def run(self) -> None:
         params = dict(st.query_params)
@@ -2250,12 +2259,8 @@ class GymApp:
         params = dict(st.query_params)
         tab_param = params.get("tab")
         sub_param = params.get("sub")
-        tab_map = {
-            "workouts": 0,
-            "library": 1,
-            "progress": 2,
-            "settings": 3,
-        }
+        labels = self.layout.nav_labels
+        tab_map = {name: idx for idx, name in enumerate(labels)}
         if tab_param in tab_map:
             st.session_state["main_tab"] = tab_map[tab_param]
         if sub_param:
@@ -2289,7 +2294,7 @@ class GymApp:
                 self.settings_repo.set_text("theme", new_theme)
                 self.theme = new_theme
                 self._apply_theme()
-                st.rerun()
+                self._trigger_refresh()
         with cols[2]:
             if st.button("Help", key="help_button_header"):
                 self._help_dialog()
@@ -2558,7 +2563,7 @@ class GymApp:
             with c2:
                 if st.button("Reset Search", key="workout_search_reset"):
                     st.session_state.workout_search = ""
-                    st.rerun()
+                    self._trigger_refresh()
             workouts = sorted(self.workouts.fetch_all_workouts(), key=lambda w: w[1])
             if search:
                 query = search.lower()
@@ -2692,6 +2697,8 @@ class GymApp:
                     mime="application/json",
                     key=f"export_json_{selected}",
                 )
+                if st.button("Share", key=f"share_{selected}"):
+                    self._share_workout_dialog(int(selected))
                 if start_time and end_time:
                     link = f"?mode={'mobile' if self.layout.is_mobile else 'desktop'}&tab=progress&start={start_time}&end={end_time}"
                     st.link_button("View Analytics", link)
@@ -2821,7 +2828,7 @@ class GymApp:
                             st.session_state[f"open_ex_{ex_id}"] = True
                             st.session_state[f"open_add_set_{ex_id}"] = True
                             st.session_state.scroll_to = f"ex_{ex_id}_sets"
-                            st.rerun()
+                            self._trigger_refresh()
                 with st.expander(
                     "Add New Exercise",
                     expanded=st.session_state.get("open_add_ex_flag", False),
@@ -2849,7 +2856,7 @@ class GymApp:
                             st.session_state[f"open_ex_{ex_id}"] = True
                             st.session_state[f"open_add_set_{ex_id}"] = True
                             st.session_state.scroll_to = f"ex_{ex_id}_sets"
-                            st.rerun()
+                            self._trigger_refresh()
                         else:
                             st.warning("Exercise and equipment required")
                 with st.expander("Logged Exercises", expanded=True):
@@ -2952,7 +2959,7 @@ class GymApp:
                 for v in variants:
                     if st.button(v, key=f"switch_{exercise_id}_{v}"):
                         self.exercises.update_name(exercise_id, v)
-                        st.rerun()
+                        self._trigger_refresh()
             with st.expander("Sets", expanded=True):
                 order = [s[0] for s in sets]
                 for idx, (
@@ -3051,7 +3058,7 @@ class GymApp:
                                         timespec="seconds"
                                     ),
                                 )
-                                st.rerun()
+                                self._trigger_refresh()
                             if finish_col.button("Finish", key=f"finish_set_{set_id}"):
                                 self.sets.set_end_time(
                                     set_id,
@@ -3059,7 +3066,7 @@ class GymApp:
                                         timespec="seconds"
                                     ),
                                 )
-                            st.rerun()
+                            self._trigger_refresh()
                         del_col, up_col, down_col = st.columns(3)
                         if del_col.button("Delete", key=f"del_{set_id}"):
                             self._confirm_delete_set(set_id)
@@ -3072,7 +3079,7 @@ class GymApp:
                             if pos > 0:
                                 order[pos - 1], order[pos] = order[pos], order[pos - 1]
                                 self.sets.reorder_sets(exercise_id, order)
-                                st.rerun()
+                                self._trigger_refresh()
                         if down_col.button(
                             "Move Down", key=f"move_down_{set_id}"
                         ) and idx < len(order):
@@ -3080,7 +3087,7 @@ class GymApp:
                             if pos < len(order) - 1:
                                 order[pos], order[pos + 1] = order[pos + 1], order[pos]
                                 self.sets.reorder_sets(exercise_id, order)
-                                st.rerun()
+                                self._trigger_refresh()
                         if start_time:
                             st.write(self._format_time(start_time))
                         if end_time:
@@ -3165,13 +3172,13 @@ class GymApp:
                                 set_id,
                                 datetime.datetime.now().isoformat(timespec="seconds"),
                             )
-                            st.rerun()
+                            self._trigger_refresh()
                         if cols[11].button("Finish", key=f"finish_set_{set_id}"):
                             self.sets.set_end_time(
                                 set_id,
                                 datetime.datetime.now().isoformat(timespec="seconds"),
                             )
-                            st.rerun()
+                            self._trigger_refresh()
                         if cols[12].button("Delete", key=f"del_{set_id}"):
                             self._confirm_delete_set(set_id)
                             continue
@@ -3183,7 +3190,7 @@ class GymApp:
                             if pos > 0:
                                 order[pos - 1], order[pos] = order[pos], order[pos - 1]
                                 self.sets.reorder_sets(exercise_id, order)
-                                st.rerun()
+                                self._trigger_refresh()
                         if cols[14].button(
                             "Move Down", key=f"move_down_{set_id}"
                         ) and idx < len(order):
@@ -3191,7 +3198,7 @@ class GymApp:
                             if pos < len(order) - 1:
                                 order[pos], order[pos + 1] = order[pos + 1], order[pos]
                                 self.sets.reorder_sets(exercise_id, order)
-                                st.rerun()
+                                self._trigger_refresh()
                         if start_time:
                             cols[10].write(self._format_time(start_time))
                         if end_time:
@@ -3245,7 +3252,7 @@ class GymApp:
                     if det["end_time"]:
                         self.sets.set_end_time(new_id, det["end_time"])
                     st.success("Set restored")
-                    st.rerun()
+                    self._trigger_refresh()
             st.markdown(
                 f"<div id='ex_{exercise_id}_sets'></div>", unsafe_allow_html=True
             )
@@ -3494,7 +3501,7 @@ class GymApp:
         st.session_state.pop(f"new_warmup_{exercise_id}", None)
         st.session_state.scroll_to = f"ex_{exercise_id}_sets"
         st.session_state[f"open_add_set_{exercise_id}"] = True
-        st.rerun()
+        self._trigger_refresh()
 
     def _update_set(self, set_id: int) -> None:
         """Update set values based on current widget state."""
@@ -3514,27 +3521,27 @@ class GymApp:
         self.sets.update_note(set_id, note_val or None)
         if dur_val and float(dur_val) > 0:
             self.sets.set_duration(set_id, float(dur_val))
-        st.rerun()
+        self._trigger_refresh()
 
     def _update_workout_type(self, workout_id: int) -> None:
         val = st.session_state.get(f"type_select_{workout_id}")
         self.workouts.set_training_type(workout_id, val)
-        st.rerun()
+        self._trigger_refresh()
 
     def _update_workout_notes(self, workout_id: int) -> None:
         val = st.session_state.get(f"workout_notes_{workout_id}", "")
         self.workouts.set_note(workout_id, val or None)
-        st.rerun()
+        self._trigger_refresh()
 
     def _update_workout_location(self, workout_id: int) -> None:
         val = st.session_state.get(f"workout_location_{workout_id}", "")
         self.workouts.set_location(workout_id, val or None)
-        st.rerun()
+        self._trigger_refresh()
 
     def _update_workout_rating(self, workout_id: int) -> None:
         val = st.session_state.get(f"rating_{workout_id}")
         self.workouts.set_rating(workout_id, int(val) if val is not None else None)
-        st.rerun()
+        self._trigger_refresh()
 
     def _load_example_workouts(self) -> None:
         """Populate the database with sample workouts."""
@@ -3560,7 +3567,7 @@ class GymApp:
                 self.sets.set_start_time(data["id"], data["start_time"])
             if data.get("end_time"):
                 self.sets.set_end_time(data["id"], data["end_time"])
-        st.rerun()
+        self._trigger_refresh()
 
     def _redo_action(self) -> None:
         stack = st.session_state.get("redo_stack", [])
@@ -3575,14 +3582,14 @@ class GymApp:
                 self.sets.set_start_time(data["id"], data["start_time"])
             if data.get("end_time"):
                 self.sets.set_end_time(data["id"], data["end_time"])
-        st.rerun()
+        self._trigger_refresh()
 
     def _update_workout_tags(self, workout_id: int) -> None:
         selected = st.session_state.get(f"tags_sel_{workout_id}", [])
         name_map = {n: tid for tid, n in self.tags_repo.fetch_all()}
         ids = [name_map[n] for n in selected]
         self.tags_repo.set_tags(workout_id, ids)
-        st.rerun()
+        self._trigger_refresh()
 
     def _update_planned_workout(self, plan_id: int) -> None:
         date_val = st.session_state.get(f"plan_edit_{plan_id}")
@@ -3591,14 +3598,14 @@ class GymApp:
             self.planned_workouts.update_date(plan_id, date_val.isoformat())
         if type_val:
             self.planned_workouts.set_training_type(plan_id, type_val)
-        st.rerun()
+        self._trigger_refresh()
 
     def _update_planned_set(self, set_id: int) -> None:
         reps_val = st.session_state.get(f"plan_reps_{set_id}")
         weight_val = st.session_state.get(f"plan_weight_{set_id}")
         rpe_val = st.session_state.get(f"plan_rpe_{set_id}")
         self.planned_sets.update(set_id, int(reps_val), float(weight_val), int(rpe_val))
-        st.rerun()
+        self._trigger_refresh()
 
     def _update_template_set(self, set_id: int) -> None:
         reps_val = st.session_state.get(f"tmpl_reps_{set_id}")
@@ -3607,7 +3614,7 @@ class GymApp:
         self.template_sets.update(
             set_id, int(reps_val), float(weight_val), int(rpe_val)
         )
-        st.rerun()
+        self._trigger_refresh()
 
     def _update_equipment(self, original: str) -> None:
         new_name = st.session_state.get(f"edit_name_{original}")
@@ -3617,7 +3624,7 @@ class GymApp:
             self.equipment.update(original, new_type, muscles, new_name)
         except ValueError as e:
             st.warning(str(e))
-        st.rerun()
+        self._trigger_refresh()
 
     def _confirm_delete_set(self, set_id: int) -> None:
         def _content() -> None:
@@ -3629,9 +3636,9 @@ class GymApp:
                 detail["exercise_id"] = ex_id
                 st.session_state.deleted_set = detail
                 self.sets.remove(set_id)
-                st.rerun()
+                self._trigger_refresh()
             if cols[1].button("No", key=f"no_{set_id}"):
-                st.rerun()
+                self._trigger_refresh()
 
         self._show_dialog("Confirm Delete", _content)
 
@@ -3643,9 +3650,9 @@ class GymApp:
                 self.workouts.delete(workout_id)
                 if st.session_state.get("selected_workout") == workout_id:
                     st.session_state.selected_workout = None
-                st.rerun()
+                self._trigger_refresh()
             if cols[1].button("No", key=f"no_w_{workout_id}"):
-                st.rerun()
+                self._trigger_refresh()
 
         self._show_dialog("Confirm Delete", _content)
 
@@ -3666,9 +3673,9 @@ class GymApp:
             cols = st.columns(2)
             if cols[0].button("Yes", key=f"yes_e_{exercise_id}"):
                 self.exercises.remove(exercise_id)
-                st.rerun()
+                self._trigger_refresh()
             if cols[1].button("No", key=f"no_e_{exercise_id}"):
-                st.rerun()
+                self._trigger_refresh()
 
         self._show_dialog("Confirm Delete", _content)
 
@@ -3925,7 +3932,7 @@ class GymApp:
                             cols[0].write(name)
                             if cols[1].button("Remove", key=f"fav_tpl_rm_{fid}"):
                                 self.favorite_templates_repo.remove(fid)
-                                st.rerun()
+                                self._trigger_refresh()
                     else:
                         st.write("No favorites.")
                 all_templates = self.template_workouts.fetch_all()
@@ -3942,7 +3949,7 @@ class GymApp:
                 )
                 if st.button("Add Favorite", key="fav_tpl_add_btn") and add_choice:
                     self.favorite_templates_repo.add(int(add_choice))
-                    st.rerun()
+                    self._trigger_refresh()
                 if st.button("Reorder Templates", key="reorder_templates_btn"):
                     self._reorder_templates_dialog()
             with st.expander("Create New Template"):
@@ -4171,7 +4178,7 @@ class GymApp:
                 cols[0].write(f)
                 if cols[1].button("Remove", key=f"fav_rm_{f}"):
                     self.favorites_repo.remove(f)
-                    st.rerun()
+                    self._trigger_refresh()
         else:
             st.write("No favorites.")
         add_choice = st.selectbox(
@@ -4181,7 +4188,7 @@ class GymApp:
         )
         if st.button("Add Favorite", key="fav_add_btn") and add_choice:
             self.favorites_repo.add(add_choice)
-            st.rerun()
+            self._trigger_refresh()
 
     def _equipment_library(self) -> None:
         muscles = self.muscles_repo.fetch_all()
@@ -4479,7 +4486,7 @@ class GymApp:
                                 c1.write(v)
                                 if c2.button("Unlink", key=f"unlink_var_{name}_{v}"):
                                     self.exercise_variants_repo.unlink(name, v)
-                                    st.rerun()
+                                    self._trigger_refresh()
                             add_v = st.selectbox(
                                 "Add Variant", [""] + names, key=f"add_var_{name}"
                             )
@@ -4488,7 +4495,7 @@ class GymApp:
                                 and add_v
                             ):
                                 self.exercise_variants_repo.link(name, add_v)
-                                st.rerun()
+                                self._trigger_refresh()
                         cols = st.columns(2)
                         if cols[0].button("Update", key=f"upd_cust_{name}"):
                             try:
@@ -4607,7 +4614,7 @@ class GymApp:
                                 c1.write(v)
                                 if c2.button("Unlink", key=f"unlink_var_{name}_{v}"):
                                     self.exercise_variants_repo.unlink(name, v)
-                                    st.rerun()
+                                    self._trigger_refresh()
                             add_v = st.selectbox(
                                 "Add Variant", [""] + names, key=f"add_var_{name}"
                             )
@@ -4616,7 +4623,7 @@ class GymApp:
                                 and add_v
                             ):
                                 self.exercise_variants_repo.link(name, add_v)
-                                st.rerun()
+                                self._trigger_refresh()
                         cols = st.columns(2)
                         if cols[0].button("Update", key=f"upd_cust_{name}"):
                             try:
@@ -4655,7 +4662,7 @@ class GymApp:
                     cols[0].write(date)
                     if cols[1].button("Remove", key=f"fav_wk_rm_{fid}"):
                         self.favorite_workouts_repo.remove(fid)
-                        st.rerun()
+                        self._trigger_refresh()
             else:
                 st.write("No favorites.")
             all_workouts = {
@@ -4670,7 +4677,7 @@ class GymApp:
             )
             if st.button("Add Favorite", key="fav_wk_add_btn") and add_choice:
                 self.favorite_workouts_repo.add(int(add_choice))
-                st.rerun()
+                self._trigger_refresh()
         with st.expander("Filters", expanded=False):
             col1, col2 = st.columns(2)
             with col1:
@@ -4687,19 +4694,19 @@ class GymApp:
                     datetime.date.today() - datetime.timedelta(days=7)
                 )
                 st.session_state.hist_end = datetime.date.today()
-                st.rerun()
+                self._trigger_refresh()
             if chip_cols[1].button("Last 30d", key="hist_30d"):
                 st.session_state.hist_start = (
                     datetime.date.today() - datetime.timedelta(days=30)
                 )
                 st.session_state.hist_end = datetime.date.today()
-                st.rerun()
+                self._trigger_refresh()
             if chip_cols[2].button("Last 90d", key="hist_90d"):
                 st.session_state.hist_start = (
                     datetime.date.today() - datetime.timedelta(days=90)
                 )
                 st.session_state.hist_end = datetime.date.today()
-                st.rerun()
+                self._trigger_refresh()
             if st.button("Reset", key="hist_reset"):
                 st.session_state.hist_start = (
                     datetime.date.today() - datetime.timedelta(days=30)
@@ -4707,7 +4714,7 @@ class GymApp:
                 st.session_state.hist_end = datetime.date.today()
                 st.session_state.hist_type = ""
                 st.session_state.hist_tags = []
-                st.rerun()
+                self._trigger_refresh()
             hist_types = [""] + self.training_options
             ttype = st.selectbox(
                 "Training Type",
@@ -4755,7 +4762,7 @@ class GymApp:
                     label = f"{em} {mapping.get(em,0)}"
                     if rcols[idx].button(label, key=f"react_{wid}_{idx}"):
                         self.reactions.react(wid, em)
-                        st.experimental_rerun()
+                        self._trigger_refresh()
                 tags = [n for _, n in self.tags_repo.fetch_for_workout(wid)]
                 if tags:
                     st.markdown("**Tags:** " + ", ".join(tags))
@@ -4773,7 +4780,7 @@ class GymApp:
             if st.button("Load More", key="hist_more"):
                 st.session_state.hist_offset += limit
                 st.session_state.load_more_hist = True
-                st.rerun()
+                self._trigger_refresh()
 
     def _workout_details_dialog(self, workout_id: int) -> None:
         exercises = self.exercises.fetch_for_workout(workout_id)
@@ -4806,6 +4813,22 @@ class GymApp:
 
         self._show_dialog("Workout Details", _content)
 
+    def _share_workout_dialog(self, workout_id: int) -> None:
+        wid, date, *_ = self.workouts.fetch_detail(workout_id)
+        lines = [f"Workout on {date}"]
+        for ex_id, name, _eq, _note in self.exercises.fetch_for_workout(workout_id):
+            sets = self.sets.fetch_for_exercise(ex_id)
+            sstr = ", ".join(f"{r}x{w}" for _sid, r, w, _rp, *_rest in sets)
+            lines.append(f"{name}: {sstr}")
+        text = "\n".join(lines)
+
+        def _content() -> None:
+            st.text_area("Share Text", value=text, height=150)
+            html = f"<button onclick=\"navigator.clipboard.writeText('{text.replace('\\','\\\\').replace('"','\\"').replace("'","\\'")}')\">Copy</button>"
+            st.markdown(html, unsafe_allow_html=True)
+
+        self._show_dialog("Share Workout", _content)
+
     def _stats_tab(self) -> None:
         st.header("Statistics")
         if self.bookmarks:
@@ -4828,7 +4851,7 @@ class GymApp:
                 )
                 st.session_state.stats_end = datetime.date.today()
                 st.session_state.stats_ex = ""
-                st.rerun()
+                self._trigger_refresh()
             start_str = start.isoformat()
             end_str = end.isoformat()
         summary = self.stats.exercise_summary(
@@ -4991,7 +5014,7 @@ class GymApp:
                 )
                 st.session_state.insights_end = datetime.date.today()
                 st.session_state.insights_ex = ""
-                st.rerun()
+                self._trigger_refresh()
         if st.button("Show Tutorial", key="insights_tut"):
             st.session_state.show_analytics_tutorial = True
         if st.session_state.get("show_analytics_tutorial"):
@@ -5044,7 +5067,7 @@ class GymApp:
                     days=30
                 )
                 st.session_state.bw_end = datetime.date.today()
-                st.rerun()
+                self._trigger_refresh()
             start_str = start.isoformat()
             end_str = end.isoformat()
         stats = self.stats.weight_stats(start_str, end_str)
@@ -5210,19 +5233,19 @@ class GymApp:
                     days=7
                 )
                 st.session_state.rep_end = datetime.date.today()
-                st.rerun()
+                self._trigger_refresh()
             if qcol2.button("Last Month", key="rep_last_month"):
                 st.session_state.rep_start = datetime.date.today() - datetime.timedelta(
                     days=30
                 )
                 st.session_state.rep_end = datetime.date.today()
-                st.rerun()
+                self._trigger_refresh()
             if st.button("Reset", key="rep_reset"):
                 st.session_state.rep_start = datetime.date.today() - datetime.timedelta(
                     days=30
                 )
                 st.session_state.rep_end = datetime.date.today()
-                st.rerun()
+                self._trigger_refresh()
             start_str = start.isoformat()
             end_str = end.isoformat()
         with st.expander("Overall Summary", expanded=True):
@@ -5371,7 +5394,7 @@ class GymApp:
                 )
                 st.session_state.risk_end = datetime.date.today()
                 st.session_state.risk_ex = ""
-                st.rerun()
+                self._trigger_refresh()
             start_str = start.isoformat()
             end_str = end.isoformat()
         summary = self.stats.adaptation_index(start_str, end_str)
@@ -5434,7 +5457,7 @@ class GymApp:
                     self.challenges_repo.update_progress(cid, int(val))
                     if val >= target:
                         self.challenges_repo.set_completed(cid, True)
-                    st.rerun()
+                    self._trigger_refresh()
         completed = [c for c in self.challenges_repo.fetch_all() if c[4]]
         with st.expander("Achievements", expanded=False):
             for _cid, name, _t, _p, _ in completed:
@@ -5444,7 +5467,7 @@ class GymApp:
             target = st.number_input("Target", min_value=1, step=1, key="new_ch_target")
             if st.button("Add Challenge", key="add_ch_btn") and name:
                 self.challenges_repo.add(name, int(target))
-                st.rerun()
+                self._trigger_refresh()
 
     def _tests_tab(self) -> None:
         st.header("Pyramid Test")
@@ -5601,7 +5624,7 @@ class GymApp:
             if st.button("Reset", key="cal_reset"):
                 st.session_state.pop("cal_start", None)
                 st.session_state.pop("cal_end", None)
-                st.rerun()
+                self._trigger_refresh()
             start_str = start.isoformat()
             end_str = end.isoformat()
         logged = self.workouts.fetch_all_workouts(start_str, end_str)
@@ -5960,6 +5983,12 @@ class GymApp:
                     value=self.tab_keys,
                     help="Comma separated keys for Workouts, Library, Progress, Settings",
                 )
+                enabled_tabs_in = st.multiselect(
+                    "Enabled Tabs",
+                    ["workouts", "library", "progress", "settings"],
+                    default=self.layout.nav_labels,
+                    key="enabled_tabs_setting",
+                )
                 qw_in = st.text_input(
                     "Quick Add Weights",
                     value=",".join(str(int(w)) for w in self.quick_weights),
@@ -6123,6 +6152,7 @@ class GymApp:
                 self.settings_repo.set_text("hotkey_add_set", add_key_in or "a")
                 self.settings_repo.set_text("hotkey_tab_keys", tab_keys_in or "1,2,3,4")
                 self.settings_repo.set_text("quick_weights", qw_in)
+                self.settings_repo.set_list("enabled_tabs", enabled_tabs_in)
                 self.settings_repo.set_list("bookmarked_views", [v for v in bookmark_in.split(",") if v])
                 self.settings_repo.set_list("pinned_stats", [v for v in pinned_in.split(",") if v])
                 self.settings_repo.set_bool("hide_completed_plans", hide_completed_opt)
@@ -6131,6 +6161,7 @@ class GymApp:
                 self.quick_weights = [float(v) for v in qw_in.split(",") if v]
                 self.bookmarks = [v for v in bookmark_in.split(",") if v]
                 self.pinned_stats = [v for v in pinned_in.split(",") if v]
+                self.layout = LayoutManager(self.settings_repo)
                 self.hide_completed_plans = hide_completed_opt
                 self.settings_repo.set_float("sidebar_width", sb_width)
                 self.sidebar_width = sb_width
