@@ -50,6 +50,7 @@ from db import (
     GoalRepository,
     NotificationRepository,
     ChallengeRepository,
+    StatsCacheRepository,
 )
 from planner_service import PlannerService
 from recommendation_service import RecommendationService
@@ -262,6 +263,7 @@ class GymApp:
         self.body_weights_repo = BodyWeightRepository(db_path)
         self.wellness_repo = WellnessRepository(db_path)
         self.heart_rates = HeartRateRepository(db_path)
+        self.stats_cache_repo = StatsCacheRepository(db_path)
         self.gamification = GamificationService(
             self.game_repo,
             self.exercises,
@@ -327,6 +329,7 @@ class GymApp:
             self.exercise_catalog,
             self.workouts,
             self.heart_rates,
+            cache_repo=self.stats_cache_repo,
         )
         self._state_init()
 

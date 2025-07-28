@@ -10,6 +10,7 @@ from db import (
     WellnessRepository,
     HeartRateRepository,
     GoalRepository,
+    StatsCacheRepository,
 )
 from ml_service import (
     VolumeModelService,
@@ -41,6 +42,7 @@ class StatisticsService:
         workout_repo: "WorkoutRepository" | None = None,
         heart_rate_repo: "HeartRateRepository" | None = None,
         goal_repo: "GoalRepository" | None = None,
+        cache_repo: "StatsCacheRepository" | None = None,
     ) -> None:
         self.sets = set_repo
         self.exercise_names = name_repo
@@ -57,11 +59,14 @@ class StatisticsService:
         self.workouts = workout_repo
         self.heart_rates = heart_rate_repo
         self.goals = goal_repo
+        self.stats_cache = cache_repo
         self._cache: dict[tuple, dict] = {}
 
     def clear_cache(self) -> None:
         """Clear any cached statistics."""
         self._cache.clear()
+        if self.stats_cache is not None:
+            self.stats_cache.clear()
 
     def _current_body_weight(self) -> float:
         """Fetch the latest logged body weight or fallback to settings."""
@@ -1679,13 +1684,22 @@ class StatisticsService:
         end_date: Optional[str] = None,
         unit: str = "kg",
     ) -> Dict[str, float]:
-        key = ("weight_stats", start_date, end_date, unit)
+        key = (start_date, end_date, unit)
+        if self.stats_cache is not None:
+            cached = self.stats_cache.fetch_weight_stats(start_date, end_date, unit)
+            if cached is not None:
+                self._cache[key] = cached
+                return cached
         if key in self._cache:
             return self._cache[key]
         history = self.body_weight_history(start_date, end_date, unit)
         if not history:
             result = {"avg": 0.0, "min": 0.0, "max": 0.0}
             self._cache[key] = result
+            if self.stats_cache is not None:
+                self.stats_cache.save_weight_stats(
+                    start_date, end_date, unit, 0.0, 0.0, 0.0
+                )
             return result
         weights = [h["weight"] for h in history]
         result = {
@@ -1694,6 +1708,15 @@ class StatisticsService:
             "max": max(weights),
         }
         self._cache[key] = result
+        if self.stats_cache is not None:
+            self.stats_cache.save_weight_stats(
+                start_date,
+                end_date,
+                unit,
+                result["avg"],
+                result["min"],
+                result["max"],
+            )
         return result
 
     def rating_history(

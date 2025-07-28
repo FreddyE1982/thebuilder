@@ -23,7 +23,7 @@
 [complete] 21. Add unit tests for ml_service models.
 [complete] 22. Provide interactive charts for power and velocity histories.
 [complete] 23. Add endpoint for exercise alias removal.
-24. Implement caching for statistics queries using SQLite views.
+[complete] 24. Implement caching for statistics queries using SQLite views.
 [complete] 25. Add Jenkinsfile for automated build.
 [complete] 26. Add color-blind friendly theme options.
 [complete] 27. Implement rate limiting on REST API endpoints.

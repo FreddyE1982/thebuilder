@@ -2537,6 +2537,9 @@ class APITestCase(unittest.TestCase):
         self.assertAlmostEqual(stats["avg"], 81.0, places=2)
         self.assertEqual(stats["min"], 80.0)
         self.assertEqual(stats["max"], 82.0)
+        cached = self.api.stats_cache.fetch_weight_stats(d1, d2, "kg")
+        self.assertIsNotNone(cached)
+        self.assertAlmostEqual(cached["avg"], 81.0, places=2)
 
         resp = self.client.get(
             "/stats/weight_stats",
@@ -2547,6 +2550,9 @@ class APITestCase(unittest.TestCase):
 
         resp = self.client.post("/stats/cache/clear")
         self.assertEqual(resp.json(), {"status": "cleared"})
+        self.assertIsNone(
+            self.api.stats_cache.fetch_weight_stats(d1, d2, "kg")
+        )
 
     def test_current_body_weight_latest_log(self) -> None:
         d1 = "2023-01-01"
