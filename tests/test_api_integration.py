@@ -18,6 +18,18 @@ class APIIntegrationDBTest(unittest.TestCase):
             os.remove(self.yaml_path)
         self.api = GymAPI(db_path=self.db_path, yaml_path=self.yaml_path)
         self.client = TestClient(self.api.app)
+        reg = self.client.post(
+            "/users/register",
+            json={"username": "test", "password": "test"},
+        )
+        assert reg.status_code == 200
+        login = self.client.post(
+            "/token",
+            json={"username": "test", "password": "test"},
+        )
+        assert login.status_code == 200
+        token = login.json()["token"]
+        self.client.headers.update({"Authorization": token})
 
     def tearDown(self) -> None:
         if os.path.exists(self.db_path):

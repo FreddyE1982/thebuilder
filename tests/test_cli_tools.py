@@ -1,5 +1,7 @@
 import os
+import sys
 import unittest
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from cli import export_workouts, backup_db, restore_db, demo_data
 from rest_api import GymAPI
 from fastapi.testclient import TestClient
@@ -14,6 +16,16 @@ class CLIToolsTest(unittest.TestCase):
             os.remove(self.yaml_path)
         self.api = GymAPI(db_path=self.db_path, yaml_path=self.yaml_path)
         self.client = TestClient(self.api.app)
+        self.client.post(
+            "/users/register",
+            json={"username": "test", "password": "test"},
+        )
+        login = self.client.post(
+            "/token",
+            json={"username": "test", "password": "test"},
+        )
+        token = login.json()["token"]
+        self.client.headers.update({"Authorization": token})
 
     def tearDown(self) -> None:
         for path in [self.db_path, self.yaml_path, "backup.db", "exports"]:

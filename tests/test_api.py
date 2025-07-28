@@ -29,6 +29,18 @@ class APITestCase(unittest.TestCase):
             rate_limit=None,
         )
         self.client = TestClient(self.api.app)
+        reg = self.client.post(
+            "/users/register",
+            json={"username": "test", "password": "test"},
+        )
+        assert reg.status_code == 200
+        login = self.client.post(
+            "/token",
+            json={"username": "test", "password": "test"},
+        )
+        assert login.status_code == 200
+        token = login.json()["token"]
+        self.client.headers.update({"Authorization": token})
 
     def tearDown(self) -> None:
         if os.path.exists(self.db_path):
@@ -43,7 +55,7 @@ class APITestCase(unittest.TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         uid = resp.json()["id"]
-        self.assertEqual(uid, 1)
+        self.assertGreaterEqual(uid, 1)
         login = self.client.post(
             "/token",
             json={"username": "alice", "password": "wonder"},

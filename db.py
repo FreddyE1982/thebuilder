@@ -841,6 +841,7 @@ class WorkoutRepository(BaseRepository):
         self,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
+        user_id: Optional[int] = None,
         sort_by: str = "id",
         descending: bool = True,
         limit: int | None = None,
@@ -848,14 +849,22 @@ class WorkoutRepository(BaseRepository):
     ) -> List[
         Tuple[int, str, Optional[str], Optional[str], str, Optional[str], Optional[int], Optional[int], Optional[int]]
     ]:
-        query = "SELECT id, date, start_time, end_time, training_type, notes, rating, mood_before, mood_after FROM workouts"
-        params: list[str] = []
+        query = (
+            "SELECT id, date, start_time, end_time, training_type, notes, rating, mood_before, mood_after FROM workouts"
+        )
+        params: list[str | int] = []
+        where_clauses: list[str] = []
+        if user_id is not None:
+            where_clauses.append("user_id = ?")
+            params.append(user_id)
         if start_date:
-            query += " WHERE date >= ?"
+            where_clauses.append("date >= ?")
             params.append(start_date)
         if end_date:
-            query += " AND date <= ?" if start_date else " WHERE date <= ?"
+            where_clauses.append("date <= ?")
             params.append(end_date)
+        if where_clauses:
+            query += " WHERE " + " AND ".join(where_clauses)
         allowed = {"id", "date", "start_time", "end_time", "training_type", "rating"}
         if sort_by not in allowed:
             sort_by = "id"
