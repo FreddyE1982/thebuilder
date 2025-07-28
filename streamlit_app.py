@@ -199,6 +199,7 @@ class GymApp:
             if v
         ]
         self.bookmarks = self.settings_repo.get_list("bookmarked_views")
+        self.pinned_stats = self.settings_repo.get_list("pinned_stats")
         self.hide_completed_plans = self.settings_repo.get_bool("hide_completed_plans", False)
         self.add_set_key = self.settings_repo.get_text("hotkey_add_set", "a")
         self.tab_keys = self.settings_repo.get_text("hotkey_tab_keys", "1,2,3,4")
@@ -1668,6 +1669,25 @@ class GymApp:
             st.markdown("</div>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
+    def _pinned_stats(self) -> None:
+        """Render user-selected stats pinned to the header."""
+        if not self.pinned_stats:
+            return
+        metrics: list[tuple[str, str]] = []
+        today = datetime.date.today().isoformat()
+        daily = None
+        if "volume_today" in self.pinned_stats or "sets_today" in self.pinned_stats:
+            daily = self.stats.daily_volume(today, today)
+        if daily:
+            if "volume_today" in self.pinned_stats:
+                metrics.append(("Today's Volume", daily[0]["volume"]))
+            if "sets_today" in self.pinned_stats:
+                metrics.append(("Sets Today", daily[0]["sets"]))
+        if "body_weight" in self.pinned_stats:
+            metrics.append(("Body Weight", self.stats._current_body_weight()))
+        if metrics:
+            self._metric_grid(metrics)
+
     def _breadcrumbs(self) -> None:
         if not self.layout.is_mobile:
             return
@@ -1704,34 +1724,29 @@ class GymApp:
             )
         )
         st.altair_chart(chart, use_container_width=True)
+        png_available = False
+        data = b""
         try:
             import altair_saver
             from io import BytesIO
 
             buf = BytesIO()
             chart.save(buf, fmt="png")
-            st.download_button(
-                "Export PNG",
-                data=buf.getvalue(),
-                file_name="chart.png",
-                mime="image/png",
-            )
+            data = buf.getvalue()
+            png_available = True
         except Exception:
             pass
-        try:
-            import altair_saver
-            from io import BytesIO
-
-            buf = BytesIO()
-            chart.save(buf, fmt="png")
-            st.download_button(
-                "Export PNG",
-                data=buf.getvalue(),
-                file_name="chart.png",
-                mime="image/png",
-            )
-        except Exception:
-            pass
+        import uuid
+        st.download_button(
+            "Export PNG",
+            data=data,
+            file_name="chart.png",
+            mime="image/png",
+            disabled=not png_available,
+            key=f"png_{uuid.uuid4()}"
+        )
+        if not png_available:
+            st.button("Export PNG", disabled=True, key=f"png_btn_{uuid.uuid4()}")
 
     def _bar_chart(
         self,
@@ -2066,8 +2081,6 @@ class GymApp:
         self._show_dialog("Quick New Workout", _content)
 
     def _dashboard_tab(self, prefix: str = "dash") -> None:
-        if os.environ.get("TEST_MODE") == "1":
-            return
         with self._section("Dashboard"):
             with st.expander("Filters", expanded=False):
                 if st.session_state.is_mobile:
@@ -2120,55 +2133,57 @@ class GymApp:
         with st.expander("Charts", expanded=True):
             if st.session_state.is_mobile:
                 st.subheader("Daily Volume")
-                if daily:
-                    df_daily = pd.DataFrame(daily).set_index("date")
-                    st.line_chart(df_daily["volume"], use_container_width=True)
+                vol_data = daily if daily else [{"date": start.isoformat(), "volume": 0}]
+                df_daily = pd.DataFrame(vol_data).set_index("date")
+                self._line_chart({"Volume": df_daily["volume"].tolist()}, df_daily.index.tolist())
                 duration = self.stats.session_duration(
                     start.isoformat(), end.isoformat()
                 )
                 st.subheader("Session Duration")
-                if duration:
-                    df_dur = pd.DataFrame(duration).set_index("date")
-                    st.line_chart(df_dur["duration"], use_container_width=True)
+                dur_data = duration if duration else [{"date": start.isoformat(), "duration": 0}]
+                df_dur = pd.DataFrame(dur_data).set_index("date")
+                self._line_chart({"Duration": df_dur["duration"].tolist()}, df_dur.index.tolist())
                 exercises = [""] + self.exercise_names_repo.fetch_all()
                 ex_choice = st.selectbox(
                     "Exercise Progression", exercises, key=f"{prefix}_ex"
                 )
+                prog = []
                 if ex_choice:
                     prog = self.stats.progression(
                         ex_choice, start.isoformat(), end.isoformat()
                     )
                     st.subheader("1RM Progression")
-                    if prog:
-                        df_prog = pd.DataFrame(prog).set_index("date")
-                        st.line_chart(df_prog["est_1rm"], use_container_width=True)
+                prog_data = prog if prog else [{"date": start.isoformat(), "est_1rm": 0}]
+                df_prog = pd.DataFrame(prog_data).set_index("date")
+                self._line_chart({"1RM": df_prog["est_1rm"].tolist()}, df_prog.index.tolist())
             else:
                 left, right = st.columns(2)
                 with left:
                     st.subheader("Daily Volume")
-                    if daily:
-                        df_daily = pd.DataFrame(daily).set_index("date")
-                        st.line_chart(df_daily["volume"], use_container_width=True)
+                    vol_data = daily if daily else [{"date": start.isoformat(), "volume": 0}]
+                    df_daily = pd.DataFrame(vol_data).set_index("date")
+                    self._line_chart({"Volume": df_daily["volume"].tolist()}, df_daily.index.tolist())
                     exercises = [""] + self.exercise_names_repo.fetch_all()
                     ex_choice = st.selectbox(
                         "Exercise Progression", exercises, key=f"{prefix}_ex"
                     )
+                    prog = []
                     if ex_choice:
                         prog = self.stats.progression(
                             ex_choice, start.isoformat(), end.isoformat()
                         )
                         st.subheader("1RM Progression")
-                        if prog:
-                            df_prog = pd.DataFrame(prog).set_index("date")
-                            st.line_chart(df_prog["est_1rm"], use_container_width=True)
+                    prog_data = prog if prog else [{"date": start.isoformat(), "est_1rm": 0}]
+                    df_prog = pd.DataFrame(prog_data).set_index("date")
+                    self._line_chart({"1RM": df_prog["est_1rm"].tolist()}, df_prog.index.tolist())
                 with right:
                     duration = self.stats.session_duration(
                         start.isoformat(), end.isoformat()
                     )
                     st.subheader("Session Duration")
-                    if duration:
-                        df_dur = pd.DataFrame(duration).set_index("date")
-                        st.line_chart(df_dur["duration"], use_container_width=True)
+                    dur_data = duration if duration else [{"date": start.isoformat(), "duration": 0}]
+                    df_dur = pd.DataFrame(dur_data).set_index("date")
+                    self._line_chart({"Duration": df_dur["duration"].tolist()}, df_dur.index.tolist())
                     eq_stats = self.stats.equipment_usage(
                         start.isoformat(), end.isoformat()
                     )
@@ -2285,6 +2300,7 @@ class GymApp:
         self._connection_status()
         st.markdown("</div>", unsafe_allow_html=True)
         self._top_nav()
+        self._pinned_stats()
         self._breadcrumbs()
         self._close_header()
         self._create_sidebar()
@@ -4727,7 +4743,7 @@ class GymApp:
                 st.markdown(
                     f"**Volume:** {summary['volume']} | **Sets:** {summary['sets']} | **Avg RPE:** {summary['avg_rpe']}"
                 )
-                reacts = self.reactions.fetch_all(wid)
+                reacts = self.reactions.list_for_workout(wid)
                 mapping = {e: c for e, c in reacts}
                 emjs = ["👍", "🔥", "💯", "🤢"]
                 rcols = st.columns(len(emjs))
@@ -5950,6 +5966,11 @@ class GymApp:
                     value=",".join(self.settings_repo.get_list("bookmarked_views")),
                     help="Comma separated analytics view names",
                 )
+                pinned_in = st.text_input(
+                    "Pinned Stats",
+                    value=",".join(self.pinned_stats),
+                    help="Comma separated from volume_today, sets_today, body_weight",
+                )
                 hide_completed_opt = st.checkbox(
                     "Hide Completed Plans",
                     value=self.settings_repo.get_bool("hide_completed_plans", False),
@@ -6099,11 +6120,13 @@ class GymApp:
                 self.settings_repo.set_text("hotkey_tab_keys", tab_keys_in or "1,2,3,4")
                 self.settings_repo.set_text("quick_weights", qw_in)
                 self.settings_repo.set_list("bookmarked_views", [v for v in bookmark_in.split(",") if v])
+                self.settings_repo.set_list("pinned_stats", [v for v in pinned_in.split(",") if v])
                 self.settings_repo.set_bool("hide_completed_plans", hide_completed_opt)
                 self.add_set_key = add_key_in or "a"
                 self.tab_keys = tab_keys_in or "1,2,3,4"
                 self.quick_weights = [float(v) for v in qw_in.split(",") if v]
                 self.bookmarks = [v for v in bookmark_in.split(",") if v]
+                self.pinned_stats = [v for v in pinned_in.split(",") if v]
                 self.hide_completed_plans = hide_completed_opt
                 self.settings_repo.set_float("sidebar_width", sb_width)
                 self.sidebar_width = sb_width

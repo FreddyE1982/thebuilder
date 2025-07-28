@@ -102,7 +102,7 @@
 - [x] 99. Introduce keyboard navigation hints in footer tooltips.
 - [x] 100. Enable exporting analytics charts as images from the GUI.
 - [x] 101. Add dynamic breadcrumbs to show navigation context on mobile.
-- [ ] 102. Allow pinning important stats to the header for constant visibility.
+- [x] 102. Allow pinning important stats to the header for constant visibility.
 - [ ] 103. Provide auto-save of set inputs as they are entered.
 - [x] 104. Implement color-coded badges for workout intensity levels.
 - [ ] 105. Add quick actions for sharing workouts via social media.

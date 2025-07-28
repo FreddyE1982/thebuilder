@@ -700,7 +700,7 @@ class GymAPI:
 
         @self.app.get("/workouts/{workout_id}/reactions")
         def list_reactions(workout_id: int):
-            data = self.reactions.fetch_all(workout_id)
+            data = self.reactions.list_for_workout(workout_id)
             return [{"emoji": e, "count": c} for e, c in data]
 
         @self.app.put("/workouts/{workout_id}/type")
