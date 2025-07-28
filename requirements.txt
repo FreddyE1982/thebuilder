@@ -13,3 +13,4 @@ pyyaml
 pydantic
 altair
 altair_saver
+pip-audit

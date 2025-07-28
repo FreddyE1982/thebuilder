@@ -25,7 +25,9 @@ class Database:
                     training_type TEXT NOT NULL DEFAULT 'strength',
                     notes TEXT,
                     location TEXT,
-                    rating INTEGER
+                    rating INTEGER,
+                    mood_before INTEGER,
+                    mood_after INTEGER
                 );""",
             [
                 "id",
@@ -36,6 +38,8 @@ class Database:
                 "notes",
                 "location",
                 "rating",
+                "mood_before",
+                "mood_after",
             ],
         ),
         "equipment": (
@@ -745,10 +749,12 @@ class WorkoutRepository(BaseRepository):
         notes: str | None = None,
         location: str | None = None,
         rating: Optional[int] = None,
+        mood_before: Optional[int] = None,
+        mood_after: Optional[int] = None,
     ) -> int:
         return self.execute(
-            "INSERT INTO workouts (date, training_type, notes, location, rating) VALUES (?, ?, ?, ?, ?);",
-            (date, training_type, notes, location, rating),
+            "INSERT INTO workouts (date, training_type, notes, location, rating, mood_before, mood_after) VALUES (?, ?, ?, ?, ?, ?, ?);",
+            (date, training_type, notes, location, rating, mood_before, mood_after),
         )
 
     def fetch_all_workouts(
@@ -760,9 +766,9 @@ class WorkoutRepository(BaseRepository):
         limit: int | None = None,
         offset: int | None = None,
     ) -> List[
-        Tuple[int, str, Optional[str], Optional[str], str, Optional[str], Optional[int]]
+        Tuple[int, str, Optional[str], Optional[str], str, Optional[str], Optional[int], Optional[int], Optional[int]]
     ]:
-        query = "SELECT id, date, start_time, end_time, training_type, notes, rating FROM workouts"
+        query = "SELECT id, date, start_time, end_time, training_type, notes, rating, mood_before, mood_after FROM workouts"
         params: list[str] = []
         if start_date:
             query += " WHERE date >= ?"
@@ -816,6 +822,18 @@ class WorkoutRepository(BaseRepository):
             (rating, workout_id),
         )
 
+    def set_mood_before(self, workout_id: int, mood: Optional[int]) -> None:
+        self.execute(
+            "UPDATE workouts SET mood_before = ? WHERE id = ?;",
+            (mood, workout_id),
+        )
+
+    def set_mood_after(self, workout_id: int, mood: Optional[int]) -> None:
+        self.execute(
+            "UPDATE workouts SET mood_after = ? WHERE id = ?;",
+            (mood, workout_id),
+        )
+
     def workout_duration(self, workout_id: int) -> float | None:
         rows = self.fetch_all(
             "SELECT start_time, end_time FROM workouts WHERE id = ?;",
@@ -857,9 +875,11 @@ class WorkoutRepository(BaseRepository):
         Optional[str],
         Optional[str],
         Optional[int],
+        Optional[int],
+        Optional[int],
     ]:
         rows = self.fetch_all(
-            "SELECT id, date, start_time, end_time, training_type, notes, location, rating FROM workouts WHERE id = ?;",
+            "SELECT id, date, start_time, end_time, training_type, notes, location, rating, mood_before, mood_after FROM workouts WHERE id = ?;",
             (workout_id,),
         )
         if not rows:
@@ -1279,6 +1299,26 @@ class SetRepository(BaseRepository):
             for name, eq, reps, weight, rpe, start, end in rows
         ]
         return json.dumps(data)
+
+    def export_workout_xml(self, workout_id: int) -> str:
+        """Return sets for a workout as an XML string."""
+        rows = self.fetch_for_workout(workout_id)
+        from xml.etree.ElementTree import Element, SubElement, tostring
+
+        root = Element("workout", id=str(workout_id))
+        for name, eq, reps, weight, rpe, start, end in rows:
+            set_elem = SubElement(root, "set")
+            SubElement(set_elem, "exercise").text = name
+            if eq:
+                SubElement(set_elem, "equipment").text = eq
+            SubElement(set_elem, "reps").text = str(reps)
+            SubElement(set_elem, "weight").text = str(weight)
+            SubElement(set_elem, "rpe").text = str(rpe)
+            if start:
+                SubElement(set_elem, "start").text = start
+            if end:
+                SubElement(set_elem, "end").text = end
+        return tostring(root, encoding="unicode")
 
     def workout_summary(self, workout_id: int) -> dict:
         rows = self.fetch_for_workout(workout_id)
@@ -3041,6 +3081,17 @@ class TemplateWorkoutRepository(BaseRepository):
                 "UPDATE workout_templates SET position = ? WHERE id = ?;",
                 (pos, tid),
             )
+
+    def clone(self, template_id: int, new_name: str) -> int:
+        tid, _name, t_type = self.fetch_detail(template_id)
+        new_id = self.create(new_name, t_type)
+        exercises = TemplateExerciseRepository(self._db_path)
+        sets = TemplateSetRepository(self._db_path)
+        for ex_id, name, eq in exercises.fetch_for_template(tid):
+            new_ex_id = exercises.add(new_id, name, eq)
+            for _sid, reps, weight, rpe in sets.fetch_for_exercise(ex_id):
+                sets.add(new_ex_id, reps, weight, rpe)
+        return new_id
 
 
 class TemplateExerciseRepository(BaseRepository):

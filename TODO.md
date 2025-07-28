@@ -28,11 +28,11 @@
 [complete] 26. Add color-blind friendly theme options.
 [complete] 27. Implement rate limiting on REST API endpoints.
 28. Add importer from widely-used workout apps (e.g. Strava).
-29. Provide export to generic training XML format.
-30. Add websockets endpoint for real-time workout updates.
+[complete] 29. Provide export to generic training XML format.
+[complete] 30. Add websockets endpoint for real-time workout updates.
 31. Implement progressive web app features for offline use.
 [complete] 32. Add endpoint to download body_weight_logs as CSV.
-33. Provide monthly summary emails via Cron or Celery.
+[complete] 33. Provide monthly summary emails via Cron or Celery.
 34. Add user-defined default equipment per exercise.
 35. Implement privacy settings for shared workouts.
 36. Add voice command support in the GUI.
@@ -42,13 +42,13 @@
 [complete] 40. Document environment variables for deployment in README.
 41. Add support for external database like PostgreSQL.
 42. Add repository pattern for ml_service states.
-43. Add progress bar to Streamlit when uploading CSV files.
-44. Provide data validation on CSV imports.
+[complete] 43. Add progress bar to Streamlit when uploading CSV files.
+[complete] 44. Provide data validation on CSV imports.
 45. Add 3D visualization of muscle engagement.
 46. Support image upload for exercise demonstration.
 [complete] 47. Add endpoint for goal progress chart data.
 [complete] 48. Create docker-compose configuration for local dev.
-49. Add ability to clone templates between users.
+[complete] 49. Add ability to clone templates between users.
 50. Support configurable RPE scale (e.g. 1–5 or 1–10).
 [complete] 51. Add analytics for training monotony and strain.
 52. Provide webhooks for completed workouts notifications.
@@ -68,7 +68,7 @@
 [complete] 66. Store original raw data of ML training sets.
 [complete] 67. Add cross-validation for ML models to compute accuracy.
 [complete] 68. Include predicted confidence intervals in API responses.
-69. Support dynamic chart resizing depending on metrics.
+[complete] 69. Support dynamic chart resizing depending on metrics.
 70. Implement advanced search filters in planner_service.
 [complete] 71. Provide endpoint to add comments to workouts.
 [complete] 72. Add rating distribution chart in Stats tab.
@@ -89,11 +89,11 @@
 [complete] 87. Add drag-and-drop reordering for workout templates.
 88. Integrate speech recognition for quick set entry.
 89. Create official REST client library in Python.
-90. Add performance benchmarks for API endpoints.
-91. Provide security audit of dependencies via tools.
+[complete] 90. Add performance benchmarks for API endpoints.
+[complete] 91. Provide security audit of dependencies via tools.
 92. Add automatic detection of stale goals.
 93. Offer periodic data export via email link.
-94. Add ability to log mood before/after workouts.
+[complete] 94. Add ability to log mood before/after workouts.
 95. Implement color-coded workout intensity map.
 96. Add endpoint to configure auto planner parameters.
 97. Support split view on tablets for side-by-side charts.

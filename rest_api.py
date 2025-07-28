@@ -2,8 +2,9 @@ import datetime
 import json
 import time
 import threading
+import asyncio
 from typing import List, Dict
-from fastapi import FastAPI, HTTPException, Response, Body, APIRouter, Request
+from fastapi import FastAPI, HTTPException, Response, Body, APIRouter, Request, WebSocket
 from db import (
     WorkoutRepository,
     ExerciseRepository,
@@ -89,18 +90,24 @@ class EmailScheduler(threading.Thread):
         self.api = api
         self.interval = interval_hours * 3600
         self.last_sent: datetime.datetime | None = None
+        self.last_monthly: datetime.datetime | None = None
         self.running = True
 
     def run(self) -> None:
         while self.running:
             try:
+                now = datetime.datetime.now()
                 if self.api.settings.get_bool("email_weekly_enabled", False):
-                    if (
-                        self.last_sent is None
-                        or (datetime.datetime.now() - self.last_sent).days >= 7
-                    ):
+                    if self.last_sent is None or (now - self.last_sent).days >= 7:
                         self.api.send_weekly_email_report()
-                        self.last_sent = datetime.datetime.now()
+                        self.last_sent = now
+                if self.api.settings.get_bool("email_monthly_enabled", False):
+                    if (
+                        self.last_monthly is None
+                        or (now - self.last_monthly).days >= 30
+                    ):
+                        self.api.send_monthly_email_report()
+                        self.last_monthly = now
             except Exception:
                 pass
             time.sleep(self.interval)
@@ -160,6 +167,7 @@ class GymAPI:
         self.heart_rates = HeartRateRepository(db_path)
         self.goals = GoalRepository(db_path)
         self.challenges = ChallengeRepository(db_path)
+        self.watchers: list[WebSocket] = []
         self.experimental_enabled = self.settings.get_bool(
             "experimental_models_enabled", False
         )
@@ -263,6 +271,41 @@ class GymAPI:
             True,
         )
 
+    def send_monthly_email_report(self, address: str | None = None) -> None:
+        addr = address or self.settings.get_text("monthly_report_email", "")
+        if not addr:
+            return
+        end = datetime.date.today()
+        start = end - datetime.timedelta(days=30)
+        summary = self.statistics.overview(start.isoformat(), end.isoformat())
+        self.email_logs.add(
+            addr,
+            f"{start.isoformat()} to {end.isoformat()}",
+            json.dumps(summary),
+            True,
+        )
+
+    async def _broadcast(self, event: dict) -> None:
+        for ws in list(self.watchers):
+            try:
+                await ws.send_json(event)
+            except Exception:
+                try:
+                    await ws.close()
+                except Exception:
+                    pass
+                self.watchers.remove(ws)
+
+    def _broadcast_event(self, event: dict) -> None:
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                loop.create_task(self._broadcast(event))
+            else:
+                loop.run_until_complete(self._broadcast(event))
+        except RuntimeError:
+            asyncio.run(self._broadcast(event))
+
     def _setup_routes(self) -> None:
         equipment_router = APIRouter(prefix="/equipment", tags=["Equipment"])
         muscles_router = APIRouter(prefix="/muscles", tags=["Muscles"])
@@ -283,6 +326,19 @@ class GymAPI:
                 return {"status": "ok"}
             except Exception as e:  # pragma: no cover - connectivity failure
                 raise HTTPException(status_code=500, detail=str(e))
+
+        @self.app.websocket("/ws/updates")
+        async def updates_socket(ws: WebSocket):
+            await ws.accept()
+            self.watchers.append(ws)
+            try:
+                while True:
+                    await ws.receive_text()
+            except Exception:
+                pass
+            finally:
+                if ws in self.watchers:
+                    self.watchers.remove(ws)
 
         @equipment_router.get("/types")
         def list_equipment_types():
@@ -671,6 +727,8 @@ class GymAPI:
             notes: str | None = None,
             location: str | None = None,
             rating: int | None = None,
+            mood_before: int | None = None,
+            mood_after: int | None = None,
         ):
             try:
                 workout_date = (
@@ -693,7 +751,10 @@ class GymAPI:
                 notes,
                 location,
                 rating,
+                mood_before,
+                mood_after,
             )
+            self._broadcast_event({"type": "workout_added", "id": workout_id})
             return {"id": workout_id}
 
         @self.app.get(
@@ -795,6 +856,8 @@ class GymAPI:
                 notes,
                 location,
                 rating,
+                mood_before,
+                mood_after,
             ) = self.workouts.fetch_detail(workout_id)
             return {
                 "id": wid,
@@ -805,6 +868,8 @@ class GymAPI:
                 "notes": notes,
                 "location": location,
                 "rating": rating,
+                "mood_before": mood_before,
+                "mood_after": mood_after,
             }
 
         @self.app.get("/workouts/{workout_id}/export_csv")
@@ -826,6 +891,17 @@ class GymAPI:
                 media_type="application/json",
                 headers={
                     "Content-Disposition": f"attachment; filename=workout_{workout_id}.json"
+                },
+            )
+
+        @self.app.get("/workouts/{workout_id}/export_xml")
+        def export_workout_xml(workout_id: int):
+            data = self.sets.export_workout_xml(workout_id)
+            return Response(
+                content=data,
+                media_type="application/xml",
+                headers={
+                    "Content-Disposition": f"attachment; filename=workout_{workout_id}.xml"
                 },
             )
 
@@ -887,6 +963,16 @@ class GymAPI:
         @self.app.put("/workouts/{workout_id}/rating")
         def update_workout_rating(workout_id: int, rating: int | None = None):
             self.workouts.set_rating(workout_id, rating)
+            return {"status": "updated"}
+
+        @self.app.put("/workouts/{workout_id}/mood_before")
+        def update_mood_before(workout_id: int, mood: int | None = None):
+            self.workouts.set_mood_before(workout_id, mood)
+            return {"status": "updated"}
+
+        @self.app.put("/workouts/{workout_id}/mood_after")
+        def update_mood_after(workout_id: int, mood: int | None = None):
+            self.workouts.set_mood_after(workout_id, mood)
             return {"status": "updated"}
 
         @self.app.delete("/workouts/{workout_id}")
@@ -1213,6 +1299,14 @@ class GymAPI:
                 lines.append(f"{ex_name}@{eq}: {sstr}")
             return {"text": "\n".join(lines)}
 
+        @self.app.post("/templates/{template_id}/clone")
+        def clone_template(template_id: int, new_name: str):
+            try:
+                tid = self.template_workouts.clone(template_id, new_name)
+                return {"id": tid}
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
         @self.app.post("/templates/{template_id}/plan")
         def create_plan_from_template(template_id: int, date: str):
             try:
@@ -1259,6 +1353,7 @@ class GymAPI:
             except Exception:
                 pass
             self.recommender.record_result(set_id, reps, weight, rpe)
+            self._broadcast_event({"type": "set_added", "id": set_id})
             return {"id": set_id}
 
         @self.app.post(

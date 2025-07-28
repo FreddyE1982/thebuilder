@@ -1500,6 +1500,11 @@ class RecommendationIntegrationTest(unittest.TestCase):
         app = GymApp(self.db_path, self.yaml_path)
         self.assertIsNotNone(app.recommender.goals)
 
+    def test_csv_uploader_present(self) -> None:
+        tab = self._get_tab("Settings")
+        idx = _find_by_label(tab.file_uploader, "Import Workout CSV")
+        self.assertIsNotNone(idx)
+
 
 if __name__ == "__main__":
     unittest.main()
