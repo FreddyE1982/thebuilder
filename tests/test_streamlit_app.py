@@ -857,6 +857,21 @@ class StreamlitAppTest(unittest.TestCase):
         conn.close()
         self.assertEqual(bool(int(val)), not current)
 
+    def test_language_selector(self) -> None:
+        self.at.query_params["tab"] = "settings"
+        self.at.run()
+        settings_tab = self._get_tab("Settings")
+        gen_tab = next(t for t in settings_tab.tabs if t.label == "General")
+        idx = _find_by_label(gen_tab.selectbox, "Language")
+        gen_tab.selectbox[idx].select("es").run()
+        save_idx = _find_by_label(gen_tab.button, "Save General Settings")
+        gen_tab.button[save_idx].click().run()
+        self.at.run()
+        from localization import translator
+
+        self.assertEqual(translator.language, "es")
+
+
 
 class StreamlitFullGUITest(unittest.TestCase):
     def setUp(self) -> None:
@@ -1513,11 +1528,11 @@ class StreamlitAllInteractionsTest(unittest.TestCase):
                     chk.check().run()
                 except Exception:
                     pass
-            for btn in self.at.button:
-                try:
-                    btn.click().run()
-                except Exception:
-                    pass
+        for btn in self.at.button:
+            try:
+                btn.click().run()
+            except Exception:
+                pass
 
 
 class RecommendationIntegrationTest(unittest.TestCase):
@@ -1544,6 +1559,7 @@ class RecommendationIntegrationTest(unittest.TestCase):
         tab = self._get_tab("Settings")
         idx = _find_by_label(tab.file_uploader, "Import Workout CSV")
         self.assertIsNotNone(idx)
+
 
 
 if __name__ == "__main__":

@@ -2426,9 +2426,18 @@ class GymApp:
             library_tab,
             progress_tab,
             settings_tab,
-        ) = st.tabs(["Workouts", "Library", "Progress", "Settings"])
+        ) = st.tabs(
+            [
+                translator.gettext("Workouts"),
+                translator.gettext("Library"),
+                translator.gettext("Progress"),
+                translator.gettext("Settings"),
+            ]
+        )
         with workouts_tab:
-            log_sub, plan_sub = st.tabs(["Log", "Plan"])
+            log_sub, plan_sub = st.tabs(
+                [translator.gettext("Log"), translator.gettext("Plan")]
+            )
             with log_sub:
                 self._log_tab()
             with plan_sub:
@@ -6093,21 +6102,23 @@ class GymApp:
             auto_tab,
         ) = st.tabs(
             [
-                "General",
-                "Workout Tags",
-                "Equipment",
-                "Exercise Management",
-                "Muscles",
-                "Exercise Aliases",
-                "Body Weight Logs",
-                "Heart Rate Logs",
-                "Autoplanner Status",
+                translator.gettext("General"),
+                translator.gettext("Workout Tags"),
+                translator.gettext("Equipment"),
+                translator.gettext("Exercise Management"),
+                translator.gettext("Muscles"),
+                translator.gettext("Exercise Aliases"),
+                translator.gettext("Body Weight Logs"),
+                translator.gettext("Heart Rate Logs"),
+                translator.gettext("Autoplanner Status"),
             ]
         )
 
         with gen_tab:
-            st.header("General Settings")
-            with st.expander("Display Settings", expanded=True):
+            st.header(translator.gettext("General Settings"))
+            with st.expander(
+                translator.gettext("Display Settings"), expanded=True
+            ):
                 bw = st.number_input(
                     "Body Weight (kg)",
                     min_value=1.0,
@@ -6155,9 +6166,15 @@ class GymApp:
                     index=["kg", "lb"].index(self.weight_unit),
                 )
                 time_fmt_opt = st.selectbox(
-                    "Time Format",
+                    translator.gettext("Time Format"),
                     ["24h", "12h"],
                     index=["24h", "12h"].index(self.time_format),
+                )
+                languages = sorted(list(translator.translations.keys()))
+                lang_opt = st.selectbox(
+                    translator.gettext("Language"),
+                    languages,
+                    index=languages.index(self.language),
                 )
                 rpe_scale_in = st.number_input(
                     "Max RPE Value",
@@ -6343,7 +6360,7 @@ class GymApp:
                         st.success("Repository updated")
                     except Exception as e:
                         st.warning(str(e))
-            if st.button("Save General Settings"):
+            if st.button(translator.gettext("Save General Settings")):
                 progress = st.progress(0.0)
                 self.settings_repo.set_float("body_weight", bw)
                 self.settings_repo.set_float("height", height)
@@ -6361,8 +6378,11 @@ class GymApp:
                     self.settings_repo.set_text("avatar", str(out))
                 self.settings_repo.set_text("weight_unit", unit_opt)
                 self.settings_repo.set_text("time_format", time_fmt_opt)
+                self.settings_repo.set_text("language", lang_opt)
                 self.weight_unit = unit_opt
                 self.time_format = time_fmt_opt
+                self.language = lang_opt
+                translator.set_language(self.language)
                 self.settings_repo.set_int("rpe_scale", int(rpe_scale_in))
                 self.rpe_scale = int(rpe_scale_in)
                 self.settings_repo.set_bool("compact_mode", compact)
