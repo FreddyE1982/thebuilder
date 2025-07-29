@@ -776,6 +776,7 @@ class Database:
             "bookmarked_views": "",
             "pinned_stats": "",
             "hide_completed_plans": "0",
+            "rpe_scale": "10",
         }
         with self._connection() as conn:
             for key, value in defaults.items():
@@ -1062,6 +1063,10 @@ class ExerciseRepository(BaseRepository):
 class SetRepository(BaseRepository):
     """Repository for sets table operations."""
 
+    def __init__(self, db_path: str, settings: Optional["SettingsRepository"] = None) -> None:
+        super().__init__(db_path)
+        self.settings = settings
+
     @staticmethod
     def _velocity(reps: int, start: Optional[str], end: Optional[str]) -> float:
         if not start or not end or reps <= 0:
@@ -1088,8 +1093,11 @@ class SetRepository(BaseRepository):
             raise ValueError("reps must be positive")
         if weight < 0:
             raise ValueError("weight must be non-negative")
-        if rpe < 0 or rpe > 10:
-            raise ValueError("rpe must be between 0 and 10")
+        max_rpe = 10
+        if self.settings is not None:
+            max_rpe = self.settings.get_int("rpe_scale", 10)
+        if rpe < 0 or rpe > max_rpe:
+            raise ValueError(f"rpe must be between 0 and {max_rpe}")
         rows = self.fetch_all(
             "SELECT COALESCE(MAX(position), 0) + 1 FROM sets WHERE exercise_id = ?;",
             (exercise_id,),
@@ -1128,8 +1136,11 @@ class SetRepository(BaseRepository):
             raise ValueError("reps must be positive")
         if weight < 0:
             raise ValueError("weight must be non-negative")
-        if rpe < 0 or rpe > 10:
-            raise ValueError("rpe must be between 0 and 10")
+        max_rpe = 10
+        if self.settings is not None:
+            max_rpe = self.settings.get_int("rpe_scale", 10)
+        if rpe < 0 or rpe > max_rpe:
+            raise ValueError(f"rpe must be between 0 and {max_rpe}")
         row = self.fetch_all("SELECT planned_set_id FROM sets WHERE id = ?;", (set_id,))
         diff_reps = 0
         diff_weight = 0.0
@@ -1566,7 +1577,16 @@ class PlannedExerciseRepository(BaseRepository):
 class PlannedSetRepository(BaseRepository):
     """Repository for planned sets."""
 
+    def __init__(self, db_path: str = "workout.db", settings: Optional["SettingsRepository"] = None) -> None:
+        super().__init__(db_path)
+        self.settings = settings
+
     def add(self, exercise_id: int, reps: int, weight: float, rpe: int) -> int:
+        max_rpe = 10
+        if self.settings is not None:
+            max_rpe = self.settings.get_int("rpe_scale", 10)
+        if rpe < 0 or rpe > max_rpe:
+            raise ValueError(f"rpe must be between 0 and {max_rpe}")
         return self.execute(
             "INSERT INTO planned_sets (planned_exercise_id, reps, weight, rpe) VALUES (?, ?, ?, ?);",
             (exercise_id, reps, weight, rpe),
@@ -1582,6 +1602,11 @@ class PlannedSetRepository(BaseRepository):
         )
 
     def update(self, set_id: int, reps: int, weight: float, rpe: int) -> None:
+        max_rpe = 10
+        if self.settings is not None:
+            max_rpe = self.settings.get_int("rpe_scale", 10)
+        if rpe < 0 or rpe > max_rpe:
+            raise ValueError(f"rpe must be between 0 and {max_rpe}")
         self.execute(
             "UPDATE planned_sets SET reps = ?, weight = ?, rpe = ? WHERE id = ?;",
             (reps, weight, rpe, set_id),
@@ -2007,7 +2032,7 @@ class SettingsRepository(BaseRepository):
 
     def get_int(self, key: str, default: int) -> int:
         try:
-            return int(self.get_text(key, str(default)))
+            return int(float(self.get_text(key, str(default))))
         except ValueError:
             return default
 

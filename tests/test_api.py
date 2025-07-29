@@ -408,6 +408,25 @@ class APITestCase(unittest.TestCase):
         )
         self.assertIn("Barbell Bench Press", resp.json())
 
+    def test_rpe_scale_setting(self) -> None:
+        resp = self.client.post("/settings/general", params={"rpe_scale": 5})
+        self.assertEqual(resp.status_code, 200)
+        self.client.post("/workouts")
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        ok = self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 5},
+        )
+        self.assertEqual(ok.status_code, 200)
+        bad = self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 6},
+        )
+        self.assertEqual(bad.status_code, 400)
+
     def test_plan_workflow(self) -> None:
         plan_date = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
 

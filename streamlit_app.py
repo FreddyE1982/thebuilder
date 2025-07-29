@@ -218,6 +218,7 @@ class GymApp:
         self.add_set_key = self.settings_repo.get_text("hotkey_add_set", "a")
         self.tab_keys = self.settings_repo.get_text("hotkey_tab_keys", "1,2,3,4")
         self.sidebar_width = self.settings_repo.get_float("sidebar_width", 18.0)
+        self.rpe_scale = self.settings_repo.get_int("rpe_scale", 10)
         self.training_options = sorted(
             [
                 "strength",
@@ -231,10 +232,10 @@ class GymApp:
         self._apply_theme()
         self.workouts = WorkoutRepository(db_path)
         self.exercises = ExerciseRepository(db_path)
-        self.sets = SetRepository(db_path)
+        self.sets = SetRepository(db_path, self.settings_repo)
         self.planned_workouts = PlannedWorkoutRepository(db_path)
         self.planned_exercises = PlannedExerciseRepository(db_path)
-        self.planned_sets = PlannedSetRepository(db_path)
+        self.planned_sets = PlannedSetRepository(db_path, self.settings_repo)
         self.template_workouts = TemplateWorkoutRepository(db_path)
         self.template_exercises = TemplateExerciseRepository(db_path)
         self.template_sets = TemplateSetRepository(db_path)
@@ -395,6 +396,9 @@ class GymApp:
         if self.weight_unit == "lb":
             return f"{weight * 2.20462:.1f} lb"
         return f"{weight:.1f} kg"
+
+    def _rpe_options(self) -> list[int]:
+        return list(range(self.rpe_scale + 1))
 
     def _format_time(self, ts: str | datetime.datetime) -> str:
         """Return time formatted per user preference."""
@@ -3118,8 +3122,8 @@ class GymApp:
                             )
                             rpe_val = st.selectbox(
                                 "RPE",
-                                options=list(range(11)),
-                                index=int(rpe),
+                                options=self._rpe_options(),
+                                index=min(int(rpe), self.rpe_scale),
                                 key=f"rpe_{set_id}",
                                 on_change=self._update_set,
                                 args=(set_id,),
@@ -3238,8 +3242,8 @@ class GymApp:
                         )
                         rpe_val = cols[3].selectbox(
                             "RPE",
-                            options=list(range(11)),
-                            index=int(rpe),
+                            options=self._rpe_options(),
+                            index=min(int(rpe), self.rpe_scale),
                             key=f"rpe_{set_id}",
                             on_change=self._update_set,
                             args=(set_id,),
@@ -3407,7 +3411,7 @@ class GymApp:
             st.error("Weight required")
         rpe = st.selectbox(
             "RPE",
-            options=list(range(11)),
+            options=self._rpe_options(),
             key=f"new_rpe_{exercise_id}",
         )
         note = st.text_input("Note", key=f"new_note_{exercise_id}")
@@ -3982,8 +3986,8 @@ class GymApp:
                             )
                             rpe_val = st.selectbox(
                                 "RPE",
-                                options=list(range(11)),
-                                index=int(rpe),
+                                options=self._rpe_options(),
+                                index=min(int(rpe), self.rpe_scale),
                                 key=f"plan_rpe_{set_id}",
                             )
                             del_col, _ = st.columns(2)
@@ -4010,8 +4014,8 @@ class GymApp:
                             )
                             rpe_val = st.selectbox(
                                 "RPE",
-                                options=list(range(11)),
-                                index=int(rpe),
+                                options=self._rpe_options(),
+                                index=min(int(rpe), self.rpe_scale),
                                 key=f"plan_rpe_{set_id}",
                                 on_change=self._update_planned_set,
                                 args=(set_id,),
@@ -4039,8 +4043,8 @@ class GymApp:
                         )
                         rpe_val = cols[3].selectbox(
                             "RPE",
-                            options=list(range(11)),
-                            index=int(rpe),
+                            options=self._rpe_options(),
+                            index=min(int(rpe), self.rpe_scale),
                             key=f"plan_rpe_{set_id}",
                             on_change=self._update_planned_set,
                             args=(set_id,),
@@ -4066,7 +4070,7 @@ class GymApp:
         )
         rpe = st.selectbox(
             "RPE",
-            options=list(range(11)),
+            options=self._rpe_options(),
             key=f"plan_new_rpe_{exercise_id}",
         )
         if st.button("Add Planned Set", key=f"add_plan_set_{exercise_id}"):
@@ -4224,8 +4228,8 @@ class GymApp:
                             )
                             rpe_val = st.selectbox(
                                 "RPE",
-                                options=list(range(11)),
-                                index=int(rpe),
+                                options=self._rpe_options(),
+                                index=min(int(rpe), self.rpe_scale),
                                 key=f"tmpl_rpe_{sid}",
                             )
                             del_col, _ = st.columns(2)
@@ -4252,8 +4256,8 @@ class GymApp:
                             )
                             rpe_val = st.selectbox(
                                 "RPE",
-                                options=list(range(11)),
-                                index=int(rpe),
+                                options=self._rpe_options(),
+                                index=min(int(rpe), self.rpe_scale),
                                 key=f"tmpl_rpe_{sid}",
                                 on_change=self._update_template_set,
                                 args=(sid,),
@@ -4279,8 +4283,8 @@ class GymApp:
                         )
                         rpe_val = cols[3].selectbox(
                             "RPE",
-                            options=list(range(11)),
-                            index=int(rpe),
+                            options=self._rpe_options(),
+                            index=min(int(rpe), self.rpe_scale),
                             key=f"tmpl_rpe_{sid}",
                             on_change=self._update_template_set,
                             args=(sid,),
@@ -4296,7 +4300,7 @@ class GymApp:
                     "Weight", min_value=0.0, step=0.5, key=f"tmpl_new_w_{exercise_id}"
                 )
                 rpe = st.selectbox(
-                    "RPE", options=list(range(11)), key=f"tmpl_new_rpe_{exercise_id}"
+                    "RPE", options=self._rpe_options(), key=f"tmpl_new_rpe_{exercise_id}"
                 )
                 if st.button("Add Set", key=f"tmpl_add_set_{exercise_id}"):
                     self.template_sets.add(
@@ -5798,7 +5802,7 @@ class GymApp:
         if self.settings_repo.get_bool("hide_completed_plans", False):
             planned = [p for p in planned if self.sets.planned_completion(p[0]) < 100]
         rows = []
-        for wid, date, _s, _e, t_type, _notes, _rating in logged:
+        for wid, date, _s, _e, t_type, _notes, _rating, *_ in logged:
             rows.append(
                 {
                     "date": date,
@@ -6118,6 +6122,13 @@ class GymApp:
                     ["24h", "12h"],
                     index=["24h", "12h"].index(self.time_format),
                 )
+                rpe_scale_in = st.number_input(
+                    "Max RPE Value",
+                    min_value=5,
+                    max_value=10,
+                    value=self.rpe_scale,
+                    step=1,
+                )
                 compact = st.checkbox(
                     "Compact Mode",
                     value=self.compact_mode,
@@ -6311,6 +6322,8 @@ class GymApp:
                 self.settings_repo.set_text("time_format", time_fmt_opt)
                 self.weight_unit = unit_opt
                 self.time_format = time_fmt_opt
+                self.settings_repo.set_int("rpe_scale", int(rpe_scale_in))
+                self.rpe_scale = int(rpe_scale_in)
                 self.settings_repo.set_bool("compact_mode", compact)
                 self.compact_mode = compact
                 self.settings_repo.set_bool("large_font_mode", large_font)
