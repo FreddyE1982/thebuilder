@@ -1,4 +1,5 @@
 import datetime
+from zoneinfo import ZoneInfo
 import pandas as pd
 from contextlib import contextmanager
 from pathlib import Path
@@ -205,6 +206,7 @@ class GymApp:
         self.collapse_header = self.settings_repo.get_bool("collapse_header", True)
         self.weight_unit = self.settings_repo.get_text("weight_unit", "kg")
         self.time_format = self.settings_repo.get_text("time_format", "24h")
+        self.timezone = self.settings_repo.get_text("timezone", "UTC")
         self.language = self.settings_repo.get_text("language", "en")
         translator.set_language(self.language)
         self.quick_weights = [
@@ -405,10 +407,18 @@ class GymApp:
     def _rpe_options(self) -> list[int]:
         return list(range(self.rpe_scale + 1))
 
+    def _now(self) -> datetime.datetime:
+        """Return current time in the configured timezone."""
+        return datetime.datetime.now(ZoneInfo(self.timezone))
+
     def _format_time(self, ts: str | datetime.datetime) -> str:
         """Return time formatted per user preference."""
         if isinstance(ts, str):
             ts = datetime.datetime.fromisoformat(ts)
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=datetime.timezone.utc)
+        tz = ZoneInfo(self.timezone)
+        ts = ts.astimezone(tz)
         return (
             ts.strftime("%I:%M %p")
             if self.time_format == "12h"
@@ -2731,12 +2741,12 @@ class GymApp:
                     if c1.button("Start Workout", key=f"start_workout_{selected}"):
                         self.workouts.set_start_time(
                             int(selected),
-                            datetime.datetime.now().isoformat(timespec="seconds"),
+                            self._now().isoformat(timespec="seconds"),
                         )
                     if c2.button("Finish Workout", key=f"finish_workout_{selected}"):
                         self.workouts.set_end_time(
                             int(selected),
-                            datetime.datetime.now().isoformat(timespec="seconds"),
+                            self._now().isoformat(timespec="seconds"),
                         )
                         summary = self.sets.workout_summary(int(selected))
                         st.success(
@@ -2755,14 +2765,14 @@ class GymApp:
                     if cols[0].button("Start Workout", key=f"start_workout_{selected}"):
                         self.workouts.set_start_time(
                             int(selected),
-                            datetime.datetime.now().isoformat(timespec="seconds"),
+                            self._now().isoformat(timespec="seconds"),
                         )
                     if cols[1].button(
                         "Finish Workout", key=f"finish_workout_{selected}"
                     ):
                         self.workouts.set_end_time(
                             int(selected),
-                            datetime.datetime.now().isoformat(timespec="seconds"),
+                            self._now().isoformat(timespec="seconds"),
                         )
                         summary = self.sets.workout_summary(int(selected))
                         st.success(
@@ -2780,7 +2790,7 @@ class GymApp:
                     st.write(f"Start: {self._format_time(start_time)}")
                     if not end_time:
                         elapsed = (
-                            datetime.datetime.now()
+                            self._now()
                             - datetime.datetime.fromisoformat(start_time)
                         ).total_seconds()
                         st.write(f"Time: {int(elapsed)}s")
@@ -3054,7 +3064,7 @@ class GymApp:
             with st.form(f"hr_form_{workout_id}"):
                 ts = st.text_input(
                     "Timestamp",
-                    datetime.datetime.now().isoformat(timespec="seconds"),
+                    self._now().isoformat(timespec="seconds"),
                     key=f"hr_ts_{workout_id}",
                 )
                 rate = st.number_input(
@@ -3233,7 +3243,7 @@ class GymApp:
                             if start_col.button("Start", key=f"start_set_{set_id}"):
                                 self.sets.set_start_time(
                                     set_id,
-                                    datetime.datetime.now().isoformat(
+                                    self._now().isoformat(
                                         timespec="seconds"
                                     ),
                                 )
@@ -3241,7 +3251,7 @@ class GymApp:
                             if finish_col.button("Finish", key=f"finish_set_{set_id}"):
                                 self.sets.set_end_time(
                                     set_id,
-                                    datetime.datetime.now().isoformat(
+                                    self._now().isoformat(
                                         timespec="seconds"
                                     ),
                                 )
@@ -3349,13 +3359,13 @@ class GymApp:
                         if cols[10].button("Start", key=f"start_set_{set_id}"):
                             self.sets.set_start_time(
                                 set_id,
-                                datetime.datetime.now().isoformat(timespec="seconds"),
+                                self._now().isoformat(timespec="seconds"),
                             )
                             self._trigger_refresh()
                         if cols[11].button("Finish", key=f"finish_set_{set_id}"):
                             self.sets.set_end_time(
                                 set_id,
-                                datetime.datetime.now().isoformat(timespec="seconds"),
+                                self._now().isoformat(timespec="seconds"),
                             )
                             self._trigger_refresh()
                         if cols[12].button("Delete", key=f"del_{set_id}"):
@@ -6200,6 +6210,11 @@ class GymApp:
                     ["24h", "12h"],
                     index=["24h", "12h"].index(self.time_format),
                 )
+                tz_opt = st.text_input(
+                    "Timezone",
+                    value=self.timezone,
+                    help="e.g. UTC or America/New_York",
+                )
                 languages = sorted(list(translator.translations.keys()))
                 lang_opt = st.selectbox(
                     translator.gettext("Language"),
@@ -6414,9 +6429,11 @@ class GymApp:
                     self.settings_repo.set_text("avatar", str(out))
                 self.settings_repo.set_text("weight_unit", unit_opt)
                 self.settings_repo.set_text("time_format", time_fmt_opt)
+                self.settings_repo.set_text("timezone", tz_opt)
                 self.settings_repo.set_text("language", lang_opt)
                 self.weight_unit = unit_opt
                 self.time_format = time_fmt_opt
+                self.timezone = tz_opt
                 self.language = lang_opt
                 translator.set_language(self.language)
                 self.settings_repo.set_int("rpe_scale", int(rpe_scale_in))

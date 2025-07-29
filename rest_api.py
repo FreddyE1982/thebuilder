@@ -2644,6 +2644,7 @@ class GymAPI:
             ml_goal_prediction_enabled: bool = None,
             ml_injury_training_enabled: bool = None,
             ml_injury_prediction_enabled: bool = None,
+            timezone: str = None,
             hide_preconfigured_equipment: bool = None,
             hide_preconfigured_exercises: bool = None,
             compact_mode: bool = None,
@@ -2722,6 +2723,8 @@ class GymAPI:
                 self.settings.set_bool(
                     "ml_injury_prediction_enabled", ml_injury_prediction_enabled
                 )
+            if timezone is not None:
+                self.settings.set_text("timezone", timezone)
             if hide_preconfigured_equipment is not None:
                 self.settings.set_bool(
                     "hide_preconfigured_equipment", hide_preconfigured_equipment

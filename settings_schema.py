@@ -4,6 +4,7 @@ class SettingsSchema(BaseModel):
     theme: str = "light"
     weight_unit: str = "kg"
     time_format: str = "24h"
+    timezone: str = "UTC"
     rpe_scale: int = 10
     language: str = "en"
     font_size: int = 16
