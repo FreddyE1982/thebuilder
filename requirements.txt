@@ -9,6 +9,7 @@ statsmodels
 pywavelets
 scikit-learn
 torch
+aiosqlite
 pyyaml
 pydantic
 altair

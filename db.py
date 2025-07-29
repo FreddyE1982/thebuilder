@@ -1,4 +1,5 @@
 import sqlite3
+import aiosqlite
 import csv
 import os
 import io
@@ -787,6 +788,29 @@ class BaseRepository(Database):
 
     def _delete_all(self, table: str) -> None:
         self.execute(f"DELETE FROM {table};")
+
+
+class AsyncDatabase(Database):
+    """Provides asynchronous connection management."""
+
+    def _async_connection(self) -> aiosqlite.Connection:
+        return aiosqlite.connect(self._db_path)
+
+
+class AsyncBaseRepository(AsyncDatabase):
+    """Asynchronous variant of BaseRepository using aiosqlite."""
+
+    async def execute(self, query: str, params: Tuple = ()) -> int:
+        async with self._async_connection() as conn:
+            cursor = await conn.execute(query, params)
+            await conn.commit()
+            return cursor.lastrowid
+
+    async def fetch_all(self, query: str, params: Tuple = ()) -> List[Tuple]:
+        async with self._async_connection() as conn:
+            cursor = await conn.execute(query, params)
+            rows = await cursor.fetchall()
+            return rows
 
 
 class WorkoutRepository(BaseRepository):
