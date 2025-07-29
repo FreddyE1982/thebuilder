@@ -520,3 +520,4 @@ keep the AGENTS.md updated by adding new sensible rules when they occur to you. 
 - Mobile layout must use a `--vh` CSS variable set via JavaScript in `_configure_page` for reliable viewport height across orientations.
 - Power history analytics must compute average power per day using weight and velocity and be available via `/stats/power_history`.
 - The header must automatically collapse when scrolling down and reappear when scrolling up.
+- Multiuser features are prohibited. The application must remain single-user and any existing multiuser functionality should be removed.
