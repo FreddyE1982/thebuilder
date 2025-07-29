@@ -777,6 +777,7 @@ class Database:
             "pinned_stats": "",
             "hide_completed_plans": "0",
             "rpe_scale": "10",
+            "language": "en",
         }
         with self._connection() as conn:
             for key, value in defaults.items():

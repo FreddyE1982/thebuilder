@@ -523,3 +523,4 @@ keep the AGENTS.md updated by adding new sensible rules when they occur to you. 
 - Power history analytics must compute average power per day using weight and velocity and be available via `/stats/power_history`.
 - The header must automatically collapse when scrolling down and reappear when scrolling up.
 - Multiuser features are prohibited. The application must remain single-user and any existing multiuser functionality should be removed.
+- The "Jump to Section" dropdown has been removed from the UI and must not be reintroduced.

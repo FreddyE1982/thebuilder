@@ -177,6 +177,23 @@ class StreamlitAppTest(unittest.TestCase):
         self.assertIsNotNone(end_time)
         conn.close()
 
+    def test_create_workout_past_date(self) -> None:
+        past = datetime.date.today() - datetime.timedelta(days=2)
+        idx_date = _find_by_label(self.at.date_input, "Date", key="new_workout_date")
+        self.at.date_input[idx_date].set_value(past).run()
+        idx_new = _find_by_label(
+            self.at.button,
+            "New Workout",
+            key="FormSubmitter:new_workout_form-New Workout",
+        )
+        self.at.button[idx_new].click().run()
+
+        conn = self._connect()
+        cur = conn.cursor()
+        cur.execute("SELECT date FROM workouts;")
+        self.assertEqual(cur.fetchone()[0], past.isoformat())
+        conn.close()
+
     def test_finish_summary_banner(self) -> None:
         idx_new = _find_by_label(
             self.at.button,
@@ -235,12 +252,6 @@ class StreamlitAppTest(unittest.TestCase):
         ex_exp = self.at.expander[exp_idx]
         options = ex_exp.selectbox[0].options
         self.assertEqual(len(options), 1)
-
-    def test_jump_to_section_selectbox(self) -> None:
-        idx = _find_by_label(self.at.selectbox, "Jump to Section", key="log_jump")
-        options = self.at.selectbox[idx].options
-        self.assertIn("Workouts", options)
-
     def test_plan_to_workout(self) -> None:
         idx_date = _find_by_label(self.at.date_input, "Plan Date", key="plan_date")
         self.at.date_input[idx_date].set_value("2024-01-02").run()

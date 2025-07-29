@@ -12,6 +12,7 @@ import warnings
 import json
 import time
 import os
+from localization import translator
 
 warnings.filterwarnings("ignore", category=AltairDeprecationWarning)
 from db import (
@@ -203,6 +204,8 @@ class GymApp:
         )
         self.weight_unit = self.settings_repo.get_text("weight_unit", "kg")
         self.time_format = self.settings_repo.get_text("time_format", "24h")
+        self.language = self.settings_repo.get_text("language", "en")
+        translator.set_language(self.language)
         self.quick_weights = [
             float(v)
             for v in self.settings_repo.get_text(
@@ -1960,12 +1963,6 @@ class GymApp:
         """End main content container."""
         self.layout.close_content()
 
-    def _jump_to_section(self, sections: list[str], key: str) -> None:
-        """Provide a select box to quickly jump to a section."""
-        choice = st.selectbox("Jump to Section", [""] + sections, key=key)
-        if choice:
-            st.session_state.scroll_to = self._slugify(choice)
-            self._trigger_refresh()
 
     def _reset_equipment_filters(self) -> None:
         """Clear equipment library filter inputs."""
@@ -2306,7 +2303,7 @@ class GymApp:
 
     def _analytics_hub_tab(self) -> None:
         with self._section("Analytics Hub"):
-            st.write("Jump to detailed analytics views:")
+            st.write("Detailed analytics views:")
             cols = st.columns(4)
             links = {
                 "Dashboard": "dashboard",
@@ -2518,10 +2515,6 @@ class GymApp:
                 ("Sets", daily[0]["sets"]),
             ]
             self._metric_grid(metrics)
-        sections = ["Workouts"]
-        if st.session_state.selected_workout:
-            sections.append("Exercises")
-        self._jump_to_section(sections, "log_jump")
         if self.layout.is_tablet:
             left, right = st.columns(2)
             with left:
@@ -2611,9 +2604,15 @@ class GymApp:
                     self._existing_workout_form(self.training_options)
 
     def _create_workout_form(self, training_options: list[str]) -> None:
-        with st.expander("Create New Workout"):
+        with st.container():
             with st.form("new_workout_form"):
                 st.markdown("<div class='form-grid'>", unsafe_allow_html=True)
+                new_date = st.date_input(
+                    "Date",
+                    datetime.date.today(),
+                    key="new_workout_date",
+                )
+                self._add_help("Workout date")
                 new_type = st.selectbox(
                     "Training Type",
                     training_options,
@@ -2627,7 +2626,7 @@ class GymApp:
                 submitted = st.form_submit_button("New Workout")
                 if submitted:
                     new_id = self.workouts.create(
-                        datetime.date.today().isoformat(),
+                        new_date.isoformat(),
                         new_type,
                         None,
                         new_location or None,
@@ -2636,7 +2635,7 @@ class GymApp:
                     self._select_workout(new_id)
 
     def _existing_workout_form(self, training_options: list[str]) -> None:
-        with st.expander("Existing Workouts", expanded=True):
+        with st.container():
             c1, c2 = st.columns([3, 1])
             with c1:
                 search = st.text_input("Search", key="workout_search")
