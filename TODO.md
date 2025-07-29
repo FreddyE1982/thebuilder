@@ -23,7 +23,10 @@
 [complete] 19. Add localization framework for multi-language UI.
 [complete] 19b. Integrate translations for UI labels.
 [complete] 19c. Add language selector in settings.
-20. Refactor database layer to async for FastAPI performance.
+[complete] 20a. Create asynchronous repository layer using aiosqlite.
+20b. Convert existing repositories to use AsyncBaseRepository.
+20c. Update REST API endpoints to use async repositories.
+20d. Update tests for async database operations.
 [complete] 21. Add unit tests for ml_service models.
 [complete] 22. Provide interactive charts for power and velocity histories.
 [complete] 23. Add endpoint for exercise alias removal.
