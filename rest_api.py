@@ -1336,16 +1336,25 @@ class GymAPI:
             return {"percent": pct}
 
         @self.app.post("/templates")
-        def create_template(name: str, training_type: str = "strength"):
-            tid = self.template_workouts.create(name, training_type)
+        def create_template(
+            name: str,
+            training_type: str = "strength",
+            color: str = "#ffffff",
+        ):
+            tid = self.template_workouts.create(name, training_type, color)
             return {"id": tid}
 
         @self.app.get("/templates")
         def list_templates():
             templates = self.template_workouts.fetch_all()
             return [
-                {"id": tid, "name": name, "training_type": t}
-                for tid, name, t in templates
+                {
+                    "id": tid,
+                    "name": name,
+                    "training_type": t,
+                    "color": color,
+                }
+                for tid, name, t, color in templates
             ]
 
         @self.app.post(
@@ -1372,9 +1381,12 @@ class GymAPI:
             template_id: int,
             name: str | None = None,
             training_type: str | None = None,
+            color: str | None = None,
         ):
             try:
-                self.template_workouts.update(template_id, name, training_type)
+                self.template_workouts.update(
+                    template_id, name, training_type, color
+                )
                 return {"status": "updated"}
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))

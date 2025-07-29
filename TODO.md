@@ -116,7 +116,7 @@
 106. Provide color-coded heatmap of training volume per week.
 107. Add speech-to-text input for set entry.
 108. Provide inline video tutorials for each exercise.
-109. Allow checkboxes to mark sets as warm-ups.
+[complete] 109. Allow checkboxes to mark sets as warm-ups.
 110. Add screenshot capture for progress charts.
 111. Enable duplication of logged workouts.
 112. Support export of progress charts to PDF.
@@ -125,14 +125,14 @@
 115. Display workout completion progress bar.
 116. Auto start rest timer after each set.
 [complete] 117. Customize quick weight buttons in settings.
-118. Allow hiding of completed sets.
-119. Collapse exercises into expandable sections.
+[complete] 118. Allow hiding of completed sets.
+[complete] 119. Collapse exercises into expandable sections.
 120. Color-code workouts by training type tags.
-121. Copy weight values to clipboard with one click.
+[complete] 121. Copy weight values to clipboard with one click.
 122. Set custom accent color in settings.
 123. Generate shareable read-only workout summary images.
 124. Undo deletion of sets.
-125. Create templates from logged workouts.
+[complete] 125. Create templates from logged workouts.
 126. Step-by-step onboarding for new features.
 127. Offline caching of recent workouts.
 128. Weekly planner view for upcoming sessions.
@@ -141,7 +141,7 @@
 131. Compare progress between two exercises.
 132. Sort exercise library by various fields.
 133. Rate workouts using star ratings.
-134. Toggle to hide navigation labels.
+[complete] 134. Toggle to hide navigation labels.
 135. Pin key metrics on the dashboard.
 [complete] 136. Collapsible filter panel in history tab.
 137. Keyboard shortcuts help overlay.
@@ -156,7 +156,7 @@
 146. Interactive tutorial for first workout creation.
 147. Hotkey to repeat last set quickly.
 [complete] 148. Inline editing of tags.
-149. Simple mode toggle hiding advanced fields.
+[complete] 149. Simple mode toggle hiding advanced fields.
 [complete] 150. Color-code sets by intensity level.
 [complete] 151. Adjustable font size slider in settings.
 152. Import images using mobile share menu.
@@ -178,21 +178,21 @@
 168. Customizable layout spacing options.
 [complete] 169. Filter by equipment type quickly.
 170. Hide or show columns in tables.
-171. Label rest timer progress with percent.
+[complete] 171. Label rest timer progress with percent.
 [complete] 172. Schedule dark mode automatically at night.
 173. Toggle to hide advanced charts.
 174. Built-in calculator for weight conversions.
 175. Voice prompts for workout start and stop.
 176. Favorite templates directly from history.
-177. "Open last workout" button on start page.
+[complete] 177. "Open last workout" button on start page.
 178. Interactive personal record tracker.
 179. Quick-add macro entries to notes.
-180. Color-code templates for organization.
+[complete] 180. Color-code templates for organization.
 181. Automatic cleanup of empty workouts.
 182. Highlight new personal record improvements.
 183. Vertical orientation option for bottom nav.
 184. "What's new" dialog after updates.
-185. Quick start workout from plan list.
+[complete] 185. Quick start workout from plan list.
 186. Print-friendly workout summary view.
 187. High-contrast accessibility theme.
 [complete] 188. Option to auto-collapse header on scroll.
