@@ -1938,11 +1938,8 @@ class GymApp:
         _dlg()
 
     def _add_help(self, text: str) -> None:
-        class _Tooltip:
-            pass
-
-        _Tooltip.__doc__ = text
-        st.help(_Tooltip)
+        """Display contextual help without verbose class info."""
+        st.caption(text)
 
     def _tab_tips(self, tips: list[str]) -> None:
         """Display tips in a slide-out panel."""
@@ -2158,10 +2155,11 @@ class GymApp:
                     self.training_options,
                     index=self.training_options.index("strength"),
                     key="quick_workout_type",
+                    help="Training focus for this workout",
                 )
-                self._add_help("Training focus for this workout")
-                new_loc = st.text_input("Location", key="quick_workout_loc")
-                self._add_help("Workout location")
+                new_loc = st.text_input(
+                    "Location", key="quick_workout_loc", help="Workout location"
+                )
                 submitted = st.form_submit_button("Create")
                 if submitted:
                     wid = self.workouts.create(
@@ -2669,17 +2667,18 @@ class GymApp:
                     "Date",
                     datetime.date.today(),
                     key="new_workout_date",
+                    help="Workout date",
                 )
-                self._add_help("Workout date")
                 new_type = st.selectbox(
                     "Training Type",
                     training_options,
                     index=training_options.index("strength"),
                     key="new_workout_type",
+                    help="Select the primary training focus",
                 )
-                self._add_help("Select the primary training focus")
-                new_location = st.text_input("Location", key="new_workout_location")
-                self._add_help("Where the workout takes place")
+                new_location = st.text_input(
+                    "Location", key="new_workout_location", help="Where the workout takes place"
+                )
                 st.markdown("</div>", unsafe_allow_html=True)
                 submitted = st.form_submit_button("New Workout")
                 if submitted:
@@ -2897,16 +2896,15 @@ class GymApp:
             with st.form("new_plan_form"):
                 st.markdown("<div class='form-grid'>", unsafe_allow_html=True)
                 plan_date = st.date_input(
-                    "Plan Date", datetime.date.today(), key="plan_date"
+                    "Plan Date", datetime.date.today(), key="plan_date", help="Date the workout is planned for"
                 )
-                self._add_help("Date the workout is planned for")
                 plan_type = st.selectbox(
                     "Training Type",
                     self.training_options,
                     index=self.training_options.index("strength"),
                     key="plan_type",
+                    help="Planned workout focus",
                 )
-                self._add_help("Planned workout focus")
                 st.markdown("</div>", unsafe_allow_html=True)
                 submitted = st.form_submit_button("New Planned Workout")
                 if submitted:
