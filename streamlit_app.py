@@ -125,6 +125,7 @@ class LayoutManager:
             "progress": "📈",
             "settings": "⚙️",
         }
+        show_labels = not self._settings.get_bool("hide_nav_labels", False)
         mode = "mobile" if self.is_mobile else "desktop"
         html = (
             f'<nav class="{container_class}" role="tablist" aria-label="Main Navigation">'
@@ -138,7 +139,8 @@ class LayoutManager:
                 f'onclick="const p=new URLSearchParams(window.location.search);'
                 f"p.set('mode','{mode}');p.set('tab','{label}');"
                 f'window.location.search=p.toString();"><span class="icon">{icons[label]}</span>'
-                f'<span class="label">{label.title()}</span></button>'
+                + (f'<span class="label">{label.title()}</span>' if show_labels else "")
+                + "</button>"
                 for idx, label in enumerate(labels)
             )
             + "</nav>"
@@ -197,8 +199,10 @@ class GymApp:
         self.color_theme = self.settings_repo.get_text("color_theme", "red")
         self.auto_dark_mode = self.settings_repo.get_bool("auto_dark_mode", False)
         self.compact_mode = self.settings_repo.get_bool("compact_mode", False)
+        self.simple_mode = self.settings_repo.get_bool("simple_mode", False)
         self.large_font = self.settings_repo.get_bool("large_font_mode", False)
         self.side_nav = self.settings_repo.get_bool("side_nav", False)
+        self.hide_nav_labels = self.settings_repo.get_bool("hide_nav_labels", False)
         self.show_onboarding = self.settings_repo.get_bool("show_onboarding", False)
         self.auto_open_last_workout = self.settings_repo.get_bool(
             "auto_open_last_workout", False
@@ -220,6 +224,9 @@ class GymApp:
         self.pinned_stats = self.settings_repo.get_list("pinned_stats")
         self.hide_completed_plans = self.settings_repo.get_bool(
             "hide_completed_plans", False
+        )
+        self.hide_completed_sets = self.settings_repo.get_bool(
+            "hide_completed_sets", False
         )
         self.add_set_key = self.settings_repo.get_text("hotkey_add_set", "a")
         self.tab_keys = self.settings_repo.get_text("hotkey_tab_keys", "1,2,3,4")
@@ -389,8 +396,9 @@ class GymApp:
             st.session_state.pop("rest_start", None)
             st.info("Rest over!")
             return
+        pct = int((1 - remaining / rest_sec) * 100)
         st.markdown(
-            f"<div id='rest-timer'>Rest: {remaining}s</div>", unsafe_allow_html=True
+            f"<div id='rest-timer'>Rest: {remaining}s ({pct}%)</div>", unsafe_allow_html=True
         )
         if os.environ.get("TEST_MODE") != "1":
             components.html(
@@ -2543,6 +2551,10 @@ class GymApp:
         )
         self._rest_timer()
         self._mini_calendar_widget()
+        last_id = self.settings_repo.get_int("last_workout_id", 0)
+        if last_id and st.button("Open Last Workout"):
+            st.session_state.selected_workout = last_id
+            self._trigger_refresh()
         plans = sorted(self.planned_workouts.fetch_all(), key=lambda p: p[1])
         options = {str(p[0]): p for p in plans}
         today = datetime.date.today().isoformat()
@@ -3142,6 +3154,8 @@ class GymApp:
                     warm,
                     _position,
                 ) in enumerate(sets, start=1):
+                    if self.hide_completed_sets and start_time and end_time:
+                        continue
                     detail = self.sets.fetch_detail(set_id)
                     est = MathTools.epley_1rm(float(weight), int(reps))
                     ratio = float(weight) / est if est else 0.0
@@ -3198,6 +3212,10 @@ class GymApp:
                                 on_change=self._update_set,
                                 args=(set_id,),
                             )
+                            st.markdown(
+                                f"<button onclick=\"navigator.clipboard.writeText('{float(weight)}')\">Copy</button>",
+                                unsafe_allow_html=True,
+                            )
                             rpe_val = st.selectbox(
                                 "RPE",
                                 options=self._rpe_options(),
@@ -3206,34 +3224,38 @@ class GymApp:
                                 on_change=self._update_set,
                                 args=(set_id,),
                             )
-                            warm_val = st.checkbox(
-                                "Warmup",
-                                value=bool(detail.get("warmup")),
-                                key=f"warm_{set_id}",
-                                on_change=self._update_set,
-                                args=(set_id,),
-                            )
-                            note_val = st.text_input(
-                                "Note",
-                                value=detail.get("note") or "",
-                                key=f"note_{set_id}",
-                                on_change=self._update_set,
-                                args=(set_id,),
-                            )
-                            dur_default = 0.0
-                            if start_time and end_time:
-                                t0 = datetime.datetime.fromisoformat(start_time)
-                                t1 = datetime.datetime.fromisoformat(end_time)
-                                dur_default = (t1 - t0).total_seconds()
-                            duration_val = st.number_input(
-                                "Duration (sec)",
-                                min_value=0.0,
-                                step=1.0,
-                                value=dur_default,
-                                key=f"duration_{set_id}",
-                                on_change=self._update_set,
-                                args=(set_id,),
-                            )
+                            warm_val = False
+                            note_val = ""
+                            duration_val = 0.0
+                            if not self.simple_mode:
+                                warm_val = st.checkbox(
+                                    "Warmup",
+                                    value=bool(detail.get("warmup")),
+                                    key=f"warm_{set_id}",
+                                    on_change=self._update_set,
+                                    args=(set_id,),
+                                )
+                                note_val = st.text_input(
+                                    "Note",
+                                    value=detail.get("note") or "",
+                                    key=f"note_{set_id}",
+                                    on_change=self._update_set,
+                                    args=(set_id,),
+                                )
+                                dur_default = 0.0
+                                if start_time and end_time:
+                                    t0 = datetime.datetime.fromisoformat(start_time)
+                                    t1 = datetime.datetime.fromisoformat(end_time)
+                                    dur_default = (t1 - t0).total_seconds()
+                                duration_val = st.number_input(
+                                    "Duration (sec)",
+                                    min_value=0.0,
+                                    step=1.0,
+                                    value=dur_default,
+                                    key=f"duration_{set_id}",
+                                    on_change=self._update_set,
+                                    args=(set_id,),
+                                )
                             st.write(f"{detail['diff_reps']:+}")
                             st.write(f"{detail['diff_weight']:+.1f}")
                             st.write(f"{detail['diff_rpe']:+}")
@@ -3315,6 +3337,10 @@ class GymApp:
                             on_change=self._update_set,
                             args=(set_id,),
                         )
+                        cols[2].markdown(
+                            f"<button onclick=\"navigator.clipboard.writeText('{float(weight)}')\">📋</button>",
+                            unsafe_allow_html=True,
+                        )
                         rpe_val = cols[3].selectbox(
                             "RPE",
                             options=self._rpe_options(),
@@ -3323,34 +3349,38 @@ class GymApp:
                             on_change=self._update_set,
                             args=(set_id,),
                         )
-                        warm_chk = cols[4].checkbox(
-                            "W",
-                            value=bool(detail.get("warmup")),
-                            key=f"warm_{set_id}",
-                            on_change=self._update_set,
-                            args=(set_id,),
-                        )
-                        note_val = cols[5].text_input(
-                            "Note",
-                            value=detail.get("note") or "",
-                            key=f"note_{set_id}",
-                            on_change=self._update_set,
-                            args=(set_id,),
-                        )
-                        dur_default = 0.0
-                        if start_time and end_time:
-                            t0 = datetime.datetime.fromisoformat(start_time)
-                            t1 = datetime.datetime.fromisoformat(end_time)
-                            dur_default = (t1 - t0).total_seconds()
-                        duration_val = cols[6].number_input(
-                            "Duration (sec)",
-                            min_value=0.0,
-                            step=1.0,
-                            value=dur_default,
-                            key=f"duration_{set_id}",
-                            on_change=self._update_set,
-                            args=(set_id,),
-                        )
+                        warm_chk = False
+                        note_val = ""
+                        duration_val = 0.0
+                        if not self.simple_mode:
+                            warm_chk = cols[4].checkbox(
+                                "W",
+                                value=bool(detail.get("warmup")),
+                                key=f"warm_{set_id}",
+                                on_change=self._update_set,
+                                args=(set_id,),
+                            )
+                            note_val = cols[5].text_input(
+                                "Note",
+                                value=detail.get("note") or "",
+                                key=f"note_{set_id}",
+                                on_change=self._update_set,
+                                args=(set_id,),
+                            )
+                            dur_default = 0.0
+                            if start_time and end_time:
+                                t0 = datetime.datetime.fromisoformat(start_time)
+                                t1 = datetime.datetime.fromisoformat(end_time)
+                                dur_default = (t1 - t0).total_seconds()
+                            duration_val = cols[6].number_input(
+                                "Duration (sec)",
+                                min_value=0.0,
+                                step=1.0,
+                                value=dur_default,
+                                key=f"duration_{set_id}",
+                                on_change=self._update_set,
+                                args=(set_id,),
+                            )
                         cols[7].write(f"{detail['diff_reps']:+}")
                         cols[8].write(f"{detail['diff_weight']:+.1f}")
                         cols[9].write(f"{detail['diff_rpe']:+}")
@@ -3485,14 +3515,18 @@ class GymApp:
             options=self._rpe_options(),
             key=f"new_rpe_{exercise_id}",
         )
-        note = st.text_input("Note", key=f"new_note_{exercise_id}")
-        duration = st.number_input(
-            "Duration (sec)",
-            min_value=0.0,
-            step=1.0,
-            key=f"new_duration_{exercise_id}",
-        )
-        warmup = st.checkbox("Warmup", key=f"new_warmup_{exercise_id}")
+        note = None
+        duration = 0.0
+        warmup = False
+        if not self.simple_mode:
+            note = st.text_input("Note", key=f"new_note_{exercise_id}")
+            duration = st.number_input(
+                "Duration (sec)",
+                min_value=0.0,
+                step=1.0,
+                key=f"new_duration_{exercise_id}",
+            )
+            warmup = st.checkbox("Warmup", key=f"new_warmup_{exercise_id}")
         last = self.sets.fetch_for_exercise(exercise_id)
         if last:
             if st.button("Copy Last Set", key=f"copy_{exercise_id}"):
@@ -4195,8 +4229,9 @@ class GymApp:
                     index=self.training_options.index("strength"),
                     key="tmpl_type",
                 )
+                color = st.color_picker("Color", "#ffffff", key="tmpl_color")
                 if st.button("Create Template") and name:
-                    tid = self.template_workouts.create(name, t_type)
+                    tid = self.template_workouts.create(name, t_type, color)
                     st.session_state.selected_template = tid
             with st.expander("Existing Templates", expanded=True):
                 all_templates = self.template_workouts.fetch_all()
@@ -4213,8 +4248,13 @@ class GymApp:
                         key="select_template",
                     )
                     st.session_state.selected_template = int(selected)
-                    for tid, name, t_type in templates:
-                        with st.expander(f"{name} (ID {tid})", expanded=False):
+                    for tid, name, t_type, color in templates:
+                        header = f"{name} (ID {tid})"
+                        st.markdown(
+                            f"<div style='background:{color};padding:2px'>{header}</div>",
+                            unsafe_allow_html=True,
+                        )
+                        with st.expander("Details", expanded=False):
                             edit_name = st.text_input(
                                 "Name", value=name, key=f"tmpl_edit_name_{tid}"
                             )
@@ -4224,6 +4264,9 @@ class GymApp:
                                 index=self.training_options.index(t_type),
                                 key=f"tmpl_edit_type_{tid}",
                             )
+                            edit_color = st.color_picker(
+                                "Color", value=color, key=f"tmpl_edit_color_{tid}"
+                            )
                             plan_date = st.date_input(
                                 "Create Plan Date",
                                 datetime.date.today(),
@@ -4231,7 +4274,9 @@ class GymApp:
                             )
                             cols = st.columns(3)
                             if cols[0].button("Save", key=f"tmpl_save_{tid}"):
-                                self.template_workouts.update(tid, edit_name, edit_type)
+                                self.template_workouts.update(
+                                    tid, edit_name, edit_type, edit_color
+                                )
                                 st.success("Updated")
                             if cols[1].button("Plan", key=f"tmpl_plan_btn_{tid}"):
                                 self.planner.create_plan_from_template(
@@ -6245,6 +6290,10 @@ class GymApp:
                     "Compact Mode",
                     value=self.compact_mode,
                 )
+                simple_mode_opt = st.checkbox(
+                    "Simple Mode",
+                    value=self.simple_mode,
+                )
                 large_font = st.checkbox(
                     "Large Font Mode",
                     value=self.large_font,
@@ -6258,6 +6307,10 @@ class GymApp:
                 side_nav_opt = st.checkbox(
                     "Enable Side Navigation",
                     value=self.side_nav,
+                )
+                hide_nav_opt = st.checkbox(
+                    "Hide Navigation Labels",
+                    value=self.hide_nav_labels,
                 )
                 sb_width = st.slider(
                     "Sidebar Width (rem)",
@@ -6312,6 +6365,10 @@ class GymApp:
                 hide_completed_opt = st.checkbox(
                     "Hide Completed Plans",
                     value=self.settings_repo.get_bool("hide_completed_plans", False),
+                )
+                hide_sets_opt = st.checkbox(
+                    "Hide Completed Sets",
+                    value=self.settings_repo.get_bool("hide_completed_sets", False),
                 )
             with st.expander("Gamification", expanded=True):
                 game_enabled = st.checkbox(
@@ -6453,12 +6510,16 @@ class GymApp:
                 self.rpe_scale = int(rpe_scale_in)
                 self.settings_repo.set_bool("compact_mode", compact)
                 self.compact_mode = compact
+                self.settings_repo.set_bool("simple_mode", simple_mode_opt)
+                self.simple_mode = simple_mode_opt
                 self.settings_repo.set_bool("large_font_mode", large_font)
                 self.large_font = large_font
                 self.settings_repo.set_float("font_size", float(font_size_in))
                 self.font_size = float(font_size_in)
                 self.settings_repo.set_bool("side_nav", side_nav_opt)
                 self.side_nav = side_nav_opt
+                self.settings_repo.set_bool("hide_nav_labels", hide_nav_opt)
+                self.hide_nav_labels = hide_nav_opt
                 self.settings_repo.set_bool("show_onboarding", show_onboard_opt)
                 self.show_onboarding = show_onboard_opt
                 self.settings_repo.set_bool("auto_open_last_workout", auto_open_opt)
@@ -6476,6 +6537,7 @@ class GymApp:
                     "pinned_stats", [v for v in pinned_in.split(",") if v]
                 )
                 self.settings_repo.set_bool("hide_completed_plans", hide_completed_opt)
+                self.settings_repo.set_bool("hide_completed_sets", hide_sets_opt)
                 self.add_set_key = add_key_in or "a"
                 self.tab_keys = tab_keys_in or "1,2,3,4"
                 self.quick_weights = [float(v) for v in qw_in.split(",") if v]
@@ -6483,6 +6545,7 @@ class GymApp:
                 self.pinned_stats = [v for v in pinned_in.split(",") if v]
                 self.layout = LayoutManager(self.settings_repo)
                 self.hide_completed_plans = hide_completed_opt
+                self.hide_completed_sets = hide_sets_opt
                 self.settings_repo.set_float("sidebar_width", sb_width)
                 self.sidebar_width = sb_width
                 self._inject_responsive_css()

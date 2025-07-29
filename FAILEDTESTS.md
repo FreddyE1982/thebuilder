@@ -2,3 +2,4 @@
 - tests/test_streamlit_app.py::StreamlitAdditionalGUITest::test_workout_context_menu_present
 - tests/test_streamlit_app.py::StreamlitHeartRateGUITest::test_compact_mode_toggle
 - tests/test_streamlit_app.py::RecommendationIntegrationTest::test_csv_uploader_present
+tests/test_api.py tests/test_streamlit_app.py failed due to missing dependencies

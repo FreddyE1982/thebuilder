@@ -181,9 +181,10 @@ class Database:
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT NOT NULL,
                     training_type TEXT NOT NULL DEFAULT 'strength',
-                    position INTEGER NOT NULL DEFAULT 0
+                    position INTEGER NOT NULL DEFAULT 0,
+                    color TEXT DEFAULT '#ffffff'
                 );""",
-            ["id", "name", "training_type", "position"],
+            ["id", "name", "training_type", "position", "color"],
         ),
         "template_exercises": (
             """CREATE TABLE template_exercises (
@@ -763,6 +764,9 @@ class Database:
             "bookmarked_views": "",
             "pinned_stats": "",
             "hide_completed_plans": "0",
+            "hide_completed_sets": "0",
+            "hide_nav_labels": "0",
+            "simple_mode": "0",
             "rpe_scale": "10",
             "language": "en",
         }
@@ -1966,6 +1970,9 @@ class SettingsRepository(BaseRepository):
             "collapse_header",
             "email_weekly_enabled",
             "hide_completed_plans",
+            "hide_completed_sets",
+            "hide_nav_labels",
+            "simple_mode",
         }
         for k, v in rows:
             if k in bool_keys:
@@ -2010,8 +2017,11 @@ class SettingsRepository(BaseRepository):
                 "auto_open_last_workout",
                 "collapse_header",
                 "email_weekly_enabled",
-                "hide_completed_plans",
-            }
+            "hide_completed_plans",
+            "hide_completed_sets",
+            "hide_nav_labels",
+            "simple_mode",
+        }
             for key, value in data.items():
                 val = str(value)
                 if key in bool_keys:
@@ -2112,6 +2122,9 @@ class SettingsRepository(BaseRepository):
             "collapse_header",
             "email_weekly_enabled",
             "hide_completed_plans",
+            "hide_completed_sets",
+            "hide_nav_labels",
+            "simple_mode",
         }
         for k in bool_keys:
             if k in data:
@@ -3217,24 +3230,26 @@ class ReactionRepository(BaseRepository):
 class TemplateWorkoutRepository(BaseRepository):
     """Repository for workout templates."""
 
-    def create(self, name: str, training_type: str = "strength") -> int:
+    def create(
+        self, name: str, training_type: str = "strength", color: str = "#ffffff"
+    ) -> int:
         rows = super().fetch_all(
             "SELECT COALESCE(MAX(position), 0) + 1 FROM workout_templates;"
         )
         position = int(rows[0][0]) if rows else 1
         return self.execute(
-            "INSERT INTO workout_templates (name, training_type, position) VALUES (?, ?, ?);",
-            (name, training_type, position),
+            "INSERT INTO workout_templates (name, training_type, position, color) VALUES (?, ?, ?, ?);",
+            (name, training_type, position, color),
         )
 
-    def fetch_all(self) -> list[tuple[int, str, str]]:
+    def fetch_all(self) -> list[tuple[int, str, str, str]]:
         return super().fetch_all(
-            "SELECT id, name, training_type FROM workout_templates ORDER BY position;"
+            "SELECT id, name, training_type, color FROM workout_templates ORDER BY position;"
         )
 
-    def fetch_detail(self, template_id: int) -> tuple[int, str, str]:
+    def fetch_detail(self, template_id: int) -> tuple[int, str, str, str]:
         rows = super().fetch_all(
-            "SELECT id, name, training_type FROM workout_templates WHERE id = ?;",
+            "SELECT id, name, training_type, color FROM workout_templates WHERE id = ?;",
             (template_id,),
         )
         if not rows:
@@ -3242,7 +3257,11 @@ class TemplateWorkoutRepository(BaseRepository):
         return rows[0]
 
     def update(
-        self, template_id: int, name: str | None, training_type: str | None
+        self,
+        template_id: int,
+        name: str | None,
+        training_type: str | None,
+        color: str | None = None,
     ) -> None:
         rows = super().fetch_all(
             "SELECT id FROM workout_templates WHERE id = ?;",
@@ -3259,6 +3278,11 @@ class TemplateWorkoutRepository(BaseRepository):
             self.execute(
                 "UPDATE workout_templates SET training_type = ? WHERE id = ?;",
                 (training_type, template_id),
+            )
+        if color is not None:
+            self.execute(
+                "UPDATE workout_templates SET color = ? WHERE id = ?;",
+                (color, template_id),
             )
 
     def delete(self, template_id: int) -> None:
@@ -3286,8 +3310,8 @@ class TemplateWorkoutRepository(BaseRepository):
             )
 
     def clone(self, template_id: int, new_name: str) -> int:
-        tid, _name, t_type = self.fetch_detail(template_id)
-        new_id = self.create(new_name, t_type)
+        tid, _name, t_type, color = self.fetch_detail(template_id)
+        new_id = self.create(new_name, t_type, color)
         exercises = TemplateExerciseRepository(self._db_path)
         sets = TemplateSetRepository(self._db_path)
         for ex_id, name, eq in exercises.fetch_for_template(tid):
