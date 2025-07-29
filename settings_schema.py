@@ -6,6 +6,7 @@ class SettingsSchema(BaseModel):
     time_format: str = "24h"
     rpe_scale: int = 10
     language: str = "en"
+    font_size: int = 16
     collapse_header: bool = True
 
 def validate_settings(data: dict) -> None:

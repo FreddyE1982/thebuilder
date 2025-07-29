@@ -222,6 +222,7 @@ class GymApp:
         self.add_set_key = self.settings_repo.get_text("hotkey_add_set", "a")
         self.tab_keys = self.settings_repo.get_text("hotkey_tab_keys", "1,2,3,4")
         self.sidebar_width = self.settings_repo.get_float("sidebar_width", 18.0)
+        self.font_size = self.settings_repo.get_float("font_size", 16.0)
         self.rpe_scale = self.settings_repo.get_int("rpe_scale", 10)
         self.training_options = sorted(
             [
@@ -668,7 +669,7 @@ class GymApp:
                 --header-bg: #ffffff;
                 --border-color: #cccccc;
                 --safe-bottom: 0px;
-                --base-font-size: 16px;
+                --base-font-size: SIZEpx;
                 --sidebar-width: WIDTHrem;
             }}
             html {
@@ -1456,14 +1457,11 @@ class GymApp:
             }
             </style>
             """
+        size = max(self.font_size, 18.0) if self.large_font else self.font_size
         st.markdown(
-            css.replace("WIDTH", str(self.sidebar_width)), unsafe_allow_html=True
+            css.replace("WIDTH", str(self.sidebar_width)).replace("SIZE", str(int(size))),
+            unsafe_allow_html=True,
         )
-        if self.large_font:
-            st.markdown(
-                "<style>:root{--base-font-size:18px;}</style>",
-                unsafe_allow_html=True,
-            )
         if self.compact_mode and not st.session_state.get("is_mobile", False):
             st.markdown(
                 """
@@ -4933,6 +4931,10 @@ class GymApp:
             )
             tag_names = [n for _, n in self.tags_repo.fetch_all()]
             sel_tags = st.multiselect("Tags", tag_names, key="hist_tags")
+            if st.button("Clear Filters", key="hist_clear"):
+                st.session_state.hist_type = ""
+                st.session_state.hist_tags = []
+                self._trigger_refresh()
             start_str = start.isoformat()
             end_str = end.isoformat()
         load_more = st.session_state.pop("load_more_hist", False)
@@ -6191,6 +6193,12 @@ class GymApp:
                     "Large Font Mode",
                     value=self.large_font,
                 )
+                font_size_in = st.slider(
+                    "Font Size (px)",
+                    12,
+                    24,
+                    value=int(self.font_size),
+                )
                 side_nav_opt = st.checkbox(
                     "Enable Side Navigation",
                     value=self.side_nav,
@@ -6389,6 +6397,8 @@ class GymApp:
                 self.compact_mode = compact
                 self.settings_repo.set_bool("large_font_mode", large_font)
                 self.large_font = large_font
+                self.settings_repo.set_float("font_size", float(font_size_in))
+                self.font_size = float(font_size_in)
                 self.settings_repo.set_bool("side_nav", side_nav_opt)
                 self.side_nav = side_nav_opt
                 self.settings_repo.set_bool("show_onboarding", show_onboard_opt)

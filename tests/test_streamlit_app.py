@@ -857,6 +857,22 @@ class StreamlitAppTest(unittest.TestCase):
         conn.close()
         self.assertEqual(bool(int(val)), not current)
 
+    def test_font_size_slider(self) -> None:
+        self.at.query_params["tab"] = "settings"
+        self.at.run()
+        settings_tab = self._get_tab("Settings")
+        idx = _find_by_label(settings_tab.slider, "Font Size (px)")
+        current = settings_tab.slider[idx].value
+        settings_tab.slider[idx].set_value(current + 1).run()
+        save_idx = _find_by_label(settings_tab.button, "Save General Settings")
+        settings_tab.button[save_idx].click().run()
+        conn = self._connect()
+        cur = conn.cursor()
+        cur.execute("SELECT value FROM settings WHERE key = 'font_size';")
+        val = cur.fetchone()[0]
+        conn.close()
+        self.assertEqual(int(float(val)), int(current) + 1)
+
     def test_language_selector(self) -> None:
         self.at.query_params["tab"] = "settings"
         self.at.run()
@@ -918,6 +934,7 @@ class StreamlitFullGUITest(unittest.TestCase):
         self.assertIn("Last 7d", buttons)
         self.assertIn("Last 30d", buttons)
         self.assertIn("Last 90d", buttons)
+        self.assertIn("Clear Filters", buttons)
 
     def test_dashboard_tab(self) -> None:
         tab = self._get_tab("Dashboard")
