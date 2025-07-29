@@ -180,21 +180,21 @@
 170. Hide or show columns in tables.
 [complete] 171. Label rest timer progress with percent.
 [complete] 172. Schedule dark mode automatically at night.
-173. Toggle to hide advanced charts.
-174. Built-in calculator for weight conversions.
+[complete] 173. Toggle to hide advanced charts.
+[complete] 174. Built-in calculator for weight conversions.
 175. Voice prompts for workout start and stop.
-176. Favorite templates directly from history.
+[complete] 176. Favorite templates directly from history.
 [complete] 177. "Open last workout" button on start page.
 178. Interactive personal record tracker.
-179. Quick-add macro entries to notes.
+[complete] 179. Quick-add macro entries to notes.
 [complete] 180. Color-code templates for organization.
-181. Automatic cleanup of empty workouts.
-182. Highlight new personal record improvements.
-183. Vertical orientation option for bottom nav.
-184. "What's new" dialog after updates.
+[complete] 181. Automatic cleanup of empty workouts.
+[complete] 182. Highlight new personal record improvements.
+[complete] 183. Vertical orientation option for bottom nav.
+[complete] 184. "What's new" dialog after updates.
 [complete] 185. Quick start workout from plan list.
-186. Print-friendly workout summary view.
-187. High-contrast accessibility theme.
+[complete] 186. Print-friendly workout summary view.
+[complete] 187. High-contrast accessibility theme.
 [complete] 188. Option to auto-collapse header on scroll.
 189. Import workout history from CSV.
 190. Local search index for offline filtering.

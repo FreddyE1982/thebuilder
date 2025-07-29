@@ -1,6 +1,8 @@
 import os
 import yaml
 
+APP_VERSION = "1.0.0"
+
 
 class YamlConfig:
     """Load and save settings to a YAML file."""

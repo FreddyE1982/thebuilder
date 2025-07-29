@@ -7,6 +7,7 @@ import subprocess
 from typing import Optional
 
 from db import WorkoutRepository, SetRepository
+from tools import WeightConverter
 from cli_tools import GitTools
 from rest_api import GymAPI
 import requests
@@ -103,6 +104,10 @@ def main() -> None:
 
     audit = sub.add_parser("audit")
 
+    conv = sub.add_parser("convert")
+    conv.add_argument("--weight", type=float, required=True)
+    conv.add_argument("--unit", choices=["kg", "lb"], required=True)
+
     args = parser.parse_args()
 
     if args.cmd == "export":
@@ -117,6 +122,11 @@ def main() -> None:
         benchmark(args.url, args.runs)
     elif args.cmd == "audit":
         security_audit()
+    elif args.cmd == "convert":
+        if args.unit == "kg":
+            print(f"{args.weight} kg = {WeightConverter.kg_to_lb(args.weight)} lb")
+        else:
+            print(f"{args.weight} lb = {WeightConverter.lb_to_kg(args.weight)} kg")
 
 
 if __name__ == "__main__":

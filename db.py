@@ -767,6 +767,9 @@ class Database:
             "hide_completed_sets": "0",
             "hide_nav_labels": "0",
             "simple_mode": "0",
+            "hide_advanced_charts": "0",
+            "vertical_nav": "0",
+            "app_version": "1.0.0",
             "rpe_scale": "10",
             "language": "en",
         }
@@ -1011,6 +1014,12 @@ class WorkoutRepository(BaseRepository):
         if not rows:
             raise ValueError("workout not found")
         self.execute("DELETE FROM workouts WHERE id = ?;", (workout_id,))
+
+    def delete_empty(self) -> None:
+        """Remove workouts that have no exercises."""
+        self.execute(
+            "DELETE FROM workouts WHERE id NOT IN (SELECT DISTINCT workout_id FROM exercises);"
+        )
 
 
 class ExerciseRepository(BaseRepository):
@@ -1973,6 +1982,8 @@ class SettingsRepository(BaseRepository):
             "hide_completed_sets",
             "hide_nav_labels",
             "simple_mode",
+            "hide_advanced_charts",
+            "vertical_nav",
         }
         for k, v in rows:
             if k in bool_keys:
@@ -2021,6 +2032,8 @@ class SettingsRepository(BaseRepository):
             "hide_completed_sets",
             "hide_nav_labels",
             "simple_mode",
+            "hide_advanced_charts",
+            "vertical_nav",
         }
             for key, value in data.items():
                 val = str(value)
