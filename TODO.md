@@ -14,7 +14,7 @@
 [complete] 10. Validate YAML settings via schema on startup.
 [complete] 11. Add backup/restore commands for the SQLite database.
 [complete] 12. Add continuous integration workflow running tests on push.
-13. Expand statistics to include per-muscle progress charts.
+[complete] 13. Expand statistics to include per-muscle progress charts.
 [complete] 14. Add endpoint for editing wellness logs.
 [complete] 15. Create responsive mobile layout tests for each GUI tab.
 [complete] 16. Include weight unit conversion support in stats_service.

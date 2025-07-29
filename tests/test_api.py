@@ -2187,6 +2187,38 @@ class APITestCase(unittest.TestCase):
         self.assertIn("volume", data[0])
         self.assertIsInstance(data[0]["volume"], float)
 
+    def test_muscle_progression_endpoint(self) -> None:
+        today = datetime.date.today().isoformat()
+        self.client.post("/workouts", params={"date": today})
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 10, "weight": 100.0, "rpe": 8},
+        )
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 8, "weight": 110.0, "rpe": 9},
+        )
+
+        self.client.post(
+            "/exercise_names/alias",
+            params={"new_name": "Bench Press", "existing": "Barbell Bench Press"},
+        )
+
+        resp = self.client.get(
+            "/stats/muscle_progression",
+            params={"muscle": "Pectoralis Major"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["date"], today)
+        expected = MathTools.epley_1rm(110.0, 8)
+        self.assertAlmostEqual(data[0]["est_1rm"], round(expected, 2), places=2)
+
     def test_deload_recommendation_endpoint(self) -> None:
         self.client.post("/workouts")
         self.client.post(
