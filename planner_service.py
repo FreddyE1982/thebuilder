@@ -85,7 +85,7 @@ class PlannerService:
         return new_id
 
     def create_plan_from_template(self, template_id: int, date: str) -> int:
-        _tid, _name, t_type = self.templates.fetch_detail(template_id)
+        _tid, _name, t_type, _color = self.templates.fetch_detail(template_id)
         plan_id = self.planned_workouts.create(date, t_type)
         exercises = self.template_exercises.fetch_for_template(template_id)
         for ex_id, name, equipment in exercises:

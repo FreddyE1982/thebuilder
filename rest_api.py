@@ -1434,7 +1434,7 @@ class GymAPI:
         @self.app.get("/templates/{template_id}/share")
         def share_template(template_id: int):
             try:
-                _tid, name, t_type = self.template_workouts.fetch_detail(template_id)
+                _tid, name, t_type, _color = self.template_workouts.fetch_detail(template_id)
             except ValueError as e:
                 raise HTTPException(status_code=404, detail=str(e))
             exercises = self.template_exercises.fetch_for_template(template_id)

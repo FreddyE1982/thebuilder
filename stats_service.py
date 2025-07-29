@@ -78,6 +78,14 @@ class StatisticsService:
             return self.settings.get_float("body_weight", 80.0)
         return 80.0
 
+    @staticmethod
+    def _parse_timestamp(ts: str) -> datetime.datetime:
+        """Return ``ts`` as timezone-aware datetime in UTC."""
+        dt = datetime.datetime.fromisoformat(ts)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=datetime.timezone.utc)
+        return dt
+
     def _all_names(self) -> List[str]:
         names = self.exercise_names.fetch_all()
         if (
@@ -311,8 +319,8 @@ class StatisticsService:
         durations: List[float] = []
         for _r, _w, _rpe, _date, start, end in rows:
             if start and end:
-                t0 = datetime.datetime.fromisoformat(start)
-                t1 = datetime.datetime.fromisoformat(end)
+                t0 = self._parse_timestamp(start)
+                t1 = self._parse_timestamp(end)
                 durations.append((t1 - t0).total_seconds())
             else:
                 durations.append(50.0)
@@ -799,8 +807,8 @@ class StatisticsService:
             volume += int(reps) * float(weight)
             rpe_total += int(rpe)
             if start and end:
-                t0 = datetime.datetime.fromisoformat(start)
-                t1 = datetime.datetime.fromisoformat(end)
+                t0 = self._parse_timestamp(start)
+                t1 = self._parse_timestamp(end)
                 durations[wid] = durations.get(wid, 0.0) + (t1 - t0).total_seconds()
         avg_rpe = rpe_total / len(rows)
         total_duration = sum(durations.values())
@@ -924,8 +932,8 @@ class StatisticsService:
             weights.append(float(w))
             reps.append(int(r))
             if start and end:
-                t0 = datetime.datetime.fromisoformat(start)
-                t1 = datetime.datetime.fromisoformat(end)
+                t0 = self._parse_timestamp(start)
+                t1 = self._parse_timestamp(end)
                 durs.append((t1 - t0).total_seconds())
             else:
                 durs.append(50.0)
@@ -1095,8 +1103,8 @@ class StatisticsService:
             weights.append(float(w))
             reps.append(int(r))
             if start and end:
-                t0 = datetime.datetime.fromisoformat(start)
-                t1 = datetime.datetime.fromisoformat(end)
+                t0 = self._parse_timestamp(start)
+                t1 = self._parse_timestamp(end)
                 durations.append((t1 - t0).total_seconds())
             else:
                 durations.append(50.0)
@@ -1146,8 +1154,8 @@ class StatisticsService:
             )
             entry["volume"] += int(r) * float(w)
             if start and end:
-                t0 = datetime.datetime.fromisoformat(start)
-                t1 = datetime.datetime.fromisoformat(end)
+                t0 = self._parse_timestamp(start)
+                t1 = self._parse_timestamp(end)
                 entry["dur"] += (t1 - t0).total_seconds()
             entry["rpe"].append(int(rpe))
         result: List[Dict[str, float]] = []
@@ -1187,8 +1195,8 @@ class StatisticsService:
             )
             entry["volume"] += int(r) * float(w)
             if start and end:
-                t0 = datetime.datetime.fromisoformat(start)
-                t1 = datetime.datetime.fromisoformat(end)
+                t0 = self._parse_timestamp(start)
+                t1 = self._parse_timestamp(end)
                 entry["dur"] += (t1 - t0).total_seconds()
         result: List[Dict[str, float]] = []
         for wid, data in sorted(by_workout.items()):
@@ -1219,8 +1227,8 @@ class StatisticsService:
             entry = by_workout.setdefault(wid, {"date": date, "sets": 0, "dur": 0.0})
             entry["sets"] += 1
             if start and end:
-                t0 = datetime.datetime.fromisoformat(start)
-                t1 = datetime.datetime.fromisoformat(end)
+                t0 = self._parse_timestamp(start)
+                t1 = self._parse_timestamp(end)
                 entry["dur"] += (t1 - t0).total_seconds()
         result: List[Dict[str, float]] = []
         for wid, data in sorted(by_workout.items()):
@@ -1255,8 +1263,8 @@ class StatisticsService:
             times_sorted = sorted(times, key=lambda t: t[0])
             rests: List[float] = []
             for i in range(1, len(times_sorted)):
-                prev_end = datetime.datetime.fromisoformat(times_sorted[i - 1][1])
-                curr_start = datetime.datetime.fromisoformat(times_sorted[i][0])
+                prev_end = self._parse_timestamp(times_sorted[i - 1][1])
+                curr_start = self._parse_timestamp(times_sorted[i][0])
                 diff = (curr_start - prev_end).total_seconds()
                 if diff > 0:
                     rests.append(diff)
@@ -1293,8 +1301,8 @@ class StatisticsService:
                 entry["end"] = end
         result: List[Dict[str, float]] = []
         for wid, data in sorted(by_workout.items()):
-            t0 = datetime.datetime.fromisoformat(data["start"])
-            t1 = datetime.datetime.fromisoformat(data["end"])
+            t0 = self._parse_timestamp(data["start"])
+            t1 = self._parse_timestamp(data["end"])
             dur = (t1 - t0).total_seconds()
             result.append(
                 {
@@ -1325,8 +1333,8 @@ class StatisticsService:
         for _r, _w, _rpe, date, start, end, wid in rows:
             if not start or not end:
                 continue
-            t0 = datetime.datetime.fromisoformat(start)
-            t1 = datetime.datetime.fromisoformat(end)
+            t0 = self._parse_timestamp(start)
+            t1 = self._parse_timestamp(end)
             dur = (t1 - t0).total_seconds()
             entry = by_workout.setdefault(wid, {"date": date, "tut": 0.0})
             entry["tut"] += dur
@@ -1465,8 +1473,8 @@ class StatisticsService:
             rpes.append(int(rpe))
             times.append((datetime.date.fromisoformat(date) - base).days)
             if start and end:
-                t0 = datetime.datetime.fromisoformat(start)
-                t1 = datetime.datetime.fromisoformat(end)
+                t0 = self._parse_timestamp(start)
+                t1 = self._parse_timestamp(end)
                 durations.append((t1 - t0).total_seconds())
             else:
                 durations.append(50.0)
@@ -1601,8 +1609,8 @@ class StatisticsService:
             entry["r"].append(int(r))
             entry["rpe"].append(int(rpe))
             if start and end:
-                t0 = datetime.datetime.fromisoformat(start)
-                t1 = datetime.datetime.fromisoformat(end)
+                t0 = self._parse_timestamp(start)
+                t1 = self._parse_timestamp(end)
                 entry["d"].append((t1 - t0).total_seconds())
             else:
                 entry["d"].append(50.0)
