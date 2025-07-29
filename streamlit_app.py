@@ -1225,6 +1225,9 @@ class GymApp:
             .badge.intensity-low { background: #4caf50; }
             .badge.intensity-medium { background: #f1c40f; }
             .badge.intensity-high { background: #e74c3c; }
+            .badge.status-running { background: #4caf50; }
+            .badge.status-finished { background: #2196f3; }
+            .badge.status-idle { background: #9e9e9e; }
             .metric-grid::-webkit-scrollbar {
                 display: none;
             }
@@ -2711,6 +2714,18 @@ class GymApp:
                 notes_val = detail[5] or ""
                 loc_val = detail[6] or ""
                 rating_val = detail[7]
+                status_class = "status-idle"
+                status_label = "Idle"
+                if start_time and end_time:
+                    status_class = "status-finished"
+                    status_label = "Finished"
+                elif start_time and not end_time:
+                    status_class = "status-running"
+                    status_label = "Running"
+                st.markdown(
+                    f"<span class='badge {status_class}'>{status_label}</span>",
+                    unsafe_allow_html=True,
+                )
                 if st.session_state.is_mobile:
                     c1, c2 = st.columns(2)
                     if c1.button("Start Workout", key=f"start_workout_{selected}"):
@@ -3130,8 +3145,18 @@ class GymApp:
                         iclass = "intensity-low"
                     intensity = int(ratio * 100)
                     badge = f"<span class='badge {iclass}'>{intensity}%</span>"
+                    if start_time and end_time:
+                        status_class = "status-finished"
+                        status_label = "Finished"
+                    elif start_time and not end_time:
+                        status_class = "status-running"
+                        status_label = "Running"
+                    else:
+                        status_class = "status-idle"
+                        status_label = "Idle"
                     registered = start_time is not None and end_time is not None
                     row_class = "set-registered" if registered else "set-unregistered"
+                    status_badge = f"<span class='badge {status_class}'>{status_label}</span>"
                     if st.session_state.get("flash_set") == set_id:
                         row_class += " flash"
                         st.session_state.flash_set = None
@@ -3142,6 +3167,7 @@ class GymApp:
                             expanded=st.session_state.pop(f"open_set_{set_id}", False),
                         ):
                             st.markdown(badge, unsafe_allow_html=True)
+                            st.markdown(status_badge, unsafe_allow_html=True)
                             st.markdown(
                                 f"<div class='set-row {row_class}'>",
                                 unsafe_allow_html=True,
@@ -3245,12 +3271,8 @@ class GymApp:
                             st.write(self._format_time(start_time))
                         if end_time:
                             st.write(self._format_time(end_time))
-                        if registered:
-                            st.markdown(
-                                "<div class='set-status'>registered</div>",
-                                unsafe_allow_html=True,
-                            )
-                            st.markdown("</div>", unsafe_allow_html=True)
+                        st.markdown(status_badge, unsafe_allow_html=True)
+                        st.markdown("</div>", unsafe_allow_html=True)
                     else:
                         exp_label = f"Set {idx} - {reps}x{weight}{self.weight_unit} RPE {rpe} ({intensity}%)"
                         exp = st.expander(
@@ -3259,6 +3281,7 @@ class GymApp:
                         )
                         with exp:
                             st.markdown(badge, unsafe_allow_html=True)
+                            st.markdown(status_badge, unsafe_allow_html=True)
                             st.markdown(
                                 f"<div class='set-row {row_class}'>",
                                 unsafe_allow_html=True,
@@ -3359,12 +3382,8 @@ class GymApp:
                             cols[10].write(self._format_time(start_time))
                         if end_time:
                             cols[11].write(self._format_time(end_time))
-                        if registered:
-                            cols[15].markdown(
-                                "<div class='set-status'>registered</div>",
-                                unsafe_allow_html=True,
-                            )
-                            st.markdown("</div>", unsafe_allow_html=True)
+                        cols[15].markdown(status_badge, unsafe_allow_html=True)
+                        st.markdown("</div>", unsafe_allow_html=True)
             hist = self.stats.exercise_history(name)
             if hist:
                 with st.expander("History (last 5)"):
@@ -4956,9 +4975,18 @@ class GymApp:
                 )
             ]
         pr_dates = {r["date"] for r in self.stats.personal_records()}
-        for wid, date, _s, _e, training_type, *_ in workouts:
+        for wid, date, start_time, end_time, training_type, *_ in workouts:
             badge = f"<span class='training-badge tt-{training_type}'>{training_type}</span>"
-            label = f"{date} {badge}"
+            status_class = "status-idle"
+            status_label = "Idle"
+            if start_time and end_time:
+                status_class = "status-finished"
+                status_label = "Finished"
+            elif start_time and not end_time:
+                status_class = "status-running"
+                status_label = "Running"
+            status_badge = f"<span class='badge {status_class}'>{status_label}</span>"
+            label = f"{date} {badge} {status_badge}"
             if date in pr_dates:
                 label = f"**{label}**"
             with st.expander(label, expanded=False):
