@@ -1865,6 +1865,15 @@ class ExerciseNameRepository(BaseRepository):
                 (alias,),
             )
 
+    def search(self, query: str, limit: int = 5) -> List[str]:
+        """Return exercise names matching the query."""
+        like = f"%{query.lower()}%"
+        rows = super().fetch_all(
+            "SELECT name FROM exercise_names WHERE lower(name) LIKE ? ORDER BY name LIMIT ?;",
+            (like, limit),
+        )
+        return [r[0] for r in rows]
+
 
 class ExerciseVariantRepository(BaseRepository):
     """Repository managing exercise variant links."""
@@ -1950,6 +1959,7 @@ class SettingsRepository(BaseRepository):
             "large_font_mode",
             "show_onboarding",
             "auto_open_last_workout",
+            "collapse_header",
             "email_weekly_enabled",
             "hide_completed_plans",
         }
@@ -1994,6 +2004,7 @@ class SettingsRepository(BaseRepository):
                 "large_font_mode",
                 "show_onboarding",
                 "auto_open_last_workout",
+                "collapse_header",
                 "email_weekly_enabled",
                 "hide_completed_plans",
             }
@@ -2094,6 +2105,7 @@ class SettingsRepository(BaseRepository):
             "large_font_mode",
             "show_onboarding",
             "auto_open_last_workout",
+            "collapse_header",
             "email_weekly_enabled",
             "hide_completed_plans",
         }

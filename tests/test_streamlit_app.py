@@ -1180,6 +1180,16 @@ class StreamlitAdditionalGUITest(unittest.TestCase):
         )
         self.assertTrue(css_present)
 
+    def test_disable_header_collapse(self) -> None:
+        with open(self.yaml_path, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+        data["collapse_header"] = False
+        with open(self.yaml_path, "w", encoding="utf-8") as f:
+            yaml.safe_dump(data, f)
+        self.at.run()
+        js_present = any("handleHeaderCollapse()" in m.body for m in self.at.markdown)
+        self.assertFalse(js_present)
+
     def test_notifications_dialog(self) -> None:
         idx = _find_by_label(self.at.button, "🔔", key="notif_btn")
         self.assertIsNotNone(self.at.button[idx])

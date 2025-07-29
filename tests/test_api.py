@@ -3534,6 +3534,11 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json(), [{"id": 2, "date": today}])
 
+    def test_exercise_search_endpoint(self) -> None:
+        resp = self.client.get("/exercises/search", params={"query": "Bench"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("Barbell Bench Press", resp.json())
+
     def test_workout_streak_endpoint(self) -> None:
         today = datetime.date.today()
         for i in range(3):
