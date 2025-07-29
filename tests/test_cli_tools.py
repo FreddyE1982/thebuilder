@@ -16,16 +16,6 @@ class CLIToolsTest(unittest.TestCase):
             os.remove(self.yaml_path)
         self.api = GymAPI(db_path=self.db_path, yaml_path=self.yaml_path)
         self.client = TestClient(self.api.app)
-        self.client.post(
-            "/users/register",
-            json={"username": "test", "password": "test"},
-        )
-        login = self.client.post(
-            "/token",
-            json={"username": "test", "password": "test"},
-        )
-        token = login.json()["token"]
-        self.client.headers.update({"Authorization": token})
 
     def tearDown(self) -> None:
         for path in [self.db_path, self.yaml_path, "backup.db", "exports"]:
