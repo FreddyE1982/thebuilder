@@ -14,6 +14,7 @@ import json
 import time
 import os
 from localization import translator
+from config import APP_VERSION
 
 warnings.filterwarnings("ignore", category=AltairDeprecationWarning)
 from db import (
@@ -150,7 +151,10 @@ class LayoutManager:
     def bottom_nav(self, selected_tab: int, tab_keys: list[str]) -> None:
         if not self.is_mobile:
             return
-        self._render_nav("bottom-nav", selected_tab, tab_keys)
+        cls = "bottom-nav"
+        if self._settings.get_bool("vertical_nav", False):
+            cls += " vertical"
+        self._render_nav(cls, selected_tab, tab_keys)
         self.scroll_top_button()
 
     def top_nav(self, selected_tab: int, tab_keys: list[str]) -> None:
@@ -200,14 +204,17 @@ class GymApp:
         self.auto_dark_mode = self.settings_repo.get_bool("auto_dark_mode", False)
         self.compact_mode = self.settings_repo.get_bool("compact_mode", False)
         self.simple_mode = self.settings_repo.get_bool("simple_mode", False)
+        self.hide_advanced_charts = self.settings_repo.get_bool("hide_advanced_charts", False)
         self.large_font = self.settings_repo.get_bool("large_font_mode", False)
         self.side_nav = self.settings_repo.get_bool("side_nav", False)
+        self.vertical_nav = self.settings_repo.get_bool("vertical_nav", False)
         self.hide_nav_labels = self.settings_repo.get_bool("hide_nav_labels", False)
         self.show_onboarding = self.settings_repo.get_bool("show_onboarding", False)
         self.auto_open_last_workout = self.settings_repo.get_bool(
             "auto_open_last_workout", False
         )
         self.collapse_header = self.settings_repo.get_bool("collapse_header", True)
+        self.app_version = self.settings_repo.get_text("app_version", "")
         self.weight_unit = self.settings_repo.get_text("weight_unit", "kg")
         self.time_format = self.settings_repo.get_text("time_format", "24h")
         self.timezone = self.settings_repo.get_text("timezone", "UTC")
@@ -1192,6 +1199,10 @@ class GymApp:
             nav.bottom-nav {
                 scroll-snap-type: x mandatory;
             }
+            nav.bottom-nav.vertical {
+                flex-direction: column;
+                height: auto;
+            }
             nav.bottom-nav button {
                 scroll-snap-align: start;
             }
@@ -1535,6 +1546,21 @@ class GymApp:
                 <style>
                 :root {
                     --accent-color: #0072B2;
+                }
+                </style>
+                """,
+                unsafe_allow_html=True,
+            )
+        if self.color_theme == "highcontrast":
+            st.markdown(
+                """
+                <style>
+                :root {
+                    --section-bg: #000;
+                    --accent-color: #FFD700;
+                    --header-bg: #000;
+                    --border-color: #fff;
+                    color: #fff;
                 }
                 </style>
                 """,
@@ -2129,6 +2155,18 @@ class GymApp:
 
         self._show_dialog("Welcome", _content)
 
+    def _whats_new_dialog(self) -> None:
+        """Show features added in new versions."""
+
+        def _content() -> None:
+            st.markdown("- New high contrast theme available\n- Weight conversion calculator in CLI\n- Advanced charts toggle")
+            if st.button("Close", key="wn_close"):
+                self.settings_repo.set_text("app_version", APP_VERSION)
+                st.session_state.show_whats_new = False
+                self._trigger_refresh()
+
+        self._show_dialog("What's New", _content)
+
     def _notifications_dialog(self) -> None:
         def _content() -> None:
             notes = self.notifications_repo.fetch_all()
@@ -2404,6 +2442,14 @@ class GymApp:
             and not self.settings_repo.get_bool("onboarding_complete", False)
         ):
             self._onboarding_wizard()
+        if (
+            os.environ.get("TEST_MODE") is None
+            and self.app_version != APP_VERSION
+            and not st.session_state.get("show_whats_new")
+        ):
+            st.session_state.show_whats_new = True
+        if st.session_state.get("show_whats_new"):
+            self._whats_new_dialog()
         self._open_header()
         st.markdown("<div class='title-section'>", unsafe_allow_html=True)
         cols = st.columns([3, 1, 1, 1, 3])
@@ -5067,6 +5113,22 @@ class GymApp:
                     on_change=self._update_workout_notes,
                     args=(wid,),
                 )
+                macros = ["Fasted", "Great energy", "Tired"]
+                m_choice = st.selectbox(
+                    "Quick Macro",
+                    [""] + macros,
+                    key=f"macro_sel_{wid}",
+                )
+                if m_choice:
+                    cur = st.session_state.get(f"hist_note_{wid}", "")
+                    new = (cur + " " + m_choice).strip()
+                    st.session_state[f"hist_note_{wid}"] = new
+                    self._update_workout_notes(wid)
+                    st.session_state[f"macro_sel_{wid}"] = ""
+                if st.button("Favorite Template", key=f"fav_tpl_hist_{wid}"):
+                    tid = self.planner.copy_workout_to_template(wid)
+                    self.favorite_templates_repo.add(tid)
+                    st.success("Template favorited")
                 if st.button("Details", key=f"hist_det_{wid}"):
                     self._workout_details_dialog(wid)
         if len(workouts) == limit:
@@ -5084,6 +5146,8 @@ class GymApp:
         w_date = self.workouts.fetch_detail(workout_id)[1]
 
         def _content() -> None:
+            if st.button("Print Summary", key="print_sum"):
+                components.html("<script>window.print()</script>", height=0)
             for ex_id, name, eq, note in exercises:
                 sets = self.sets.fetch_for_exercise(ex_id)
                 header = name if not eq else f"{name} ({eq})"
@@ -5097,8 +5161,14 @@ class GymApp:
                         if etime:
                             line += f" end: {etime}"
                         if (name, w_date, reps, weight) in records:
+                            prev = self.stats.previous_personal_record(name, w_date)
+                            improv = ""
+                            if prev:
+                                diff = MathTools.epley_1rm(weight, reps) - prev["est_1rm"]
+                                if diff > 0:
+                                    improv = f" (+{diff:.2f}kg)"
                             st.markdown(
-                                f"<span style='color: var(--accent-color); font-weight:bold'>{line} - PR</span>",
+                                f"<span style='color: var(--accent-color); font-weight:bold'>{line} - PR{improv}</span>",
                                 unsafe_allow_html=True,
                             )
                         else:
@@ -5240,8 +5310,10 @@ class GymApp:
                         )
                     )
                 self._chart_carousel(charts, "prog_car")
-                self._progress_forecast_section(ex_choice)
-            self._volume_forecast_section(start_str, end_str)
+                if not self.hide_advanced_charts:
+                    self._progress_forecast_section(ex_choice)
+            if not self.hide_advanced_charts:
+                self._volume_forecast_section(start_str, end_str)
         with rec_tab:
             records = self.stats.personal_records(
                 ex_choice if ex_choice else None,
@@ -5332,7 +5404,7 @@ class GymApp:
                 ex_choice, start.isoformat(), end.isoformat()
             )
             prog = self.stats.progression(ex_choice, start.isoformat(), end.isoformat())
-            if insights:
+            if insights and not self.hide_advanced_charts:
                 with st.expander("Trend Analysis", expanded=True):
                     st.write(f"Trend: {insights.get('trend', '')}")
                     metrics = []
@@ -6246,7 +6318,7 @@ class GymApp:
                     value=self.auto_dark_mode,
                     help="Match theme to system preference",
                 )
-                colors = ["red", "blue", "green", "purple", "colorblind"]
+                colors = ["red", "blue", "green", "purple", "colorblind", "highcontrast"]
                 color_opt = st.selectbox(
                     "Color Theme",
                     colors,
@@ -6294,6 +6366,10 @@ class GymApp:
                     "Simple Mode",
                     value=self.simple_mode,
                 )
+                hide_adv_charts_opt = st.checkbox(
+                    "Hide Advanced Charts",
+                    value=self.hide_advanced_charts,
+                )
                 large_font = st.checkbox(
                     "Large Font Mode",
                     value=self.large_font,
@@ -6307,6 +6383,10 @@ class GymApp:
                 side_nav_opt = st.checkbox(
                     "Enable Side Navigation",
                     value=self.side_nav,
+                )
+                vertical_nav_opt = st.checkbox(
+                    "Vertical Bottom Nav",
+                    value=self.vertical_nav,
                 )
                 hide_nav_opt = st.checkbox(
                     "Hide Navigation Labels",
@@ -6512,12 +6592,16 @@ class GymApp:
                 self.compact_mode = compact
                 self.settings_repo.set_bool("simple_mode", simple_mode_opt)
                 self.simple_mode = simple_mode_opt
+                self.settings_repo.set_bool("hide_advanced_charts", hide_adv_charts_opt)
+                self.hide_advanced_charts = hide_adv_charts_opt
                 self.settings_repo.set_bool("large_font_mode", large_font)
                 self.large_font = large_font
                 self.settings_repo.set_float("font_size", float(font_size_in))
                 self.font_size = float(font_size_in)
                 self.settings_repo.set_bool("side_nav", side_nav_opt)
                 self.side_nav = side_nav_opt
+                self.settings_repo.set_bool("vertical_nav", vertical_nav_opt)
+                self.vertical_nav = vertical_nav_opt
                 self.settings_repo.set_bool("hide_nav_labels", hide_nav_opt)
                 self.hide_nav_labels = hide_nav_opt
                 self.settings_repo.set_bool("show_onboarding", show_onboard_opt)

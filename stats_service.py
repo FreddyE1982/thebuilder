@@ -843,6 +843,16 @@ class StatisticsService:
                 }
         return sorted(records.values(), key=lambda x: x["exercise"])
 
+    def previous_personal_record(
+        self, exercise: str, before_date: str
+    ) -> Optional[Dict[str, float]]:
+        """Return the best set before ``before_date``."""
+        recs = self.personal_records(
+            exercise=exercise,
+            end_date=(datetime.date.fromisoformat(before_date) - datetime.timedelta(days=1)).isoformat(),
+        )
+        return recs[0] if recs else None
+
     def progress_insights(
         self,
         exercise: str,

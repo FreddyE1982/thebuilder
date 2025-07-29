@@ -124,6 +124,7 @@ class EmailScheduler(threading.Thread):
                     ):
                         self.api.send_monthly_email_report()
                         self.last_monthly = now
+                self.api.workouts.delete_empty()
             except Exception:
                 pass
             time.sleep(self.interval)

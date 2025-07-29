@@ -4,7 +4,7 @@ import math
 import unittest
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-from tools import MathTools, ExercisePrescription
+from tools import MathTools, ExercisePrescription, WeightConverter
 from db import PyramidTestRepository, PyramidEntryRepository
 
 
@@ -230,6 +230,12 @@ class MathToolsTestCase(unittest.TestCase):
             "max_achieved": 120.0,
         }
         self.assertFalse(ExercisePrescription._validate_pyramid_test(invalid_test))
+
+
+class WeightConverterTestCase(unittest.TestCase):
+    def test_basic_conversion(self) -> None:
+        self.assertAlmostEqual(WeightConverter.kg_to_lb(1), 2.2, places=1)
+        self.assertAlmostEqual(WeightConverter.lb_to_kg(2.2), 1.0, places=1)
 
 
 if __name__ == "__main__":
