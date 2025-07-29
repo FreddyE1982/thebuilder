@@ -16,3 +16,5 @@ altair
 altair_saver
 pip-audit
 plotly
+pytest
+pytest-asyncio
