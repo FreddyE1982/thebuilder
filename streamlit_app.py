@@ -202,6 +202,7 @@ class GymApp:
         self.auto_open_last_workout = self.settings_repo.get_bool(
             "auto_open_last_workout", False
         )
+        self.collapse_header = self.settings_repo.get_bool("collapse_header", True)
         self.weight_unit = self.settings_repo.get_text("weight_unit", "kg")
         self.time_format = self.settings_repo.get_text("time_format", "24h")
         self.language = self.settings_repo.get_text("language", "en")
@@ -581,7 +582,7 @@ class GymApp:
             }
             window.addEventListener('scroll', () => {
                 toggleScrollTopButton();
-                handleHeaderCollapse();
+                %COLLAPSE_HEADER%
                 saveScroll();
             });
             window.addEventListener('DOMContentLoaded', () => {
@@ -650,7 +651,11 @@ class GymApp:
             )
             .replace("%TAB_KEYS%", json.dumps(self.tab_keys.split(",")))
             .replace("%TAB_LABELS%", json.dumps(self.layout.nav_labels))
-            .replace("%ADD_KEY%", self.add_set_key),
+            .replace("%ADD_KEY%", self.add_set_key)
+            .replace(
+                "%COLLAPSE_HEADER%",
+                "handleHeaderCollapse();" if self.collapse_header else "",
+            ),
             height=0,
         )
 
@@ -1603,32 +1608,65 @@ class GymApp:
         self.layout.scroll_top_button()
 
     def _quick_search(self, prefix: str) -> None:
-        """Search workouts by notes or location and open them."""
+        """Search workouts or exercises and open them."""
         query = st.text_input("Search", key=f"{prefix}_search")
-        suggestions = (
+        w_sug = (
             self.workouts.search(query)[:5] if query and len(query) >= 2 else []
         )
+        e_sug = (
+            self.exercise_names_repo.search(query)[:5]
+            if query and len(query) >= 2
+            else []
+        )
         if st.button("Search", key=f"{prefix}_search_btn"):
-            st.session_state[f"{prefix}_search_results"] = (
+            st.session_state[f"{prefix}_workout_results"] = (
                 self.workouts.search(query) if query else []
             )
-        results = st.session_state.get(f"{prefix}_search_results", [])
-        if suggestions:
-            opt_map = {f"{wid} - {date}": wid for wid, date in suggestions}
-            pick = st.selectbox(
-                "Suggestions", list(opt_map.keys()), key=f"{prefix}_suggest"
+            st.session_state[f"{prefix}_exercise_results"] = (
+                self.exercise_names_repo.search(query) if query else []
             )
-            if st.button("Open", key=f"{prefix}_suggest_open"):
-                self._select_workout(opt_map[pick])
-                self._switch_tab("workouts")
-        if results:
-            options = {f"{wid} - {date}": wid for wid, date in results}
-            choice = st.selectbox(
-                "Results", list(options.keys()), key=f"{prefix}_search_sel"
-            )
-            if st.button("Open", key=f"{prefix}_search_open"):
-                self._select_workout(options[choice])
-                self._switch_tab("workouts")
+        w_results = st.session_state.get(f"{prefix}_workout_results", [])
+        e_results = st.session_state.get(f"{prefix}_exercise_results", [])
+        if w_sug or e_sug:
+            if w_sug:
+                opt_map = {f"{wid} - {date}": wid for wid, date in w_sug}
+                pick = st.selectbox(
+                    "Workout Suggestions",
+                    list(opt_map.keys()),
+                    key=f"{prefix}_suggest_w",
+                )
+                if st.button("Open", key=f"{prefix}_open_w"):
+                    self._select_workout(opt_map[pick])
+                    self._switch_tab("workouts")
+            if e_sug:
+                epick = st.selectbox(
+                    "Exercise Suggestions",
+                    e_sug,
+                    key=f"{prefix}_suggest_e",
+                )
+                if st.button("Open Exercise", key=f"{prefix}_open_e"):
+                    st.session_state.lib_ex_prefix = epick
+                    self._switch_tab("library")
+        if w_results or e_results:
+            if w_results:
+                options = {f"{wid} - {date}": wid for wid, date in w_results}
+                choice = st.selectbox(
+                    "Workout Results",
+                    list(options.keys()),
+                    key=f"{prefix}_res_w",
+                )
+                if st.button("Open", key=f"{prefix}_res_open_w"):
+                    self._select_workout(options[choice])
+                    self._switch_tab("workouts")
+            if e_results:
+                ech = st.selectbox(
+                    "Exercise Results",
+                    e_results,
+                    key=f"{prefix}_res_e",
+                )
+                if st.button("Open", key=f"{prefix}_res_open_e"):
+                    st.session_state.lib_ex_prefix = ech
+                    self._switch_tab("library")
 
     def _quick_workout_button(self) -> None:
         """Display floating button to quickly add a workout."""
@@ -6155,6 +6193,10 @@ class GymApp:
                     "Auto-Open Last Workout",
                     value=self.auto_open_last_workout,
                 )
+                collapse_header_opt = st.checkbox(
+                    "Collapse Header on Scroll",
+                    value=self.collapse_header,
+                )
                 add_key_in = st.text_input(
                     "Add Set Hotkey",
                     value=self.add_set_key,
@@ -6333,6 +6375,8 @@ class GymApp:
                 self.show_onboarding = show_onboard_opt
                 self.settings_repo.set_bool("auto_open_last_workout", auto_open_opt)
                 self.auto_open_last_workout = auto_open_opt
+                self.settings_repo.set_bool("collapse_header", collapse_header_opt)
+                self.collapse_header = collapse_header_opt
                 self.settings_repo.set_text("hotkey_add_set", add_key_in or "a")
                 self.settings_repo.set_text("hotkey_tab_keys", tab_keys_in or "1,2,3,4")
                 self.settings_repo.set_text("quick_weights", qw_in)

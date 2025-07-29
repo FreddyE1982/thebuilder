@@ -105,8 +105,8 @@
 99. Add screenshot-based test for mobile layout via playwright.
 [complete] 100. Document contribution guidelines and code style.
 
-101. Add interactive calendar to schedule workouts.
-102. Add global search bar for workouts and exercises.
+[complete] 101. Add interactive calendar to schedule workouts.
+[complete] 102. Add global search bar for workouts and exercises.
 103. Provide quick-add popup for workouts from home.
 104. Add drag-and-drop reordering for planned workouts.
 105. Add time-based filter in workout history.
@@ -121,7 +121,7 @@
 114. Filter exercise lists to favorites only.
 115. Display workout completion progress bar.
 116. Auto start rest timer after each set.
-117. Customize quick weight buttons in settings.
+[complete] 117. Customize quick weight buttons in settings.
 118. Allow hiding of completed sets.
 119. Collapse exercises into expandable sections.
 120. Color-code workouts by training type tags.
@@ -140,7 +140,7 @@
 133. Rate workouts using star ratings.
 134. Toggle to hide navigation labels.
 135. Pin key metrics on the dashboard.
-136. Collapsible filter panel in history tab.
+[complete] 136. Collapsible filter panel in history tab.
 137. Keyboard shortcuts help overlay.
 138. Bulk edit multiple sets at once.
 139. Randomize training plan generator.
@@ -152,9 +152,9 @@
 145. Link directly to equipment details from sets.
 146. Interactive tutorial for first workout creation.
 147. Hotkey to repeat last set quickly.
-148. Inline editing of tags.
+[complete] 148. Inline editing of tags.
 149. Simple mode toggle hiding advanced fields.
-150. Color-code sets by intensity level.
+[complete] 150. Color-code sets by intensity level.
 151. Adjustable font size slider in settings.
 152. Import images using mobile share menu.
 153. Quick-add rest notes after each set.
@@ -192,7 +192,7 @@
 185. Quick start workout from plan list.
 186. Print-friendly workout summary view.
 187. High-contrast accessibility theme.
-188. Option to auto-collapse header on scroll.
+[complete] 188. Option to auto-collapse header on scroll.
 189. Import workout history from CSV.
 190. Local search index for offline filtering.
 191. Daily reminder notifications.

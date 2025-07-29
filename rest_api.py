@@ -540,6 +540,10 @@ class GymAPI:
             self.exercise_names.add_alias(new_name, existing)
             return {"status": "added"}
 
+        @self.app.get("/exercises/search")
+        def search_exercises(query: str, limit: int = 5):
+            return self.exercise_names.search(query, limit)
+
         @self.app.delete("/exercise_names/alias/{alias}")
         def delete_exercise_alias(alias: str):
             try:
