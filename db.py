@@ -3443,6 +3443,31 @@ class GoalRepository(BaseRepository):
             )
         return result
 
+    def fetch_all_active(self, today: str | None = None) -> list[dict[str, object]]:
+        """Return all currently active goals ordered by target date."""
+        current = today or datetime.date.today().isoformat()
+        rows = super().fetch_all(
+            "SELECT id, exercise_name, name, target_value, unit, start_date, target_date, achieved "
+            "FROM goals WHERE achieved = 0 AND start_date <= ? AND target_date >= ? "
+            "ORDER BY target_date;",
+            (current, current),
+        )
+        result = []
+        for r in rows:
+            result.append(
+                {
+                    "id": r[0],
+                    "exercise_name": r[1],
+                    "name": r[2],
+                    "target_value": float(r[3]),
+                    "unit": r[4],
+                    "start_date": r[5],
+                    "target_date": r[6],
+                    "achieved": bool(r[7]),
+                }
+            )
+        return result
+
 
 class AutoPlannerLogRepository(BaseRepository):
     """Repository for autoplanner run logs."""

@@ -15,7 +15,12 @@ from streamlit.testing.v1 import AppTest
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from streamlit_app import GymApp
-from db import TemplateWorkoutRepository, FavoriteTemplateRepository
+from db import (
+    TemplateWorkoutRepository,
+    FavoriteTemplateRepository,
+    PlannedWorkoutRepository,
+    GoalRepository,
+)
 
 
 def _find_by_label(elements, label, option=None, key=None):
@@ -1016,8 +1021,21 @@ class StreamlitFullGUITest(unittest.TestCase):
         self.at.run()
         plan_tab = self._get_tab("Plan")
         labels = [e.label for e in plan_tab.expander]
-        for name in ["AI Planner", "Templates", "Planned Workouts"]:
+        for name in ["AI Planner", "Goal Planner", "Templates", "Planned Workouts"]:
             self.assertIn(name, labels)
+
+    def test_goal_plan_creation(self) -> None:
+        gp_repo = GoalRepository(self.db_path)
+        today = datetime.date.today().isoformat()
+        target = (datetime.date.today() + datetime.timedelta(days=7)).isoformat()
+        gp_repo.add("Barbell Bench Press", "1RM", 80.0, "kg", today, target)
+        self.at.query_params["tab"] = "workouts"
+        self.at.run()
+        plan_tab = self._get_tab("Plan")
+        gp_exp = next(e for e in plan_tab.expander if e.label == "Goal Planner")
+        gp_exp.button[0].click().run()
+        pw_repo = PlannedWorkoutRepository(self.db_path)
+        self.assertEqual(len(pw_repo.fetch_all(None, None)), 1)
 
     def test_library_sections(self) -> None:
         self.at.query_params["tab"] = "library"

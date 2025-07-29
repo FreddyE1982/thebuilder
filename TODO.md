@@ -10,7 +10,7 @@
 [complete] 6. Implement pagination on workout history API.
 [complete] 7. Create CLI to export workouts to CSV and JSON.
 [complete] 8. Add scheduling for regular email reports.
-9. Improve planner_service with goal-based plan suggestions.
+[complete] 9. Improve planner_service with goal-based plan suggestions.
 [complete] 10. Validate YAML settings via schema on startup.
 [complete] 11. Add backup/restore commands for the SQLite database.
 [complete] 12. Add continuous integration workflow running tests on push.

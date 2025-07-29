@@ -3401,6 +3401,42 @@ class APITestCase(unittest.TestCase):
         sets_data = sets_resp.json()
         self.assertGreaterEqual(len(sets_data), 1)
 
+    def test_goal_plan_endpoint(self) -> None:
+        """Goal planner should create plan from active goals."""
+        # create history
+        wid = self.client.post("/workouts").json()["id"]
+        ex_id = self.client.post(
+            f"/workouts/{wid}/exercises",
+            params={"name": "Bench", "equipment": "Olympic Barbell"},
+        ).json()["id"]
+        self.client.post(
+            f"/exercises/{ex_id}/sets",
+            params={"reps": 5, "weight": 60.0, "rpe": 8},
+        )
+        today = datetime.date.today().isoformat()
+        target = (datetime.date.today() + datetime.timedelta(days=7)).isoformat()
+        g_resp = self.client.post(
+            "/goals",
+            params={
+                "exercise_name": "Bench",
+                "name": "1RM",
+                "target_value": 80.0,
+                "unit": "kg",
+                "start_date": today,
+                "target_date": target,
+            },
+        )
+        self.assertEqual(g_resp.status_code, 200)
+        plan_date = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
+        resp = self.client.post(
+            "/planned_workouts/goal_plan",
+            params={"date": plan_date},
+        )
+        self.assertEqual(resp.status_code, 200)
+        pid = resp.json()["id"]
+        ex_resp = self.client.get(f"/planned_workouts/{pid}/exercises")
+        self.assertEqual(len(ex_resp.json()), 1)
+
     def test_autoplanner_status_success_and_error(self) -> None:
         """Autoplanner status should report last run and errors."""
         # Trigger error first
