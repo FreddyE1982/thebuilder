@@ -29,7 +29,9 @@ The agent is to always follow there rules:
 12. if the user asks the agent to roll back the last merged PR then the agent is allowed to do so...even if the rollback violates ANY rules.
 13. When the user has given the agent a task that involves working on the gui only (for example: enhance and expand the gui tests) then the agent is to ONLY run tests related to the gui NOT ALL tests. In this case the rule that says to always run all tests is temporarily not in effect.
 14. When testing, any failed tests should be logged into
-a FAILEDTESTS.md that is persisted. 
+a FAILEDTESTS.md that is persisted.
+15. the agent is NOT to run ANY tests if the agent has not made any changes to code yet
+16. if the user says "relevant tests only", then the agent is to run tests that are relevant to the changed code pieces ONLY even if that contradicts another rule
 
 ## Muscle linking
 
