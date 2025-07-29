@@ -4,9 +4,9 @@
 [complete] 2. Add tests for GUI components described in streamlittestinghowto.md.
 [complete] 3. Refactor rest_api.py to group routes by resource using APIRouter.
 [complete] 4. Document API endpoints with OpenAPI descriptions.
-[complete] 5a. Add user and token tables with registration/login endpoints.
-5b. Associate workouts with user accounts.
-5c. Enforce authentication for workout editing.
+[removed] 5a. Remove user and token tables and login endpoints.
+[removed] 5b. Associate workouts with user accounts (multiuser removed).
+[removed] 5c. Enforce authentication for workout editing (multiuser removed).
 [complete] 6. Implement pagination on workout history API.
 [complete] 7. Create CLI to export workouts to CSV and JSON.
 [complete] 8. Add scheduling for regular email reports.
@@ -19,7 +19,7 @@
 [complete] 15. Create responsive mobile layout tests for each GUI tab.
 [complete] 16. Include weight unit conversion support in stats_service.
 [complete] 17. Add dark/light theme switch stored in settings.
-18. Implement two-factor authentication for new user login.
+[removed] 18. Remove two-factor authentication and login features (multiuser removed).
 19. Add localization framework for multi-language UI.
 20. Refactor database layer to async for FastAPI performance.
 [complete] 21. Add unit tests for ml_service models.
@@ -36,7 +36,7 @@
 [complete] 32. Add endpoint to download body_weight_logs as CSV.
 [complete] 33. Provide monthly summary emails via Cron or Celery.
 [complete] 34. Add user-defined default equipment per exercise.
-35. Implement privacy settings for shared workouts.
+[removed] 35. Remove privacy settings for shared workouts (multiuser removed).
 36. Add voice command support in the GUI.
 37. Add voice feedback for timer events using STT.
 [complete] 38. Refactor tools.py to separate math utilities from CLI utilities.
@@ -50,7 +50,7 @@
 46. Support image upload for exercise demonstration.
 [complete] 47. Add endpoint for goal progress chart data.
 [complete] 48. Create docker-compose configuration for local dev.
-[complete] 49. Add ability to clone templates between users.
+[removed] 49. Remove ability to clone templates between users (multiuser removed).
 50. Support configurable RPE scale (e.g. 1–5 or 1–10).
 [complete] 51. Add analytics for training monotony and strain.
 52. Provide webhooks for completed workouts notifications.
@@ -63,7 +63,7 @@
 [complete] 59. Add instructions for customizing CSS in README.
 [complete] 60. Ensure StatsService returns sorted results consistently.
 [complete] 61. Add REST endpoint for editing exercise catalog entries.
-62. Provide ability to share workout templates via link.
+[removed] 62. Remove ability to share workout templates via link (multiuser removed).
 [complete] 63. Add feature flag support for experimental models.
 64. Implement timeline view of workout history in GUI.
 [complete] 65. Improve error messages for invalid API input.
@@ -103,3 +103,104 @@
 99. Add screenshot-based test for mobile layout via playwright.
 [complete] 100. Document contribution guidelines and code style.
 
+101. Add interactive calendar to schedule workouts.
+102. Add global search bar for workouts and exercises.
+103. Provide quick-add popup for workouts from home.
+104. Add drag-and-drop reordering for planned workouts.
+105. Add time-based filter in workout history.
+106. Provide color-coded heatmap of training volume per week.
+107. Add speech-to-text input for set entry.
+108. Provide inline video tutorials for each exercise.
+109. Allow checkboxes to mark sets as warm-ups.
+110. Add screenshot capture for progress charts.
+111. Enable duplication of logged workouts.
+112. Support export of progress charts to PDF.
+113. Show real-time timer overlay during sets.
+114. Filter exercise lists to favorites only.
+115. Display workout completion progress bar.
+116. Auto start rest timer after each set.
+117. Customize quick weight buttons in settings.
+118. Allow hiding of completed sets.
+119. Collapse exercises into expandable sections.
+120. Color-code workouts by training type tags.
+121. Copy weight values to clipboard with one click.
+122. Set custom accent color in settings.
+123. Generate shareable read-only workout summary images.
+124. Undo deletion of sets.
+125. Create templates from logged workouts.
+126. Step-by-step onboarding for new features.
+127. Offline caching of recent workouts.
+128. Weekly planner view for upcoming sessions.
+129. Voice output for rest timer countdown.
+130. Quick-add notes using predefined phrases.
+131. Compare progress between two exercises.
+132. Sort exercise library by various fields.
+133. Rate workouts using star ratings.
+134. Toggle to hide navigation labels.
+135. Pin key metrics on the dashboard.
+136. Collapsible filter panel in history tab.
+137. Keyboard shortcuts help overlay.
+138. Bulk edit multiple sets at once.
+139. Randomize training plan generator.
+140. Filter exercises without equipment assigned.
+141. Switch weight units on the fly in set entry.
+142. Assign custom icons to workouts.
+143. Multi-select deletion of planned workouts.
+144. Donut charts for goal progress visualization.
+145. Link directly to equipment details from sets.
+146. Interactive tutorial for first workout creation.
+147. Hotkey to repeat last set quickly.
+148. Inline editing of tags.
+149. Simple mode toggle hiding advanced fields.
+150. Color-code sets by intensity level.
+151. Adjustable font size slider in settings.
+152. Import images using mobile share menu.
+153. Quick-add rest notes after each set.
+154. Contextual help tips on each page.
+155. Toggle display of estimated 1RM.
+156. Indicator for unsaved changes in forms.
+157. Collapsible summary metrics in history.
+158. Step counter integration for cardio.
+159. Quick access to recently used templates.
+160. Mini progress widget on home screen.
+161. Filter results by muscle group across tabs.
+162. Dynamic search suggestions for exercises.
+163. Highlight personal record sets automatically.
+164. Short completion animations for workouts.
+165. Quick-add tags using hashtag syntax.
+166. Scrollable timeline of workout months.
+167. Rename logged workouts.
+168. Customizable layout spacing options.
+169. Filter by equipment type quickly.
+170. Hide or show columns in tables.
+171. Label rest timer progress with percent.
+172. Schedule dark mode automatically at night.
+173. Toggle to hide advanced charts.
+174. Built-in calculator for weight conversions.
+175. Voice prompts for workout start and stop.
+176. Favorite templates directly from history.
+177. "Open last workout" button on start page.
+178. Interactive personal record tracker.
+179. Quick-add macro entries to notes.
+180. Color-code templates for organization.
+181. Automatic cleanup of empty workouts.
+182. Highlight new personal record improvements.
+183. Vertical orientation option for bottom nav.
+184. "What's new" dialog after updates.
+185. Quick start workout from plan list.
+186. Print-friendly workout summary view.
+187. High-contrast accessibility theme.
+188. Option to auto-collapse header on scroll.
+189. Import workout history from CSV.
+190. Local search index for offline filtering.
+191. Daily reminder notifications.
+192. Quick filter for unrated workouts.
+193. Keyboard navigation in history table.
+194. Customizable quick weight increments.
+195. Bulk mark sets as completed using checkboxes.
+196. Collapsible explanations for analytics charts.
+197. Preview thumbnails for uploaded images.
+198. Keyboard shortcut to toggle dark mode.
+199. Flexible grid layout toggle.
+200. "Clear filters" button in history tab.
+201. Remove all multiuser features from the code base.
