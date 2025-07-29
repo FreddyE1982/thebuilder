@@ -155,7 +155,7 @@
 [complete] 148. Inline editing of tags.
 149. Simple mode toggle hiding advanced fields.
 [complete] 150. Color-code sets by intensity level.
-151. Adjustable font size slider in settings.
+[complete] 151. Adjustable font size slider in settings.
 152. Import images using mobile share menu.
 153. Quick-add rest notes after each set.
 154. Contextual help tips on each page.
@@ -204,5 +204,5 @@
 197. Preview thumbnails for uploaded images.
 198. Keyboard shortcut to toggle dark mode.
 199. Flexible grid layout toggle.
-200. "Clear filters" button in history tab.
+[complete] 200. "Clear filters" button in history tab.
 201. Remove all multiuser features from the code base.
