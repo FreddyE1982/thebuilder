@@ -51,17 +51,17 @@
 42. Add repository pattern for ml_service states.
 [complete] 43. Add progress bar to Streamlit when uploading CSV files.
 [complete] 44. Provide data validation on CSV imports.
-45. Add 3D visualization of muscle engagement.
-46. Support image upload for exercise demonstration.
+[complete] 45. Add 3D visualization of muscle engagement.
+[complete] 46. Support image upload for exercise demonstration.
 [complete] 47. Add endpoint for goal progress chart data.
 [complete] 48. Create docker-compose configuration for local dev.
 [removed] 49. Remove ability to clone templates between users (multiuser removed).
-50. Support configurable RPE scale (e.g. 1–5 or 1–10).
+[complete] 50. Support configurable RPE scale (e.g. 1–5 or 1–10).
 [complete] 51. Add analytics for training monotony and strain.
-52. Provide webhooks for completed workouts notifications.
+[complete] 52. Provide webhooks for completed workouts notifications.
 [complete] 53. Add route to mark challenges as completed automatically.
 54. Implement search for exercises by tags in GUI.
-55. Support uploading heart rate monitor data in bulk.
+[complete] 55. Support uploading heart rate monitor data in bulk.
 [complete] 56. Extend rest_api tests to cover error conditions.
 57. Add dynamic equipment suggestion using ML predictions.
 [complete] 58. Provide sample data seeding script.
@@ -98,11 +98,11 @@
 89. Create official REST client library in Python.
 [complete] 90. Add performance benchmarks for API endpoints.
 [complete] 91. Provide security audit of dependencies via tools.
-92. Add automatic detection of stale goals.
+[complete] 92. Add automatic detection of stale goals.
 93. Offer periodic data export via email link.
 [complete] 94. Add ability to log mood before/after workouts.
 95. Implement color-coded workout intensity map.
-96. Add endpoint to configure auto planner parameters.
+[complete] 96. Add endpoint to configure auto planner parameters.
 97. Support split view on tablets for side-by-side charts.
 98. Provide API to fetch saved report PDFs.
 99. Add screenshot-based test for mobile layout via playwright.
@@ -110,7 +110,7 @@
 
 [complete] 101. Add interactive calendar to schedule workouts.
 [complete] 102. Add global search bar for workouts and exercises.
-103. Provide quick-add popup for workouts from home.
+[complete] 103. Provide quick-add popup for workouts from home.
 104. Add drag-and-drop reordering for planned workouts.
 105. Add time-based filter in workout history.
 106. Provide color-coded heatmap of training volume per week.
@@ -176,10 +176,10 @@
 166. Scrollable timeline of workout months.
 167. Rename logged workouts.
 168. Customizable layout spacing options.
-169. Filter by equipment type quickly.
+[complete] 169. Filter by equipment type quickly.
 170. Hide or show columns in tables.
 171. Label rest timer progress with percent.
-172. Schedule dark mode automatically at night.
+[complete] 172. Schedule dark mode automatically at night.
 173. Toggle to hide advanced charts.
 174. Built-in calculator for weight conversions.
 175. Voice prompts for workout start and stop.

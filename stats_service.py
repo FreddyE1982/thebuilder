@@ -578,6 +578,26 @@ class StatisticsService:
             )
         return result
 
+    def muscle_engagement_3d(
+        self, start_date: str | None = None, end_date: str | None = None
+    ) -> List[Dict[str, float]]:
+        """Return muscle engagement metrics for 3D visualisation."""
+        usage = self.muscle_usage(start_date, end_date)
+        result = []
+        for item in usage:
+            sets = item["sets"]
+            vol = item["volume"]
+            intensity = vol / sets if sets else 0.0
+            result.append(
+                {
+                    "muscle": item["muscle"],
+                    "sets": sets,
+                    "volume": vol,
+                    "intensity": round(intensity, 2),
+                }
+            )
+        return result
+
     def rpe_distribution(
         self,
         exercise: Optional[str] = None,
