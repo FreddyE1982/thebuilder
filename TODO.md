@@ -205,4 +205,4 @@
 198. Keyboard shortcut to toggle dark mode.
 199. Flexible grid layout toggle.
 [complete] 200. "Clear filters" button in history tab.
-201. Remove all multiuser features from the code base.
+[complete] 201. Remove all multiuser features from the code base.

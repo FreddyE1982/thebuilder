@@ -29,39 +29,12 @@ class APITestCase(unittest.TestCase):
             rate_limit=None,
         )
         self.client = TestClient(self.api.app)
-        reg = self.client.post(
-            "/users/register",
-            json={"username": "test", "password": "test"},
-        )
-        assert reg.status_code == 200
-        login = self.client.post(
-            "/token",
-            json={"username": "test", "password": "test"},
-        )
-        assert login.status_code == 200
-        token = login.json()["token"]
-        self.client.headers.update({"Authorization": token})
 
     def tearDown(self) -> None:
         if os.path.exists(self.db_path):
             os.remove(self.db_path)
         if os.path.exists(self.yaml_path):
             os.remove(self.yaml_path)
-
-    def test_user_registration_and_login(self) -> None:
-        resp = self.client.post(
-            "/users/register",
-            json={"username": "alice", "password": "wonder"},
-        )
-        self.assertEqual(resp.status_code, 200)
-        uid = resp.json()["id"]
-        self.assertGreaterEqual(uid, 1)
-        login = self.client.post(
-            "/token",
-            json={"username": "alice", "password": "wonder"},
-        )
-        self.assertEqual(login.status_code, 200)
-        self.assertIn("token", login.json())
 
     def test_full_workflow(self) -> None:
         today = datetime.date.today().isoformat()
