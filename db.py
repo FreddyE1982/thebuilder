@@ -2110,6 +2110,8 @@ class SettingsRepository(BaseRepository):
                 data[k] = bool(data[k])
             else:
                 data[k] = False
+        if "timezone" not in data:
+            data["timezone"] = "UTC"
         return data
 
 

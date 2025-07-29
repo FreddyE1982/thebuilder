@@ -925,6 +925,13 @@ class StreamlitAppTest(unittest.TestCase):
 
         self.assertEqual(translator.language, "es")
 
+    def test_timezone_formatting(self) -> None:
+        repo = GymApp(self.db_path, self.yaml_path)
+        repo.settings_repo.set_text("timezone", "America/New_York")
+        repo = GymApp(self.db_path, self.yaml_path)
+        res = repo._format_time("2023-01-01T12:00:00")
+        self.assertEqual(res, "07:00")
+
 
 
 class StreamlitFullGUITest(unittest.TestCase):

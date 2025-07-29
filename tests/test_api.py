@@ -246,6 +246,7 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(data["height"], 1.75)
         self.assertEqual(data["months_active"], 1.0)
         self.assertEqual(data["theme"], "light")
+        self.assertEqual(data["timezone"], "UTC")
         self.assertFalse(data["compact_mode"])
         self.assertFalse(data["auto_dark_mode"])
         self.assertFalse(data["show_onboarding"])
@@ -260,6 +261,7 @@ class APITestCase(unittest.TestCase):
                 "height": 1.8,
                 "months_active": 6.0,
                 "theme": "dark",
+                "timezone": "America/New_York",
                 "ml_all_enabled": False,
                 "compact_mode": True,
                 "auto_dark_mode": True,
@@ -279,12 +281,22 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(data["auto_dark_mode"], True)
         self.assertTrue(data["show_onboarding"])
         self.assertTrue(data["auto_open_last_workout"])
+        self.assertEqual(data["timezone"], "America/New_York")
 
+    def test_timezone_setting(self) -> None:
+        resp = self.client.post(
+            "/settings/general",
+            params={"timezone": "Asia/Tokyo"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        resp = self.client.get("/settings/general")
+        self.assertEqual(resp.json()["timezone"], "Asia/Tokyo")
         new_data = {
             "body_weight": 90.0,
             "height": 1.7,
             "months_active": 12.0,
             "theme": "light",
+            "timezone": "UTC",
             "game_enabled": "0",
             "ml_all_enabled": "0",
             "compact_mode": "1",
@@ -302,6 +314,7 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(data["height"], 1.7)
         self.assertEqual(data["months_active"], 12.0)
         self.assertEqual(data["theme"], "light")
+        self.assertEqual(data["timezone"], "UTC")
         self.assertFalse(data["game_enabled"])
         self.assertFalse(data["ml_all_enabled"])
         self.assertTrue(data["compact_mode"])
