@@ -10,6 +10,7 @@ from db import (
     TemplateExerciseRepository,
     TemplateSetRepository,
     AutoPlannerLogRepository,
+    GoalRepository,
 )
 from gamification_service import GamificationService
 
@@ -31,6 +32,7 @@ class PlannerService:
         template_set_repo: TemplateSetRepository | None = None,
         recommender: RecommendationService | None = None,
         log_repo: AutoPlannerLogRepository | None = None,
+        goal_repo: GoalRepository | None = None,
     ) -> None:
         self.workouts = workout_repo
         self.exercises = exercise_repo
@@ -44,6 +46,7 @@ class PlannerService:
         self.template_sets = template_set_repo or TemplateSetRepository()
         self.recommender = recommender
         self.log_repo = log_repo
+        self.goals = goal_repo
 
     def create_workout_from_plan(self, plan_id: int) -> int:
         _pid, date, t_type = self.planned_workouts.fetch_detail(plan_id)
@@ -106,6 +109,46 @@ class PlannerService:
                 ex_id = self.planned_exercises.add(plan_id, name, equipment)
                 presc = self.recommender.generate_prescription(name)
                 for item in presc["prescription"]:
+                    self.planned_sets.add(
+                        ex_id,
+                        int(item["reps"]),
+                        float(item["weight"]),
+                        int(round(item["target_rpe"])),
+                    )
+            if self.log_repo is not None:
+                self.log_repo.log_success()
+            return plan_id
+        except Exception as e:
+            if self.log_repo is not None:
+                self.log_repo.log_error(str(e))
+            raise
+
+    def create_goal_plan(self, date: str) -> int:
+        """Create a plan using all active goals."""
+        if not self.recommender:
+            raise ValueError("recommender not configured")
+        if self.goals is None:
+            raise ValueError("goal repo not configured")
+        active = self.goals.fetch_all_active()
+        if not active:
+            raise ValueError("no active goals")
+        try:
+            plan_id = self.planned_workouts.create(date, "strength")
+            for g in active:
+                name = g["exercise_name"]
+                ex_id = self.planned_exercises.add(plan_id, name, None)
+                try:
+                    presc = self.recommender.generate_prescription(name)
+                    sets = presc["prescription"]
+                except Exception:
+                    sets = [
+                        {
+                            "reps": 5,
+                            "weight": float(g["target_value"]),
+                            "target_rpe": 8,
+                        }
+                    ]
+                for item in sets:
                     self.planned_sets.add(
                         ex_id,
                         int(item["reps"]),

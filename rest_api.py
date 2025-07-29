@@ -250,6 +250,7 @@ class GymAPI:
             self.template_sets,
             recommender=self.recommender,
             log_repo=self.autoplan_logs,
+            goal_repo=self.goals,
         )
         self.statistics = StatisticsService(
             self.sets,
@@ -1271,6 +1272,14 @@ class GymAPI:
                     pairs.append((it, None))
             try:
                 pid = self.planner.create_ai_plan(date, pairs, training_type)
+                return {"id": pid}
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
+        @self.app.post("/planned_workouts/goal_plan")
+        def goal_plan(date: str):
+            try:
+                pid = self.planner.create_goal_plan(date)
                 return {"id": pid}
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))

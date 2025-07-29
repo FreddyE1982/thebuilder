@@ -313,6 +313,7 @@ class GymApp:
             self.template_sets,
             recommender=self.recommender,
             log_repo=self.autoplan_logs,
+            goal_repo=self.goals_repo,
         )
         self.stats = StatisticsService(
             self.sets,
@@ -2568,6 +2569,17 @@ class GymApp:
                         st.warning(str(e))
                 else:
                     st.warning("Select exercises")
+        with st.expander("Goal Planner", expanded=False):
+            gp_date = st.date_input(
+                "Plan Date", datetime.date.today(), key="goal_plan_date"
+            )
+            if st.button("Generate Goal Plan", key="goal_plan_btn"):
+                try:
+                    pid = self.planner.create_goal_plan(gp_date.isoformat())
+                    st.session_state.selected_planned_workout = pid
+                    st.success("Plan created")
+                except ValueError as e:
+                    st.warning(str(e))
         if st.query_params.get("tab") == "workouts":
             with st.expander("Templates", expanded=False):
                 self._template_section()
