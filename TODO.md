@@ -21,8 +21,8 @@
 [complete] 17. Add dark/light theme switch stored in settings.
 [removed] 18. Remove two-factor authentication and login features (multiuser removed).
 [complete] 19. Add localization framework for multi-language UI.
-19b. Integrate translations for UI labels.
-19c. Add language selector in settings.
+[complete] 19b. Integrate translations for UI labels.
+[complete] 19c. Add language selector in settings.
 20. Refactor database layer to async for FastAPI performance.
 [complete] 21. Add unit tests for ml_service models.
 [complete] 22. Provide interactive charts for power and velocity histories.
