@@ -1748,6 +1748,18 @@ class GymAPI:
                 end_date,
             )
 
+        @self.app.get("/stats/muscle_progression")
+        def stats_muscle_progression(
+            muscle: str,
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            return self.statistics.muscle_progression(
+                muscle,
+                start_date,
+                end_date,
+            )
+
         @self.app.get("/stats/daily_volume")
         def stats_daily_volume(
             start_date: str = None,

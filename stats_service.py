@@ -199,6 +199,34 @@ class StatisticsService:
                 by_date[date] = est
         return [{"date": d, "est_1rm": round(by_date[d], 2)} for d in sorted(by_date)]
 
+    def muscle_progression(
+        self,
+        muscle: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> List[Dict[str, float]]:
+        """Return estimated 1RM progression aggregated for a muscle."""
+        if self.catalog is None:
+            return []
+        names = self.catalog.fetch_names(muscles=[muscle])
+        all_names: list[str] = []
+        for n in names:
+            all_names.extend(self.exercise_names.aliases(n))
+        uniq = sorted(dict.fromkeys(all_names))
+        rows = self.sets.fetch_history_by_names(
+            uniq,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        by_date: Dict[str, float] = {}
+        for reps, weight, _rpe, date in rows:
+            est = MathTools.epley_1rm(float(weight), int(reps))
+            if date not in by_date or est > by_date[date]:
+                by_date[date] = est
+        return [
+            {"date": d, "est_1rm": round(by_date[d], 2)} for d in sorted(by_date)
+        ]
+
     def daily_volume(
         self,
         start_date: Optional[str] = None,
