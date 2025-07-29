@@ -4,12 +4,14 @@ import time
 import threading
 import asyncio
 import os
+import requests
 from typing import List, Dict
 from fastapi import (
     FastAPI,
     HTTPException,
     Response,
     Body,
+    UploadFile,
     APIRouter,
     Request,
     WebSocket,
@@ -49,6 +51,7 @@ from db import (
     BodyWeightRepository,
     WellnessRepository,
     HeartRateRepository,
+    ExerciseImageRepository,
     FavoriteExerciseRepository,
     FavoriteTemplateRepository,
     FavoriteWorkoutRepository,
@@ -179,6 +182,7 @@ class GymAPI:
         self.body_weights = BodyWeightRepository(db_path)
         self.wellness = WellnessRepository(db_path)
         self.heart_rates = HeartRateRepository(db_path)
+        self.exercise_images = ExerciseImageRepository(db_path)
         self.stats_cache = StatsCacheRepository(db_path)
         self.goals = GoalRepository(db_path)
         self.challenges = ChallengeRepository(db_path)
@@ -322,6 +326,19 @@ class GymAPI:
                 loop.run_until_complete(self._broadcast(event))
         except RuntimeError:
             asyncio.run(self._broadcast(event))
+
+    def _notify_workout_completed(self, workout_id: int) -> None:
+        url = self.settings.get_text("webhook_url", "")
+        if not url:
+            return
+        payload = {
+            "workout_id": workout_id,
+            "timestamp": datetime.datetime.now().isoformat(timespec="seconds"),
+        }
+        try:
+            requests.post(url, json=payload, timeout=5)
+        except Exception:
+            pass
 
     def _setup_routes(self) -> None:
         equipment_router = APIRouter(prefix="/equipment", tags=["Equipment"])
@@ -738,6 +755,36 @@ class GymAPI:
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
 
+        @self.app.post("/exercise_catalog/{name}/image")
+        def upload_exercise_image(name: str, file: UploadFile = Body(...)):
+            try:
+                data = file.file.read()
+                os.makedirs("images", exist_ok=True)
+                path = f"images/{name}.png"
+                with open(path, "wb") as f:
+                    f.write(data)
+                self.exercise_images.set(name, path)
+                return {"status": "uploaded"}
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
+        @self.app.get("/exercise_catalog/{name}/image")
+        def get_exercise_image(name: str):
+            path = self.exercise_images.fetch(name)
+            if not path or not os.path.exists(path):
+                raise HTTPException(status_code=404, detail="not found")
+            with open(path, "rb") as f:
+                data = f.read()
+            return Response(data, media_type="image/png")
+
+        @self.app.delete("/exercise_catalog/{name}/image")
+        def delete_exercise_image(name: str):
+            self.exercise_images.delete(name)
+            path = f"images/{name}.png"
+            if os.path.exists(path):
+                os.remove(path)
+            return {"status": "deleted"}
+
         @equipment_router.put("/{name}")
         def update_equipment(
             name: str,
@@ -1088,6 +1135,7 @@ class GymAPI:
                     self.statistics.readiness_model.train(
                         s["stress"], s["fatigue"], score
                     )
+            self._notify_workout_completed(workout_id)
             return {"status": "finished", "timestamp": timestamp}
 
         @self.app.post("/workouts/{workout_id}/exercises")
@@ -1722,6 +1770,13 @@ class GymAPI:
             end_date: str = None,
         ):
             return self.statistics.muscle_group_usage(start_date, end_date)
+
+        @self.app.get("/stats/muscle_engagement_3d")
+        def stats_muscle_engagement_3d(
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            return self.statistics.muscle_engagement_3d(start_date, end_date)
 
         @self.app.get("/stats/daily_muscle_group_volume")
         def stats_daily_muscle_group_volume(
@@ -2386,6 +2441,17 @@ class GymAPI:
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
 
+        @self.app.post("/workouts/{workout_id}/heart_rate/bulk")
+        def bulk_log_heart_rate(workout_id: int, items: List[Dict] = Body(...)):
+            try:
+                entries = [
+                    (itm["timestamp"], int(itm["heart_rate"])) for itm in items
+                ]
+                ids = self.heart_rates.bulk_log(workout_id, entries)
+                return {"ids": ids}
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
         @self.app.get("/workouts/{workout_id}/heart_rate")
         def list_workout_heart_rate(workout_id: int):
             rows = self.heart_rates.fetch_for_workout(workout_id)
@@ -2438,6 +2504,11 @@ class GymAPI:
                 }
                 for gid, ex, name, val, unit, start, target, ach in rows
             ]
+
+        @self.app.get("/goals/stale")
+        def list_stale_goals():
+            rows = self.goals.fetch_stale()
+            return rows
 
         @self.app.post("/goals")
         def add_goal(
@@ -2618,6 +2689,19 @@ class GymAPI:
                 "prescription_errors": presc_errors,
             }
 
+        @self.app.get("/autoplanner/config")
+        def get_autoplan_config():
+            return {
+                "days_ahead": self.settings.get_int("autoplan_days", 7),
+                "intensity": self.settings.get_text("autoplan_intensity", "medium"),
+            }
+
+        @self.app.post("/autoplanner/config")
+        def set_autoplan_config(days_ahead: int, intensity: str):
+            self.settings.set_int("autoplan_days", days_ahead)
+            self.settings.set_text("autoplan_intensity", intensity)
+            return {"status": "updated"}
+
         @self.app.get("/settings/general")
         def get_general_settings():
             return self.settings.all_settings()
@@ -2653,6 +2737,7 @@ class GymAPI:
             auto_open_last_workout: bool = None,
             email_weekly_enabled: bool = None,
             weekly_report_email: str = None,
+            webhook_url: str = None,
             experimental_models_enabled: bool = None,
             hide_completed_plans: bool = None,
             rpe_scale: int = None,
@@ -2745,6 +2830,8 @@ class GymAPI:
                 self.settings.set_bool("email_weekly_enabled", email_weekly_enabled)
             if weekly_report_email is not None:
                 self.settings.set_text("weekly_report_email", weekly_report_email)
+            if webhook_url is not None:
+                self.settings.set_text("webhook_url", webhook_url)
             if experimental_models_enabled is not None:
                 self.settings.set_bool(
                     "experimental_models_enabled",

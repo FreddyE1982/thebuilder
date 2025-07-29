@@ -5109,13 +5109,14 @@ class GymApp:
             start_str,
             end_str,
         )
-        over_tab, dist_tab, prog_tab, rec_tab, tsb_tab = st.tabs(
+        over_tab, dist_tab, prog_tab, rec_tab, tsb_tab, eng_tab = st.tabs(
             [
                 "Overview",
                 "Distributions",
                 "Progress",
                 "Records",
                 "Stress Balance",
+                "Engagement 3D",
             ]
         )
         with over_tab:
@@ -5220,6 +5221,20 @@ class GymApp:
                     ("Fatigue", overview["fatigue"]),
                 ]
                 self._metric_grid(metrics)
+        with eng_tab:
+            data = self.stats.muscle_engagement_3d(start_str, end_str)
+            if data:
+                import plotly.express as px
+
+                df = pd.DataFrame(data)
+                fig = px.scatter_3d(
+                    df,
+                    x="sets",
+                    y="volume",
+                    z="intensity",
+                    color="muscle",
+                )
+                st.plotly_chart(fig, use_container_width=True)
 
     def _progress_forecast_section(self, exercise: str) -> None:
         with st.expander("Progress Forecast", expanded=False):

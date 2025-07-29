@@ -126,6 +126,14 @@ class Database:
                 );""",
             ["exercise_name", "variant_name"],
         ),
+        "exercise_images": (
+            """CREATE TABLE exercise_images (
+                    exercise_name TEXT PRIMARY KEY,
+                    path TEXT NOT NULL,
+                    FOREIGN KEY(exercise_name) REFERENCES exercise_catalog(name) ON DELETE CASCADE
+                );""",
+            ["exercise_name", "path"],
+        ),
         "exercises": (
             """CREATE TABLE exercises (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2998,6 +3006,13 @@ class HeartRateRepository(BaseRepository):
             (workout_id, timestamp, heart_rate),
         )
 
+    def bulk_log(self, workout_id: int, entries: list[tuple[str, int]]) -> list[int]:
+        """Insert multiple heart rate entries and return their ids."""
+        ids: list[int] = []
+        for ts, hr in entries:
+            ids.append(self.log(workout_id, ts, hr))
+        return ids
+
     def fetch_for_workout(self, workout_id: int) -> list[tuple[int, str, int]]:
         rows = self.fetch_all(
             "SELECT id, timestamp, heart_rate FROM heart_rate_logs WHERE workout_id = ? ORDER BY timestamp;",
@@ -3040,6 +3055,35 @@ class HeartRateRepository(BaseRepository):
         if not rows:
             raise ValueError("log not found")
         self.execute("DELETE FROM heart_rate_logs WHERE id = ?;", (entry_id,))
+
+
+class ExerciseImageRepository(BaseRepository):
+    """Repository for storing exercise demonstration images."""
+
+    def __init__(self, db_path: str = "workout.db") -> None:
+        super().__init__(db_path)
+        self.exercise_names = ExerciseNameRepository(db_path)
+
+    def set(self, exercise_name: str, path: str) -> None:
+        self.exercise_names.ensure([exercise_name])
+        self.execute(
+            "INSERT INTO exercise_images (exercise_name, path) VALUES (?, ?) "
+            "ON CONFLICT(exercise_name) DO UPDATE SET path=excluded.path;",
+            (exercise_name, path),
+        )
+
+    def fetch(self, exercise_name: str) -> str | None:
+        rows = self.fetch_all(
+            "SELECT path FROM exercise_images WHERE exercise_name = ?;",
+            (exercise_name,),
+        )
+        return rows[0][0] if rows else None
+
+    def delete(self, exercise_name: str) -> None:
+        self.execute(
+            "DELETE FROM exercise_images WHERE exercise_name = ?;",
+            (exercise_name,),
+        )
 
 
 class FavoriteExerciseRepository(BaseRepository):
@@ -3487,6 +3531,30 @@ class GoalRepository(BaseRepository):
             "FROM goals WHERE achieved = 0 AND start_date <= ? AND target_date >= ? "
             "ORDER BY target_date;",
             (current, current),
+        )
+        result = []
+        for r in rows:
+            result.append(
+                {
+                    "id": r[0],
+                    "exercise_name": r[1],
+                    "name": r[2],
+                    "target_value": float(r[3]),
+                    "unit": r[4],
+                    "start_date": r[5],
+                    "target_date": r[6],
+                    "achieved": bool(r[7]),
+                }
+            )
+        return result
+
+    def fetch_stale(self, today: str | None = None) -> list[dict[str, object]]:
+        """Return goals past their target date and not achieved."""
+        current = today or datetime.date.today().isoformat()
+        rows = super().fetch_all(
+            "SELECT id, exercise_name, name, target_value, unit, start_date, target_date, achieved "
+            "FROM goals WHERE achieved = 0 AND target_date < ? ORDER BY target_date;",
+            (current,),
         )
         result = []
         for r in rows:

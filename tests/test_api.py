@@ -1086,6 +1086,11 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(zone["sets"], 2)
         self.assertAlmostEqual(zone["volume"], 1880.0)
 
+        resp = self.client.get("/stats/muscle_engagement_3d")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(any(d["muscle"] == "Pectoralis Major" for d in data))
+
         resp = self.client.get(
             "/prediction/progress",
             params={"exercise": "Bench Press", "weeks": 2, "workouts": 1},
@@ -3511,6 +3516,72 @@ class APITestCase(unittest.TestCase):
         # volume model should be present by default
         status = self.client.get("/autoplanner/status").json()
         self.assertTrue(any(m["name"] == "volume_model" for m in status["models"]))
+
+    def test_bulk_heart_rate_upload(self) -> None:
+        self.client.post("/workouts")
+        data = [
+            {"timestamp": "2023-01-01T10:00:00", "heart_rate": 120},
+            {"timestamp": "2023-01-01T10:01:00", "heart_rate": 125},
+        ]
+        resp = self.client.post("/workouts/1/heart_rate/bulk", json=data)
+        self.assertEqual(resp.status_code, 200)
+        ids = resp.json()["ids"]
+        self.assertEqual(len(ids), 2)
+        rows = self.client.get("/workouts/1/heart_rate").json()
+        self.assertEqual(len(rows), 2)
+
+    def test_stale_goals_endpoint(self) -> None:
+        today = datetime.date.today().isoformat()
+        past = (datetime.date.today() - datetime.timedelta(days=10)).isoformat()
+        self.client.post(
+            "/goals",
+            params={
+                "exercise_name": "Bench Press",
+                "name": "old",
+                "target_value": 100.0,
+                "unit": "kg",
+                "start_date": past,
+                "target_date": past,
+            },
+        )
+        resp = self.client.get("/goals/stale")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(len(resp.json()), 1)
+
+    def test_autoplan_config(self) -> None:
+        resp = self.client.post(
+            "/autoplanner/config", params={"days_ahead": 5, "intensity": "high"}
+        )
+        self.assertEqual(resp.status_code, 200)
+        cfg = self.client.get("/autoplanner/config").json()
+        self.assertEqual(cfg["days_ahead"], 5)
+        self.assertEqual(cfg["intensity"], "high")
+
+    def test_workout_completion_webhook(self) -> None:
+        from http.server import BaseHTTPRequestHandler, HTTPServer
+        import threading
+
+        received: list = []
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_POST(self):
+                length = int(self.headers.get("content-length", 0))
+                body = self.rfile.read(length)
+                received.append(json.loads(body))
+                self.send_response(200)
+                self.end_headers()
+
+        server = HTTPServer(("localhost", 0), Handler)
+        thread = threading.Thread(target=server.serve_forever)
+        thread.start()
+        url = f"http://localhost:{server.server_address[1]}"
+        self.client.post("/settings/general", params={"webhook_url": url})
+        wid = self.client.post("/workouts").json()["id"]
+        self.client.post(f"/workouts/{wid}/finish")
+        server.shutdown()
+        thread.join()
+        self.assertEqual(len(received), 1)
+        self.assertEqual(received[0]["workout_id"], wid)
 
     def test_workout_search_endpoint(self) -> None:
         today = datetime.date.today().isoformat()
