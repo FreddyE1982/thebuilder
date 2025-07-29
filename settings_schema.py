@@ -4,6 +4,7 @@ class SettingsSchema(BaseModel):
     theme: str = "light"
     weight_unit: str = "kg"
     time_format: str = "24h"
+    rpe_scale: int = 10
 
 def validate_settings(data: dict) -> None:
     try:

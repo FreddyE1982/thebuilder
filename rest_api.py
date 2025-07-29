@@ -145,16 +145,16 @@ class GymAPI:
         rate_window: int = 60,
     ) -> None:
         self.db_path = db_path
+        self.settings = SettingsRepository(db_path, yaml_path)
         self.workouts = WorkoutRepository(db_path)
         self.exercises = ExerciseRepository(db_path)
-        self.sets = SetRepository(db_path)
+        self.sets = SetRepository(db_path, self.settings)
         self.planned_workouts = PlannedWorkoutRepository(db_path)
         self.planned_exercises = PlannedExerciseRepository(db_path)
-        self.planned_sets = PlannedSetRepository(db_path)
+        self.planned_sets = PlannedSetRepository(db_path, self.settings)
         self.template_workouts = TemplateWorkoutRepository(db_path)
         self.template_exercises = TemplateExerciseRepository(db_path)
         self.template_sets = TemplateSetRepository(db_path)
-        self.settings = SettingsRepository(db_path, yaml_path)
         self.equipment_types = EquipmentTypeRepository(db_path, self.settings)
         self.equipment = EquipmentRepository(
             db_path, self.settings, self.equipment_types
@@ -2719,6 +2719,7 @@ class GymAPI:
             weekly_report_email: str = None,
             experimental_models_enabled: bool = None,
             hide_completed_plans: bool = None,
+            rpe_scale: int = None,
         ):
             if body_weight is not None:
                 self.settings.set_float("body_weight", body_weight)
@@ -2730,6 +2731,8 @@ class GymAPI:
                 self.settings.set_text("theme", theme)
             if color_theme is not None:
                 self.settings.set_text("color_theme", color_theme)
+            if rpe_scale is not None:
+                self.settings.set_int("rpe_scale", rpe_scale)
             if ml_all_enabled is not None:
                 self.settings.set_bool("ml_all_enabled", ml_all_enabled)
             if ml_training_enabled is not None:
