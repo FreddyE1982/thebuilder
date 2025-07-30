@@ -209,6 +209,7 @@ class GymApp:
         self.compact_mode = self.settings_repo.get_bool("compact_mode", False)
         self.simple_mode = self.settings_repo.get_bool("simple_mode", False)
         self.hide_advanced_charts = self.settings_repo.get_bool("hide_advanced_charts", False)
+        self.show_est_1rm = self.settings_repo.get_bool("show_est_1rm", True)
         self.large_font = self.settings_repo.get_bool("large_font_mode", False)
         self.side_nav = self.settings_repo.get_bool("side_nav", False)
         self.vertical_nav = self.settings_repo.get_bool("vertical_nav", False)
@@ -241,6 +242,10 @@ class GymApp:
             "hide_completed_sets", False
         )
         self.add_set_key = self.settings_repo.get_text("hotkey_add_set", "a")
+        self.repeat_set_key = self.settings_repo.get_text(
+            "hotkey_repeat_last_set",
+            "r",
+        )
         self.tab_keys = self.settings_repo.get_text("hotkey_tab_keys", "1,2,3,4")
         self.toggle_theme_key = self.settings_repo.get_text("hotkey_toggle_theme", "d")
         self.sidebar_width = self.settings_repo.get_float("sidebar_width", 18.0)
@@ -428,11 +433,29 @@ class GymApp:
                 height=0,
             )
 
+    def _set_timer(self) -> None:
+        start = st.session_state.get("set_timer_start")
+        if not start:
+            return
+        elapsed = int(time.time() - start)
+        st.markdown(
+            f"<div id='set-timer'>Time: {elapsed}s</div>", unsafe_allow_html=True
+        )
+        if os.environ.get("TEST_MODE") != "1":
+            components.html(
+                "<script>setTimeout(()=>window.location.reload(),1000);</script>",
+                height=0,
+            )
+
     def _format_weight(self, weight: float) -> str:
         """Return weight formatted according to user settings."""
-        if self.weight_unit == "lb":
+        unit = st.session_state.get("weight_unit_override", self.weight_unit)
+        if unit == "lb":
             return f"{weight * 2.20462:.1f} lb"
         return f"{weight:.1f} kg"
+
+    def _current_weight_unit(self) -> str:
+        return st.session_state.get("weight_unit_override", self.weight_unit)
 
     def _rpe_options(self) -> list[int]:
         return list(range(self.rpe_scale + 1))
@@ -646,6 +669,7 @@ class GymApp:
             const tabKeys = JSON.parse('%TAB_KEYS%');
             const tabLabels = JSON.parse('%TAB_LABELS%');
             const addSetKey = '%ADD_KEY%'.toLowerCase();
+            const repeatSetKey = '%REPEAT_KEY%'.toLowerCase();
             const toggleThemeKey = '%TOGGLE_KEY%'.toLowerCase();
             function handleHotkeys(e) {
                 if (e.altKey && tabKeys.includes(e.key)) {
@@ -656,6 +680,10 @@ class GymApp:
                 } else if (e.altKey && e.key.toLowerCase() === addSetKey) {
                     const btn = Array.from(document.querySelectorAll('button'))
                         .find(b => b.innerText.trim() === 'Add Set');
+                    if (btn) btn.click();
+                } else if (e.altKey && e.key.toLowerCase() === repeatSetKey) {
+                    const btn = Array.from(document.querySelectorAll('button'))
+                        .find(b => b.innerText.trim() === 'Repeat Last Set');
                     if (btn) btn.click();
                 } else if (e.ctrlKey && e.key.toLowerCase() === 'k') {
                     const params = new URLSearchParams(window.location.search);
@@ -706,6 +734,7 @@ class GymApp:
             .replace("%TAB_KEYS%", json.dumps(self.tab_keys.split(",")))
             .replace("%TAB_LABELS%", json.dumps(self.layout.nav_labels))
             .replace("%ADD_KEY%", self.add_set_key)
+            .replace("%REPEAT_KEY%", self.repeat_set_key)
             .replace("%TOGGLE_KEY%", self.toggle_theme_key)
             .replace(
                 "%COLLAPSE_HEADER%",
@@ -2650,6 +2679,7 @@ class GymApp:
             ]
         )
         self._rest_timer()
+        self._set_timer()
         self._mini_calendar_widget()
         self._mini_progress_widget()
         last_id = self.settings_repo.get_int("last_workout_id", 0)
@@ -3234,11 +3264,22 @@ class GymApp:
                 self._submit_set(
                     exercise_id, reps_val, weight_val, rpe_val, note_val, dur_val
                 )
+            if st.button("Repeat Last Set", key=f"repeat_{exercise_id}"):
+                self._repeat_last_set(exercise_id)
+            unit = st.selectbox(
+                "Unit",
+                ["kg", "lb"],
+                index=0 if self._current_weight_unit() == "kg" else 1,
+                key="weight_unit_select",
+                on_change=self._update_weight_unit,
+            )
             if equipment:
                 muscles = self.equipment.fetch_muscles(equipment)
                 st.markdown("**Muscles:**")
                 for m in muscles:
                     st.markdown(f"- {m}")
+                if st.button("Equipment Details", key=f"eq_details_{exercise_id}"):
+                    self._equipment_details_dialog(equipment)
             note_val = st.text_input(
                 "Note",
                 value=note or "",
@@ -3381,6 +3422,7 @@ class GymApp:
                                         timespec="seconds"
                                     ),
                                 )
+                                st.session_state.set_timer_start = time.time()
                                 self._trigger_refresh()
                             if finish_col.button("Finish", key=f"finish_set_{set_id}"):
                                 self.sets.set_end_time(
@@ -3389,6 +3431,7 @@ class GymApp:
                                         timespec="seconds"
                                     ),
                                 )
+                                st.session_state.pop("set_timer_start", None)
                             self._trigger_refresh()
                         del_col, up_col, down_col = st.columns(3)
                         if del_col.button("Delete", key=f"del_{set_id}"):
@@ -3503,12 +3546,14 @@ class GymApp:
                                 set_id,
                                 self._now().isoformat(timespec="seconds"),
                             )
+                            st.session_state.set_timer_start = time.time()
                             self._trigger_refresh()
                         if cols[11].button("Finish", key=f"finish_set_{set_id}"):
                             self.sets.set_end_time(
                                 set_id,
                                 self._now().isoformat(timespec="seconds"),
                             )
+                            st.session_state.pop("set_timer_start", None)
                             self._trigger_refresh()
                         if cols[12].button("Delete", key=f"del_{set_id}"):
                             self._confirm_delete_set(set_id)
@@ -3546,7 +3591,7 @@ class GymApp:
                         [h["date"] for h in hist],
                     )
                 prog = self.stats.progression(name)
-                if prog:
+                if prog and self.show_est_1rm:
                     with st.expander("1RM Progress"):
                         self._line_chart(
                             {"1RM": [p["est_1rm"] for p in prog]},
@@ -3595,6 +3640,7 @@ class GymApp:
             if st.button("Reorder Sets", key=f"reorder_{exercise_id}"):
                 self._reorder_sets_dialog(exercise_id)
             self._rest_timer()
+            self._set_timer()
 
     def _add_set_form(self, exercise_id: int, with_button: bool = True) -> None:
         qkey = f"qw_set_{exercise_id}"
@@ -3743,6 +3789,21 @@ class GymApp:
 
         self._show_dialog("Warmup Plan", _content)
 
+    def _equipment_details_dialog(self, equipment: str) -> None:
+        detail = self.equipment.fetch_detail(equipment)
+        if not detail:
+            st.warning("Not found")
+            return
+
+        def _content() -> None:
+            eq_type, muscles, _ = detail
+            st.markdown(f"**Type:** {eq_type}")
+            st.markdown("**Muscles:**")
+            for m in muscles:
+                st.markdown(f"- {m}")
+
+        self._show_dialog("Equipment Details", _content)
+
     def _reorder_sets_dialog(self, exercise_id: int) -> None:
         def _content() -> None:
             st.markdown("Drag sets to reorder and save")
@@ -3812,12 +3873,12 @@ class GymApp:
         note: str,
         duration: float,
         warmup: bool = False,
-    ) -> None:
+        ) -> None:
         """Create a new set and record gamification metrics."""
         sid = self.sets.add(
             exercise_id,
             int(reps),
-            float(weight) / 2.20462 if self.weight_unit == "lb" else float(weight),
+            float(weight) / 2.20462 if self._current_weight_unit() == "lb" else float(weight),
             int(rpe),
             note or None,
             warmup=warmup,
@@ -3836,6 +3897,28 @@ class GymApp:
         st.session_state[f"open_add_set_{exercise_id}"] = True
         self._trigger_refresh()
 
+    def _update_weight_unit(self) -> None:
+        val = st.session_state.get("weight_unit_select", self.weight_unit)
+        st.session_state.weight_unit_override = val
+        self._trigger_refresh()
+
+    def _repeat_last_set(self, exercise_id: int) -> None:
+        """Duplicate the most recent set for the exercise."""
+        sets = self.sets.fetch_for_exercise(exercise_id)
+        if not sets:
+            st.warning("No previous set")
+            return
+        last = sets[-1]
+        self._submit_set(
+            exercise_id,
+            last[1],
+            last[2] if self._current_weight_unit() == "kg" else last[2] * 2.20462,
+            last[3],
+            "",
+            0.0,
+            last[6],
+        )
+
     def _update_set(self, set_id: int) -> None:
         """Update set values based on current widget state."""
         prev = self.sets.fetch_detail(set_id)
@@ -3849,7 +3932,7 @@ class GymApp:
         dur_val = st.session_state.get(f"duration_{set_id}", 0.0)
         warm_val = st.session_state.get(f"warm_{set_id}")
         weight = float(weight_val)
-        if self.weight_unit == "lb":
+        if self._current_weight_unit() == "lb":
             weight /= 2.20462
         self.sets.update(set_id, int(reps_val), weight, int(rpe_val), warm_val)
         self.sets.update_note(set_id, note_val or None)
@@ -5562,7 +5645,7 @@ class GymApp:
                         )
                     metrics.append(("Plateau Score", insights["plateau_score"]))
                     self._metric_grid(metrics)
-            if prog:
+            if prog and self.show_est_1rm:
                 with st.expander("1RM Progression", expanded=True):
                     self._line_chart(
                         {"1RM": [p["est_1rm"] for p in prog]},
@@ -6537,6 +6620,10 @@ class GymApp:
                     "Hide Advanced Charts",
                     value=self.hide_advanced_charts,
                 )
+                show_1rm_opt = st.checkbox(
+                    "Show Estimated 1RM",
+                    value=self.show_est_1rm,
+                )
                 large_font = st.checkbox(
                     "Large Font Mode",
                     value=self.large_font,
@@ -6588,6 +6675,11 @@ class GymApp:
                 add_key_in = st.text_input(
                     "Add Set Hotkey",
                     value=self.add_set_key,
+                    max_chars=1,
+                )
+                repeat_key_in = st.text_input(
+                    "Repeat Set Hotkey",
+                    value=self.repeat_set_key,
                     max_chars=1,
                 )
                 tab_keys_in = st.text_input(
@@ -6801,6 +6893,7 @@ class GymApp:
                 self.settings_repo.set_bool("collapse_header", collapse_header_opt)
                 self.collapse_header = collapse_header_opt
                 self.settings_repo.set_text("hotkey_add_set", add_key_in or "a")
+                self.settings_repo.set_text("hotkey_repeat_last_set", repeat_key_in or "r")
                 self.settings_repo.set_text("hotkey_tab_keys", tab_keys_in or "1,2,3,4")
                 self.settings_repo.set_text("hotkey_toggle_theme", toggle_key_in or "d")
                 self.settings_repo.set_text("quick_weights", qw_in)
@@ -6814,13 +6907,16 @@ class GymApp:
                 )
                 self.settings_repo.set_bool("hide_completed_plans", hide_completed_opt)
                 self.settings_repo.set_bool("hide_completed_sets", hide_sets_opt)
+                self.settings_repo.set_bool("show_est_1rm", show_1rm_opt)
                 self.add_set_key = add_key_in or "a"
+                self.repeat_set_key = repeat_key_in or "r"
                 self.tab_keys = tab_keys_in or "1,2,3,4"
                 self.toggle_theme_key = toggle_key_in or "d"
                 self.quick_weights = [float(v) for v in qw_in.split(",") if v]
                 self.weight_increment = float(qi_in)
                 self.bookmarks = [v for v in bookmark_in.split(",") if v]
                 self.pinned_stats = [v for v in pinned_in.split(",") if v]
+                self.show_est_1rm = show_1rm_opt
                 self.layout = LayoutManager(self.settings_repo)
                 self.hide_completed_plans = hide_completed_opt
                 self.hide_completed_sets = hide_sets_opt

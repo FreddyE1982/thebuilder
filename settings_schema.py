@@ -13,6 +13,8 @@ class SettingsSchema(BaseModel):
     flex_metric_grid: bool = False
     collapse_header: bool = True
     accent_color: str = "#ff4b4b"
+    hotkey_repeat_last_set: str = "r"
+    show_est_1rm: bool = True
 
 def validate_settings(data: dict) -> None:
     try:

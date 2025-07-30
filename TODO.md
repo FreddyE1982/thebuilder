@@ -122,8 +122,8 @@
 [complete] 109. Allow checkboxes to mark sets as warm-ups.
 [complete] 110. Add screenshot capture for progress charts.
 [complete] 111. Enable duplication of logged workouts.
-112. Support export of progress charts to PDF.
-113. Show real-time timer overlay during sets.
+[complete] 112. Support export of progress charts to PDF.
+[complete] 113. Show real-time timer overlay during sets.
 [complete] 114. Filter exercise lists to favorites only.
 [complete] 115. Display workout completion progress bar.
 [complete] 116. Auto start rest timer after each set.
@@ -151,13 +151,13 @@
 138. Bulk edit multiple sets at once.
 139. Randomize training plan generator.
 140. Filter exercises without equipment assigned.
-141. Switch weight units on the fly in set entry.
+[complete] 141. Switch weight units on the fly in set entry.
 142. Assign custom icons to workouts.
 143. Multi-select deletion of planned workouts.
 144. Donut charts for goal progress visualization.
-145. Link directly to equipment details from sets.
+[complete] 145. Link directly to equipment details from sets.
 146. Interactive tutorial for first workout creation.
-147. Hotkey to repeat last set quickly.
+[complete] 147. Hotkey to repeat last set quickly.
 [complete] 148. Inline editing of tags.
 [complete] 149. Simple mode toggle hiding advanced fields.
 [complete] 150. Color-code sets by intensity level.
@@ -165,7 +165,7 @@
 152. Import images using mobile share menu.
 153. Quick-add rest notes after each set.
 154. Contextual help tips on each page.
-155. Toggle display of estimated 1RM.
+[complete] 155. Toggle display of estimated 1RM.
 156. Indicator for unsaved changes in forms.
 [complete] 157. Collapsible summary metrics in history.
 158. Step counter integration for cardio.

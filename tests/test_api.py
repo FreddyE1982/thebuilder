@@ -3991,6 +3991,24 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.headers["content-type"], "application/pdf")
 
+    def test_progression_pdf_endpoint(self) -> None:
+        # minimal workout and set to create progression data
+        self.client.post("/workouts")
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8},
+        )
+        resp = self.client.get(
+            "/stats/progression_pdf",
+            params={"exercise": "Bench Press"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.headers["content-type"], "application/pdf")
+
 
 
 class RateLimitTestCase(unittest.TestCase):

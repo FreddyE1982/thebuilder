@@ -2130,3 +2130,29 @@ class StatisticsService:
             avg = sum(window_vals) / len(window_vals)
             result.append({"date": dates[i], "moving_avg": round(avg, 2)})
         return result
+
+    def progression_chart_pdf(
+        self,
+        exercise: str,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> bytes:
+        """Return a PDF line chart of 1RM progression."""
+        data = self.progression(exercise, start_date, end_date)
+        if not data:
+            return b""
+        import matplotlib.pyplot as plt
+        from io import BytesIO
+
+        dates = [d["date"] for d in data]
+        values = [d["est_1rm"] for d in data]
+        plt.figure()
+        plt.plot(dates, values, marker="o")
+        plt.title(f"{exercise} 1RM Progress")
+        plt.xlabel("Date")
+        plt.ylabel("Estimated 1RM")
+        plt.tight_layout()
+        buf = BytesIO()
+        plt.savefig(buf, format="pdf")
+        plt.close()
+        return buf.getvalue()
