@@ -6,6 +6,8 @@ import asyncio
 import os
 import requests
 import re
+import zipfile
+import base64
 from typing import List, Dict
 from fastapi import (
     FastAPI,
@@ -307,6 +309,18 @@ class GymAPI:
             json.dumps(summary),
             True,
         )
+
+    def send_export_email(self, address: str) -> None:
+        workouts = self.workouts.fetch_all_workouts()
+        zip_path = "export.zip"
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            for wid, _date, *_ in workouts:
+                csv_data = self.sets.export_workout_csv(wid)
+                zf.writestr(f"workout_{wid}.csv", csv_data)
+        with open(zip_path, "rb") as f:
+            data = base64.b64encode(f.read()).decode()
+        self.email_logs.add(address, "full export", data, True)
+        os.remove(zip_path)
 
     async def _broadcast(self, event: dict) -> None:
         for ws in list(self.watchers):
@@ -653,6 +667,25 @@ class GymAPI:
             self.tags.remove(workout_id, tag_id)
             return {"status": "deleted"}
 
+        @self.app.get("/exercises/{name}/tags")
+        def list_exercise_tags(name: str):
+            rows = self.tags.fetch_for_exercise(name)
+            return [{"id": tid, "name": tname} for tid, tname in rows]
+
+        @self.app.post("/exercises/{name}/tags")
+        def add_exercise_tag(name: str, tag_id: int):
+            self.tags.assign_exercise(name, tag_id)
+            return {"status": "added"}
+
+        @self.app.delete("/exercises/{name}/tags/{tag_id}")
+        def remove_exercise_tag(name: str, tag_id: int):
+            self.tags.remove_exercise(name, tag_id)
+            return {"status": "deleted"}
+
+        @self.app.get("/exercises/by_tag")
+        def exercises_by_tag(tag: str):
+            return self.tags.search_exercises_by_tag(tag)
+
         @self.app.get("/exercise_catalog/muscle_groups")
         def list_muscle_groups():
             return self.exercise_catalog.fetch_muscle_groups()
@@ -688,6 +721,7 @@ class GymAPI:
                 secondary_muscle,
                 tertiary_muscle,
                 other_muscles,
+                video_url,
                 _,
             ) = data
             return {
@@ -704,6 +738,7 @@ class GymAPI:
                     tertiary_muscle.split("|") if tertiary_muscle else []
                 ),
                 "other_muscles": other_muscles.split("|") if other_muscles else [],
+                "video_url": video_url,
             }
 
         @self.app.post("/exercise_catalog")
@@ -716,6 +751,7 @@ class GymAPI:
             secondary_muscle: str = "",
             tertiary_muscle: str = "",
             other_muscles: str = "",
+            video_url: str = "",
         ):
             try:
                 eid = self.exercise_catalog.add(
@@ -727,6 +763,7 @@ class GymAPI:
                     secondary_muscle,
                     tertiary_muscle,
                     other_muscles,
+                    video_url,
                 )
                 return {"id": eid}
             except ValueError as e:
@@ -742,6 +779,7 @@ class GymAPI:
             secondary_muscle: str = "",
             tertiary_muscle: str = "",
             other_muscles: str = "",
+            video_url: str = "",
             new_name: str = None,
         ):
             try:
@@ -754,6 +792,7 @@ class GymAPI:
                     secondary_muscle,
                     tertiary_muscle,
                     other_muscles,
+                    video_url,
                     new_name,
                 )
                 return {"status": "updated"}
@@ -1948,6 +1987,25 @@ class GymAPI:
                 end_date,
             )
 
+        @self.app.get("/stats/intensity_map")
+        def stats_intensity_map(
+            exercise: str = None,
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            return self.statistics.intensity_map(
+                exercise,
+                start_date,
+                end_date,
+            )
+
+        @self.app.get("/stats/volume_heatmap")
+        def stats_volume_heatmap(
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            return self.statistics.volume_heatmap(start_date, end_date)
+
         @self.app.get("/stats/exercise_frequency")
         def stats_exercise_frequency(
             exercise: str = None,
@@ -3035,6 +3093,13 @@ class GymAPI:
         @self.app.get("/reports/email_logs")
         def list_email_logs():
             return self.email_logs.fetch_all_logs()
+
+        @self.app.post("/reports/export_email")
+        def export_email(address: str):
+            if not address:
+                raise HTTPException(status_code=400, detail="address required")
+            self.send_export_email(address)
+            return {"status": "sent"}
 
         @self.app.get("/reports/{filename}")
         def get_report_pdf(filename: str):

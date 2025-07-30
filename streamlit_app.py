@@ -13,6 +13,7 @@ import warnings
 import json
 import time
 import os
+import pyttsx3
 from localization import translator
 from avatar_service import AvatarService
 from config import APP_VERSION
@@ -409,6 +410,13 @@ class GymApp:
         if remaining <= 0:
             st.session_state.pop("rest_start", None)
             st.info("Rest over!")
+            if os.environ.get("TEST_MODE") != "1":
+                try:
+                    engine = pyttsx3.init()
+                    engine.say("Rest over")
+                    engine.runAndWait()
+                except Exception:
+                    pass
             return
         pct = int((1 - remaining / rest_sec) * 100)
         st.markdown(
@@ -2093,6 +2101,7 @@ class GymApp:
         st.session_state.lib_ex_mus = []
         st.session_state.lib_ex_eq = ""
         st.session_state.lib_ex_prefix = ""
+        st.session_state.lib_ex_tags = []
         if os.environ.get("TEST_MODE") != "1":
             self._trigger_refresh()
 
@@ -4657,6 +4666,7 @@ class GymApp:
         muscles = self.muscles_repo.fetch_all()
         recent_mus = self.stats.recent_muscles()
         muscles = list(dict.fromkeys(recent_mus + muscles))
+        tag_names = [name for _id, name in self.tags_repo.fetch_all()]
         hide_pre = st.checkbox(
             "Hide Preconfigured Exercises",
             value=self.settings_repo.get_bool("hide_preconfigured_exercises", False),
@@ -4665,6 +4675,7 @@ class GymApp:
         if st.session_state.is_mobile:
             sel_groups = st.multiselect("Muscle Groups", groups, key="lib_ex_groups")
             sel_mus = st.multiselect("Muscles", muscles, key="lib_ex_mus")
+            sel_tags = st.multiselect("Tags", tag_names, key="lib_ex_tags")
             eq_names = self.equipment.fetch_names()
             recent_eq = self.stats.recent_equipment()
             eq_names = list(dict.fromkeys(recent_eq + eq_names))
@@ -4678,6 +4689,9 @@ class GymApp:
                 sel_eq or None,
                 name_filter or None,
             )
+            if sel_tags:
+                tagged = set(self.tags_repo.search_exercises_by_tag(sel_tags[0]))
+                names = [n for n in names if n in tagged]
             with st.expander("Exercise List", expanded=True):
                 choice = st.selectbox("Exercise", [""] + names, key="lib_ex_name")
                 if choice and st.button("Show Details", key="lib_ex_btn"):
@@ -4691,6 +4705,7 @@ class GymApp:
                             secondary,
                             tertiary,
                             other,
+                            video,
                             _,
                         ) = detail
 
@@ -4713,6 +4728,8 @@ class GymApp:
                                 st.markdown("**Variants:**")
                                 for v in variants.split("|"):
                                     st.markdown(f"- {v}")
+                            if video:
+                                st.video(video)
 
                         self._show_dialog("Exercise Details", _content)
         else:
@@ -4723,6 +4740,7 @@ class GymApp:
                         "Muscle Groups", groups, key="lib_ex_groups"
                     )
                     sel_mus = st.multiselect("Muscles", muscles, key="lib_ex_mus")
+                    sel_tags = st.multiselect("Tags", tag_names, key="lib_ex_tags")
                     eq_names = self.equipment.fetch_names()
                     recent_eq = self.stats.recent_equipment()
                     eq_names = list(dict.fromkeys(recent_eq + eq_names))
@@ -4736,6 +4754,9 @@ class GymApp:
                 sel_eq or None,
                 name_filter or None,
             )
+            if sel_tags:
+                tagged = set(self.tags_repo.search_exercises_by_tag(sel_tags[0]))
+                names = [n for n in names if n in tagged]
             with l_col:
                 with st.expander("Exercise List", expanded=True):
                     choice = st.selectbox("Exercise", [""] + names, key="lib_ex_name")
@@ -4750,6 +4771,7 @@ class GymApp:
                                 secondary,
                                 tertiary,
                                 other,
+                                video,
                                 _,
                             ) = detail
 
@@ -4772,6 +4794,8 @@ class GymApp:
                                     st.markdown("**Variants:**")
                                     for v in variants.split("|"):
                                         st.markdown(f"- {v}")
+                                if video:
+                                    st.video(video)
 
                             self._show_dialog("Exercise Details", _content)
 
@@ -4806,6 +4830,7 @@ class GymApp:
                 secondary_sel = st.multiselect("Secondary", muscles, key="cust_ex_sec")
                 tertiary_sel = st.multiselect("Tertiary", muscles, key="cust_ex_ter")
                 other_sel = st.multiselect("Other", muscles, key="cust_ex_other")
+                video_url = st.text_input("Video URL", key="cust_ex_video")
                 if st.button("Add Exercise", key="cust_ex_add"):
                     if name:
                         try:
@@ -4832,6 +4857,7 @@ class GymApp:
                                 secondary,
                                 tertiary,
                                 other,
+                                video_url,
                             )
                             st.success("Exercise added")
                         except ValueError as e:
@@ -4876,6 +4902,8 @@ class GymApp:
                         edit_other = st.text_input(
                             "Other", other, key=f"cust_oth_{name}"
                         )
+                        edit_video = st.text_input("Video URL", key=f"cust_vid_{name}")
+                        edit_video = st.text_input("Video URL", key=f"cust_vid_{name}")
                         with st.expander("Variants", expanded=False):
                             current_vars = self.exercise_variants_repo.fetch_variants(
                                 name
@@ -4907,6 +4935,7 @@ class GymApp:
                                     edit_secondary,
                                     edit_tertiary,
                                     edit_other,
+                                    edit_video,
                                     new_name=edit_name,
                                 )
                                 st.success("Updated")
@@ -4934,6 +4963,7 @@ class GymApp:
                 secondary_sel = st.multiselect("Secondary", muscles, key="cust_ex_sec")
                 tertiary_sel = st.multiselect("Tertiary", muscles, key="cust_ex_ter")
                 other_sel = st.multiselect("Other", muscles, key="cust_ex_other")
+                video_url = st.text_input("Video URL", key="cust_ex_video")
                 if st.button("Add Exercise", key="cust_ex_add"):
                     if name:
                         try:
@@ -4960,6 +4990,7 @@ class GymApp:
                                 secondary,
                                 tertiary,
                                 other,
+                                video_url,
                             )
                             st.success("Exercise added")
                         except ValueError as e:
@@ -5035,6 +5066,7 @@ class GymApp:
                                     edit_secondary,
                                     edit_tertiary,
                                     edit_other,
+                                    edit_video,
                                     new_name=edit_name,
                                 )
                                 st.success("Updated")
