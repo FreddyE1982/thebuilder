@@ -139,6 +139,17 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), [])
 
+    def test_create_workout_with_timezone(self) -> None:
+        resp = self.client.post(
+            "/workouts",
+            params={"timezone": "America/New_York"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        wid = resp.json()["id"]
+        resp = self.client.get(f"/workouts/{wid}")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["timezone"], "America/New_York")
+
         response = self.client.delete("/exercises/1")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"status": "deleted"})
@@ -263,6 +274,7 @@ class APITestCase(unittest.TestCase):
                 "months_active": 6.0,
                 "theme": "dark",
                 "timezone": "America/New_York",
+                "quick_weight_increment": 1.0,
                 "ml_all_enabled": False,
                 "compact_mode": True,
                 "auto_dark_mode": True,
@@ -284,6 +296,7 @@ class APITestCase(unittest.TestCase):
         self.assertTrue(data["show_onboarding"])
         self.assertTrue(data["auto_open_last_workout"])
         self.assertEqual(data["timezone"], "America/New_York")
+        self.assertEqual(float(data["quick_weight_increment"]), 1.0)
         self.assertEqual(data["accent_color"], "#00ff00")
 
     def test_timezone_setting(self) -> None:

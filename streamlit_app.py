@@ -221,6 +221,7 @@ class GymApp:
         self.timezone = self.settings_repo.get_text("timezone", "UTC")
         self.language = self.settings_repo.get_text("language", "en")
         translator.set_language(self.language)
+        self.weight_increment = self.settings_repo.get_float("quick_weight_increment", 0.5)
         self.quick_weights = [
             float(v)
             for v in self.settings_repo.get_text(
@@ -1616,6 +1617,7 @@ class GymApp:
         if st.sidebar.button("New Workout"):
             wid = self.workouts.create(
                 datetime.date.today().isoformat(),
+                self.timezone,
                 "strength",
                 None,
                 None,
@@ -2213,6 +2215,7 @@ class GymApp:
                 if submitted:
                     wid = self.workouts.create(
                         datetime.date.today().isoformat(),
+                        self.timezone,
                         new_type,
                         None,
                         new_loc or None,
@@ -2600,6 +2603,7 @@ class GymApp:
         )
         self._rest_timer()
         self._mini_calendar_widget()
+        self._mini_progress_widget()
         last_id = self.settings_repo.get_int("last_workout_id", 0)
         if last_id and st.button("Open Last Workout"):
             st.session_state.selected_workout = last_id
@@ -2746,6 +2750,7 @@ class GymApp:
                 if submitted:
                     new_id = self.workouts.create(
                         new_date.isoformat(),
+                        self.timezone,
                         new_type,
                         None,
                         new_location or None,
@@ -2870,6 +2875,16 @@ class GymApp:
                     value=loc_val,
                     key=f"workout_location_{selected}",
                     on_change=self._update_workout_location,
+                    args=(int(selected),),
+                )
+                all_tz = sorted(ZoneInfo.available_timezones())
+                tz_index = all_tz.index(detail[4]) if detail[4] in all_tz else 0
+                tz_sel = st.selectbox(
+                    "Timezone",
+                    all_tz,
+                    index=tz_index,
+                    key=f"workout_tz_{selected}",
+                    on_change=self._update_workout_timezone,
                     args=(int(selected),),
                 )
                 rating_edit = st.slider(
@@ -3548,7 +3563,7 @@ class GymApp:
         weight = st.number_input(
             f"Weight ({self.weight_unit})",
             min_value=0.0,
-            step=0.5,
+            step=self.weight_increment,
             key=f"new_weight_{exercise_id}",
         )
         if self.quick_weights:
@@ -3808,6 +3823,11 @@ class GymApp:
         self.workouts.set_location(workout_id, val or None)
         self._trigger_refresh()
 
+    def _update_workout_timezone(self, workout_id: int) -> None:
+        val = st.session_state.get(f"workout_tz_{workout_id}", self.timezone)
+        self.workouts.set_timezone(workout_id, val)
+        self._trigger_refresh()
+
     def _update_workout_rating(self, workout_id: int) -> None:
         val = st.session_state.get(f"rating_{workout_id}")
         self.workouts.set_rating(workout_id, int(val) if val is not None else None)
@@ -3826,12 +3846,14 @@ class GymApp:
     def _load_example_workouts(self) -> None:
         """Populate the database with sample workouts."""
         today = datetime.date.today()
-        wid = self.workouts.create(today.isoformat(), "strength")
+        wid = self.workouts.create(today.isoformat(), self.timezone, "strength")
         ex_id = self.exercises.add(wid, "Bench Press", "Olympic Barbell")
         self.sets.add(ex_id, 5, 100.0, 8)
         self.sets.add(ex_id, 5, 105.0, 9)
         wid2 = self.workouts.create(
-            (today - datetime.timedelta(days=1)).isoformat(), "hypertrophy"
+            (today - datetime.timedelta(days=1)).isoformat(),
+            self.timezone,
+            "hypertrophy",
         )
         ex2 = self.exercises.add(wid2, "Squat", "Olympic Barbell")
         self.sets.add(ex2, 8, 150.0, 7)
@@ -3843,7 +3865,10 @@ class GymApp:
         required = {"Exercise", "Equipment", "Reps", "Weight", "RPE"}
         if not required.issubset(reader.fieldnames or []):
             raise ValueError("invalid columns")
-        wid = self.workouts.create(datetime.date.today().isoformat())
+        wid = self.workouts.create(
+            datetime.date.today().isoformat(),
+            self.timezone,
+        )
         progress = st.progress(0.0)
         rows = list(reader)
         for i, row in enumerate(rows, start=1):
@@ -4220,7 +4245,7 @@ class GymApp:
         weight = st.number_input(
             "Weight (kg)",
             min_value=0.0,
-            step=0.5,
+            step=self.weight_increment,
             key=f"plan_new_weight_{exercise_id}",
         )
         rpe = st.selectbox(
@@ -6116,6 +6141,15 @@ class GymApp:
         )
         st.altair_chart(chart, use_container_width=True)
 
+    def _mini_progress_widget(self) -> None:
+        streak = self.stats.weekly_streak()
+        best = streak.get("best", 0)
+        cur = streak.get("current", 0)
+        pct = int(100 * cur / best) if best else 0
+        ring = f"<div class='progress-ring' style='--val:{pct};'></div>"
+        st.markdown(ring, unsafe_allow_html=True)
+        st.caption(f"Streak {cur}/{best} weeks")
+
     def _goals_tab(self) -> None:
         st.header("Goals")
         overview_tab, manage_tab = st.tabs(["Overview", "Manage"])
@@ -6444,6 +6478,13 @@ class GymApp:
                     value=",".join(str(int(w)) for w in self.quick_weights),
                     help="Comma separated weight values",
                 )
+                qi_in = st.number_input(
+                    "Quick Weight Increment",
+                    min_value=0.1,
+                    step=0.1,
+                    value=float(self.weight_increment),
+                    key="qweight_inc",
+                )
                 bookmark_in = st.text_input(
                     "Bookmarked Analytics",
                     value=",".join(self.settings_repo.get_list("bookmarked_views")),
@@ -6627,6 +6668,7 @@ class GymApp:
                 self.settings_repo.set_text("hotkey_add_set", add_key_in or "a")
                 self.settings_repo.set_text("hotkey_tab_keys", tab_keys_in or "1,2,3,4")
                 self.settings_repo.set_text("quick_weights", qw_in)
+                self.settings_repo.set_float("quick_weight_increment", float(qi_in))
                 self.settings_repo.set_list("enabled_tabs", enabled_tabs_in)
                 self.settings_repo.set_list(
                     "bookmarked_views", [v for v in bookmark_in.split(",") if v]
@@ -6639,6 +6681,7 @@ class GymApp:
                 self.add_set_key = add_key_in or "a"
                 self.tab_keys = tab_keys_in or "1,2,3,4"
                 self.quick_weights = [float(v) for v in qw_in.split(",") if v]
+                self.weight_increment = float(qi_in)
                 self.bookmarks = [v for v in bookmark_in.split(",") if v]
                 self.pinned_stats = [v for v in pinned_in.split(",") if v]
                 self.layout = LayoutManager(self.settings_repo)

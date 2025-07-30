@@ -819,6 +819,7 @@ class GymAPI:
             training_type: str = "strength",
             notes: str | None = None,
             location: str | None = None,
+            timezone: str = "UTC",
             rating: int | None = None,
             mood_before: int | None = None,
             mood_after: int | None = None,
@@ -840,6 +841,7 @@ class GymAPI:
                 )
             workout_id = self.workouts.create(
                 workout_date.isoformat(),
+                timezone,
                 training_type,
                 notes,
                 location,
@@ -950,6 +952,7 @@ class GymAPI:
                 date,
                 start_time,
                 end_time,
+                tz,
                 training_type,
                 notes,
                 location,
@@ -962,6 +965,7 @@ class GymAPI:
                 "date": date,
                 "start_time": start_time,
                 "end_time": end_time,
+                "timezone": tz,
                 "training_type": training_type,
                 "notes": notes,
                 "location": location,
@@ -1065,6 +1069,11 @@ class GymAPI:
             location: str = None,
         ):
             self.workouts.set_location(workout_id, location)
+            return {"status": "updated"}
+
+        @self.app.put("/workouts/{workout_id}/timezone")
+        def update_workout_timezone(workout_id: int, timezone: str):
+            self.workouts.set_timezone(workout_id, timezone)
             return {"status": "updated"}
 
         @self.app.put("/workouts/{workout_id}/rating")

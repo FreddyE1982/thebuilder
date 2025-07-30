@@ -5,6 +5,7 @@ class SettingsSchema(BaseModel):
     weight_unit: str = "kg"
     time_format: str = "24h"
     timezone: str = "UTC"
+    quick_weight_increment: float = 0.5
     rpe_scale: int = 10
     language: str = "en"
     font_size: int = 16
