@@ -61,6 +61,7 @@ from db import (
     DefaultEquipmentRepository,
     ReactionRepository,
     TagRepository,
+    APIKeyRepository,
     GoalRepository,
     ChallengeRepository,
     StatsCacheRepository,
@@ -179,6 +180,7 @@ class GymAPI:
         self.ml_status = MLModelStatusRepository(db_path)
         self.notifications = NotificationRepository(db_path)
         self.comments = WorkoutCommentRepository(db_path)
+        self.api_keys = APIKeyRepository(db_path)
         self.ml_training_raw = MLTrainingRawRepository(db_path)
         self.autoplan_logs = AutoPlannerLogRepository(db_path)
         self.prescription_logs = ExercisePrescriptionLogRepository(db_path)
@@ -696,6 +698,7 @@ class GymAPI:
             muscles: str = None,
             equipment: str = None,
             prefix: str = None,
+            no_equipment: bool = False,
             sort_by: str = "name",
         ):
             groups = muscle_groups.split("|") if muscle_groups else None
@@ -705,6 +708,7 @@ class GymAPI:
                 muscs,
                 equipment,
                 prefix,
+                no_equipment,
                 sort_by,
             )
 
@@ -905,6 +909,7 @@ class GymAPI:
                 )
             workout_id = self.workouts.create(
                 workout_date.isoformat(),
+                None,
                 timezone,
                 training_type,
                 notes,
@@ -1045,6 +1050,7 @@ class GymAPI:
             (
                 wid,
                 date,
+                _name,
                 start_time,
                 end_time,
                 tz,
@@ -1058,6 +1064,7 @@ class GymAPI:
             return {
                 "id": wid,
                 "date": date,
+                "name": _name,
                 "start_time": start_time,
                 "end_time": end_time,
                 "timezone": tz,
@@ -1163,6 +1170,11 @@ class GymAPI:
                     if tid is None:
                         tid = self.tags.add(t)
                     self.tags.assign(workout_id, tid)
+            return {"status": "updated"}
+
+        @self.app.put("/workouts/{workout_id}/name")
+        def rename_workout(workout_id: int, name: str | None = None):
+            self.workouts.set_name(workout_id, name)
             return {"status": "updated"}
 
         @self.app.put("/workouts/{workout_id}/location")
@@ -1347,6 +1359,15 @@ class GymAPI:
                 return {"status": "deleted"}
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
+
+        @self.app.post("/planned_workouts/delete_bulk")
+        def delete_planned_bulk(ids: str = Body(...)):
+            try:
+                plan_ids = [int(i) for i in ids.split(",") if i]
+            except ValueError:
+                raise HTTPException(status_code=400, detail="invalid ids")
+            self.planned_workouts.delete_bulk(plan_ids)
+            return {"status": "deleted"}
 
         @self.app.post("/planned_workouts/{plan_id}/duplicate")
         def duplicate_planned_workout(plan_id: int, date: str):
@@ -1788,6 +1809,13 @@ class GymAPI:
                 "start_time": start_dt.isoformat(timespec="seconds"),
                 "end_time": end_dt.isoformat(timespec="seconds"),
             }
+
+        @self.app.post("/sets/bulk_complete")
+        def bulk_complete(set_ids: str):
+            ids = [int(i) for i in set_ids.split(",") if i]
+            ts = datetime.datetime.now().isoformat(timespec="seconds")
+            self.sets.bulk_complete(ids, ts)
+            return {"status": "completed", "timestamp": ts}
 
         @self.app.get("/sets/{set_id}")
         def get_set(set_id: int):
@@ -3136,6 +3164,23 @@ class GymAPI:
         @self.app.get("/notifications/unread_count")
         def unread_count():
             return {"count": self.notifications.unread_count()}
+
+        @self.app.get("/api_keys")
+        def list_api_keys():
+            return [
+                {"id": kid, "name": name, "key": key}
+                for kid, name, key in self.api_keys.fetch_all()
+            ]
+
+        @self.app.post("/api_keys")
+        def add_api_key(name: str, key: str):
+            kid = self.api_keys.add(name, key)
+            return {"id": kid}
+
+        @self.app.delete("/api_keys/{kid}")
+        def delete_api_key(kid: int):
+            self.api_keys.delete(kid)
+            return {"status": "deleted"}
 
         self.app.include_router(equipment_router)
         self.app.include_router(muscles_router)
