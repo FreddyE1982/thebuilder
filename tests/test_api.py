@@ -2232,6 +2232,42 @@ class APITestCase(unittest.TestCase):
         expected = MathTools.epley_1rm(110.0, 8)
         self.assertAlmostEqual(data[0]["est_1rm"], round(expected, 2), places=2)
 
+    def test_moving_average_progress_endpoint(self) -> None:
+        d1 = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
+        d2 = datetime.date.today().isoformat()
+        self.client.post("/workouts", params={"date": d1})
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8},
+        )
+        self.client.post("/workouts", params={"date": d2})
+        self.client.post(
+            "/workouts/2/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/exercises/2/sets",
+            params={"reps": 5, "weight": 110.0, "rpe": 8},
+        )
+
+        resp = self.client.get(
+            "/stats/moving_average_progress",
+            params={"exercise": "Bench Press", "window": 2},
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(len(data), 2)
+        self.assertEqual(data[0]["date"], d1)
+        expected1 = MathTools.epley_1rm(100.0, 5)
+        self.assertAlmostEqual(data[0]["moving_avg"], round(expected1, 2), places=2)
+        self.assertEqual(data[1]["date"], d2)
+        expected2 = (MathTools.epley_1rm(100.0, 5) + MathTools.epley_1rm(110.0, 5)) / 2
+        self.assertAlmostEqual(data[1]["moving_avg"], round(expected2, 2), places=2)
+
     def test_deload_recommendation_endpoint(self) -> None:
         self.client.post("/workouts")
         self.client.post(

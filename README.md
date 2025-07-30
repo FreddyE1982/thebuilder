@@ -141,3 +141,10 @@ docker-compose up
 This builds a Python image, installs the requirements and starts both the FastAPI
 backend on port `8000` and the Streamlit frontend on port `8501`.
 
+## Command Line Tools
+
+Several helper commands are available via `cli.py`.
+
+- `export`/`backup`/`restore` manage database files and workout exports.
+- `import_strava --csv path --db workout.db` imports workouts from a Strava CSV export.
+

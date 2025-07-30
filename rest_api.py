@@ -1752,6 +1752,20 @@ class GymAPI:
                 end_date,
             )
 
+        @self.app.get("/stats/moving_average_progress")
+        def stats_moving_average_progress(
+            exercise: str,
+            window: int = 7,
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            return self.statistics.moving_average_progress(
+                exercise,
+                window,
+                start_date,
+                end_date,
+            )
+
         @self.app.get("/stats/muscle_progression")
         def stats_muscle_progression(
             muscle: str,

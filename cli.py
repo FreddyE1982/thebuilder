@@ -40,6 +40,22 @@ def restore_db(backup_path: str, db_path: str) -> None:
     shutil.copy(backup_path, db_path)
 
 
+def import_strava(csv_path: str, db_path: str) -> None:
+    """Import workouts from a Strava CSV export."""
+    api = GymAPI(db_path=db_path)
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            date = row.get("Activity Date") or row.get("Date")
+            if not date:
+                continue
+            wtype = row.get("Activity Type") or row.get("Sport", "Cardio")
+            distance = float(row.get("Distance", 0.0))
+            wid = api.workouts.create(date, wtype)
+            ex_id = api.exercises.add(wid, wtype, "Bodyweight")
+            api.sets.add(ex_id, 1, distance, 0)
+
+
 def benchmark(url: str, runs: int = 10) -> None:
     times: list[float] = []
     for _ in range(runs):
@@ -104,6 +120,10 @@ def main() -> None:
 
     audit = sub.add_parser("audit")
 
+    imp = sub.add_parser("import_strava")
+    imp.add_argument("--csv", required=True)
+    imp.add_argument("--db", default="workout.db")
+
     conv = sub.add_parser("convert")
     conv.add_argument("--weight", type=float, required=True)
     conv.add_argument("--unit", choices=["kg", "lb"], required=True)
@@ -122,6 +142,8 @@ def main() -> None:
         benchmark(args.url, args.runs)
     elif args.cmd == "audit":
         security_audit()
+    elif args.cmd == "import_strava":
+        import_strava(args.csv, args.db)
     elif args.cmd == "convert":
         if args.unit == "kg":
             print(f"{args.weight} kg = {WeightConverter.kg_to_lb(args.weight)} lb")
