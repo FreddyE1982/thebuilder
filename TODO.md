@@ -91,7 +91,7 @@
 79. Implement plugin architecture for custom ML models.
 [complete] 80. Add data migration script for schema changes.
 [complete] 81. Implement Slack notifications for workout logs.
-82. Add API key management for third-party integrations.
+[complete] 82. Add API key management for third-party integrations.
 [complete] 83. Provide user-friendly onboarding wizard in GUI.
 [complete] 84. Add long-term trend analytics (moving averages).
 [complete] 85. Support per-workout timezone handling.
@@ -150,10 +150,10 @@
 [complete] 137. Keyboard shortcuts help overlay.
 138. Bulk edit multiple sets at once.
 139. Randomize training plan generator.
-140. Filter exercises without equipment assigned.
+[complete] 140. Filter exercises without equipment assigned.
 [complete] 141. Switch weight units on the fly in set entry.
 142. Assign custom icons to workouts.
-143. Multi-select deletion of planned workouts.
+[complete] 143. Multi-select deletion of planned workouts.
 144. Donut charts for goal progress visualization.
 [complete] 145. Link directly to equipment details from sets.
 146. Interactive tutorial for first workout creation.
@@ -177,7 +177,7 @@
 164. Short completion animations for workouts.
 [complete] 165. Quick-add tags using hashtag syntax.
 166. Scrollable timeline of workout months.
-167. Rename logged workouts.
+[complete] 167. Rename logged workouts.
 [complete] 168. Customizable layout spacing options.
 [complete] 169. Filter by equipment type quickly.
 [complete] 170. Hide or show columns in tables.
@@ -205,7 +205,7 @@
 [complete] 192. Quick filter for unrated workouts.
 [complete] 193. Keyboard navigation in history table.
 [complete] 194. Customizable quick weight increments.
-195. Bulk mark sets as completed using checkboxes.
+[complete] 195. Bulk mark sets as completed using checkboxes.
 [complete] 196. Collapsible explanations for analytics charts.
 [complete] 197. Preview thumbnails for uploaded images.
 [complete] 198. Keyboard shortcut to toggle dark mode.

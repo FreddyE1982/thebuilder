@@ -21,6 +21,7 @@ class Database:
             """CREATE TABLE workouts (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     date TEXT NOT NULL,
+                    name TEXT,
                     start_time TEXT,
                     end_time TEXT,
                     timezone TEXT NOT NULL DEFAULT 'UTC',
@@ -34,6 +35,7 @@ class Database:
             [
                 "id",
                 "date",
+                "name",
                 "start_time",
                 "end_time",
                 "timezone",
@@ -533,6 +535,14 @@ class Database:
                 );""",
             ["id", "workout_id", "timestamp", "comment"],
         ),
+        "api_keys": (
+            """CREATE TABLE api_keys (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL UNIQUE,
+                    api_key TEXT NOT NULL
+                );""",
+            ["id", "name", "api_key"],
+        ),
         "weight_stats_cache": (
             """CREATE TABLE weight_stats_cache (
                     start_date TEXT,
@@ -894,6 +904,7 @@ class AsyncWorkoutRepository(AsyncBaseRepository):
             str,
             Optional[str],
             Optional[str],
+            Optional[str],
             str,
             str,
             Optional[str],
@@ -953,6 +964,7 @@ class WorkoutRepository(BaseRepository):
     def create(
         self,
         date: str,
+        name: str | None = None,
         timezone: str = "UTC",
         training_type: str = "strength",
         notes: str | None = None,
@@ -964,9 +976,10 @@ class WorkoutRepository(BaseRepository):
         end_time: str | None = None,
     ) -> int:
         return self.execute(
-            "INSERT INTO workouts (date, timezone, training_type, notes, location, rating, mood_before, mood_after, start_time, end_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+            "INSERT INTO workouts (date, name, timezone, training_type, notes, location, rating, mood_before, mood_after, start_time, end_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
             (
                 date,
+                name,
                 timezone,
                 training_type,
                 notes,
@@ -1004,7 +1017,7 @@ class WorkoutRepository(BaseRepository):
         ]
     ]:
         query = (
-            "SELECT id, date, start_time, end_time, timezone, training_type, notes, rating, mood_before, mood_after FROM workouts"
+            "SELECT id, date, name, start_time, end_time, timezone, training_type, notes, rating, mood_before, mood_after FROM workouts"
         )
         params: list[str | int] = []
         where_clauses: list[str] = []
@@ -1123,6 +1136,7 @@ class WorkoutRepository(BaseRepository):
         str,
         Optional[str],
         Optional[str],
+        Optional[str],
         str,
         str,
         Optional[str],
@@ -1132,7 +1146,7 @@ class WorkoutRepository(BaseRepository):
         Optional[int],
     ]:
         rows = self.fetch_all(
-            "SELECT id, date, start_time, end_time, timezone, training_type, notes, location, rating, mood_before, mood_after FROM workouts WHERE id = ?;",
+            "SELECT id, date, name, start_time, end_time, timezone, training_type, notes, location, rating, mood_before, mood_after FROM workouts WHERE id = ?;",
             (workout_id,),
         )
         if not rows:
@@ -1143,6 +1157,12 @@ class WorkoutRepository(BaseRepository):
         self.execute(
             "UPDATE workouts SET notes = ? WHERE id = ?;",
             (note, workout_id),
+        )
+
+    def set_name(self, workout_id: int, name: str | None) -> None:
+        self.execute(
+            "UPDATE workouts SET name = ? WHERE id = ?;",
+            (name, workout_id),
         )
 
     def search(self, query: str) -> list[tuple[int, str]]:
@@ -1376,6 +1396,16 @@ class SetRepository(BaseRepository):
             "UPDATE sets SET end_time = ? WHERE id = ?;",
             (timestamp, set_id),
         )
+
+    def bulk_complete(self, set_ids: list[int], timestamp: str) -> None:
+        if not set_ids:
+            return
+        with self._connection() as conn:
+            for sid in set_ids:
+                conn.execute(
+                    "UPDATE sets SET start_time = ?, end_time = ? WHERE id = ?;",
+                    (timestamp, timestamp, sid),
+                )
 
     def set_duration(self, set_id: int, seconds: float, end_timestamp: str | None = None) -> None:
         if seconds <= 0:
@@ -1714,6 +1744,15 @@ class PlannedWorkoutRepository(BaseRepository):
         if not rows:
             raise ValueError("planned workout not found")
         self.execute("DELETE FROM planned_workouts WHERE id = ?;", (plan_id,))
+
+    def delete_bulk(self, plan_ids: list[int]) -> None:
+        if not plan_ids:
+            return
+        placeholders = ",".join("?" for _ in plan_ids)
+        self.execute(
+            f"DELETE FROM planned_workouts WHERE id IN ({placeholders});",
+            tuple(plan_ids),
+        )
 
     def delete_all(self) -> None:
         self._delete_all("planned_workouts")
@@ -2595,6 +2634,7 @@ class ExerciseCatalogRepository(BaseRepository):
         muscles: Optional[List[str]] = None,
         equipment: Optional[str] = None,
         prefix: Optional[str] = None,
+        no_equipment: bool = False,
         sort_by: str = "name",
     ) -> List[str]:
         query = "SELECT name FROM exercise_catalog WHERE 1=1"
@@ -2606,6 +2646,8 @@ class ExerciseCatalogRepository(BaseRepository):
         if equipment:
             query += " AND equipment_names LIKE ?"
             params.append(f"%{equipment}%")
+        if no_equipment:
+            query += " AND (equipment_names IS NULL OR equipment_names = '')"
         if prefix:
             query += " AND name LIKE ?"
             params.append(f"{prefix}%")
@@ -3429,6 +3471,25 @@ class ReactionRepository(BaseRepository):
             (workout_id,),
         )
         return [(r[0], int(r[1])) for r in rows]
+
+
+class APIKeyRepository(BaseRepository):
+    """Repository for managing third-party API keys."""
+
+    def add(self, name: str, key: str) -> int:
+        return self.execute(
+            "INSERT INTO api_keys (name, api_key) VALUES (?, ?);",
+            (name, key),
+        )
+
+    def fetch_all(self) -> list[tuple[int, str, str]]:
+        rows = super().fetch_all(
+            "SELECT id, name, api_key FROM api_keys ORDER BY id;"
+        )
+        return [(int(r[0]), r[1], r[2]) for r in rows]
+
+    def delete(self, key_id: int) -> None:
+        self.execute("DELETE FROM api_keys WHERE id = ?;", (key_id,))
 
 
 class TemplateWorkoutRepository(BaseRepository):
