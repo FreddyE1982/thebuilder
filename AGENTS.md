@@ -32,7 +32,7 @@ The agent is to always follow there rules:
 a FAILEDTESTS.md that is persisted.
 15. the agent is NOT to run ANY tests if the agent has not made any changes to code yet
 16. if the user says "relevant tests only", then the agent is to run tests that are relevant to the changed code pieces ONLY even if that contradicts another rule
-17. the agent is NEVER to run all tests in one go. (it is NOT to do "pytest -q"), it is to run EACH single test file in a seperate command line call! example: lets say we have three test files "test1.py", "test2.py", "test3.py".
+17. the agent is NEVER to run all tests in one go. (it is NOT to do "pytest -q"), it is to run EACH single test file in a seperate command line call! THE AGENT IS FORBIDDEN TO USE LOOPS! IT MUST DO A SEPERATE PYTEST CALL TO EACH INDIVIDUAL TEST FILE! example: lets say we have three test files "test1.py", "test2.py", "test3.py".
 The correct procedure for the agent is: 1. run test1.py, fix errors (if any)...rerun test1.py (fix errors if any...repeat until no more errors), 2. run test2.py, fix errors (if any)...rerun test2.py (fix errors if any...repeat until no more errors), 3. run test3.py, fix errors (if any)...rerun test3.py (fix errors if any...repeat until no more errors).
 
 ## Muscle linking
