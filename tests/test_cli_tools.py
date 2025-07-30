@@ -2,7 +2,13 @@ import os
 import sys
 import unittest
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-from cli import export_workouts, backup_db, restore_db, demo_data
+from cli import (
+    export_workouts,
+    backup_db,
+    restore_db,
+    demo_data,
+    import_strava,
+)
 from rest_api import GymAPI
 from fastapi.testclient import TestClient
 
@@ -43,6 +49,17 @@ class CLIToolsTest(unittest.TestCase):
         api2 = GymAPI(db_path=self.db_path, yaml_path=self.yaml_path)
         workouts = api2.workouts.fetch_all_workouts()
         self.assertEqual(len(workouts), 1)
+
+    def test_import_strava(self) -> None:
+        csv_path = "activities.csv"
+        with open(csv_path, "w", encoding="utf-8", newline="") as f:
+            f.write("Activity Date,Activity Type,Distance\n")
+            f.write("2023-01-01,Run,5.0\n")
+        import_strava(csv_path, self.db_path)
+        api2 = GymAPI(db_path=self.db_path, yaml_path=self.yaml_path)
+        workouts = api2.workouts.fetch_all_workouts()
+        self.assertEqual(len(workouts), 1)
+        os.remove(csv_path)
 
 if __name__ == "__main__":
     unittest.main()

@@ -2066,3 +2066,22 @@ class StatisticsService:
             else:
                 break
         return {"current": current, "best": best}
+
+    def moving_average_progress(
+        self,
+        exercise: str,
+        window: int = 7,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> list[dict[str, float]]:
+        """Return moving average of estimated 1RM progression."""
+        hist = self.progression(exercise, start_date, end_date)
+        values = [h["est_1rm"] for h in hist]
+        dates = [h["date"] for h in hist]
+        result: list[dict[str, float]] = []
+        for i, val in enumerate(values):
+            start = max(0, i - window + 1)
+            window_vals = values[start : i + 1]
+            avg = sum(window_vals) / len(window_vals)
+            result.append({"date": dates[i], "moving_avg": round(avg, 2)})
+        return result

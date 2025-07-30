@@ -34,7 +34,7 @@
 [complete] 25. Add Jenkinsfile for automated build.
 [complete] 26. Add color-blind friendly theme options.
 [complete] 27. Implement rate limiting on REST API endpoints.
-28. Add importer from widely-used workout apps (e.g. Strava).
+[complete] 28. Add importer from widely-used workout apps (e.g. Strava).
 [complete] 29. Provide export to generic training XML format.
 [complete] 30. Add websockets endpoint for real-time workout updates.
 31. Implement progressive web app features for offline use.
@@ -90,7 +90,7 @@
 81. Implement Slack notifications for workout logs.
 82. Add API key management for third-party integrations.
 [complete] 83. Provide user-friendly onboarding wizard in GUI.
-84. Add long-term trend analytics (moving averages).
+[complete] 84. Add long-term trend analytics (moving averages).
 85. Support per-workout timezone handling.
 [complete] 86. Implement automatic database vacuuming.
 [complete] 87. Add drag-and-drop reordering for workout templates.
