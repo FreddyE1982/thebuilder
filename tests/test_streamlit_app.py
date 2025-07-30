@@ -279,6 +279,22 @@ class StreamlitAppTest(unittest.TestCase):
         self.assertEqual(row, ("2024-01-02", "strength"))
         conn.close()
 
+    def test_star_rating_widget(self) -> None:
+        idx_new = _find_by_label(
+            self.at.button,
+            "New Workout",
+            key="FormSubmitter:new_workout_form-New Workout",
+        )
+        self.at.button[idx_new].click().run()
+        rating_idx = _find_by_label(self.at.select_slider, "Rating")
+        self.at.select_slider[rating_idx].set_value(3).run()
+        conn = self._connect()
+        cur = conn.cursor()
+        cur.execute("SELECT rating FROM workouts;")
+        val = cur.fetchone()[0]
+        conn.close()
+        self.assertEqual(val, 3)
+
     def test_add_favorite_exercise(self) -> None:
         self.at.query_params["tab"] = "library"
         self.at.run()

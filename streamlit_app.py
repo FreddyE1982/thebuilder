@@ -1,5 +1,5 @@
 import datetime
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, available_timezones
 import pandas as pd
 from contextlib import contextmanager
 from pathlib import Path
@@ -2825,10 +2825,10 @@ class GymApp:
                 detail = self.workouts.fetch_detail(int(selected))
                 start_time = detail[2]
                 end_time = detail[3]
-                current_type = detail[4]
-                notes_val = detail[5] or ""
-                loc_val = detail[6] or ""
-                rating_val = detail[7]
+                current_type = detail[5]
+                notes_val = detail[6] or ""
+                loc_val = detail[7] or ""
+                rating_val = detail[8]
                 status_class = "status-idle"
                 status_label = "Idle"
                 if start_time and end_time:
@@ -2916,7 +2916,7 @@ class GymApp:
                     on_change=self._update_workout_location,
                     args=(int(selected),),
                 )
-                all_tz = sorted(ZoneInfo.available_timezones())
+                all_tz = sorted(available_timezones())
                 tz_index = all_tz.index(detail[4]) if detail[4] in all_tz else 0
                 tz_sel = st.selectbox(
                     "Timezone",
@@ -2926,10 +2926,11 @@ class GymApp:
                     on_change=self._update_workout_timezone,
                     args=(int(selected),),
                 )
-                rating_edit = st.slider(
+                stars = lambda v: "\u2605" * v + "\u2606" * (5 - v)
+                rating_edit = st.select_slider(
                     "Rating",
-                    0,
-                    5,
+                    options=[0, 1, 2, 3, 4, 5],
+                    format_func=stars,
                     value=rating_val if rating_val is not None else 0,
                     key=f"rating_{selected}",
                     on_change=self._update_workout_rating,
