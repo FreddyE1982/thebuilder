@@ -132,9 +132,10 @@ class Database:
             """CREATE TABLE exercise_images (
                     exercise_name TEXT PRIMARY KEY,
                     path TEXT NOT NULL,
+                    thumbnail_path TEXT,
                     FOREIGN KEY(exercise_name) REFERENCES exercise_catalog(name) ON DELETE CASCADE
                 );""",
-            ["exercise_name", "path"],
+            ["exercise_name", "path", "thumbnail_path"],
         ),
         "exercises": (
             """CREATE TABLE exercises (
@@ -152,9 +153,10 @@ class Database:
             """CREATE TABLE planned_workouts (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     date TEXT NOT NULL,
-                    training_type TEXT NOT NULL DEFAULT 'strength'
+                    training_type TEXT NOT NULL DEFAULT 'strength',
+                    position INTEGER NOT NULL DEFAULT 0
                 );""",
-            ["id", "date", "training_type"],
+            ["id", "date", "training_type", "position"],
         ),
         "planned_exercises": (
             """CREATE TABLE planned_exercises (
@@ -845,9 +847,11 @@ class AsyncWorkoutRepository(AsyncBaseRepository):
         rating: Optional[int] = None,
         mood_before: Optional[int] = None,
         mood_after: Optional[int] = None,
+        start_time: str | None = None,
+        end_time: str | None = None,
     ) -> int:
         return await self.execute(
-            "INSERT INTO workouts (date, timezone, training_type, notes, location, rating, mood_before, mood_after) VALUES (?, ?, ?, ?, ?, ?, ?, ?);",
+            "INSERT INTO workouts (date, timezone, training_type, notes, location, rating, mood_before, mood_after, start_time, end_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
             (
                 date,
                 timezone,
@@ -857,6 +861,8 @@ class AsyncWorkoutRepository(AsyncBaseRepository):
                 rating,
                 mood_before,
                 mood_after,
+                start_time,
+                end_time,
             ),
         )
 
@@ -864,6 +870,8 @@ class AsyncWorkoutRepository(AsyncBaseRepository):
         self,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
+        start_time: Optional[str] = None,
+        end_time: Optional[str] = None,
         sort_by: str = "id",
         descending: bool = True,
         limit: int | None = None,
@@ -893,6 +901,12 @@ class AsyncWorkoutRepository(AsyncBaseRepository):
         if end_date:
             where_clauses.append("date <= ?")
             params.append(end_date)
+        if start_time:
+            where_clauses.append("start_time >= ?")
+            params.append(start_time)
+        if end_time:
+            where_clauses.append("end_time <= ?")
+            params.append(end_time)
         if where_clauses:
             query += " WHERE " + " AND ".join(where_clauses)
         allowed = {"id", "date", "start_time", "end_time", "training_type", "rating"}
@@ -934,9 +948,11 @@ class WorkoutRepository(BaseRepository):
         rating: Optional[int] = None,
         mood_before: Optional[int] = None,
         mood_after: Optional[int] = None,
+        start_time: str | None = None,
+        end_time: str | None = None,
     ) -> int:
         return self.execute(
-            "INSERT INTO workouts (date, timezone, training_type, notes, location, rating, mood_before, mood_after) VALUES (?, ?, ?, ?, ?, ?, ?, ?);",
+            "INSERT INTO workouts (date, timezone, training_type, notes, location, rating, mood_before, mood_after, start_time, end_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
             (
                 date,
                 timezone,
@@ -946,6 +962,8 @@ class WorkoutRepository(BaseRepository):
                 rating,
                 mood_before,
                 mood_after,
+                start_time,
+                end_time,
             ),
         )
 
@@ -953,6 +971,8 @@ class WorkoutRepository(BaseRepository):
         self,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
+        start_time: Optional[str] = None,
+        end_time: Optional[str] = None,
         sort_by: str = "id",
         descending: bool = True,
         limit: int | None = None,
@@ -982,6 +1002,12 @@ class WorkoutRepository(BaseRepository):
         if end_date:
             where_clauses.append("date <= ?")
             params.append(end_date)
+        if start_time:
+            where_clauses.append("start_time >= ?")
+            params.append(start_time)
+        if end_time:
+            where_clauses.append("end_time <= ?")
+            params.append(end_time)
         if where_clauses:
             query += " WHERE " + " AND ".join(where_clauses)
         allowed = {"id", "date", "start_time", "end_time", "training_type", "rating"}
@@ -1606,19 +1632,21 @@ class PlannedWorkoutRepository(BaseRepository):
     """Repository for planned workouts."""
 
     def create(self, date: str, training_type: str = "strength") -> int:
+        rows = self.fetch_all("SELECT COALESCE(MAX(position),0)+1 FROM planned_workouts")
+        pos = int(rows[0][0]) if rows else 1
         return self.execute(
-            "INSERT INTO planned_workouts (date, training_type) VALUES (?, ?);",
-            (date, training_type),
+            "INSERT INTO planned_workouts (date, training_type, position) VALUES (?, ?, ?);",
+            (date, training_type, pos),
         )
 
     def fetch_all(
         self,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
-        sort_by: str = "id",
+        sort_by: str = "position",
         descending: bool = True,
-    ) -> List[Tuple[int, str, str]]:
-        query = "SELECT id, date, training_type FROM planned_workouts WHERE 1=1"
+    ) -> List[Tuple[int, str, str, int]]:
+        query = "SELECT id, date, training_type, position FROM planned_workouts WHERE 1=1"
         params: list[str] = []
         if start_date:
             query += " AND date >= ?"
@@ -1626,9 +1654,9 @@ class PlannedWorkoutRepository(BaseRepository):
         if end_date:
             query += " AND date <= ?"
             params.append(end_date)
-        allowed = {"id", "date", "training_type"}
+        allowed = {"id", "date", "training_type", "position"}
         if sort_by not in allowed:
-            sort_by = "id"
+            sort_by = "position"
         order = "DESC" if descending else "ASC"
         query += f" ORDER BY {sort_by} {order};"
         return super().fetch_all(query, tuple(params))
@@ -1677,6 +1705,16 @@ class PlannedWorkoutRepository(BaseRepository):
 
     def delete_all(self) -> None:
         self._delete_all("planned_workouts")
+
+    def reorder(self, order: list[int]) -> None:
+        existing = [row[0] for row in super().fetch_all("SELECT id FROM planned_workouts ORDER BY position;")]
+        if set(order) != set(existing) or len(order) != len(existing):
+            raise ValueError("invalid order")
+        for pos, pid in enumerate(order, start=1):
+            self.execute(
+                "UPDATE planned_workouts SET position = ? WHERE id = ?;",
+                (pos, pid),
+            )
 
 
 class PlannedExerciseRepository(BaseRepository):
@@ -2529,6 +2567,7 @@ class ExerciseCatalogRepository(BaseRepository):
         muscles: Optional[List[str]] = None,
         equipment: Optional[str] = None,
         prefix: Optional[str] = None,
+        sort_by: str = "name",
     ) -> List[str]:
         query = "SELECT name FROM exercise_catalog WHERE 1=1"
         params: List[str] = []
@@ -2561,7 +2600,10 @@ class ExerciseCatalogRepository(BaseRepository):
             query += " AND (" + " OR ".join(muscle_clauses) + ")"
         if self._hide_preconfigured():
             query += " AND is_custom = 1"
-        query += " ORDER BY name;"
+        allowed = {"name", "muscle_group"}
+        if sort_by not in allowed:
+            sort_by = "name"
+        query += f" ORDER BY {sort_by};"
         rows = self.fetch_all(query, tuple(params))
         result: List[str] = []
         for (name,) in rows:
@@ -3203,20 +3245,20 @@ class ExerciseImageRepository(BaseRepository):
         super().__init__(db_path)
         self.exercise_names = ExerciseNameRepository(db_path)
 
-    def set(self, exercise_name: str, path: str) -> None:
+    def set(self, exercise_name: str, path: str, thumbnail_path: str | None = None) -> None:
         self.exercise_names.ensure([exercise_name])
         self.execute(
-            "INSERT INTO exercise_images (exercise_name, path) VALUES (?, ?) "
-            "ON CONFLICT(exercise_name) DO UPDATE SET path=excluded.path;",
-            (exercise_name, path),
+            "INSERT INTO exercise_images (exercise_name, path, thumbnail_path) VALUES (?, ?, ?) "
+            "ON CONFLICT(exercise_name) DO UPDATE SET path=excluded.path, thumbnail_path=excluded.thumbnail_path;",
+            (exercise_name, path, thumbnail_path),
         )
 
-    def fetch(self, exercise_name: str) -> str | None:
+    def fetch(self, exercise_name: str) -> tuple[str, str | None] | None:
         rows = self.fetch_all(
-            "SELECT path FROM exercise_images WHERE exercise_name = ?;",
+            "SELECT path, thumbnail_path FROM exercise_images WHERE exercise_name = ?;",
             (exercise_name,),
         )
-        return rows[0][0] if rows else None
+        return (rows[0][0], rows[0][1]) if rows else None
 
     def delete(self, exercise_name: str) -> None:
         self.execute(
@@ -3504,6 +3546,10 @@ class TagRepository(BaseRepository):
     def fetch_all(self) -> list[tuple[int, str]]:
         rows = super().fetch_all("SELECT id, name FROM tags ORDER BY name;")
         return [(r[0], r[1]) for r in rows]
+
+    def get_id(self, name: str) -> int | None:
+        rows = super().fetch_all("SELECT id FROM tags WHERE name = ?;", (name,))
+        return rows[0][0] if rows else None
 
     def assign(self, workout_id: int, tag_id: int) -> None:
         self.execute(

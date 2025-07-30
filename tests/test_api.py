@@ -5,6 +5,7 @@ import unittest
 import sqlite3
 import shutil
 import subprocess
+import io
 from fastapi.testclient import TestClient
 import yaml
 import json
@@ -3930,6 +3931,66 @@ class APITestCase(unittest.TestCase):
         data = resp.json()
         self.assertEqual(len(data), 1)
         self.assertIn("progress", data[0])
+
+    def test_reorder_planned_workouts(self) -> None:
+        d1 = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
+        d2 = (datetime.date.today() + datetime.timedelta(days=2)).isoformat()
+        id1 = self.client.post("/planned_workouts", params={"date": d1}).json()["id"]
+        id2 = self.client.post("/planned_workouts", params={"date": d2}).json()["id"]
+        resp = self.client.post("/planned_workouts/order", params={"order": f"{id2},{id1}"})
+        self.assertEqual(resp.status_code, 200)
+        data = self.client.get("/planned_workouts", params={"sort_by": "position", "descending": False}).json()
+        self.assertEqual([d["id"] for d in data], [id2, id1])
+
+    def test_workout_history_time_filter(self) -> None:
+        self.client.post("/workouts", params={"date": "2024-01-01", "start_time": "08:00", "end_time": "09:00"})
+        self.client.post("/workouts", params={"date": "2024-01-02", "start_time": "18:00", "end_time": "19:00"})
+        resp = self.client.get(
+            "/workouts/history",
+            params={"start_date": "2024-01-01", "end_date": "2024-01-02", "start_time": "17:00"},
+        )
+        self.assertEqual(len(resp.json()), 1)
+
+    def test_exercise_catalog_sort(self) -> None:
+        self.client.post(
+            "/exercise_catalog",
+            params={
+                "muscle_group": "Chest",
+                "name": "ZZ Press",
+                "variants": "",
+                "equipment_names": "Dumbbell",
+                "primary_muscle": "Chest",
+            },
+        )
+        self.client.post(
+            "/exercise_catalog",
+            params={
+                "muscle_group": "Arms",
+                "name": "AA Curl",
+                "variants": "",
+                "equipment_names": "Dumbbell",
+                "primary_muscle": "Biceps",
+            },
+        )
+        resp = self.client.get("/exercise_catalog", params={"sort_by": "muscle_group"})
+        self.assertEqual(resp.json()[0], "AA Curl")
+
+    def test_hashtag_tags(self) -> None:
+        resp = self.client.post("/workouts", params={"notes": "great #fun"})
+        wid = resp.json()["id"]
+        tags = self.client.get(f"/workouts/{wid}/tags").json()
+        self.assertEqual(len(tags), 1)
+        self.assertEqual(tags[0]["name"], "fun")
+
+    def test_report_pdf_endpoint(self) -> None:
+        os.makedirs("reports", exist_ok=True)
+        path = "reports/test.pdf"
+        with open(path, "wb") as f:
+            f.write(b"%PDF-1.4\n%%EOF")
+        resp = self.client.get("/reports/test.pdf")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.headers["content-type"], "application/pdf")
+
 
 
 class RateLimitTestCase(unittest.TestCase):
