@@ -1880,6 +1880,15 @@ class GymAPI:
                 end_date,
             )
 
+        @self.app.get("/stats/progression_pdf")
+        def stats_progression_pdf(
+            exercise: str,
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            data = self.statistics.progression_chart_pdf(exercise, start_date, end_date)
+            return Response(content=data, media_type="application/pdf")
+
         @self.app.get("/stats/moving_average_progress")
         def stats_moving_average_progress(
             exercise: str,
