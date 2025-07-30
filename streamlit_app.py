@@ -239,6 +239,7 @@ class GymApp:
         )
         self.add_set_key = self.settings_repo.get_text("hotkey_add_set", "a")
         self.tab_keys = self.settings_repo.get_text("hotkey_tab_keys", "1,2,3,4")
+        self.toggle_theme_key = self.settings_repo.get_text("hotkey_toggle_theme", "d")
         self.sidebar_width = self.settings_repo.get_float("sidebar_width", 18.0)
         self.font_size = self.settings_repo.get_float("font_size", 16.0)
         self.rpe_scale = self.settings_repo.get_int("rpe_scale", 10)
@@ -479,6 +480,10 @@ class GymApp:
             st.session_state.open_palette = True
             params.pop("cmd")
             st.experimental_set_query_params(**params)
+        if params.get("help") == "1":
+            st.session_state.open_help_dialog = True
+            params.pop("help")
+            st.experimental_set_query_params(**params)
         if mode is None:
             components.html(
                 """
@@ -629,6 +634,7 @@ class GymApp:
             const tabKeys = JSON.parse('%TAB_KEYS%');
             const tabLabels = JSON.parse('%TAB_LABELS%');
             const addSetKey = '%ADD_KEY%'.toLowerCase();
+            const toggleThemeKey = '%TOGGLE_KEY%'.toLowerCase();
             function handleHotkeys(e) {
                 if (e.altKey && tabKeys.includes(e.key)) {
                     const idx = tabKeys.indexOf(e.key);
@@ -642,6 +648,14 @@ class GymApp:
                 } else if (e.ctrlKey && e.key.toLowerCase() === 'k') {
                     const params = new URLSearchParams(window.location.search);
                     params.set('cmd', '1');
+                    window.location.search = params.toString();
+                } else if (e.ctrlKey && e.key.toLowerCase() === toggleThemeKey) {
+                    const btn = Array.from(document.querySelectorAll('button'))
+                        .find(b => b.innerText.trim() === 'Toggle Theme');
+                    if (btn) btn.click();
+                } else if (!e.ctrlKey && !e.altKey && e.key === '?') {
+                    const params = new URLSearchParams(window.location.search);
+                    params.set('help', '1');
                     window.location.search = params.toString();
                 }
             }
@@ -680,6 +694,7 @@ class GymApp:
             .replace("%TAB_KEYS%", json.dumps(self.tab_keys.split(",")))
             .replace("%TAB_LABELS%", json.dumps(self.layout.nav_labels))
             .replace("%ADD_KEY%", self.add_set_key)
+            .replace("%TOGGLE_KEY%", self.toggle_theme_key)
             .replace(
                 "%COLLAPSE_HEADER%",
                 "handleHeaderCollapse();" if self.collapse_header else "",
@@ -1635,6 +1650,9 @@ class GymApp:
                 self._help_dialog()
             if st.button("Show About", key="about_btn"):
                 self._about_dialog()
+            if st.session_state.get("open_help_dialog"):
+                self._help_dialog()
+                st.session_state.open_help_dialog = False
         with st.sidebar.expander("Quick Search"):
             self._quick_search("sidebar")
 
@@ -2082,6 +2100,11 @@ class GymApp:
     def _help_overlay_dialog(self) -> None:
         def _content() -> None:
             st.markdown("## Help Topics")
+            st.markdown("### Keyboard Shortcuts")
+            st.markdown("- **Alt + [Tab Keys]**: Switch tabs")
+            st.markdown(f"- **Alt + {self.add_set_key.upper()}**: Add Set")
+            st.markdown(f"- **Ctrl + {self.toggle_theme_key.upper()}**: Toggle Theme")
+            st.markdown("- **?**: Open Help")
             readme = Path(__file__).with_name("README.md")
             if readme.exists():
                 with open(readme, "r", encoding="utf-8") as f:
@@ -6467,6 +6490,11 @@ class GymApp:
                     value=self.tab_keys,
                     help="Comma separated keys for Workouts, Library, Progress, Settings",
                 )
+                toggle_key_in = st.text_input(
+                    "Toggle Theme Hotkey",
+                    value=self.toggle_theme_key,
+                    max_chars=1,
+                )
                 enabled_tabs_in = st.multiselect(
                     "Enabled Tabs",
                     ["workouts", "library", "progress", "settings"],
@@ -6667,6 +6695,7 @@ class GymApp:
                 self.collapse_header = collapse_header_opt
                 self.settings_repo.set_text("hotkey_add_set", add_key_in or "a")
                 self.settings_repo.set_text("hotkey_tab_keys", tab_keys_in or "1,2,3,4")
+                self.settings_repo.set_text("hotkey_toggle_theme", toggle_key_in or "d")
                 self.settings_repo.set_text("quick_weights", qw_in)
                 self.settings_repo.set_float("quick_weight_increment", float(qi_in))
                 self.settings_repo.set_list("enabled_tabs", enabled_tabs_in)
@@ -6680,6 +6709,7 @@ class GymApp:
                 self.settings_repo.set_bool("hide_completed_sets", hide_sets_opt)
                 self.add_set_key = add_key_in or "a"
                 self.tab_keys = tab_keys_in or "1,2,3,4"
+                self.toggle_theme_key = toggle_key_in or "d"
                 self.quick_weights = [float(v) for v in qw_in.split(",") if v]
                 self.weight_increment = float(qi_in)
                 self.bookmarks = [v for v in bookmark_in.split(",") if v]
