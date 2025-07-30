@@ -118,7 +118,7 @@
 108. Provide inline video tutorials for each exercise.
 [complete] 109. Allow checkboxes to mark sets as warm-ups.
 110. Add screenshot capture for progress charts.
-111. Enable duplication of logged workouts.
+[complete] 111. Enable duplication of logged workouts.
 112. Support export of progress charts to PDF.
 113. Show real-time timer overlay during sets.
 114. Filter exercise lists to favorites only.
@@ -199,7 +199,7 @@
 189. Import workout history from CSV.
 190. Local search index for offline filtering.
 191. Daily reminder notifications.
-192. Quick filter for unrated workouts.
+[complete] 192. Quick filter for unrated workouts.
 193. Keyboard navigation in history table.
 194. Customizable quick weight increments.
 195. Bulk mark sets as completed using checkboxes.

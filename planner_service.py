@@ -188,3 +188,50 @@ class PlannerService:
             for _sid, reps, weight, rpe, _st, _et, _warm, _pos in sets:
                 self.template_sets.add(t_ex_id, reps, weight, rpe)
         return template_id
+
+    def duplicate_workout(self, workout_id: int, new_date: str) -> int:
+        """Create a copy of an existing workout including all exercises and sets."""
+        (
+            _wid,
+            _date,
+            _s,
+            _e,
+            training_type,
+            notes,
+            location,
+            rating,
+            mood_before,
+            mood_after,
+        ) = self.workouts.fetch_detail(workout_id)
+        new_id = self.workouts.create(
+            new_date,
+            training_type,
+            notes,
+            location,
+            rating,
+            mood_before,
+            mood_after,
+        )
+        exercises = self.exercises.fetch_for_workout(workout_id)
+        for ex_id, name, equipment, note in exercises:
+            new_ex_id = self.exercises.add(new_id, name, equipment, note)
+            sets = self.sets.fetch_for_exercise(ex_id)
+            for sid, reps, weight, rpe, stime, etime, warmup, _pos in sets:
+                detail = self.sets.fetch_detail(sid)
+                new_set_id = self.sets.add(
+                    new_ex_id,
+                    reps,
+                    weight,
+                    rpe,
+                    detail["note"],
+                    None,
+                    0,
+                    0.0,
+                    0,
+                    bool(warmup),
+                )
+                if stime:
+                    self.sets.set_start_time(new_set_id, stime)
+                if etime:
+                    self.sets.set_end_time(new_set_id, etime)
+        return new_id

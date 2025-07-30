@@ -3108,6 +3108,29 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(detail.status_code, 200)
         self.assertEqual(len(detail.json()), 1)
 
+    def test_duplicate_workout(self) -> None:
+        self.client.post("/workouts")
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8},
+        )
+        new_date = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
+        resp = self.client.post(
+            "/workouts/1/duplicate",
+            params={"date": new_date},
+        )
+        self.assertEqual(resp.status_code, 200)
+        dup_id = resp.json()["id"]
+        detail = self.client.get(f"/workouts/{dup_id}")
+        self.assertEqual(detail.status_code, 200)
+        self.assertEqual(detail.json()["date"], new_date)
+        sets = self.client.get(f"/workouts/{dup_id}/exercises")
+        self.assertEqual(len(sets.json()), 1)
+
     def test_template_reordering(self) -> None:
         tids = []
         for name in ["T1", "T2", "T3"]:
