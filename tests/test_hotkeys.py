@@ -12,6 +12,7 @@ class HotkeyScriptTest(unittest.TestCase):
         self.assertIn("window.addEventListener('keydown'", content)
         self.assertIn("tabKeys", content)
         self.assertIn("addSetKey", content)
+        self.assertIn("toggleThemeKey", content)
 
 if __name__ == "__main__":
     unittest.main()

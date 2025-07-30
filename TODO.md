@@ -147,7 +147,7 @@
 [complete] 134. Toggle to hide navigation labels.
 [complete] 135. Pin key metrics on the dashboard.
 [complete] 136. Collapsible filter panel in history tab.
-137. Keyboard shortcuts help overlay.
+[complete] 137. Keyboard shortcuts help overlay.
 138. Bulk edit multiple sets at once.
 139. Randomize training plan generator.
 140. Filter exercises without equipment assigned.
@@ -208,7 +208,7 @@
 195. Bulk mark sets as completed using checkboxes.
 196. Collapsible explanations for analytics charts.
 [complete] 197. Preview thumbnails for uploaded images.
-198. Keyboard shortcut to toggle dark mode.
+[complete] 198. Keyboard shortcut to toggle dark mode.
 199. Flexible grid layout toggle.
 [complete] 200. "Clear filters" button in history tab.
 [complete] 201. Remove all multiuser features from the code base.
