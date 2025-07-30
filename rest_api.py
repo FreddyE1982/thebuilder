@@ -2734,6 +2734,7 @@ class GymAPI:
             months_active: float = None,
             theme: str = None,
             color_theme: str = None,
+            accent_color: str = None,
             ml_all_enabled: bool = None,
             ml_training_enabled: bool = None,
             ml_prediction_enabled: bool = None,
@@ -2773,6 +2774,8 @@ class GymAPI:
                 self.settings.set_text("theme", theme)
             if color_theme is not None:
                 self.settings.set_text("color_theme", color_theme)
+            if accent_color is not None:
+                self.settings.set_text("accent_color", accent_color)
             if rpe_scale is not None:
                 self.settings.set_int("rpe_scale", rpe_scale)
             if ml_all_enabled is not None:

@@ -201,6 +201,7 @@ class GymApp:
         self.settings_repo = SettingsRepository(db_path, yaml_path)
         self.theme = self.settings_repo.get_text("theme", "light")
         self.color_theme = self.settings_repo.get_text("color_theme", "red")
+        self.accent_color = self.settings_repo.get_text("accent_color", "#ff4b4b")
         self.auto_dark_mode = self.settings_repo.get_bool("auto_dark_mode", False)
         self.compact_mode = self.settings_repo.get_bool("compact_mode", False)
         self.simple_mode = self.settings_repo.get_bool("simple_mode", False)
@@ -690,7 +691,7 @@ class GymApp:
             <style>
             :root {{
                 --section-bg: #fafafa;
-                --accent-color: #ff4b4b;
+                --accent-color: ACCENT;
                 --header-bg: #ffffff;
                 --border-color: #cccccc;
                 --safe-bottom: 0px;
@@ -1491,7 +1492,9 @@ class GymApp:
             """
         size = max(self.font_size, 18.0) if self.large_font else self.font_size
         st.markdown(
-            css.replace("WIDTH", str(self.sidebar_width)).replace("SIZE", str(int(size))),
+            css.replace("WIDTH", str(self.sidebar_width))
+            .replace("SIZE", str(int(size)))
+            .replace("ACCENT", self.accent_color),
             unsafe_allow_html=True,
         )
         if self.compact_mode and not st.session_state.get("is_mobile", False):
@@ -1510,32 +1513,32 @@ class GymApp:
     def _apply_theme(self) -> None:
         if self.theme == "dark":
             st.markdown(
-                """
+                f"""
                 <style>
-                body {
+                body {{
                     background-color: #121212;
                     color: #eee;
-                }
-                :root {
+                }}
+                :root {{
                     --section-bg: #1f1f1f;
-                    --accent-color: #ff6b6b;
+                    --accent-color: {self.accent_color};
                     --header-bg: #2a2a2a;
                     --border-color: #444444;
-                }
+                }}
                 </style>
                 """,
                 unsafe_allow_html=True,
             )
         else:
             st.markdown(
-                """
+                f"""
                 <style>
-                :root {
+                :root {{
                     --section-bg: #fafafa;
-                    --accent-color: #ff4b4b;
+                    --accent-color: {self.accent_color};
                     --header-bg: #ffffff;
                     --border-color: #cccccc;
-                }
+                }}
                 </style>
                 """,
                 unsafe_allow_html=True,
@@ -1696,20 +1699,20 @@ class GymApp:
             if w_results:
                 options = {f"{wid} - {date}": wid for wid, date in w_results}
                 choice = st.selectbox(
-                    "Workout Results",
+                    "Results",
                     list(options.keys()),
-                    key=f"{prefix}_res_w",
+                    key=f"{prefix}_search_sel",
                 )
-                if st.button("Open", key=f"{prefix}_res_open_w"):
+                if st.button("Open", key=f"{prefix}_search_open"):
                     self._select_workout(options[choice])
                     self._switch_tab("workouts")
             if e_results:
                 ech = st.selectbox(
-                    "Exercise Results",
+                    "Results",
                     e_results,
-                    key=f"{prefix}_res_e",
+                    key=f"{prefix}_search_sel_e",
                 )
-                if st.button("Open", key=f"{prefix}_res_open_e"):
+                if st.button("Open", key=f"{prefix}_search_open_e"):
                     st.session_state.lib_ex_prefix = ech
                     self._switch_tab("library")
 
@@ -2710,7 +2713,7 @@ class GymApp:
 
     def _workout_section(self) -> None:
         with self._section("Workouts"):
-            with st.expander("Workout Management", expanded=True):
+            with st.expander("Existing Workouts", expanded=True):
                 create_tab, manage_tab = st.tabs(["Create New", "Existing"])
                 with create_tab:
                     self._create_workout_form(self.training_options)
@@ -2738,6 +2741,7 @@ class GymApp:
                     "Location", key="new_workout_location", help="Where the workout takes place"
                 )
                 st.markdown("</div>", unsafe_allow_html=True)
+                st.markdown("", help="Select the primary training focus")
                 submitted = st.form_submit_button("New Workout")
                 if submitted:
                     new_id = self.workouts.create(
@@ -6322,11 +6326,15 @@ class GymApp:
                     value=self.auto_dark_mode,
                     help="Match theme to system preference",
                 )
-                colors = ["red", "blue", "green", "purple", "colorblind", "highcontrast"]
+                colors = ["red", "blue", "green", "purple", "colorblind", "highcontrast", "custom"]
                 color_opt = st.selectbox(
                     "Color Theme",
                     colors,
                     index=colors.index(self.color_theme),
+                )
+                accent_color_in = st.color_picker(
+                    "Accent Color",
+                    value=self.accent_color,
                 )
                 avatar_file = st.file_uploader(
                     "Avatar", type=["png", "jpg"], key="avatar_upload"
@@ -6572,9 +6580,11 @@ class GymApp:
                 self.settings_repo.set_float("months_active", ma)
                 self.settings_repo.set_text("theme", theme_opt)
                 self.settings_repo.set_text("color_theme", color_opt)
+                self.settings_repo.set_text("accent_color", accent_color_in)
                 self.settings_repo.set_bool("auto_dark_mode", auto_dark)
                 self.theme = theme_opt
                 self.color_theme = color_opt
+                self.accent_color = accent_color_in
                 self.auto_dark_mode = auto_dark
                 self._apply_theme()
                 if avatar_file is not None:

@@ -129,7 +129,7 @@
 [complete] 119. Collapse exercises into expandable sections.
 120. Color-code workouts by training type tags.
 [complete] 121. Copy weight values to clipboard with one click.
-122. Set custom accent color in settings.
+[complete] 122. Set custom accent color in settings.
 123. Generate shareable read-only workout summary images.
 124. Undo deletion of sets.
 [complete] 125. Create templates from logged workouts.

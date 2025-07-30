@@ -737,6 +737,7 @@ class Database:
             "months_active": "1",
             "theme": "light",
             "color_theme": "red",
+            "accent_color": "#ff4b4b",
             "auto_dark_mode": "0",
             "game_enabled": "0",
             "ml_all_enabled": "1",
