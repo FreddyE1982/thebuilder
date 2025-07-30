@@ -9,6 +9,7 @@ class SettingsSchema(BaseModel):
     language: str = "en"
     font_size: int = 16
     collapse_header: bool = True
+    accent_color: str = "#ff4b4b"
 
 def validate_settings(data: dict) -> None:
     try:

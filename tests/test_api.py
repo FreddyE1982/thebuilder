@@ -253,6 +253,7 @@ class APITestCase(unittest.TestCase):
         self.assertFalse(data["auto_open_last_workout"])
         self.assertFalse(data["game_enabled"])
         self.assertIn("ml_all_enabled", data)
+        self.assertEqual(data["accent_color"], "#ff4b4b")
 
         resp = self.client.post(
             "/settings/general",
@@ -267,6 +268,7 @@ class APITestCase(unittest.TestCase):
                 "auto_dark_mode": True,
                 "show_onboarding": True,
                 "auto_open_last_workout": True,
+                "accent_color": "#00ff00",
             },
         )
         self.assertEqual(resp.status_code, 200)
@@ -282,6 +284,7 @@ class APITestCase(unittest.TestCase):
         self.assertTrue(data["show_onboarding"])
         self.assertTrue(data["auto_open_last_workout"])
         self.assertEqual(data["timezone"], "America/New_York")
+        self.assertEqual(data["accent_color"], "#00ff00")
 
     def test_timezone_setting(self) -> None:
         resp = self.client.post(

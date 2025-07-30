@@ -1,1 +1,1 @@
-All tests passed
+test_tooltips_present and test_workout_search failed during run
