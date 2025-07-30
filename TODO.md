@@ -46,7 +46,7 @@
 [complete] 34. Add user-defined default equipment per exercise.
 [removed] 35. Remove privacy settings for shared workouts (multiuser removed).
 36. Add voice command support in the GUI.
-37. Add voice feedback for timer events using STT.
+[complete] 37. Add voice feedback for timer events using STT.
 [complete] 38. Refactor tools.py to separate math utilities from CLI utilities.
 [complete] 39. Add coverage reporting to tests.
 [complete] 40. Document environment variables for deployment in README.
@@ -63,7 +63,7 @@
 [complete] 51. Add analytics for training monotony and strain.
 [complete] 52. Provide webhooks for completed workouts notifications.
 [complete] 53. Add route to mark challenges as completed automatically.
-54. Implement search for exercises by tags in GUI.
+[complete] 54. Implement search for exercises by tags in GUI.
 [complete] 55. Support uploading heart rate monitor data in bulk.
 [complete] 56. Extend rest_api tests to cover error conditions.
 57. Add dynamic equipment suggestion using ML predictions.
@@ -102,9 +102,9 @@
 [complete] 90. Add performance benchmarks for API endpoints.
 [complete] 91. Provide security audit of dependencies via tools.
 [complete] 92. Add automatic detection of stale goals.
-93. Offer periodic data export via email link.
+[complete] 93. Offer periodic data export via email link.
 [complete] 94. Add ability to log mood before/after workouts.
-95. Implement color-coded workout intensity map.
+[complete] 95. Implement color-coded workout intensity map.
 [complete] 96. Add endpoint to configure auto planner parameters.
 [complete] 97. Support split view on tablets for side-by-side charts.
 [complete] 98. Provide API to fetch saved report PDFs.
@@ -116,9 +116,9 @@
 [complete] 103. Provide quick-add popup for workouts from home.
 [complete] 104. Add drag-and-drop reordering for planned workouts.
 [complete] 105. Add time-based filter in workout history.
-106. Provide color-coded heatmap of training volume per week.
+[complete] 106. Provide color-coded heatmap of training volume per week.
 107. Add speech-to-text input for set entry.
-108. Provide inline video tutorials for each exercise.
+[complete] 108. Provide inline video tutorials for each exercise.
 [complete] 109. Allow checkboxes to mark sets as warm-ups.
 [complete] 110. Add screenshot capture for progress charts.
 [complete] 111. Enable duplication of logged workouts.

@@ -103,6 +103,7 @@ class Database:
                     secondary_muscle TEXT,
                     tertiary_muscle TEXT,
                     other_muscles TEXT,
+                    video_url TEXT,
                     is_custom INTEGER NOT NULL DEFAULT 0
                 );""",
             [
@@ -115,6 +116,7 @@ class Database:
                 "secondary_muscle",
                 "tertiary_muscle",
                 "other_muscles",
+                "video_url",
                 "is_custom",
             ],
         ),
@@ -434,6 +436,16 @@ class Database:
                     FOREIGN KEY(tag_id) REFERENCES tags(id) ON DELETE CASCADE
                 );""",
             ["workout_id", "tag_id"],
+        ),
+        "exercise_tags": (
+            """CREATE TABLE exercise_tags (
+                    exercise_name TEXT NOT NULL,
+                    tag_id INTEGER NOT NULL,
+                    PRIMARY KEY (exercise_name, tag_id),
+                    FOREIGN KEY(exercise_name) REFERENCES exercise_catalog(name) ON DELETE CASCADE,
+                    FOREIGN KEY(tag_id) REFERENCES tags(id) ON DELETE CASCADE
+                );""",
+            ["exercise_name", "tag_id"],
         ),
         "goals": (
             """CREATE TABLE goals (
@@ -2628,10 +2640,10 @@ class ExerciseCatalogRepository(BaseRepository):
 
     def fetch_detail(
         self, name: str
-    ) -> Optional[Tuple[str, str, str, str, str, str, str]]:
+    ) -> Optional[Tuple[str, str, str, str, str, str, str, str]]:
         canonical = self.exercise_names.canonical(name)
         rows = self.fetch_all(
-            "SELECT muscle_group, variants, equipment_names, primary_muscle, secondary_muscle, tertiary_muscle, other_muscles, is_custom FROM exercise_catalog WHERE name = ?;",
+            "SELECT muscle_group, variants, equipment_names, primary_muscle, secondary_muscle, tertiary_muscle, other_muscles, video_url, is_custom FROM exercise_catalog WHERE name = ?;",
             (canonical,),
         )
         if rows:
@@ -2643,6 +2655,7 @@ class ExerciseCatalogRepository(BaseRepository):
                 secondary,
                 tertiary,
                 other,
+                video,
                 is_custom,
             ) = rows[0]
 
@@ -2658,16 +2671,17 @@ class ExerciseCatalogRepository(BaseRepository):
                 canon_list(secondary),
                 canon_list(tertiary),
                 canon_list(other),
+                video,
                 is_custom,
             )
         return None
 
     def fetch_all_records(
         self, custom_only: bool = False
-    ) -> List[Tuple[str, str, str, str, str, str, str, int]]:
+    ) -> List[Tuple[str, str, str, str, str, str, str, str, int]]:
         query = (
             "SELECT name, muscle_group, variants, equipment_names, primary_muscle, "
-            "secondary_muscle, tertiary_muscle, other_muscles, is_custom FROM "
+            "secondary_muscle, tertiary_muscle, other_muscles, video_url, is_custom FROM "
             "exercise_catalog WHERE 1=1"
         )
         if custom_only or self._hide_preconfigured():
@@ -2684,6 +2698,7 @@ class ExerciseCatalogRepository(BaseRepository):
             secondary,
             tertiary,
             other,
+            video,
             is_custom,
         ) in rows:
 
@@ -2699,11 +2714,12 @@ class ExerciseCatalogRepository(BaseRepository):
                     equipment_names,
                     canon(primary),
                     canon(secondary),
-                    canon(tertiary),
-                    canon(other),
-                    is_custom,
-                )
+                canon(tertiary),
+                canon(other),
+                video,
+                is_custom,
             )
+        )
         return result
 
     def fetch_all_muscles(self) -> List[str]:
@@ -2733,6 +2749,7 @@ class ExerciseCatalogRepository(BaseRepository):
         secondary_muscle: str,
         tertiary_muscle: str,
         other_muscles: str,
+        video_url: str = "",
     ) -> int:
         existing = self.fetch_all(
             "SELECT is_custom FROM exercise_catalog WHERE name = ?;",
@@ -2759,7 +2776,7 @@ class ExerciseCatalogRepository(BaseRepository):
             [self.muscles.canonical(m) for m in other_muscles.split("|") if m]
         )
         return self.execute(
-            "INSERT INTO exercise_catalog (muscle_group, name, variants, equipment_names, primary_muscle, secondary_muscle, tertiary_muscle, other_muscles, is_custom) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1);",
+            "INSERT INTO exercise_catalog (muscle_group, name, variants, equipment_names, primary_muscle, secondary_muscle, tertiary_muscle, other_muscles, video_url, is_custom) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1);",
             (
                 muscle_group,
                 name,
@@ -2769,6 +2786,7 @@ class ExerciseCatalogRepository(BaseRepository):
                 secondary_muscle,
                 tertiary_muscle,
                 other_muscles,
+                video_url,
             ),
         )
 
@@ -2782,6 +2800,7 @@ class ExerciseCatalogRepository(BaseRepository):
         secondary_muscle: str,
         tertiary_muscle: str,
         other_muscles: str,
+        video_url: str = "",
         new_name: Optional[str] = None,
     ) -> None:
         rows = self.fetch_all(
@@ -2812,7 +2831,7 @@ class ExerciseCatalogRepository(BaseRepository):
             [self.muscles.canonical(m) for m in other_muscles.split("|") if m]
         )
         self.execute(
-            "UPDATE exercise_catalog SET muscle_group = ?, name = ?, variants = ?, equipment_names = ?, primary_muscle = ?, secondary_muscle = ?, tertiary_muscle = ?, other_muscles = ? WHERE name = ?;",
+            "UPDATE exercise_catalog SET muscle_group = ?, name = ?, variants = ?, equipment_names = ?, primary_muscle = ?, secondary_muscle = ?, tertiary_muscle = ?, other_muscles = ?, video_url = ? WHERE name = ?;",
             (
                 muscle_group,
                 target,
@@ -2822,6 +2841,7 @@ class ExerciseCatalogRepository(BaseRepository):
                 secondary_muscle,
                 tertiary_muscle,
                 other_muscles,
+                video_url,
                 name,
             ),
         )
@@ -3596,6 +3616,34 @@ class TagRepository(BaseRepository):
                     "INSERT INTO workout_tags (workout_id, tag_id) VALUES (?, ?);",
                     (workout_id, tid),
                 )
+
+    # Exercise tag management
+
+    def assign_exercise(self, exercise_name: str, tag_id: int) -> None:
+        self.execute(
+            "INSERT OR IGNORE INTO exercise_tags (exercise_name, tag_id) VALUES (?, ?);",
+            (exercise_name, tag_id),
+        )
+
+    def remove_exercise(self, exercise_name: str, tag_id: int) -> None:
+        self.execute(
+            "DELETE FROM exercise_tags WHERE exercise_name = ? AND tag_id = ?;",
+            (exercise_name, tag_id),
+        )
+
+    def fetch_for_exercise(self, exercise_name: str) -> list[tuple[int, str]]:
+        rows = super().fetch_all(
+            "SELECT t.id, t.name FROM tags t JOIN exercise_tags e ON t.id = e.tag_id WHERE e.exercise_name = ? ORDER BY t.name;",
+            (exercise_name,),
+        )
+        return [(r[0], r[1]) for r in rows]
+
+    def search_exercises_by_tag(self, tag: str) -> list[str]:
+        rows = super().fetch_all(
+            "SELECT e.exercise_name FROM exercise_tags e JOIN tags t ON e.tag_id = t.id WHERE t.name = ? ORDER BY e.exercise_name;",
+            (tag,),
+        )
+        return [r[0] for r in rows]
 
 
 class GoalRepository(BaseRepository):

@@ -697,6 +697,29 @@ class StatisticsService:
             )
         return result
 
+    def intensity_map(
+        self,
+        exercise: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> List[Dict[str, float | int | str]]:
+        """Return intensity distribution with color codes."""
+        base = self.intensity_distribution(exercise, start_date, end_date)
+        colors = [
+            "#1a9641",
+            "#a6d96a",
+            "#ffffbf",
+            "#fdae61",
+            "#d7191c",
+            "#800026",
+        ]
+        result: List[Dict[str, float | int | str]] = []
+        for idx, entry in enumerate(base):
+            color = colors[min(idx // 2, len(colors) - 1)]
+            entry["color"] = color
+            result.append(entry)
+        return result
+
     def velocity_history(
         self,
         exercise: str,
@@ -1270,6 +1293,28 @@ class StatisticsService:
                     rests.append(diff)
             avg = sum(rests) / len(rests) if rests else 0.0
             result.append({"workout_id": wid, "avg_rest": round(avg, 2)})
+        return result
+
+    def volume_heatmap(
+        self,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> List[Dict[str, float]]:
+        """Return weekly training volume for heatmap charts."""
+        names = self._all_names()
+        rows = self.sets.fetch_history_by_names(
+            names,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        by_week: Dict[str, float] = {}
+        for reps, weight, _rpe, date in rows:
+            d = datetime.date.fromisoformat(date)
+            key = f"{d.isocalendar()[0]}-W{d.isocalendar()[1]:02d}"
+            by_week[key] = by_week.get(key, 0.0) + int(reps) * float(weight)
+        result: List[Dict[str, float]] = []
+        for week in sorted(by_week):
+            result.append({"week": week, "volume": round(by_week[week], 2)})
         return result
 
     def session_duration(
