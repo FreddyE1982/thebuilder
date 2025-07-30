@@ -832,6 +832,95 @@ class AsyncBaseRepository(AsyncDatabase):
             return rows
 
 
+class AsyncWorkoutRepository(AsyncBaseRepository):
+    """Async repository for workout table operations."""
+
+    async def create(
+        self,
+        date: str,
+        timezone: str = "UTC",
+        training_type: str = "strength",
+        notes: str | None = None,
+        location: str | None = None,
+        rating: Optional[int] = None,
+        mood_before: Optional[int] = None,
+        mood_after: Optional[int] = None,
+    ) -> int:
+        return await self.execute(
+            "INSERT INTO workouts (date, timezone, training_type, notes, location, rating, mood_before, mood_after) VALUES (?, ?, ?, ?, ?, ?, ?, ?);",
+            (
+                date,
+                timezone,
+                training_type,
+                notes,
+                location,
+                rating,
+                mood_before,
+                mood_after,
+            ),
+        )
+
+    async def fetch_all_workouts(
+        self,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        sort_by: str = "id",
+        descending: bool = True,
+        limit: int | None = None,
+        offset: int | None = None,
+    ) -> List[
+        Tuple[
+            int,
+            str,
+            Optional[str],
+            Optional[str],
+            str,
+            str,
+            Optional[str],
+            Optional[int],
+            Optional[int],
+            Optional[int],
+        ]
+    ]:
+        query = (
+            "SELECT id, date, start_time, end_time, timezone, training_type, notes, location, rating, mood_before, mood_after FROM workouts"
+        )
+        params: list[str | int] = []
+        where_clauses: list[str] = []
+        if start_date:
+            where_clauses.append("date >= ?")
+            params.append(start_date)
+        if end_date:
+            where_clauses.append("date <= ?")
+            params.append(end_date)
+        if where_clauses:
+            query += " WHERE " + " AND ".join(where_clauses)
+        allowed = {"id", "date", "start_time", "end_time", "training_type", "rating"}
+        if sort_by not in allowed:
+            sort_by = "id"
+        order = "DESC" if descending else "ASC"
+        query += f" ORDER BY {sort_by} {order}"
+        if limit is not None:
+            query += " LIMIT ?"
+            params.append(limit)
+        if offset is not None:
+            if limit is None:
+                query += " LIMIT -1"
+            query += " OFFSET ?"
+            params.append(offset)
+        query += ";"
+        return await self.fetch_all(query, tuple(params))
+
+    async def delete(self, workout_id: int) -> None:
+        rows = await super().fetch_all(
+            "SELECT id FROM workouts WHERE id = ?;",
+            (workout_id,),
+        )
+        if not rows:
+            raise ValueError("workout not found")
+        await self.execute("DELETE FROM workouts WHERE id = ?;", (workout_id,))
+
+
 class WorkoutRepository(BaseRepository):
     """Repository for workout table operations."""
 
