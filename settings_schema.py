@@ -9,6 +9,8 @@ class SettingsSchema(BaseModel):
     rpe_scale: int = 10
     language: str = "en"
     font_size: int = 16
+    layout_spacing: float = 1.5
+    flex_metric_grid: bool = False
     collapse_header: bool = True
     accent_color: str = "#ff4b4b"
 

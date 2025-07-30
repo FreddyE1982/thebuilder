@@ -2135,6 +2135,7 @@ class SettingsRepository(BaseRepository):
             "simple_mode",
             "hide_advanced_charts",
             "vertical_nav",
+            "flex_metric_grid",
         }
         for k, v in rows:
             if k in bool_keys:
@@ -2185,6 +2186,7 @@ class SettingsRepository(BaseRepository):
             "simple_mode",
             "hide_advanced_charts",
             "vertical_nav",
+            "flex_metric_grid",
         }
             for key, value in data.items():
                 val = str(value)
@@ -2244,6 +2246,18 @@ class SettingsRepository(BaseRepository):
     def set_list(self, key: str, items: list[str]) -> None:
         self.set_text(key, ",".join(items))
 
+    def get_bytes(self, key: str) -> bytes | None:
+        val = self.get_text(key, "")
+        if not val:
+            return None
+        import base64
+        return base64.b64decode(val)
+
+    def set_bytes(self, key: str, data: bytes) -> None:
+        import base64
+        b64 = base64.b64encode(data).decode("ascii")
+        self.set_text(key, b64)
+
     def get_bool(self, key: str, default: bool) -> bool:
         return self.get_text(key, "1" if default else "0") in {
             "1",
@@ -2289,6 +2303,8 @@ class SettingsRepository(BaseRepository):
             "hide_completed_sets",
             "hide_nav_labels",
             "simple_mode",
+            "vertical_nav",
+            "flex_metric_grid",
         }
         for k in bool_keys:
             if k in data:

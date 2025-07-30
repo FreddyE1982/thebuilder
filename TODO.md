@@ -73,7 +73,7 @@
 [complete] 61. Add REST endpoint for editing exercise catalog entries.
 [removed] 62. Remove ability to share workout templates via link (multiuser removed).
 [complete] 63. Add feature flag support for experimental models.
-64. Implement timeline view of workout history in GUI.
+[complete] 64. Implement timeline view of workout history in GUI.
 [complete] 65. Improve error messages for invalid API input.
 [complete] 66. Store original raw data of ML training sets.
 [complete] 67. Add cross-validation for ML models to compute accuracy.
@@ -87,7 +87,7 @@
 [complete] 75. Add `--demo` mode for generating fake data.
 76. Encrypt sensitive settings in YAML with keyring.
 [complete] 77. Add endpoint to clear cached statistics.
-78. Provide gender-neutral avatar images in GUI.
+[complete] 78. Provide gender-neutral avatar images in GUI.
 79. Implement plugin architecture for custom ML models.
 [complete] 80. Add data migration script for schema changes.
 [complete] 81. Implement Slack notifications for workout logs.
@@ -106,7 +106,7 @@
 [complete] 94. Add ability to log mood before/after workouts.
 95. Implement color-coded workout intensity map.
 [complete] 96. Add endpoint to configure auto planner parameters.
-97. Support split view on tablets for side-by-side charts.
+[complete] 97. Support split view on tablets for side-by-side charts.
 [complete] 98. Provide API to fetch saved report PDFs.
 99. Add screenshot-based test for mobile layout via playwright.
 [complete] 100. Document contribution guidelines and code style.
@@ -120,11 +120,11 @@
 107. Add speech-to-text input for set entry.
 108. Provide inline video tutorials for each exercise.
 [complete] 109. Allow checkboxes to mark sets as warm-ups.
-110. Add screenshot capture for progress charts.
+[complete] 110. Add screenshot capture for progress charts.
 [complete] 111. Enable duplication of logged workouts.
 112. Support export of progress charts to PDF.
 113. Show real-time timer overlay during sets.
-114. Filter exercise lists to favorites only.
+[complete] 114. Filter exercise lists to favorites only.
 [complete] 115. Display workout completion progress bar.
 [complete] 116. Auto start rest timer after each set.
 [complete] 117. Customize quick weight buttons in settings.
@@ -167,7 +167,7 @@
 154. Contextual help tips on each page.
 155. Toggle display of estimated 1RM.
 156. Indicator for unsaved changes in forms.
-157. Collapsible summary metrics in history.
+[complete] 157. Collapsible summary metrics in history.
 158. Step counter integration for cardio.
 159. Quick access to recently used templates.
 [complete] 160. Mini progress widget on home screen.
@@ -178,7 +178,7 @@
 [complete] 165. Quick-add tags using hashtag syntax.
 166. Scrollable timeline of workout months.
 167. Rename logged workouts.
-168. Customizable layout spacing options.
+[complete] 168. Customizable layout spacing options.
 [complete] 169. Filter by equipment type quickly.
 [complete] 170. Hide or show columns in tables.
 [complete] 171. Label rest timer progress with percent.
@@ -203,12 +203,12 @@
 190. Local search index for offline filtering.
 191. Daily reminder notifications.
 [complete] 192. Quick filter for unrated workouts.
-193. Keyboard navigation in history table.
+[complete] 193. Keyboard navigation in history table.
 [complete] 194. Customizable quick weight increments.
 195. Bulk mark sets as completed using checkboxes.
-196. Collapsible explanations for analytics charts.
+[complete] 196. Collapsible explanations for analytics charts.
 [complete] 197. Preview thumbnails for uploaded images.
 [complete] 198. Keyboard shortcut to toggle dark mode.
-199. Flexible grid layout toggle.
+[complete] 199. Flexible grid layout toggle.
 [complete] 200. "Clear filters" button in history tab.
 [complete] 201. Remove all multiuser features from the code base.
