@@ -911,6 +911,56 @@ class StreamlitAppTest(unittest.TestCase):
         conn.close()
         self.assertEqual(int(float(val)), int(current) + 1)
 
+    def test_layout_spacing_slider(self) -> None:
+        self.at.query_params["tab"] = "settings"
+        self.at.run()
+        settings_tab = self._get_tab("Settings")
+        idx = _find_by_label(settings_tab.slider, "Layout Spacing")
+        current = settings_tab.slider[idx].value
+        settings_tab.slider[idx].set_value(current + 0.5).run()
+        save_idx = _find_by_label(settings_tab.button, "Save General Settings")
+        settings_tab.button[save_idx].click().run()
+        conn = self._connect()
+        cur = conn.cursor()
+        cur.execute("SELECT value FROM settings WHERE key = 'layout_spacing';")
+        val = cur.fetchone()[0]
+        conn.close()
+        self.assertAlmostEqual(float(val), current + 0.5, places=2)
+
+    def test_flex_metric_grid_toggle(self) -> None:
+        self.at.query_params["tab"] = "settings"
+        self.at.run()
+        settings_tab = self._get_tab("Settings")
+        idx = _find_by_label(settings_tab.checkbox, "Flex Metric Grid")
+        cur_val = settings_tab.checkbox[idx].value
+        if cur_val:
+            settings_tab.checkbox[idx].uncheck().run()
+        else:
+            settings_tab.checkbox[idx].check().run()
+        save_idx = _find_by_label(settings_tab.button, "Save General Settings")
+        settings_tab.button[save_idx].click().run()
+        conn = self._connect()
+        cur = conn.cursor()
+        cur.execute("SELECT value FROM settings WHERE key = 'flex_metric_grid';")
+        val = cur.fetchone()[0]
+        conn.close()
+        self.assertEqual(bool(int(val)), not cur_val)
+
+    def test_default_avatar_choice(self) -> None:
+        self.at.query_params["tab"] = "settings"
+        self.at.run()
+        settings_tab = self._get_tab("Settings")
+        idx = _find_by_label(settings_tab.selectbox, "Avatar")
+        settings_tab.selectbox[idx].select("Default 1").run()
+        save_idx = _find_by_label(settings_tab.button, "Save General Settings")
+        settings_tab.button[save_idx].click().run()
+        conn = self._connect()
+        cur = conn.cursor()
+        cur.execute("SELECT value FROM settings WHERE key = 'avatar';")
+        val = cur.fetchone()[0]
+        conn.close()
+        self.assertGreater(len(val), 50)
+
     def test_language_selector(self) -> None:
         self.at.query_params["tab"] = "settings"
         self.at.run()

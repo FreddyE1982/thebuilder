@@ -14,6 +14,7 @@ import json
 import time
 import os
 from localization import translator
+from avatar_service import AvatarService
 from config import APP_VERSION
 
 warnings.filterwarnings("ignore", category=AltairDeprecationWarning)
@@ -199,6 +200,7 @@ class GymApp:
                     warnings.simplefilter("ignore", AltairDeprecationWarning)
                     alt.themes.enable = _noop_theme
         self.settings_repo = SettingsRepository(db_path, yaml_path)
+        self.avatar_service = AvatarService(self.settings_repo)
         self.theme = self.settings_repo.get_text("theme", "light")
         self.color_theme = self.settings_repo.get_text("color_theme", "red")
         self.accent_color = self.settings_repo.get_text("accent_color", "#ff4b4b")
@@ -242,6 +244,8 @@ class GymApp:
         self.toggle_theme_key = self.settings_repo.get_text("hotkey_toggle_theme", "d")
         self.sidebar_width = self.settings_repo.get_float("sidebar_width", 18.0)
         self.font_size = self.settings_repo.get_float("font_size", 16.0)
+        self.layout_spacing = self.settings_repo.get_float("layout_spacing", 1.5)
+        self.flex_metric_grid = self.settings_repo.get_bool("flex_metric_grid", False)
         self.rpe_scale = self.settings_repo.get_int("rpe_scale", 10)
         self.training_options = sorted(
             [
@@ -713,6 +717,7 @@ class GymApp:
                 --safe-bottom: 0px;
                 --base-font-size: SIZEpx;
                 --sidebar-width: WIDTHrem;
+                --spacing: SPACING;
             }}
             html {
                 font-size: var(--base-font-size);
@@ -799,7 +804,7 @@ class GymApp:
                 padding: 0 1rem;
             }
             .section-wrapper {
-                margin-bottom: 1.5rem;
+                margin-bottom: calc(var(--spacing) * 1rem);
                 background: var(--section-bg);
                 border-radius: 0.5rem;
                 padding: 1rem;
@@ -1241,6 +1246,11 @@ class GymApp:
                 scroll-snap-type: x mandatory;
                 scrollbar-width: none;
             }
+            .metric-grid.flex {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
             .metric-grid > div[data-testid="metric-container"] {
                 width: 100%;
             }
@@ -1510,6 +1520,7 @@ class GymApp:
         st.markdown(
             css.replace("WIDTH", str(self.sidebar_width))
             .replace("SIZE", str(int(size)))
+            .replace("SPACING", str(self.layout_spacing))
             .replace("ACCENT", self.accent_color),
             unsafe_allow_html=True,
         )
@@ -1810,7 +1821,8 @@ class GymApp:
 
     def _metric_grid(self, metrics: list[tuple[str, str]]) -> None:
         """Render metrics in a responsive grid."""
-        st.markdown("<div class='metric-grid'>", unsafe_allow_html=True)
+        cls = "metric-grid flex" if self.flex_metric_grid else "metric-grid"
+        st.markdown(f"<div class='{cls}'>", unsafe_allow_html=True)
         for label, val in metrics:
             st.markdown("<div class='metric-card'>", unsafe_allow_html=True)
             st.metric(label, val)
@@ -2254,7 +2266,7 @@ class GymApp:
     def _dashboard_tab(self, prefix: str = "dash") -> None:
         with self._section("Dashboard"):
             with st.expander("Filters", expanded=False):
-                if st.session_state.is_mobile:
+                if self.layout.is_mobile:
                     start = st.date_input(
                         "Start",
                         datetime.date.today() - datetime.timedelta(days=30),
@@ -2304,7 +2316,7 @@ class GymApp:
             self._metric_grid(metrics)
         daily = self.stats.daily_volume(start.isoformat(), end.isoformat())
         with st.expander("Charts", expanded=True):
-            if st.session_state.is_mobile:
+            if self.layout.is_mobile:
                 st.subheader("Daily Volume")
                 vol_data = (
                     daily if daily else [{"date": start.isoformat(), "volume": 0}]
@@ -2388,10 +2400,14 @@ class GymApp:
                     eq_stats = self.stats.equipment_usage(
                         start.isoformat(), end.isoformat()
                     )
-                    if eq_stats:
-                        st.subheader("Equipment Usage")
-                        df_eq = pd.DataFrame(eq_stats).set_index("equipment")
-                        st.bar_chart(df_eq["sets"], use_container_width=True)
+                if eq_stats:
+                    st.subheader("Equipment Usage")
+                    df_eq = pd.DataFrame(eq_stats).set_index("equipment")
+                    st.bar_chart(df_eq["sets"], use_container_width=True)
+            with st.expander("Chart Explanations", expanded=False):
+                st.markdown("- **Daily Volume**: total weight lifted each day.")
+                st.markdown("- **Session Duration**: minutes spent per workout.")
+                st.markdown("- **1RM Progression**: estimated one-rep max over time.")
             records = self.stats.personal_records(
                 ex_choice if ex_choice else None,
                 start.isoformat(),
@@ -4090,12 +4106,16 @@ class GymApp:
             "Name Contains",
             key=f"{prefix}_name_filter",
         )
+        fav_only = st.checkbox("Favorites Only", key=f"{prefix}_fav_only")
         names = self.exercise_catalog.fetch_names(
             group_sel or None,
             muscle_sel or None,
             equipment,
             name_filter or None,
         )
+        if fav_only:
+            favs = set(self.favorites_repo.fetch_all())
+            names = [n for n in names if n in favs]
         ex_name = st.selectbox("Exercise", [""] + names, key=f"{prefix}_exercise")
         if ex_name:
             detail = self.exercise_catalog.fetch_detail(ex_name)
@@ -5192,6 +5212,38 @@ class GymApp:
                 st.session_state.hist_offset += limit
                 st.session_state.load_more_hist = True
                 self._trigger_refresh()
+
+        with st.expander("Summary Metrics", expanded=False):
+            ov = self.stats.overview(start_str, end_str)
+            metrics = [
+                ("Workouts", ov["workouts"]),
+                ("Volume", ov["volume"]),
+                ("Avg RPE", ov["avg_rpe"]),
+            ]
+            self._metric_grid(metrics)
+
+        with st.expander("Timeline View", expanded=False):
+            dates = [w[1] for w in workouts]
+            if dates:
+                df = pd.DataFrame({"date": dates, "idx": list(range(len(dates)))})
+                chart = alt.Chart(df).mark_circle(size=60).encode(y="date:T", x="idx")
+                st.altair_chart(chart, use_container_width=True)
+            else:
+                st.write("No workouts")
+        components.html(
+            """
+            <script>
+            const items = Array.from(document.querySelectorAll('details'));
+            let idx = items.findIndex(i => i.open);
+            document.addEventListener('keydown', e => {
+                if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+                if(e.key === 'ArrowDown') { idx = Math.min(items.length-1, idx+1); items[idx].querySelector('summary').click(); }
+                if(e.key === 'ArrowUp') { idx = Math.max(0, idx-1); items[idx].querySelector('summary').click(); }
+            });
+            </script>
+            """,
+            height=0,
+        )
 
     def _workout_details_dialog(self, workout_id: int) -> None:
         exercises = self.exercises.fetch_for_workout(workout_id)
@@ -6393,12 +6445,25 @@ class GymApp:
                     "Accent Color",
                     value=self.accent_color,
                 )
-                avatar_file = st.file_uploader(
-                    "Avatar", type=["png", "jpg"], key="avatar_upload"
+                avatar_opts = {
+                    "Default 1": "default1",
+                    "Default 2": "default2",
+                    "Upload": "__upload__",
+                }
+                avatar_choice = st.selectbox(
+                    "Avatar", list(avatar_opts.keys()), key="avatar_choice"
                 )
-                current_avatar = self.settings_repo.get_text("avatar", "")
-                if current_avatar and Path(current_avatar).exists():
-                    st.image(current_avatar, width=100)
+                avatar_file = None
+                if avatar_choice == "Upload":
+                    avatar_file = st.file_uploader(
+                        "Upload Avatar", type=["png", "jpg"], key="avatar_upload"
+                    )
+                current_avatar_data = self.settings_repo.get_bytes("avatar")
+                if avatar_choice != "Upload":
+                    idx = 1 if avatar_opts[avatar_choice] == "default1" else 2
+                    current_avatar_data = self.avatar_service.get_default(idx)
+                if current_avatar_data:
+                    st.image(current_avatar_data, width=100)
                 unit_opt = st.selectbox(
                     "Weight Unit",
                     ["kg", "lb"],
@@ -6467,6 +6532,13 @@ class GymApp:
                     30.0,
                     value=self.sidebar_width,
                     step=1.0,
+                )
+                spacing_in = st.slider(
+                    "Layout Spacing", 0.5, 3.0, value=float(self.layout_spacing), step=0.1
+                )
+                flex_grid_opt = st.checkbox(
+                    "Flex Metric Grid",
+                    value=self.flex_metric_grid,
                 )
                 show_onboard_opt = st.checkbox(
                     "Show Onboarding Wizard",
@@ -6656,10 +6728,12 @@ class GymApp:
                 self.accent_color = accent_color_in
                 self.auto_dark_mode = auto_dark
                 self._apply_theme()
-                if avatar_file is not None:
-                    out = Path("avatar.png")
-                    out.write_bytes(avatar_file.getvalue())
-                    self.settings_repo.set_text("avatar", str(out))
+                if avatar_choice != "Upload":
+                    idx = 1 if avatar_opts[avatar_choice] == "default1" else 2
+                    data = self.avatar_service.get_default(idx)
+                    self.settings_repo.set_bytes("avatar", data)
+                elif avatar_file is not None:
+                    self.settings_repo.set_bytes("avatar", avatar_file.getvalue())
                 self.settings_repo.set_text("weight_unit", unit_opt)
                 self.settings_repo.set_text("time_format", time_fmt_opt)
                 self.settings_repo.set_text("timezone", tz_opt)
@@ -6719,6 +6793,10 @@ class GymApp:
                 self.hide_completed_sets = hide_sets_opt
                 self.settings_repo.set_float("sidebar_width", sb_width)
                 self.sidebar_width = sb_width
+                self.settings_repo.set_float("layout_spacing", float(spacing_in))
+                self.layout_spacing = float(spacing_in)
+                self.settings_repo.set_bool("flex_metric_grid", flex_grid_opt)
+                self.flex_metric_grid = flex_grid_opt
                 self._inject_responsive_css()
                 self.gamification.enable(game_enabled)
                 self.settings_repo.set_bool("ml_all_enabled", ml_global)
