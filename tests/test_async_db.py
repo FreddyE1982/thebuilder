@@ -4,7 +4,7 @@ import asyncio
 import pytest
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-from db import AsyncBaseRepository
+from db import AsyncBaseRepository, AsyncWorkoutRepository
 
 class NumberRepository(AsyncBaseRepository):
     async def init_db(self) -> None:
@@ -25,3 +25,15 @@ async def test_async_repository(tmp_path):
     await repo.init_db()
     await repo.add(5)
     assert await repo.all() == [5]
+
+
+@pytest.mark.asyncio
+async def test_async_workout_repo(tmp_path):
+    db_file = str(tmp_path / "workout.db")
+    repo = AsyncWorkoutRepository(db_file)
+    wid = await repo.create("2024-01-01")
+    assert wid == 1
+    rows = await repo.fetch_all_workouts()
+    assert rows[0][0] == 1
+    await repo.delete(wid)
+    assert await repo.fetch_all_workouts() == []
