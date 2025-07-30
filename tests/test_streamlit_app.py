@@ -980,6 +980,8 @@ class StreamlitFullGUITest(unittest.TestCase):
         self.assertIn("Last 30d", buttons)
         self.assertIn("Last 90d", buttons)
         self.assertIn("Clear Filters", buttons)
+        chk_labels = [c.label for c in filt_exp.checkbox]
+        self.assertIn("Unrated Only", chk_labels)
 
     def test_dashboard_tab(self) -> None:
         tab = self._get_tab("Dashboard")

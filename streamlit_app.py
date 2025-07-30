@@ -5049,9 +5049,11 @@ class GymApp:
             )
             tag_names = [n for _, n in self.tags_repo.fetch_all()]
             sel_tags = st.multiselect("Tags", tag_names, key="hist_tags")
+            unrated_only = st.checkbox("Unrated Only", key="hist_unrated")
             if st.button("Clear Filters", key="hist_clear"):
                 st.session_state.hist_type = ""
                 st.session_state.hist_tags = []
+                st.session_state.hist_unrated = False
                 self._trigger_refresh()
             start_str = start.isoformat()
             end_str = end.isoformat()
@@ -5073,6 +5075,8 @@ class GymApp:
                     {n for _, n in self.tags_repo.fetch_for_workout(w[0])}
                 )
             ]
+        if unrated_only:
+            workouts = [w for w in workouts if w[6] is None]
         pr_dates = {r["date"] for r in self.stats.personal_records()}
         for wid, date, start_time, end_time, training_type, *_ in workouts:
             badge = f"<span class='training-badge tt-{training_type}'>{training_type}</span>"

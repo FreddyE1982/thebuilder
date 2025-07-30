@@ -12,6 +12,7 @@ The Builder is a full featured workout planner, logger and analytics platform bu
 - REST API exposing every action used by the GUI.
 - Log workouts with training type, exercises and detailed sets. Each set stores reps, weight, RPE and timestamps.
 - Plan future workouts, duplicate plans and convert them to logged sessions.
+- Duplicate logged workouts via `/workouts/{id}/duplicate` including all sets.
 - Manage equipment and muscle mappings. Custom equipment can be added and linked to muscles.
 - Maintain an exercise catalog with primary/secondary muscles and available equipment.
 - Mark favorite exercises for quick access in the library.

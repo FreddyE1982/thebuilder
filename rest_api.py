@@ -1252,6 +1252,14 @@ class GymAPI:
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
 
+        @self.app.post("/workouts/{workout_id}/duplicate")
+        def duplicate_workout(workout_id: int, date: str):
+            try:
+                new_id = self.planner.duplicate_workout(workout_id, date)
+                return {"id": new_id}
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
         @self.app.post("/planned_workouts/auto_plan")
         def auto_plan(date: str, exercises: str, training_type: str = "strength"):
             items = [i for i in exercises.split("|") if i]
