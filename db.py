@@ -23,6 +23,7 @@ class Database:
                     date TEXT NOT NULL,
                     start_time TEXT,
                     end_time TEXT,
+                    timezone TEXT NOT NULL DEFAULT 'UTC',
                     training_type TEXT NOT NULL DEFAULT 'strength',
                     notes TEXT,
                     location TEXT,
@@ -35,6 +36,7 @@ class Database:
                 "date",
                 "start_time",
                 "end_time",
+                "timezone",
                 "training_type",
                 "notes",
                 "location",
@@ -762,6 +764,7 @@ class Database:
             "weight_unit": "kg",
             "time_format": "24h",
             "quick_weights": "20,40,60,80,100",
+            "quick_weight_increment": "0.5",
             "bookmarked_views": "",
             "pinned_stats": "",
             "hide_completed_plans": "0",
@@ -835,6 +838,7 @@ class WorkoutRepository(BaseRepository):
     def create(
         self,
         date: str,
+        timezone: str = "UTC",
         training_type: str = "strength",
         notes: str | None = None,
         location: str | None = None,
@@ -843,9 +847,10 @@ class WorkoutRepository(BaseRepository):
         mood_after: Optional[int] = None,
     ) -> int:
         return self.execute(
-            "INSERT INTO workouts (date, training_type, notes, location, rating, mood_before, mood_after) VALUES (?, ?, ?, ?, ?, ?, ?);",
+            "INSERT INTO workouts (date, timezone, training_type, notes, location, rating, mood_before, mood_after) VALUES (?, ?, ?, ?, ?, ?, ?, ?);",
             (
                 date,
+                timezone,
                 training_type,
                 notes,
                 location,
@@ -864,10 +869,21 @@ class WorkoutRepository(BaseRepository):
         limit: int | None = None,
         offset: int | None = None,
     ) -> List[
-        Tuple[int, str, Optional[str], Optional[str], str, Optional[str], Optional[int], Optional[int], Optional[int]]
+        Tuple[
+            int,
+            str,
+            Optional[str],
+            Optional[str],
+            str,
+            str,
+            Optional[str],
+            Optional[int],
+            Optional[int],
+            Optional[int],
+        ]
     ]:
         query = (
-            "SELECT id, date, start_time, end_time, training_type, notes, rating, mood_before, mood_after FROM workouts"
+            "SELECT id, date, start_time, end_time, timezone, training_type, notes, rating, mood_before, mood_after FROM workouts"
         )
         params: list[str | int] = []
         where_clauses: list[str] = []
@@ -917,6 +933,12 @@ class WorkoutRepository(BaseRepository):
         self.execute(
             "UPDATE workouts SET location = ? WHERE id = ?;",
             (location, workout_id),
+        )
+
+    def set_timezone(self, workout_id: int, timezone: str) -> None:
+        self.execute(
+            "UPDATE workouts SET timezone = ? WHERE id = ?;",
+            (timezone, workout_id),
         )
 
     def set_rating(self, workout_id: int, rating: Optional[int]) -> None:
@@ -975,6 +997,7 @@ class WorkoutRepository(BaseRepository):
         Optional[str],
         Optional[str],
         str,
+        str,
         Optional[str],
         Optional[str],
         Optional[int],
@@ -982,7 +1005,7 @@ class WorkoutRepository(BaseRepository):
         Optional[int],
     ]:
         rows = self.fetch_all(
-            "SELECT id, date, start_time, end_time, training_type, notes, location, rating, mood_before, mood_after FROM workouts WHERE id = ?;",
+            "SELECT id, date, start_time, end_time, timezone, training_type, notes, location, rating, mood_before, mood_after FROM workouts WHERE id = ?;",
             (workout_id,),
         )
         if not rows:
