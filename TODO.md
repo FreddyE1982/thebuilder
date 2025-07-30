@@ -89,8 +89,8 @@
 [complete] 77. Add endpoint to clear cached statistics.
 78. Provide gender-neutral avatar images in GUI.
 79. Implement plugin architecture for custom ML models.
-80. Add data migration script for schema changes.
-81. Implement Slack notifications for workout logs.
+[complete] 80. Add data migration script for schema changes.
+[complete] 81. Implement Slack notifications for workout logs.
 82. Add API key management for third-party integrations.
 [complete] 83. Provide user-friendly onboarding wizard in GUI.
 [complete] 84. Add long-term trend analytics (moving averages).
@@ -107,15 +107,15 @@
 95. Implement color-coded workout intensity map.
 [complete] 96. Add endpoint to configure auto planner parameters.
 97. Support split view on tablets for side-by-side charts.
-98. Provide API to fetch saved report PDFs.
+[complete] 98. Provide API to fetch saved report PDFs.
 99. Add screenshot-based test for mobile layout via playwright.
 [complete] 100. Document contribution guidelines and code style.
 
 [complete] 101. Add interactive calendar to schedule workouts.
 [complete] 102. Add global search bar for workouts and exercises.
 [complete] 103. Provide quick-add popup for workouts from home.
-104. Add drag-and-drop reordering for planned workouts.
-105. Add time-based filter in workout history.
+[complete] 104. Add drag-and-drop reordering for planned workouts.
+[complete] 105. Add time-based filter in workout history.
 106. Provide color-coded heatmap of training volume per week.
 107. Add speech-to-text input for set entry.
 108. Provide inline video tutorials for each exercise.
@@ -142,7 +142,7 @@
 129. Voice output for rest timer countdown.
 [complete] 130. Quick-add notes using predefined phrases.
 131. Compare progress between two exercises.
-132. Sort exercise library by various fields.
+[complete] 132. Sort exercise library by various fields.
 133. Rate workouts using star ratings.
 [complete] 134. Toggle to hide navigation labels.
 [complete] 135. Pin key metrics on the dashboard.
@@ -175,12 +175,12 @@
 [complete] 162. Dynamic search suggestions for exercises.
 [complete] 163. Highlight personal record sets automatically.
 164. Short completion animations for workouts.
-165. Quick-add tags using hashtag syntax.
+[complete] 165. Quick-add tags using hashtag syntax.
 166. Scrollable timeline of workout months.
 167. Rename logged workouts.
 168. Customizable layout spacing options.
 [complete] 169. Filter by equipment type quickly.
-170. Hide or show columns in tables.
+[complete] 170. Hide or show columns in tables.
 [complete] 171. Label rest timer progress with percent.
 [complete] 172. Schedule dark mode automatically at night.
 [complete] 173. Toggle to hide advanced charts.
@@ -199,7 +199,7 @@
 [complete] 186. Print-friendly workout summary view.
 [complete] 187. High-contrast accessibility theme.
 [complete] 188. Option to auto-collapse header on scroll.
-189. Import workout history from CSV.
+[complete] 189. Import workout history from CSV.
 190. Local search index for offline filtering.
 191. Daily reminder notifications.
 [complete] 192. Quick filter for unrated workouts.
@@ -207,7 +207,7 @@
 [complete] 194. Customizable quick weight increments.
 195. Bulk mark sets as completed using checkboxes.
 196. Collapsible explanations for analytics charts.
-197. Preview thumbnails for uploaded images.
+[complete] 197. Preview thumbnails for uploaded images.
 198. Keyboard shortcut to toggle dark mode.
 199. Flexible grid layout toggle.
 [complete] 200. "Clear filters" button in history tab.

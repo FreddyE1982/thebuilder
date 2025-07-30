@@ -5,6 +5,7 @@ import threading
 import asyncio
 import os
 import requests
+import re
 from typing import List, Dict
 from fastapi import (
     FastAPI,
@@ -341,6 +342,15 @@ class GymAPI:
         except Exception:
             pass
 
+    def _notify_slack(self, text: str) -> None:
+        url = self.settings.get_text("slack_webhook_url", "")
+        if not url:
+            return
+        try:
+            requests.post(url, json={"text": text}, timeout=5)
+        except Exception:
+            pass
+
     def _setup_routes(self) -> None:
         equipment_router = APIRouter(prefix="/equipment", tags=["Equipment"])
         muscles_router = APIRouter(prefix="/muscles", tags=["Muscles"])
@@ -653,6 +663,7 @@ class GymAPI:
             muscles: str = None,
             equipment: str = None,
             prefix: str = None,
+            sort_by: str = "name",
         ):
             groups = muscle_groups.split("|") if muscle_groups else None
             muscs = muscles.split("|") if muscles else None
@@ -661,6 +672,7 @@ class GymAPI:
                 muscs,
                 equipment,
                 prefix,
+                sort_by,
             )
 
         @self.app.get("/exercise_catalog/{name}")
@@ -764,7 +776,18 @@ class GymAPI:
                 path = f"images/{name}.png"
                 with open(path, "wb") as f:
                     f.write(data)
-                self.exercise_images.set(name, path)
+                thumb_dir = "images/thumbnails"
+                os.makedirs(thumb_dir, exist_ok=True)
+                thumb_path = f"{thumb_dir}/{name}.png"
+                try:
+                    from PIL import Image
+
+                    img = Image.open(path)
+                    img.thumbnail((200, 200))
+                    img.save(thumb_path)
+                except Exception:
+                    thumb_path = None
+                self.exercise_images.set(name, path, thumb_path)
                 return {"status": "uploaded"}
             except Exception as e:
                 raise HTTPException(status_code=400, detail=str(e))
@@ -823,6 +846,8 @@ class GymAPI:
             rating: int | None = None,
             mood_before: int | None = None,
             mood_after: int | None = None,
+            start_time: str | None = None,
+            end_time: str | None = None,
         ):
             try:
                 workout_date = (
@@ -848,7 +873,17 @@ class GymAPI:
                 rating,
                 mood_before,
                 mood_after,
+                start_time,
+                end_time,
             )
+            if notes:
+                tags = re.findall(r"#(\w+)", notes)
+                for t in tags:
+                    tid = self.tags.get_id(t)
+                    if tid is None:
+                        tid = self.tags.add(t)
+                    self.tags.assign(workout_id, tid)
+            self._notify_slack(f"Workout logged on {workout_date.isoformat()}")
             self._broadcast_event({"type": "workout_added", "id": workout_id})
             return {"id": workout_id}
 
@@ -862,18 +897,31 @@ class GymAPI:
             end_date: str = None,
             sort_by: str = "id",
             descending: bool = True,
+            start_time: str | None = None,
+            end_time: str | None = None,
+            fields: str | None = None,
             limit: int | None = None,
             offset: int | None = None,
         ):
             workouts = self.workouts.fetch_all_workouts(
                 start_date,
                 end_date,
+                start_time=start_time,
+                end_time=end_time,
                 sort_by=sort_by,
                 descending=descending,
                 limit=limit,
                 offset=offset,
             )
-            return [{"id": wid, "date": date} for wid, date, *_ in workouts]
+            result = []
+            for wid, date, *_s, _e, _tz, _t, _n, _r, _mb, _ma in workouts:
+                entry = {"id": wid, "date": date}
+                if fields:
+                    allowed = set(entry.keys())
+                    keep = [f for f in fields.split(",") if f in allowed]
+                    entry = {k: entry[k] for k in keep}
+                result.append(entry)
+            return result
 
         @self.app.get("/workouts/search")
         def search_workouts(query: str):
@@ -891,12 +939,17 @@ class GymAPI:
             training_type: str = None,
             sort_by: str = "id",
             descending: bool = True,
+            start_time: str | None = None,
+            end_time: str | None = None,
+            fields: str | None = None,
             limit: int | None = None,
             offset: int | None = None,
         ):
             workouts = self.workouts.fetch_all_workouts(
                 start_date,
                 end_date,
+                start_time=start_time,
+                end_time=end_time,
                 sort_by=sort_by,
                 descending=descending,
                 limit=limit,
@@ -907,16 +960,19 @@ class GymAPI:
                 if training_type and t_type != training_type:
                     continue
                 summary = self.sets.workout_summary(wid)
-                result.append(
-                    {
-                        "id": wid,
-                        "date": date,
-                        "training_type": t_type,
-                        "volume": summary["volume"],
-                        "sets": summary["sets"],
-                        "avg_rpe": summary["avg_rpe"],
-                    }
-                )
+                entry = {
+                    "id": wid,
+                    "date": date,
+                    "training_type": t_type,
+                    "volume": summary["volume"],
+                    "sets": summary["sets"],
+                    "avg_rpe": summary["avg_rpe"],
+                }
+                if fields:
+                    allowed = set(entry.keys())
+                    keep = [f for f in fields.split(",") if f in allowed]
+                    entry = {k: entry[k] for k in keep}
+                result.append(entry)
             return result
 
         @self.app.get("/calendar")
@@ -1061,6 +1117,13 @@ class GymAPI:
             notes: str = None,
         ):
             self.workouts.set_note(workout_id, notes)
+            if notes:
+                tags = re.findall(r"#(\w+)", notes)
+                for t in tags:
+                    tid = self.tags.get_id(t)
+                    if tid is None:
+                        tid = self.tags.add(t)
+                    self.tags.assign(workout_id, tid)
             return {"status": "updated"}
 
         @self.app.put("/workouts/{workout_id}/location")
@@ -1219,7 +1282,8 @@ class GymAPI:
                 start_date, end_date, sort_by, descending
             )
             return [
-                {"id": pid, "date": date, "training_type": t} for pid, date, t in plans
+                {"id": pid, "date": date, "training_type": t, "position": pos}
+                for pid, date, t, pos in plans
             ]
 
         @self.app.put("/planned_workouts/{plan_id}")
@@ -1250,6 +1314,22 @@ class GymAPI:
             try:
                 new_id = self.planner.duplicate_plan(plan_id, date)
                 return {"id": new_id}
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
+        @self.app.post(
+            "/planned_workouts/order",
+            summary="Reorder planned workouts",
+            description="Update the display order of planned workouts using comma-separated ids.",
+        )
+        def reorder_planned(order: str):
+            try:
+                ids = [int(i) for i in order.split(",") if i]
+            except ValueError:
+                raise HTTPException(status_code=400, detail="invalid order")
+            try:
+                self.planned_workouts.reorder(ids)
+                return {"status": "updated"}
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
 
@@ -2955,6 +3035,15 @@ class GymAPI:
         @self.app.get("/reports/email_logs")
         def list_email_logs():
             return self.email_logs.fetch_all_logs()
+
+        @self.app.get("/reports/{filename}")
+        def get_report_pdf(filename: str):
+            path = os.path.join("reports", filename)
+            if not os.path.exists(path):
+                raise HTTPException(status_code=404, detail="not found")
+            with open(path, "rb") as f:
+                data = f.read()
+            return Response(content=data, media_type="application/pdf")
 
         @self.app.post("/notifications")
         def create_notification(message: str = Body(...)):

@@ -18,3 +18,4 @@ pip-audit
 plotly
 pytest
 pytest-asyncio
+Pillow>=9.0.0
