@@ -48,7 +48,7 @@
 [complete] 39. Add coverage reporting to tests.
 [complete] 40. Document environment variables for deployment in README.
 41. Add support for external database like PostgreSQL.
-42. Add repository pattern for ml_service states.
+[complete] 42. Add repository pattern for ml_service states.
 [complete] 43. Add progress bar to Streamlit when uploading CSV files.
 [complete] 44. Provide data validation on CSV imports.
 [complete] 45. Add 3D visualization of muscle engagement.
@@ -91,7 +91,7 @@
 82. Add API key management for third-party integrations.
 [complete] 83. Provide user-friendly onboarding wizard in GUI.
 [complete] 84. Add long-term trend analytics (moving averages).
-85. Support per-workout timezone handling.
+[complete] 85. Support per-workout timezone handling.
 [complete] 86. Implement automatic database vacuuming.
 [complete] 87. Add drag-and-drop reordering for workout templates.
 88. Integrate speech recognition for quick set entry.
@@ -122,27 +122,27 @@
 112. Support export of progress charts to PDF.
 113. Show real-time timer overlay during sets.
 114. Filter exercise lists to favorites only.
-115. Display workout completion progress bar.
-116. Auto start rest timer after each set.
+[complete] 115. Display workout completion progress bar.
+[complete] 116. Auto start rest timer after each set.
 [complete] 117. Customize quick weight buttons in settings.
 [complete] 118. Allow hiding of completed sets.
 [complete] 119. Collapse exercises into expandable sections.
-120. Color-code workouts by training type tags.
+[complete] 120. Color-code workouts by training type tags.
 [complete] 121. Copy weight values to clipboard with one click.
 [complete] 122. Set custom accent color in settings.
 123. Generate shareable read-only workout summary images.
-124. Undo deletion of sets.
+[complete] 124. Undo deletion of sets.
 [complete] 125. Create templates from logged workouts.
 126. Step-by-step onboarding for new features.
 127. Offline caching of recent workouts.
 128. Weekly planner view for upcoming sessions.
 129. Voice output for rest timer countdown.
-130. Quick-add notes using predefined phrases.
+[complete] 130. Quick-add notes using predefined phrases.
 131. Compare progress between two exercises.
 132. Sort exercise library by various fields.
 133. Rate workouts using star ratings.
 [complete] 134. Toggle to hide navigation labels.
-135. Pin key metrics on the dashboard.
+[complete] 135. Pin key metrics on the dashboard.
 [complete] 136. Collapsible filter panel in history tab.
 137. Keyboard shortcuts help overlay.
 138. Bulk edit multiple sets at once.
@@ -167,10 +167,10 @@
 157. Collapsible summary metrics in history.
 158. Step counter integration for cardio.
 159. Quick access to recently used templates.
-160. Mini progress widget on home screen.
+[complete] 160. Mini progress widget on home screen.
 161. Filter results by muscle group across tabs.
-162. Dynamic search suggestions for exercises.
-163. Highlight personal record sets automatically.
+[complete] 162. Dynamic search suggestions for exercises.
+[complete] 163. Highlight personal record sets automatically.
 164. Short completion animations for workouts.
 165. Quick-add tags using hashtag syntax.
 166. Scrollable timeline of workout months.
@@ -201,7 +201,7 @@
 191. Daily reminder notifications.
 [complete] 192. Quick filter for unrated workouts.
 193. Keyboard navigation in history table.
-194. Customizable quick weight increments.
+[complete] 194. Customizable quick weight increments.
 195. Bulk mark sets as completed using checkboxes.
 196. Collapsible explanations for analytics charts.
 197. Preview thumbnails for uploaded images.
