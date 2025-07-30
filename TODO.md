@@ -143,7 +143,7 @@
 [complete] 130. Quick-add notes using predefined phrases.
 131. Compare progress between two exercises.
 [complete] 132. Sort exercise library by various fields.
-133. Rate workouts using star ratings.
+[complete] 133. Rate workouts using star ratings.
 [complete] 134. Toggle to hide navigation labels.
 [complete] 135. Pin key metrics on the dashboard.
 [complete] 136. Collapsible filter panel in history tab.
