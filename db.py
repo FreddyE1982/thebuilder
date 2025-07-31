@@ -808,6 +808,7 @@ class Database:
             "app_version": "1.0.0",
             "rpe_scale": "10",
             "language": "en",
+            "show_help_tips": "0",
         }
         with self._connection() as conn:
             for key, value in defaults.items():
@@ -2236,6 +2237,7 @@ class SettingsRepository(BaseRepository):
             "auto_dark_mode",
             "large_font_mode",
             "show_onboarding",
+            "show_help_tips",
             "auto_open_last_workout",
             "collapse_header",
             "email_weekly_enabled",
@@ -2288,6 +2290,7 @@ class SettingsRepository(BaseRepository):
                 "auto_dark_mode",
                 "large_font_mode",
                 "show_onboarding",
+                "show_help_tips",
                 "auto_open_last_workout",
                 "collapse_header",
                 "email_weekly_enabled",
@@ -2408,6 +2411,7 @@ class SettingsRepository(BaseRepository):
             "auto_dark_mode",
             "large_font_mode",
             "show_onboarding",
+            "show_help_tips",
             "auto_open_last_workout",
             "collapse_header",
             "email_weekly_enabled",

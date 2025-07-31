@@ -15,6 +15,7 @@ class SettingsSchema(BaseModel):
     accent_color: str = "#ff4b4b"
     hotkey_repeat_last_set: str = "r"
     show_est_1rm: bool = True
+    show_help_tips: bool = False
 
 def validate_settings(data: dict) -> None:
     try:

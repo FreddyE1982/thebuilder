@@ -276,6 +276,7 @@ class APITestCase(unittest.TestCase):
         self.assertFalse(data["compact_mode"])
         self.assertFalse(data["auto_dark_mode"])
         self.assertFalse(data["show_onboarding"])
+        self.assertFalse(data["show_help_tips"])
         self.assertFalse(data["auto_open_last_workout"])
         self.assertFalse(data["game_enabled"])
         self.assertIn("ml_all_enabled", data)
@@ -294,6 +295,7 @@ class APITestCase(unittest.TestCase):
                 "compact_mode": True,
                 "auto_dark_mode": True,
                 "show_onboarding": True,
+                "show_help_tips": True,
                 "auto_open_last_workout": True,
                 "accent_color": "#00ff00",
             },
@@ -309,6 +311,7 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(data["theme"], "dark")
         self.assertEqual(data["auto_dark_mode"], True)
         self.assertTrue(data["show_onboarding"])
+        self.assertTrue(data["show_help_tips"])
         self.assertTrue(data["auto_open_last_workout"])
         self.assertEqual(data["timezone"], "America/New_York")
         self.assertEqual(float(data["quick_weight_increment"]), 1.0)
@@ -333,6 +336,7 @@ class APITestCase(unittest.TestCase):
             "compact_mode": "1",
             "auto_dark_mode": "1",
             "show_onboarding": "1",
+            "show_help_tips": "1",
             "auto_open_last_workout": "1",
         }
         with open(self.yaml_path, "w", encoding="utf-8") as f:
@@ -351,6 +355,7 @@ class APITestCase(unittest.TestCase):
         self.assertTrue(data["compact_mode"])
         self.assertTrue(data["auto_dark_mode"])
         self.assertTrue(data["show_onboarding"])
+        self.assertTrue(data["show_help_tips"])
         self.assertTrue(data["auto_open_last_workout"])
 
     def test_ml_toggle(self) -> None:
