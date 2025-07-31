@@ -133,7 +133,7 @@
 [complete] 120. Color-code workouts by training type tags.
 [complete] 121. Copy weight values to clipboard with one click.
 [complete] 122. Set custom accent color in settings.
-123. Generate shareable read-only workout summary images.
+[complete] 123. Generate shareable read-only workout summary images.
 [complete] 124. Undo deletion of sets.
 [complete] 125. Create templates from logged workouts.
 126. Step-by-step onboarding for new features.
@@ -148,8 +148,8 @@
 [complete] 135. Pin key metrics on the dashboard.
 [complete] 136. Collapsible filter panel in history tab.
 [complete] 137. Keyboard shortcuts help overlay.
-138. Bulk edit multiple sets at once.
-139. Randomize training plan generator.
+[complete] 138. Bulk edit multiple sets at once.
+[complete] 139. Randomize training plan generator.
 [complete] 140. Filter exercises without equipment assigned.
 [complete] 141. Switch weight units on the fly in set entry.
 [complete] 142. Assign custom icons to workouts.
@@ -169,9 +169,9 @@
 [complete] 156. Indicator for unsaved changes in forms.
 [complete] 157. Collapsible summary metrics in history.
 158. Step counter integration for cardio.
-159. Quick access to recently used templates.
+[complete] 159. Quick access to recently used templates.
 [complete] 160. Mini progress widget on home screen.
-161. Filter results by muscle group across tabs.
+[complete] 161. Filter results by muscle group across tabs.
 [complete] 162. Dynamic search suggestions for exercises.
 [complete] 163. Highlight personal record sets automatically.
 164. Short completion animations for workouts.

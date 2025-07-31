@@ -4114,3 +4114,24 @@ class CompareProgressTestCase(unittest.TestCase):
         )
         self.assertEqual(resp.status_code, 200)
 
+
+class SummaryImageTestCase(unittest.TestCase):
+    def setUp(self) -> None:
+        api = GymAPI(start_scheduler=False)
+        self.client = TestClient(api.app)
+
+    def test_summary_image_endpoint(self) -> None:
+        self.client.post("/workouts")
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench", "equipment": "Bar"},
+        )
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8},
+        )
+        resp = self.client.get("/workouts/1/summary_image")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.headers["content-type"], "image/png")
+        self.assertGreater(len(resp.content), 0)
+

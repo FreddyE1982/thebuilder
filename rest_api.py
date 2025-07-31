@@ -1070,6 +1070,11 @@ class GymAPI:
             result.sort(key=lambda x: x["date"])
             return result
 
+        @self.app.get("/workouts/by_muscle")
+        def workouts_by_muscle_group(muscle_group: str):
+            ids = self.statistics.workouts_by_muscle_group(muscle_group)
+            return {"workout_ids": ids}
+
         @self.app.get("/workouts/{workout_id}")
         def get_workout(workout_id: int):
             (
@@ -1135,6 +1140,11 @@ class GymAPI:
                     "Content-Disposition": f"attachment; filename=workout_{workout_id}.xml"
                 },
             )
+
+        @self.app.get("/workouts/{workout_id}/summary_image")
+        def workout_summary_image(workout_id: int):
+            data = self.statistics.workout_summary_image(workout_id)
+            return Response(content=data, media_type="image/png")
 
         @self.app.get("/workouts/{workout_id}/share")
         def share_workout(workout_id: int):
@@ -1221,6 +1231,7 @@ class GymAPI:
         def update_workout_timezone(workout_id: int, timezone: str):
             self.workouts.set_timezone(workout_id, timezone)
             return {"status": "updated"}
+
 
         @self.app.put("/workouts/{workout_id}/rating")
         def update_workout_rating(
@@ -1460,7 +1471,12 @@ class GymAPI:
                 raise HTTPException(status_code=400, detail=str(e))
 
         @self.app.post("/planned_workouts/auto_plan")
-        def auto_plan(date: str, exercises: str, training_type: str = "strength"):
+        def auto_plan(
+            date: str,
+            exercises: str,
+            training_type: str = "strength",
+            randomize: bool = False,
+        ):
             items = [i for i in exercises.split("|") if i]
             pairs: list[tuple[str, str | None]] = []
             for it in items:
@@ -1470,7 +1486,7 @@ class GymAPI:
                 else:
                     pairs.append((it, None))
             try:
-                pid = self.planner.create_ai_plan(date, pairs, training_type)
+                pid = self.planner.create_ai_plan(date, pairs, training_type, randomize)
                 return {"id": pid}
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
@@ -1564,6 +1580,11 @@ class GymAPI:
                 }
                 for tid, name, t, color in templates
             ]
+
+        @self.app.get("/templates/recent")
+        def recent_templates(limit: int = 5):
+            rows = self.template_workouts.fetch_recent(limit)
+            return [{"id": tid, "name": name} for tid, name in rows]
 
         @self.app.post(
             "/templates/order",

@@ -40,6 +40,25 @@ def restore_db(backup_path: str, db_path: str) -> None:
     shutil.copy(backup_path, db_path)
 
 
+def bulk_update_sets_csv(csv_path: str, db_path: str) -> None:
+    """Bulk update sets from a CSV file with columns id,reps,weight,rpe."""
+    repo = SetRepository(db_path)
+    updates: list[dict] = []
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            updates.append(
+                {
+                    "id": int(row["id"]),
+                    "reps": int(row["reps"]),
+                    "weight": float(row["weight"]),
+                    "rpe": int(row["rpe"]),
+                    "warmup": row.get("warmup"),
+                }
+            )
+    repo.bulk_update(updates)
+
+
 def import_strava(csv_path: str, db_path: str) -> None:
     """Import workouts from a Strava CSV export."""
     api = GymAPI(db_path=db_path)
@@ -149,6 +168,10 @@ def main() -> None:
     conv.add_argument("--weight", type=float, required=True)
     conv.add_argument("--unit", choices=["kg", "lb"], required=True)
 
+    bulk_up = sub.add_parser("bulk_update_sets")
+    bulk_up.add_argument("--csv", required=True)
+    bulk_up.add_argument("--db", default="workout.db")
+
     args = parser.parse_args()
 
     if args.cmd == "export":
@@ -163,6 +186,8 @@ def main() -> None:
         benchmark(args.url, args.runs)
     elif args.cmd == "audit":
         security_audit()
+    elif args.cmd == "bulk_update_sets":
+        bulk_update_sets_csv(args.csv, args.db)
     elif args.cmd == "import_strava":
         import_strava(args.csv, args.db)
     elif args.cmd == "import_workout":
