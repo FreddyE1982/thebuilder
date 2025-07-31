@@ -1,1 +1,2 @@
 test_tooltips_present and test_workout_search failed during run
+API tests failed: calendar_endpoint, copy_workout_to_template, duplicate_workout, general_settings, plan_progress, plan_workflow, schema_migration, training_type_summary_endpoint, workout_history_endpoint

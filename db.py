@@ -804,6 +804,7 @@ class Database:
             "simple_mode": "0",
             "hide_advanced_charts": "0",
             "vertical_nav": "0",
+            "daily_reminders_enabled": "0",
             "app_version": "1.0.0",
             "rpe_scale": "10",
             "language": "en",
@@ -2245,6 +2246,7 @@ class SettingsRepository(BaseRepository):
             "hide_advanced_charts",
             "vertical_nav",
             "flex_metric_grid",
+            "daily_reminders_enabled",
         }
         for k, v in rows:
             if k in bool_keys:
@@ -2296,6 +2298,7 @@ class SettingsRepository(BaseRepository):
             "hide_advanced_charts",
             "vertical_nav",
             "flex_metric_grid",
+            "daily_reminders_enabled",
         }
             for key, value in data.items():
                 val = str(value)
@@ -2414,6 +2417,7 @@ class SettingsRepository(BaseRepository):
             "simple_mode",
             "vertical_nav",
             "flex_metric_grid",
+            "daily_reminders_enabled",
         }
         for k in bool_keys:
             if k in data:

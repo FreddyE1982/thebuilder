@@ -136,7 +136,7 @@
 [complete] 123. Generate shareable read-only workout summary images.
 [complete] 124. Undo deletion of sets.
 [complete] 125. Create templates from logged workouts.
-126. Step-by-step onboarding for new features.
+[complete] 126. Step-by-step onboarding for new features.
 127. Offline caching of recent workouts.
 128. Weekly planner view for upcoming sessions.
 [complete] 129. Voice output for rest timer countdown.
@@ -156,7 +156,7 @@
 [complete] 143. Multi-select deletion of planned workouts.
 [complete] 144. Donut charts for goal progress visualization.
 [complete] 145. Link directly to equipment details from sets.
-146. Interactive tutorial for first workout creation.
+[complete] 146. Interactive tutorial for first workout creation.
 [complete] 147. Hotkey to repeat last set quickly.
 [complete] 148. Inline editing of tags.
 [complete] 149. Simple mode toggle hiding advanced fields.
@@ -164,7 +164,7 @@
 [complete] 151. Adjustable font size slider in settings.
 [complete] 152. Import images using mobile share menu.
 [complete] 153. Quick-add rest notes after each set.
-154. Contextual help tips on each page.
+[complete] 154. Contextual help tips on each page.
 [complete] 155. Toggle display of estimated 1RM.
 [complete] 156. Indicator for unsaved changes in forms.
 [complete] 157. Collapsible summary metrics in history.
@@ -174,7 +174,7 @@
 [complete] 161. Filter results by muscle group across tabs.
 [complete] 162. Dynamic search suggestions for exercises.
 [complete] 163. Highlight personal record sets automatically.
-164. Short completion animations for workouts.
+[complete] 164. Short completion animations for workouts.
 [complete] 165. Quick-add tags using hashtag syntax.
 [complete] 166. Scrollable timeline of workout months.
 [complete] 167. Rename logged workouts.
@@ -201,7 +201,7 @@
 [complete] 188. Option to auto-collapse header on scroll.
 [complete] 189. Import workout history from CSV.
 190. Local search index for offline filtering.
-191. Daily reminder notifications.
+[complete] 191. Daily reminder notifications.
 [complete] 192. Quick filter for unrated workouts.
 [complete] 193. Keyboard navigation in history table.
 [complete] 194. Customizable quick weight increments.
