@@ -1059,7 +1059,7 @@ class GymAPI:
                 offset=offset,
             )
             result = []
-            for wid, date, _s, _e, t_type, _notes, _rating, *_ in workouts:
+            for wid, date, _s, _e, _tz, t_type, _notes, _loc, _rating, *_ in workouts:
                 if training_type and t_type != training_type:
                     continue
                 summary = self.sets.workout_summary(wid)
@@ -1083,7 +1083,7 @@ class GymAPI:
             logged = await self.async_workouts.fetch_all_workouts(start_date, end_date)
             planned = self.planned_workouts.fetch_all(start_date, end_date)
             result = []
-            for wid, date, _s, _e, t_type, _notes, _rating, *_ in logged:
+            for wid, date, _s, _e, _tz, t_type, _notes, _loc, _rating, *_ in logged:
                 result.append(
                     {
                         "id": wid,
@@ -1092,7 +1092,7 @@ class GymAPI:
                         "planned": False,
                     }
                 )
-            for pid, date, t_type in planned:
+            for pid, date, t_type, _pos in planned:
                 result.append(
                     {
                         "id": pid,
@@ -1410,8 +1410,8 @@ class GymAPI:
                 start_date, end_date, sort_by, descending
             )
             return [
-                {"id": pid, "date": date, "training_type": t, "position": pos}
-                for pid, date, t, pos in plans
+                {"id": pid, "date": date, "training_type": t}
+                for pid, date, t, _pos in plans
             ]
 
         @self.app.get("/planned_workouts/weekly")
@@ -1422,8 +1422,8 @@ class GymAPI:
                 today.isoformat(), end.isoformat(), sort_by="date", descending=False
             )
             return [
-                {"id": pid, "date": date, "training_type": t, "position": pos}
-                for pid, date, t, pos in plans
+                {"id": pid, "date": date, "training_type": t}
+                for pid, date, t, _pos in plans
             ]
 
         @self.app.get("/planned_workouts/search")
@@ -1941,7 +1941,10 @@ class GymAPI:
 
         @self.app.get("/sets/{set_id}")
         def get_set(set_id: int):
-            return self.sets.fetch_detail(set_id)
+            data = self.sets.fetch_detail(set_id)
+            if data.get("rest_note") is None:
+                data.pop("rest_note", None)
+            return data
 
         @self.app.get("/exercises/{exercise_id}/sets")
         def list_sets(exercise_id: int):
@@ -3101,6 +3104,7 @@ class GymAPI:
             experimental_models_enabled: bool = None,
             hide_completed_plans: bool = None,
             rpe_scale: int = None,
+            quick_weight_increment: float = None,
         ):
             if body_weight is not None:
                 self.settings.set_float("body_weight", body_weight)
@@ -3205,6 +3209,8 @@ class GymAPI:
                 )
             if hide_completed_plans is not None:
                 self.settings.set_bool("hide_completed_plans", hide_completed_plans)
+            if quick_weight_increment is not None:
+                self.settings.set_float("quick_weight_increment", quick_weight_increment)
             return {"status": "updated"}
 
         @self.app.get("/settings/bookmarks")

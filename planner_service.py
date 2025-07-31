@@ -52,10 +52,14 @@ class PlannerService:
         _pid, date, t_type = self.planned_workouts.fetch_detail(plan_id)
         workout_id = self.workouts.create(
             date,
-            t_type,
-            None,
-            None,
-            None,
+            name=None,
+            training_type=t_type,
+            notes=None,
+            location=None,
+            icon=None,
+            rating=None,
+            mood_before=None,
+            mood_after=None,
         )
         exercises = self.planned_exercises.fetch_for_workout(plan_id)
         for ex_id, name, equipment in exercises:
@@ -178,13 +182,17 @@ class PlannerService:
         (
             _wid,
             _date,
-            _s,
-            _e,
+            _name,
+            _start_time,
+            _end_time,
+            _timezone,
             t_type,
             _notes,
             _loc,
+            _icon,
             _rating,
-            *_,
+            _mood_before,
+            _mood_after,
         ) = self.workouts.fetch_detail(workout_id)
         if name is None:
             name = f"Workout {workout_id}"
@@ -193,7 +201,7 @@ class PlannerService:
         for ex_id, ex_name, eq, _note in exercises:
             t_ex_id = self.template_exercises.add(template_id, ex_name, eq)
             sets = self.sets.fetch_for_exercise(ex_id)
-            for _sid, reps, weight, rpe, _st, _et, _warm, _pos in sets:
+            for _sid, reps, weight, rpe, _st, _et, _rest_note, _warm, _pos in sets:
                 self.template_sets.add(t_ex_id, reps, weight, rpe)
         return template_id
 
@@ -202,29 +210,37 @@ class PlannerService:
         (
             _wid,
             _date,
-            _s,
-            _e,
+            _name,
+            _start_time,
+            _end_time,
+            _timezone,
             training_type,
             notes,
             location,
+            _icon,
             rating,
             mood_before,
             mood_after,
         ) = self.workouts.fetch_detail(workout_id)
         new_id = self.workouts.create(
             new_date,
-            training_type,
-            notes,
-            location,
-            rating,
-            mood_before,
-            mood_after,
+            name=None,
+            timezone=_timezone,
+            training_type=training_type,
+            notes=notes,
+            location=location,
+            icon=_icon,
+            rating=rating,
+            mood_before=mood_before,
+            mood_after=mood_after,
+            start_time=_start_time,
+            end_time=_end_time,
         )
         exercises = self.exercises.fetch_for_workout(workout_id)
         for ex_id, name, equipment, note in exercises:
             new_ex_id = self.exercises.add(new_id, name, equipment, note)
             sets = self.sets.fetch_for_exercise(ex_id)
-            for sid, reps, weight, rpe, stime, etime, warmup, _pos in sets:
+            for sid, reps, weight, rpe, stime, etime, _rest_note, warmup, _pos in sets:
                 detail = self.sets.fetch_detail(sid)
                 new_set_id = self.sets.add(
                     new_ex_id,
