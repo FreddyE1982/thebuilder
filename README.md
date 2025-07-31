@@ -104,6 +104,7 @@ The following variables control runtime paths:
 | Variable  | Description                      | Default        |
 |-----------|----------------------------------|----------------|
 | `DB_PATH` | Path to the SQLite database file | `workout.db`   |
+| `DB_URL`  | Optional PostgreSQL connection URL | *(unset)* |
 | `YAML_PATH` | Path to the settings YAML       | `settings.yaml`|
 | `TEST_MODE` | Enable simplified test behaviour | `0` |
 

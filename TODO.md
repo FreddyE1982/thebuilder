@@ -52,6 +52,7 @@
 [complete] 39. Add coverage reporting to tests.
 [complete] 40. Document environment variables for deployment in README.
 41. Add support for external database like PostgreSQL.
+41a. Add DB_URL env variable for external database configuration. [complete]
 [complete] 42. Add repository pattern for ml_service states.
 [complete] 43. Add progress bar to Streamlit when uploading CSV files.
 [complete] 44. Provide data validation on CSV imports.
