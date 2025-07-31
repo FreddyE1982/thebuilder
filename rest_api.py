@@ -968,18 +968,17 @@ class GymAPI:
                 )
             workout_id = await self.async_workouts.create(
                 workout_date.isoformat(),
-                None,
-                timezone,
-                training_type,
-                notes,
-                location,
+                timezone=timezone,
+                training_type=training_type,
+                notes=notes,
+                location=location,
                 rating=rating,
                 mood_before=mood_before,
                 mood_after=mood_after,
-                icon=icon,
                 start_time=start_time,
                 end_time=end_time,
             )
+            await self.async_workouts.set_icon(workout_id, icon)
             if notes:
                 tags = re.findall(r"#(\w+)", notes)
                 for t in tags:

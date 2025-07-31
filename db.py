@@ -562,7 +562,8 @@ class Database:
         ),
     }
 
-    def __init__(self, db_path: str = "workout.db") -> None:
+    def __init__(self, db_path: str = "workout.db", db_url: str | None = None) -> None:
+        self._db_url = db_url or os.environ.get("DB_URL")
         self._db_path = db_path
         self._ensure_schema()
         self._import_equipment_data()
@@ -574,8 +575,12 @@ class Database:
         self.vacuum()
 
     @contextmanager
-    def _connection(self) -> sqlite3.Connection:
-        connection = sqlite3.connect(self._db_path)
+    def _connection(self):
+        if self._db_url and self._db_url.startswith("postgresql"):
+            import psycopg2
+            connection = psycopg2.connect(self._db_url)
+        else:
+            connection = sqlite3.connect(self._db_path)
         try:
             yield connection
             connection.commit()
