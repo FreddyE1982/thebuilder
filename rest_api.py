@@ -3077,6 +3077,7 @@ class GymAPI:
             compact_mode: bool = None,
             auto_dark_mode: bool = None,
             show_onboarding: bool = None,
+            show_help_tips: bool = None,
             auto_open_last_workout: bool = None,
             email_weekly_enabled: bool = None,
             daily_reminders_enabled: bool = None,
@@ -3170,6 +3171,8 @@ class GymAPI:
                 self.settings.set_bool("auto_dark_mode", auto_dark_mode)
             if show_onboarding is not None:
                 self.settings.set_bool("show_onboarding", show_onboarding)
+            if show_help_tips is not None:
+                self.settings.set_bool("show_help_tips", show_help_tips)
             if auto_open_last_workout is not None:
                 self.settings.set_bool("auto_open_last_workout", auto_open_last_workout)
             if email_weekly_enabled is not None:

@@ -216,6 +216,7 @@ class GymApp:
         self.vertical_nav = self.settings_repo.get_bool("vertical_nav", False)
         self.hide_nav_labels = self.settings_repo.get_bool("hide_nav_labels", False)
         self.show_onboarding = self.settings_repo.get_bool("show_onboarding", False)
+        self.show_help_tips = self.settings_repo.get_bool("show_help_tips", False)
         self.auto_open_last_workout = self.settings_repo.get_bool(
             "auto_open_last_workout", False
         )
@@ -2410,6 +2411,9 @@ class GymApp:
     def _show_help_tip(self, page: str) -> None:
         """Display contextual help tip for ``page``."""
 
+        if not self.show_help_tips:
+            return
+
         tips = {
             "Workouts": "Use the **Add Workout** button to start tracking your session.",
             "Progress": "Select an exercise to view detailed charts and records.",
@@ -2714,7 +2718,7 @@ class GymApp:
             st.session_state.show_whats_new = True
         if st.session_state.get("show_whats_new"):
             self._whats_new_dialog()
-        if st.session_state.get("show_feature_onboarding"):
+        if st.session_state.get("show_feature_onboarding") and self.show_onboarding:
             self._new_feature_onboarding()
         self._open_header()
         st.markdown("<div class='title-section'>", unsafe_allow_html=True)
@@ -2981,10 +2985,14 @@ class GymApp:
 
     def _workout_section(self) -> None:
         with self._section("Workouts"):
-            if not self.workouts.fetch_all_workouts() and not st.session_state.get("show_workout_tutorial_shown"):
+            if (
+                self.show_onboarding
+                and not self.workouts.fetch_all_workouts()
+                and not st.session_state.get("show_workout_tutorial_shown")
+            ):
                 st.session_state.show_workout_tutorial = True
                 st.session_state.show_workout_tutorial_shown = True
-            if st.session_state.get("show_workout_tutorial"):
+            if st.session_state.get("show_workout_tutorial") and self.show_onboarding:
                 self._first_workout_tutorial()
             with st.expander("Existing Workouts", expanded=True):
                 create_tab, manage_tab = st.tabs(["Create New", "Existing"])
@@ -2992,7 +3000,8 @@ class GymApp:
                     self._create_workout_form(self.training_options)
                 with manage_tab:
                     self._existing_workout_form(self.training_options)
-            self._show_help_tip("Workouts")
+            if self.show_help_tips:
+                self._show_help_tip("Workouts")
 
     def _create_workout_form(self, training_options: list[str]) -> None:
         with st.container():
@@ -5880,7 +5889,8 @@ class GymApp:
                     )
         else:
             st.info("Select an exercise to view insights.")
-        self._show_help_tip("Progress")
+        if self.show_help_tips:
+            self._show_help_tip("Progress")
 
     def _weight_tab(self) -> None:
         st.header("Body Weight")
@@ -6902,6 +6912,10 @@ class GymApp:
                     "Show Onboarding Wizard",
                     value=self.show_onboarding,
                 )
+                help_tips_opt = st.checkbox(
+                    "Show Help Tips",
+                    value=self.show_help_tips,
+                )
                 auto_open_opt = st.checkbox(
                     "Auto-Open Last Workout",
                     value=self.auto_open_last_workout,
@@ -7126,6 +7140,8 @@ class GymApp:
                 self.hide_nav_labels = hide_nav_opt
                 self.settings_repo.set_bool("show_onboarding", show_onboard_opt)
                 self.show_onboarding = show_onboard_opt
+                self.settings_repo.set_bool("show_help_tips", help_tips_opt)
+                self.show_help_tips = help_tips_opt
                 self.settings_repo.set_bool("auto_open_last_workout", auto_open_opt)
                 self.auto_open_last_workout = auto_open_opt
                 self.settings_repo.set_bool("collapse_header", collapse_header_opt)

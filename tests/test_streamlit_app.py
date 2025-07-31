@@ -781,6 +781,34 @@ class StreamlitAppTest(unittest.TestCase):
         help_text = any("Workout Logger Help" in m.body for m in self.at.markdown)
         self.assertTrue(help_text)
 
+    def test_help_tips_disabled_by_default(self) -> None:
+        tips_present = any("Need Help?" in m.body for m in self.at.markdown)
+        self.assertFalse(tips_present)
+
+    def test_enable_help_tips(self) -> None:
+        with open(self.yaml_path, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+        data["show_help_tips"] = True
+        with open(self.yaml_path, "w", encoding="utf-8") as f:
+            yaml.safe_dump(data, f)
+        self.at.run()
+        tips_present = any("Need Help?" in m.body for m in self.at.markdown)
+        self.assertTrue(tips_present)
+
+    def test_onboarding_tutorial_disabled(self) -> None:
+        tutorial = any("First Workout" in m.body for m in self.at.markdown)
+        self.assertFalse(tutorial)
+
+    def test_enable_onboarding_tutorial(self) -> None:
+        with open(self.yaml_path, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+        data["show_onboarding"] = True
+        with open(self.yaml_path, "w", encoding="utf-8") as f:
+            yaml.safe_dump(data, f)
+        self.at.run()
+        tutorial = any("First Workout" in m.body for m in self.at.markdown)
+        self.assertTrue(tutorial)
+
     def test_pinned_stats_header(self) -> None:
         idx_new = _find_by_label(
             self.at.button,
