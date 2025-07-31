@@ -25,6 +25,7 @@
 [complete] 19c. Add language selector in settings.
 [complete] 20a. Create asynchronous repository layer using aiosqlite.
 20b1. Convert WorkoutRepository to AsyncWorkoutRepository. [complete]
+20b2a. Convert TagRepository to AsyncTagRepository. [pending]
 20b2. Convert remaining repositories to async versions.
 20c1. Update REST API workouts endpoints to async. [pending]
 20c2. Update remaining endpoints to async.
