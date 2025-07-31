@@ -1898,6 +1898,8 @@ class GymApp:
 
     def _help_overlay_button(self) -> None:
         """Floating help button opening overlay with README links."""
+        if not self.show_help_tips:
+            return
         st.markdown("<div class='help-container'>", unsafe_allow_html=True)
         if st.button("?", key="help_overlay_btn"):
             st.session_state.open_help_overlay = True
