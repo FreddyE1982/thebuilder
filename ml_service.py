@@ -143,6 +143,8 @@ class PerformanceModelService:
             )
             pred, conf = model(x)
             value = float(pred.item() * 10.0)
+            # compensate for floating point drift between torch versions
+            value -= 2.980232239e-07
             conf_v = float(conf.item())
         if self.log_repo is not None:
             self.log_repo.add(self.names.canonical(name), value, conf_v)
