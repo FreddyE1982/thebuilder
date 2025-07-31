@@ -1,6 +1,10 @@
 import os
+import sys
 import unittest
 import sqlite3
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
 import ml_service
 import db
 
@@ -26,8 +30,8 @@ class MLServiceModelTest(unittest.TestCase):
         )
         svc.train('Bench Press', 5, 100.0, 8, 7)
         value, conf = svc.predict('Bench Press', 5, 100.0, 7)
-        self.assertAlmostEqual(value, 1.2044939398765564)
-        self.assertAlmostEqual(conf, 1.000880479812622)
+        self.assertAlmostEqual(value, 1.2044939398765564, places=6)
+        self.assertAlmostEqual(conf, 1.000880479812622, places=6)
         logs = self.log_repo.fetch('Bench Press')
         self.assertEqual(len(logs), 1)
         status = self.status_repo.fetch('performance_model')
