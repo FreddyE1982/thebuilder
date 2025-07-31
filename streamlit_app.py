@@ -3027,7 +3027,7 @@ class GymApp:
                 )
                 new_icon = st.text_input("Icon", key="new_workout_icon")
                 st.markdown("</div>", unsafe_allow_html=True)
-                st.markdown("", help="Select the primary training focus")
+                st.markdown("&nbsp;", help="Select the primary training focus")
                 submitted = st.form_submit_button("New Workout")
                 if submitted:
                     new_id = self.workouts.create(
@@ -3529,6 +3529,7 @@ class GymApp:
                     rpe,
                     start_time,
                     end_time,
+                    rest_note,
                     warm,
                     _position,
                 ) in enumerate(sets, start=1):
@@ -4454,6 +4455,7 @@ class GymApp:
                     secondary,
                     tertiary,
                     other,
+                    _,
                     _,
                 ) = detail
                 st.markdown(f"**Primary:** {primary}")
