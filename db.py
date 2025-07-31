@@ -192,9 +192,10 @@ class Database:
                     name TEXT NOT NULL,
                     training_type TEXT NOT NULL DEFAULT 'strength',
                     position INTEGER NOT NULL DEFAULT 0,
-                    color TEXT DEFAULT '#ffffff'
+                    color TEXT DEFAULT '#ffffff',
+                    last_used TEXT
                 );""",
-            ["id", "name", "training_type", "position", "color"],
+            ["id", "name", "training_type", "position", "color", "last_used"],
         ),
         "template_exercises": (
             """CREATE TABLE template_exercises (
@@ -3630,6 +3631,19 @@ class TemplateWorkoutRepository(BaseRepository):
                 "UPDATE workout_templates SET position = ? WHERE id = ?;",
                 (pos, tid),
             )
+
+    def update_last_used(self, template_id: int) -> None:
+        self.execute(
+            "UPDATE workout_templates SET last_used = ? WHERE id = ?;",
+            (datetime.date.today().isoformat(), template_id),
+        )
+
+    def fetch_recent(self, limit: int = 5) -> list[tuple[int, str]]:
+        rows = super().fetch_all(
+            "SELECT id, name FROM workout_templates WHERE last_used IS NOT NULL ORDER BY last_used DESC LIMIT ?;",
+            (limit,),
+        )
+        return [(r[0], r[1]) for r in rows]
 
     def clone(self, template_id: int, new_name: str) -> int:
         tid, _name, t_type, color = self.fetch_detail(template_id)

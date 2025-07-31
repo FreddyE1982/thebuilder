@@ -87,6 +87,7 @@ class PlannerService:
     def create_plan_from_template(self, template_id: int, date: str) -> int:
         _tid, _name, t_type, _color = self.templates.fetch_detail(template_id)
         plan_id = self.planned_workouts.create(date, t_type)
+        self.templates.update_last_used(template_id)
         exercises = self.template_exercises.fetch_for_template(template_id)
         for ex_id, name, equipment in exercises:
             new_ex_id = self.planned_exercises.add(plan_id, name, equipment)
@@ -100,15 +101,22 @@ class PlannerService:
         date: str,
         exercises: list[tuple[str, str | None]],
         training_type: str = "strength",
+        randomize: bool = False,
     ) -> int:
         if not self.recommender:
             raise ValueError("recommender not configured")
         try:
+            if randomize:
+                import random
+                random.shuffle(exercises)
             plan_id = self.planned_workouts.create(date, training_type)
             for name, equipment in exercises:
                 ex_id = self.planned_exercises.add(plan_id, name, equipment)
                 presc = self.recommender.generate_prescription(name)
-                for item in presc["prescription"]:
+                sets = presc["prescription"]
+                if randomize:
+                    random.shuffle(sets)
+                for item in sets:
                     self.planned_sets.add(
                         ex_id,
                         int(item["reps"]),

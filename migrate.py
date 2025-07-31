@@ -25,6 +25,10 @@ def migrate(db_path='workout.db'):
     cols = [r[1] for r in cur.fetchall()]
     if 'rest_note' not in cols:
         cur.execute("ALTER TABLE sets ADD COLUMN rest_note TEXT;")
+    cur.execute("PRAGMA table_info(workout_templates);")
+    cols = [r[1] for r in cur.fetchall()]
+    if 'last_used' not in cols:
+        cur.execute("ALTER TABLE workout_templates ADD COLUMN last_used TEXT;")
     conn.commit()
     conn.close()
 

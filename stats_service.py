@@ -296,6 +296,19 @@ class StatisticsService:
             )
         return result
 
+    def workouts_by_muscle_group(self, muscle_group: str) -> list[int]:
+        """Return workout IDs containing exercises for the given muscle group."""
+        if self.catalog is None:
+            return []
+        names = self.catalog.fetch_names([muscle_group])
+        all_names: list[str] = []
+        for n in names:
+            all_names.extend(self.exercise_names.aliases(n))
+        uniq = sorted(dict.fromkeys(all_names))
+        rows = self.sets.fetch_history_by_names(uniq, with_workout_id=True)
+        ids = sorted({r[-1] for r in rows})
+        return ids
+
     def deload_recommendation(
         self,
         exercise: str,
@@ -2172,3 +2185,20 @@ class StatisticsService:
         for d in dates:
             result.append({"date": d, "difference": round(p1[d] - p2[d], 2)})
         return result
+
+    def workout_summary_image(self, workout_id: int) -> bytes:
+        """Return PNG image summarizing workout volume, sets and avg RPE."""
+        summary = self.sets.workout_summary(workout_id)
+        from io import BytesIO
+        from PIL import Image, ImageDraw, ImageFont
+
+        img = Image.new("RGB", (400, 160), "white")
+        draw = ImageDraw.Draw(img)
+        font = ImageFont.load_default()
+        draw.text((10, 10), f"Workout {workout_id}", fill="black", font=font)
+        draw.text((10, 50), f"Volume: {summary['volume']} kg", fill="black", font=font)
+        draw.text((10, 80), f"Sets: {summary['sets']}", fill="black", font=font)
+        draw.text((10, 110), f"Avg RPE: {summary['avg_rpe']}", fill="black", font=font)
+        buf = BytesIO()
+        img.save(buf, format="PNG")
+        return buf.getvalue()
