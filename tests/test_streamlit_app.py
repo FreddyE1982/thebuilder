@@ -782,8 +782,14 @@ class StreamlitAppTest(unittest.TestCase):
         self.assertTrue(help_text)
 
     def test_help_tips_disabled_by_default(self) -> None:
-        tips_present = any("Need Help?" in m.body for m in self.at.markdown)
+        tips_present = any(e.label == "Need Help?" for e in self.at.expander)
         self.assertFalse(tips_present)
+
+    def test_help_overlay_button_disabled_by_default(self) -> None:
+        overlay_present = any(
+            getattr(b, "key", None) == "help_overlay_btn" for b in self.at.button
+        )
+        self.assertFalse(overlay_present)
 
     def test_enable_help_tips(self) -> None:
         with open(self.yaml_path, "r", encoding="utf-8") as f:
@@ -792,8 +798,12 @@ class StreamlitAppTest(unittest.TestCase):
         with open(self.yaml_path, "w", encoding="utf-8") as f:
             yaml.safe_dump(data, f)
         self.at.run()
-        tips_present = any("Need Help?" in m.body for m in self.at.markdown)
+        tips_present = any(e.label == "Need Help?" for e in self.at.expander)
+        overlay_present = any(
+            getattr(b, "key", None) == "help_overlay_btn" for b in self.at.button
+        )
         self.assertTrue(tips_present)
+        self.assertTrue(overlay_present)
 
     def test_onboarding_tutorial_disabled(self) -> None:
         tutorial = any("First Workout" in m.body for m in self.at.markdown)
