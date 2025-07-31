@@ -97,8 +97,8 @@
 [complete] 85. Support per-workout timezone handling.
 [complete] 86. Implement automatic database vacuuming.
 [complete] 87. Add drag-and-drop reordering for workout templates.
-88. Integrate speech recognition for quick set entry.
-89. Create official REST client library in Python.
+[complete] 88. Integrate speech recognition for quick set entry.
+[complete] 89. Create official REST client library in Python.
 [complete] 90. Add performance benchmarks for API endpoints.
 [complete] 91. Provide security audit of dependencies via tools.
 [complete] 92. Add automatic detection of stale goals.
@@ -117,7 +117,7 @@
 [complete] 104. Add drag-and-drop reordering for planned workouts.
 [complete] 105. Add time-based filter in workout history.
 [complete] 106. Provide color-coded heatmap of training volume per week.
-107. Add speech-to-text input for set entry.
+[complete] 107. Add speech-to-text input for set entry.
 [complete] 108. Provide inline video tutorials for each exercise.
 [complete] 109. Allow checkboxes to mark sets as warm-ups.
 [complete] 110. Add screenshot capture for progress charts.
@@ -139,7 +139,7 @@
 126. Step-by-step onboarding for new features.
 127. Offline caching of recent workouts.
 128. Weekly planner view for upcoming sessions.
-129. Voice output for rest timer countdown.
+[complete] 129. Voice output for rest timer countdown.
 [complete] 130. Quick-add notes using predefined phrases.
 131. Compare progress between two exercises.
 [complete] 132. Sort exercise library by various fields.
@@ -152,9 +152,9 @@
 139. Randomize training plan generator.
 [complete] 140. Filter exercises without equipment assigned.
 [complete] 141. Switch weight units on the fly in set entry.
-142. Assign custom icons to workouts.
+[complete] 142. Assign custom icons to workouts.
 [complete] 143. Multi-select deletion of planned workouts.
-144. Donut charts for goal progress visualization.
+[complete] 144. Donut charts for goal progress visualization.
 [complete] 145. Link directly to equipment details from sets.
 146. Interactive tutorial for first workout creation.
 [complete] 147. Hotkey to repeat last set quickly.
@@ -166,7 +166,7 @@
 153. Quick-add rest notes after each set.
 154. Contextual help tips on each page.
 [complete] 155. Toggle display of estimated 1RM.
-156. Indicator for unsaved changes in forms.
+[complete] 156. Indicator for unsaved changes in forms.
 [complete] 157. Collapsible summary metrics in history.
 158. Step counter integration for cardio.
 159. Quick access to recently used templates.
@@ -176,7 +176,7 @@
 [complete] 163. Highlight personal record sets automatically.
 164. Short completion animations for workouts.
 [complete] 165. Quick-add tags using hashtag syntax.
-166. Scrollable timeline of workout months.
+[complete] 166. Scrollable timeline of workout months.
 [complete] 167. Rename logged workouts.
 [complete] 168. Customizable layout spacing options.
 [complete] 169. Filter by equipment type quickly.
