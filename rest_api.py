@@ -870,6 +870,11 @@ class GymAPI:
                 os.remove(path)
             return {"status": "deleted"}
 
+        @self.app.post("/share/exercise_image")
+        def share_exercise_image(exercise: str, file: UploadFile = Body(...)):
+            """Endpoint used by PWA share target for image uploads."""
+            return upload_exercise_image(exercise, file)
+
         @equipment_router.put("/{name}")
         def update_equipment(
             name: str,
@@ -1805,6 +1810,11 @@ class GymAPI:
             self.sets.update_note(set_id, note)
             return {"status": "updated"}
 
+        @self.app.put("/sets/{set_id}/rest_note")
+        def update_set_rest_note(set_id: int, note: str | None = None):
+            self.sets.set_rest_note(set_id, note)
+            return {"status": "updated"}
+
         @self.app.delete("/sets/{set_id}")
         def delete_set(set_id: int):
             self.sets.remove(set_id)
@@ -1870,7 +1880,7 @@ class GymAPI:
         def list_sets(exercise_id: int):
             sets = self.sets.fetch_for_exercise(exercise_id)
             result = []
-            for sid, reps, weight, rpe, start_time, end_time, warm, pos in sets:
+            for sid, reps, weight, rpe, start_time, end_time, rest_note, warm, pos in sets:
                 entry = {
                     "id": sid,
                     "reps": reps,
@@ -1883,6 +1893,8 @@ class GymAPI:
                     entry["start_time"] = start_time
                 if end_time is not None:
                     entry["end_time"] = end_time
+                if rest_note is not None:
+                    entry["rest_note"] = rest_note
                 result.append(entry)
             return result
 
@@ -1984,6 +1996,20 @@ class GymAPI:
         ):
             return self.statistics.muscle_progression(
                 muscle,
+                start_date,
+                end_date,
+            )
+
+        @self.app.get("/stats/compare_progress")
+        def stats_compare_progress(
+            exercise1: str,
+            exercise2: str,
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            return self.statistics.compare_progress(
+                exercise1,
+                exercise2,
                 start_date,
                 end_date,
             )

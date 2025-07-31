@@ -435,6 +435,15 @@ class GymApp:
         st.markdown(
             f"<div id='rest-timer'>Rest: {remaining}s ({pct}%)</div>", unsafe_allow_html=True
         )
+        sid = st.session_state.get("flash_set")
+        if sid:
+            key = f"rest_note_{sid}"
+            st.text_input(
+                "Rest Note",
+                key=key,
+                on_change=self._save_rest_note,
+                args=(sid, key),
+            )
         if os.environ.get("TEST_MODE") != "1":
             components.html(
                 "<script>setTimeout(()=>window.location.reload(),1000);</script>",
@@ -454,6 +463,23 @@ class GymApp:
                 "<script>setTimeout(()=>window.location.reload(),1000);</script>",
                 height=0,
             )
+
+    def _voice_notify(self, text: str) -> None:
+        """Speak ``text`` using TTS if not in test mode."""
+        if os.environ.get("TEST_MODE") == "1":
+            return
+        try:
+            engine = pyttsx3.init()
+            engine.say(text)
+            engine.runAndWait()
+        except Exception:
+            pass
+
+    def _save_rest_note(self, set_id: int, key: str) -> None:
+        note = st.session_state.get(key, "")
+        self.sets.set_rest_note(set_id, note or None)
+        st.session_state.pop("flash_set", None)
+        st.session_state.pop(key, None)
 
     def _format_weight(self, weight: float) -> str:
         """Return weight formatted according to user settings."""
@@ -2973,11 +2999,13 @@ class GymApp:
                             int(selected),
                             self._now().isoformat(timespec="seconds"),
                         )
+                        self._voice_notify("Workout started")
                     if c2.button("Finish Workout", key=f"finish_workout_{selected}"):
                         self.workouts.set_end_time(
                             int(selected),
                             self._now().isoformat(timespec="seconds"),
                         )
+                        self._voice_notify("Workout finished")
                         summary = self.sets.workout_summary(int(selected))
                         st.success(
                             f"Logged {summary['sets']} sets, volume {self._format_weight(summary['volume'])}, avg RPE {summary['avg_rpe']}"
@@ -2997,6 +3025,7 @@ class GymApp:
                             int(selected),
                             self._now().isoformat(timespec="seconds"),
                         )
+                        self._voice_notify("Workout started")
                     if cols[1].button(
                         "Finish Workout", key=f"finish_workout_{selected}"
                     ):
@@ -3004,6 +3033,7 @@ class GymApp:
                             int(selected),
                             self._now().isoformat(timespec="seconds"),
                         )
+                        self._voice_notify("Workout finished")
                         summary = self.sets.workout_summary(int(selected))
                         st.success(
                             f"Logged {summary['sets']} sets, volume {self._format_weight(summary['volume'])}, avg RPE {summary['avg_rpe']}"

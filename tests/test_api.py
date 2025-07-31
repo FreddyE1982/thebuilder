@@ -212,7 +212,8 @@ class APITestCase(unittest.TestCase):
     def test_delete_endpoints(self) -> None:
         plan_date = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
 
-        self.client.post("/workouts")
+        d = "2024-01-01"
+        self.client.post("/workouts", params={"date": d})
         self.client.post(
             "/planned_workouts",
             params={"date": plan_date, "training_type": "strength"},
@@ -232,7 +233,8 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), [])
 
-        self.client.post("/workouts")
+        d = "2024-01-01"
+        self.client.post("/workouts", params={"date": d})
         self.client.post(
             "/planned_workouts",
             params={"date": plan_date, "training_type": "strength"},
@@ -4058,4 +4060,57 @@ class PWAEndpointsTest(unittest.TestCase):
         resp = self.client.get("/sw.js")
         self.assertEqual(resp.status_code, 200)
         self.assertIn("addEventListener", resp.text)
+
+
+class RestNoteTestCase(unittest.TestCase):
+    def setUp(self) -> None:
+        api = GymAPI(start_scheduler=False)
+        self.client = TestClient(api.app)
+
+    def test_rest_note_update(self) -> None:
+        self.client.post("/workouts")
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Squat", "equipment": "Rack"},
+        )
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8},
+        )
+        resp = self.client.put("/sets/1/rest_note", params={"note": "tough"})
+        self.assertEqual(resp.status_code, 200)
+        detail = self.client.get("/sets/1").json()
+        self.assertEqual(detail["rest_note"], "tough")
+
+
+class CompareProgressTestCase(unittest.TestCase):
+    def setUp(self) -> None:
+        api = GymAPI(start_scheduler=False)
+        self.client = TestClient(api.app)
+
+    def test_compare_progress(self) -> None:
+        d = "2024-01-01"
+        self.client.post("/workouts", params={"date": d})
+        self.client.post(
+            "/workouts/1/exercises",
+            params={"name": "Bench Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/exercises/1/sets",
+            params={"reps": 5, "weight": 100.0, "rpe": 8},
+        )
+        self.client.post("/workouts", params={"date": d})
+        self.client.post(
+            "/workouts/2/exercises",
+            params={"name": "Overhead Press", "equipment": "Olympic Barbell"},
+        )
+        self.client.post(
+            "/exercises/2/sets",
+            params={"reps": 5, "weight": 90.0, "rpe": 8},
+        )
+        resp = self.client.get(
+            "/stats/compare_progress",
+            params={"exercise1": "Bench Press", "exercise2": "Overhead Press"},
+        )
+        self.assertEqual(resp.status_code, 200)
 

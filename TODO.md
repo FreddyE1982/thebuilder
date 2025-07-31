@@ -108,7 +108,7 @@
 [complete] 96. Add endpoint to configure auto planner parameters.
 [complete] 97. Support split view on tablets for side-by-side charts.
 [complete] 98. Provide API to fetch saved report PDFs.
-99. Add screenshot-based test for mobile layout via playwright.
+[complete] 99. Add screenshot-based test for mobile layout via playwright.
 [complete] 100. Document contribution guidelines and code style.
 
 [complete] 101. Add interactive calendar to schedule workouts.
@@ -141,7 +141,7 @@
 128. Weekly planner view for upcoming sessions.
 [complete] 129. Voice output for rest timer countdown.
 [complete] 130. Quick-add notes using predefined phrases.
-131. Compare progress between two exercises.
+[complete] 131. Compare progress between two exercises.
 [complete] 132. Sort exercise library by various fields.
 [complete] 133. Rate workouts using star ratings.
 [complete] 134. Toggle to hide navigation labels.
@@ -162,8 +162,8 @@
 [complete] 149. Simple mode toggle hiding advanced fields.
 [complete] 150. Color-code sets by intensity level.
 [complete] 151. Adjustable font size slider in settings.
-152. Import images using mobile share menu.
-153. Quick-add rest notes after each set.
+[complete] 152. Import images using mobile share menu.
+[complete] 153. Quick-add rest notes after each set.
 154. Contextual help tips on each page.
 [complete] 155. Toggle display of estimated 1RM.
 [complete] 156. Indicator for unsaved changes in forms.
@@ -185,7 +185,7 @@
 [complete] 172. Schedule dark mode automatically at night.
 [complete] 173. Toggle to hide advanced charts.
 [complete] 174. Built-in calculator for weight conversions.
-175. Voice prompts for workout start and stop.
+[complete] 175. Voice prompts for workout start and stop.
 [complete] 176. Favorite templates directly from history.
 [complete] 177. "Open last workout" button on start page.
 178. Interactive personal record tracker.

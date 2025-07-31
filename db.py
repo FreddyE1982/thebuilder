@@ -233,6 +233,7 @@ class Database:
                     start_time TEXT,
                     end_time TEXT,
                     note TEXT,
+                    rest_note TEXT,
                     warmup INTEGER NOT NULL DEFAULT 0,
                     FOREIGN KEY(exercise_id) REFERENCES exercises(id) ON DELETE CASCADE,
                     FOREIGN KEY(planned_set_id) REFERENCES planned_sets(id) ON DELETE SET NULL
@@ -251,6 +252,7 @@ class Database:
                 "start_time",
                 "end_time",
                 "note",
+                "rest_note",
                 "warmup",
             ],
         ),
@@ -1447,6 +1449,13 @@ class SetRepository(BaseRepository):
             (note, set_id),
         )
 
+    def set_rest_note(self, set_id: int, rest_note: Optional[str]) -> None:
+        """Store rest note for a set."""
+        self.execute(
+            "UPDATE sets SET rest_note = ? WHERE id = ?;",
+            (rest_note, set_id),
+        )
+
     def fetch_exercise_id(self, set_id: int) -> int:
         rows = self.fetch_all(
             "SELECT exercise_id FROM sets WHERE id = ?;",
@@ -1458,15 +1467,15 @@ class SetRepository(BaseRepository):
 
     def fetch_for_exercise(
         self, exercise_id: int
-    ) -> List[Tuple[int, int, float, int, Optional[str], Optional[str], int, int]]:
+    ) -> List[Tuple[int, int, float, int, Optional[str], Optional[str], Optional[str], int, int]]:
         return self.fetch_all(
-            "SELECT id, reps, weight, rpe, start_time, end_time, warmup, position FROM sets WHERE exercise_id = ? ORDER BY position;",
+            "SELECT id, reps, weight, rpe, start_time, end_time, rest_note, warmup, position FROM sets WHERE exercise_id = ? ORDER BY position;",
             (exercise_id,),
         )
 
     def fetch_detail(self, set_id: int) -> dict:
         rows = self.fetch_all(
-            "SELECT id, reps, weight, rpe, note, planned_set_id, diff_reps, diff_weight, diff_rpe, start_time, end_time, warmup, position FROM sets WHERE id = ?;",
+            "SELECT id, reps, weight, rpe, note, rest_note, planned_set_id, diff_reps, diff_weight, diff_rpe, start_time, end_time, warmup, position FROM sets WHERE id = ?;",
             (set_id,),
         )
         (
@@ -1475,6 +1484,7 @@ class SetRepository(BaseRepository):
             weight,
             rpe,
             note,
+            rest_note,
             planned_set_id,
             diff_reps,
             diff_weight,
@@ -1497,6 +1507,7 @@ class SetRepository(BaseRepository):
             "start_time": start_time,
             "end_time": end_time,
             "note": note,
+            "rest_note": rest_note,
             "warmup": bool(warmup),
             "position": position,
             "velocity": velocity,

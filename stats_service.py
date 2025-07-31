@@ -2156,3 +2156,19 @@ class StatisticsService:
         plt.savefig(buf, format="pdf")
         plt.close()
         return buf.getvalue()
+
+    def compare_progress(
+        self,
+        exercise1: str,
+        exercise2: str,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> list[dict[str, float]]:
+        """Return difference in estimated 1RM between two exercises."""
+        p1 = {p["date"]: p["est_1rm"] for p in self.progression(exercise1, start_date, end_date)}
+        p2 = {p["date"]: p["est_1rm"] for p in self.progression(exercise2, start_date, end_date)}
+        dates = sorted(set(p1) & set(p2))
+        result: list[dict[str, float]] = []
+        for d in dates:
+            result.append({"date": d, "difference": round(p1[d] - p2[d], 2)})
+        return result

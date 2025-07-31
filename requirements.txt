@@ -18,6 +18,8 @@ pip-audit
 plotly
 pytest
 pytest-asyncio
+pytest-playwright
+playwright
 pyttsx3
 Pillow>=9.0.0
 matplotlib
