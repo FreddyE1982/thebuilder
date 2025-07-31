@@ -209,6 +209,15 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(len(resp2.json()), 1)
         self.assertEqual(resp2.json()[0]["date"], dates[2])
 
+    def test_weekly_planner_endpoint(self) -> None:
+        today = datetime.date.today()
+        for i in range(3):
+            d = (today + datetime.timedelta(days=i)).isoformat()
+            self.client.post("/planned_workouts", params={"date": d})
+        resp = self.client.get("/planned_workouts/weekly")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(len(resp.json()), 3)
+
     def test_delete_endpoints(self) -> None:
         plan_date = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
 
@@ -4065,6 +4074,7 @@ class PWAEndpointsTest(unittest.TestCase):
         resp = self.client.get("/sw.js")
         self.assertEqual(resp.status_code, 200)
         self.assertIn("addEventListener", resp.text)
+        self.assertIn("offline_search", resp.text)
 
 
 class RestNoteTestCase(unittest.TestCase):

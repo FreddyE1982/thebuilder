@@ -25,9 +25,9 @@
 [complete] 19c. Add language selector in settings.
 [complete] 20a. Create asynchronous repository layer using aiosqlite.
 20b1. Convert WorkoutRepository to AsyncWorkoutRepository. [complete]
-20b2a. Convert TagRepository to AsyncTagRepository. [pending]
+20b2a. Convert TagRepository to AsyncTagRepository. [complete]
 20b2. Convert remaining repositories to async versions.
-20c1. Update REST API workouts endpoints to async. [pending]
+20c1. Update REST API workouts endpoints to async. [complete]
 20c2. Update remaining endpoints to async.
 20d1. Add tests for AsyncWorkoutRepository. [complete]
 20d2. Update remaining tests for async operations.
@@ -138,8 +138,8 @@
 [complete] 124. Undo deletion of sets.
 [complete] 125. Create templates from logged workouts.
 [complete] 126. Step-by-step onboarding for new features.
-127. Offline caching of recent workouts.
-128. Weekly planner view for upcoming sessions.
+127. Offline caching of recent workouts. [complete]
+128. Weekly planner view for upcoming sessions. [complete]
 [complete] 129. Voice output for rest timer countdown.
 [complete] 130. Quick-add notes using predefined phrases.
 [complete] 131. Compare progress between two exercises.
@@ -201,7 +201,7 @@
 [complete] 187. High-contrast accessibility theme.
 [complete] 188. Option to auto-collapse header on scroll.
 [complete] 189. Import workout history from CSV.
-190. Local search index for offline filtering.
+190. Local search index for offline filtering. [complete]
 [complete] 191. Daily reminder notifications.
 [complete] 192. Quick filter for unrated workouts.
 [complete] 193. Keyboard navigation in history table.
