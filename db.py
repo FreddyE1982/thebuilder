@@ -1703,6 +1703,30 @@ class PlannedWorkoutRepository(BaseRepository):
         query += f" ORDER BY {sort_by} {order};"
         return super().fetch_all(query, tuple(params))
 
+    def search(
+        self,
+        query_str: str | None = None,
+        training_type: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> List[Tuple[int, str, str, int]]:
+        query = "SELECT id, date, training_type, position FROM planned_workouts WHERE 1=1"
+        params: list[str] = []
+        if query_str:
+            query += " AND lower(training_type) LIKE ?"
+            params.append(f"%{query_str.lower()}%")
+        if training_type:
+            query += " AND training_type = ?"
+            params.append(training_type)
+        if start_date:
+            query += " AND date >= ?"
+            params.append(start_date)
+        if end_date:
+            query += " AND date <= ?"
+            params.append(end_date)
+        query += " ORDER BY position ASC;"
+        return super().fetch_all(query, tuple(params))
+
     def fetch_detail(self, plan_id: int) -> Tuple[int, str, str]:
         rows = super().fetch_all(
             "SELECT id, date, training_type FROM planned_workouts WHERE id = ?;",

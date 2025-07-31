@@ -4033,3 +4033,17 @@ class RateLimitTestCase(unittest.TestCase):
         self.client.get("/health")
         resp = self.client.get("/health")
         self.assertEqual(resp.status_code, 429)
+
+class PWAEndpointsTest(unittest.TestCase):
+    def setUp(self) -> None:
+        api = GymAPI(start_scheduler=False)
+        self.client = TestClient(api.app)
+
+    def test_manifest_and_sw(self) -> None:
+        resp = self.client.get("/manifest.json")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("name", resp.json())
+        resp = self.client.get("/sw.js")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("addEventListener", resp.text)
+

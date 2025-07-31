@@ -90,6 +90,22 @@ class RecommendationService:
         history = self.sets.fetch_history_by_names(names)
         return len(history) > 0
 
+    def suggest_equipment(self, exercise_name: str, options: list[str]) -> str | None:
+        """Return suggested equipment name based on ML predictions."""
+        if not options:
+            return None
+        best = options[0]
+        best_rpe = float("inf")
+        for eq in options:
+            if self.ml is not None:
+                pred, _ = self.ml.predict(exercise_name, 5, 20.0, 6.0)
+            else:
+                pred = 10.0
+            if pred < best_rpe:
+                best_rpe = pred
+                best = eq
+        return best
+
     def generate_prescription(self, exercise_name: str) -> dict:
         """Return a full prescription for the given exercise."""
         alias_names = self.exercise_names.aliases(exercise_name)

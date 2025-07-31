@@ -40,12 +40,12 @@
 [complete] 28. Add importer from widely-used workout apps (e.g. Strava).
 [complete] 29. Provide export to generic training XML format.
 [complete] 30. Add websockets endpoint for real-time workout updates.
-31. Implement progressive web app features for offline use.
+[complete] 31. Implement progressive web app features for offline use.
 [complete] 32. Add endpoint to download body_weight_logs as CSV.
 [complete] 33. Provide monthly summary emails via Cron or Celery.
 [complete] 34. Add user-defined default equipment per exercise.
 [removed] 35. Remove privacy settings for shared workouts (multiuser removed).
-36. Add voice command support in the GUI.
+[complete] 36. Add voice command support in the GUI.
 [complete] 37. Add voice feedback for timer events using STT.
 [complete] 38. Refactor tools.py to separate math utilities from CLI utilities.
 [complete] 39. Add coverage reporting to tests.
@@ -66,7 +66,7 @@
 [complete] 54. Implement search for exercises by tags in GUI.
 [complete] 55. Support uploading heart rate monitor data in bulk.
 [complete] 56. Extend rest_api tests to cover error conditions.
-57. Add dynamic equipment suggestion using ML predictions.
+[complete] 57. Add dynamic equipment suggestion using ML predictions.
 [complete] 58. Provide sample data seeding script.
 [complete] 59. Add instructions for customizing CSS in README.
 [complete] 60. Ensure StatsService returns sorted results consistently.
@@ -79,13 +79,13 @@
 [complete] 67. Add cross-validation for ML models to compute accuracy.
 [complete] 68. Include predicted confidence intervals in API responses.
 [complete] 69. Support dynamic chart resizing depending on metrics.
-70. Implement advanced search filters in planner_service.
+[complete] 70. Implement advanced search filters in planner_service.
 [complete] 71. Provide endpoint to add comments to workouts.
 [complete] 72. Add rating distribution chart in Stats tab.
 [complete] 73. Validate equipment type names to avoid duplicates.
 [complete] 74. Document database schema in README.
 [complete] 75. Add `--demo` mode for generating fake data.
-76. Encrypt sensitive settings in YAML with keyring.
+[complete] 76. Encrypt sensitive settings in YAML with keyring.
 [complete] 77. Add endpoint to clear cached statistics.
 [complete] 78. Provide gender-neutral avatar images in GUI.
 79. Implement plugin architecture for custom ML models.

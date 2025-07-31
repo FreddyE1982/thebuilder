@@ -539,6 +539,20 @@ class GymApp:
             "<meta name='viewport' content='width=device-width, height=device-height, initial-scale=1, shrink-to-fit=no, viewport-fit=cover'>",
             unsafe_allow_html=True,
         )
+        st.markdown(
+            "<link rel='manifest' href='/manifest.json'>",
+            unsafe_allow_html=True,
+        )
+        components.html(
+            """
+            <script>
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js');
+            }
+            </script>
+            """,
+            height=0,
+        )
         st.session_state.layout_set = True
         st.session_state.is_mobile = mode == "mobile"
         st.session_state.is_tablet = mode == "tablet"
@@ -638,6 +652,16 @@ class GymApp:
                         });
                     });
                 });
+            }
+            function startVoiceCommand() {
+                const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!Rec) return;
+                const rec = new Rec();
+                rec.onresult = e => {
+                    const txt = e.results[0][0].transcript.toLowerCase();
+                    document.dispatchEvent(new CustomEvent('voice-command', {detail: txt}));
+                };
+                rec.start();
             }
             window.addEventListener('resize', handleResize);
             window.addEventListener('orientationchange', handleResize);
@@ -2535,7 +2559,7 @@ class GymApp:
             self._whats_new_dialog()
         self._open_header()
         st.markdown("<div class='title-section'>", unsafe_allow_html=True)
-        cols = st.columns([3, 1, 1, 1, 3])
+        cols = st.columns([3, 1, 1, 1, 1, 3])
         with cols[0]:
             st.title("Workout Logger")
         with cols[1]:
@@ -2549,11 +2573,14 @@ class GymApp:
             if st.button("Help", key="help_button_header"):
                 self._help_dialog()
         with cols[3]:
+            if st.button("🎤", key="voice_cmd_btn"):
+                components.html("<script>startVoiceCommand();</script>", height=0)
+        with cols[4]:
             unread = self.notifications_repo.unread_count()
             label = f"🔔 ({unread})" if unread else "🔔"
             if st.button(label, key="notif_btn"):
                 st.session_state.open_notifications = True
-        with cols[4]:
+        with cols[5]:
             with st.expander("Quick Search", expanded=False):
                 self._quick_search("header")
         self._connection_status()
