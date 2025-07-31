@@ -864,6 +864,9 @@ class AsyncBaseRepository(AsyncDatabase):
             rows = await cursor.fetchall()
             return rows
 
+    async def _delete_all(self, table: str) -> None:
+        await self.execute(f"DELETE FROM {table};")
+
 
 class AsyncWorkoutRepository(AsyncBaseRepository):
     """Async repository for workout table operations."""
@@ -965,6 +968,105 @@ class AsyncWorkoutRepository(AsyncBaseRepository):
         if not rows:
             raise ValueError("workout not found")
         await self.execute("DELETE FROM workouts WHERE id = ?;", (workout_id,))
+
+    async def fetch_detail(
+        self, workout_id: int
+    ) -> Tuple[
+        int,
+        str,
+        Optional[str],
+        Optional[str],
+        Optional[str],
+        str,
+        str,
+        Optional[str],
+        Optional[str],
+        Optional[str],
+        Optional[int],
+        Optional[int],
+        Optional[int],
+    ]:
+        rows = await self.fetch_all(
+            "SELECT id, date, name, start_time, end_time, timezone, training_type, notes, location, icon, rating, mood_before, mood_after FROM workouts WHERE id = ?;",
+            (workout_id,),
+        )
+        if not rows:
+            raise ValueError("workout not found")
+        return rows[0]
+
+    async def set_note(self, workout_id: int, note: str | None) -> None:
+        await self.execute(
+            "UPDATE workouts SET notes = ? WHERE id = ?;",
+            (note, workout_id),
+        )
+
+    async def set_name(self, workout_id: int, name: str | None) -> None:
+        await self.execute(
+            "UPDATE workouts SET name = ? WHERE id = ?;",
+            (name, workout_id),
+        )
+
+    async def set_start_time(self, workout_id: int, timestamp: str) -> None:
+        await self.execute(
+            "UPDATE workouts SET start_time = ? WHERE id = ?;",
+            (timestamp, workout_id),
+        )
+
+    async def set_end_time(self, workout_id: int, timestamp: str) -> None:
+        await self.execute(
+            "UPDATE workouts SET end_time = ? WHERE id = ?;",
+            (timestamp, workout_id),
+        )
+
+    async def set_training_type(self, workout_id: int, training_type: str) -> None:
+        await self.execute(
+            "UPDATE workouts SET training_type = ? WHERE id = ?;",
+            (training_type, workout_id),
+        )
+
+    async def set_location(self, workout_id: int, location: Optional[str]) -> None:
+        await self.execute(
+            "UPDATE workouts SET location = ? WHERE id = ?;",
+            (location, workout_id),
+        )
+
+    async def set_timezone(self, workout_id: int, timezone: str) -> None:
+        await self.execute(
+            "UPDATE workouts SET timezone = ? WHERE id = ?;",
+            (timezone, workout_id),
+        )
+
+    async def set_rating(self, workout_id: int, rating: Optional[int]) -> None:
+        await self.execute(
+            "UPDATE workouts SET rating = ? WHERE id = ?;",
+            (rating, workout_id),
+        )
+
+    async def set_mood_before(self, workout_id: int, mood: Optional[int]) -> None:
+        await self.execute(
+            "UPDATE workouts SET mood_before = ? WHERE id = ?;",
+            (mood, workout_id),
+        )
+
+    async def set_mood_after(self, workout_id: int, mood: Optional[int]) -> None:
+        await self.execute(
+            "UPDATE workouts SET mood_after = ? WHERE id = ?;",
+            (mood, workout_id),
+        )
+
+    async def set_icon(self, workout_id: int, icon: str | None) -> None:
+        await self.execute(
+            "UPDATE workouts SET icon = ? WHERE id = ?;",
+            (icon, workout_id),
+        )
+
+    async def search(self, query: str) -> list[tuple[int, str]]:
+        like = f"%{query.lower()}%"
+        rows = await self.fetch_all(
+            "SELECT id, date FROM workouts WHERE lower(notes) LIKE ? OR lower(location) LIKE ? ORDER BY id DESC;",
+            (like, like),
+        )
+        return [(wid, date) for wid, date in rows]
 
 
 class WorkoutRepository(BaseRepository):
@@ -3780,6 +3882,93 @@ class TagRepository(BaseRepository):
 
     def search_exercises_by_tag(self, tag: str) -> list[str]:
         rows = super().fetch_all(
+            "SELECT e.exercise_name FROM exercise_tags e JOIN tags t ON e.tag_id = t.id WHERE t.name = ? ORDER BY e.exercise_name;",
+            (tag,),
+        )
+        return [r[0] for r in rows]
+
+
+class AsyncTagRepository(AsyncBaseRepository):
+    """Asynchronous repository for workout tags."""
+
+    async def add(self, name: str) -> int:
+        return await self.execute("INSERT INTO tags (name) VALUES (?);", (name,))
+
+    async def update(self, tag_id: int, name: str) -> None:
+        rows = await super().fetch_all("SELECT id FROM tags WHERE id = ?;", (tag_id,))
+        if not rows:
+            raise ValueError("tag not found")
+        await self.execute("UPDATE tags SET name = ? WHERE id = ?;", (name, tag_id))
+
+    async def delete(self, tag_id: int) -> None:
+        rows = await super().fetch_all("SELECT id FROM tags WHERE id = ?;", (tag_id,))
+        if not rows:
+            raise ValueError("tag not found")
+        await self.execute("DELETE FROM tags WHERE id = ?;", (tag_id,))
+        await self.execute("DELETE FROM workout_tags WHERE tag_id = ?;", (tag_id,))
+
+    async def fetch_all(self) -> list[tuple[int, str]]:
+        rows = await super().fetch_all("SELECT id, name FROM tags ORDER BY name;")
+        return [(r[0], r[1]) for r in rows]
+
+    async def get_id(self, name: str) -> int | None:
+        rows = await super().fetch_all("SELECT id FROM tags WHERE name = ?;", (name,))
+        return rows[0][0] if rows else None
+
+    async def assign(self, workout_id: int, tag_id: int) -> None:
+        await self.execute(
+            "INSERT OR IGNORE INTO workout_tags (workout_id, tag_id) VALUES (?, ?);",
+            (workout_id, tag_id),
+        )
+
+    async def remove(self, workout_id: int, tag_id: int) -> None:
+        await self.execute(
+            "DELETE FROM workout_tags WHERE workout_id = ? AND tag_id = ?;",
+            (workout_id, tag_id),
+        )
+
+    async def fetch_for_workout(self, workout_id: int) -> list[tuple[int, str]]:
+        rows = await super().fetch_all(
+            "SELECT t.id, t.name FROM tags t JOIN workout_tags w ON t.id = w.tag_id WHERE w.workout_id = ? ORDER BY t.name;",
+            (workout_id,),
+        )
+        return [(r[0], r[1]) for r in rows]
+
+    async def set_tags(self, workout_id: int, tag_ids: list[int]) -> None:
+        async with self._async_connection() as conn:
+            await conn.execute(
+                "DELETE FROM workout_tags WHERE workout_id = ?;", (workout_id,)
+            )
+            for tid in tag_ids:
+                await conn.execute(
+                    "INSERT INTO workout_tags (workout_id, tag_id) VALUES (?, ?);",
+                    (workout_id, tid),
+                )
+            await conn.commit()
+
+    # Exercise tag management
+
+    async def assign_exercise(self, exercise_name: str, tag_id: int) -> None:
+        await self.execute(
+            "INSERT OR IGNORE INTO exercise_tags (exercise_name, tag_id) VALUES (?, ?);",
+            (exercise_name, tag_id),
+        )
+
+    async def remove_exercise(self, exercise_name: str, tag_id: int) -> None:
+        await self.execute(
+            "DELETE FROM exercise_tags WHERE exercise_name = ? AND tag_id = ?;",
+            (exercise_name, tag_id),
+        )
+
+    async def fetch_for_exercise(self, exercise_name: str) -> list[tuple[int, str]]:
+        rows = await super().fetch_all(
+            "SELECT t.id, t.name FROM tags t JOIN exercise_tags e ON t.id = e.tag_id WHERE e.exercise_name = ? ORDER BY t.name;",
+            (exercise_name,),
+        )
+        return [(r[0], r[1]) for r in rows]
+
+    async def search_exercises_by_tag(self, tag: str) -> list[str]:
+        rows = await super().fetch_all(
             "SELECT e.exercise_name FROM exercise_tags e JOIN tags t ON e.tag_id = t.id WHERE t.name = ? ORDER BY e.exercise_name;",
             (tag,),
         )

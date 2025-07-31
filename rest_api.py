@@ -23,6 +23,7 @@ from fastapi import (
 )
 from db import (
     WorkoutRepository,
+    AsyncWorkoutRepository,
     ExerciseRepository,
     SetRepository,
     PlannedWorkoutRepository,
@@ -61,6 +62,7 @@ from db import (
     DefaultEquipmentRepository,
     ReactionRepository,
     TagRepository,
+    AsyncTagRepository,
     APIKeyRepository,
     GoalRepository,
     ChallengeRepository,
@@ -168,6 +170,7 @@ class GymAPI:
         self.db_path = db_path
         self.settings = SettingsRepository(db_path, yaml_path)
         self.workouts = WorkoutRepository(db_path)
+        self.async_workouts = AsyncWorkoutRepository(db_path)
         self.exercises = ExerciseRepository(db_path)
         self.sets = SetRepository(db_path, self.settings)
         self.planned_workouts = PlannedWorkoutRepository(db_path)
@@ -191,6 +194,7 @@ class GymAPI:
         self.default_equipment = DefaultEquipmentRepository(db_path, self.exercise_names)
         self.reactions = ReactionRepository(db_path)
         self.tags = TagRepository(db_path)
+        self.async_tags = AsyncTagRepository(db_path)
         self.pyramid_tests = PyramidTestRepository(db_path)
         self.pyramid_entries = PyramidEntryRepository(db_path)
         self.game_repo = GamificationRepository(db_path)
@@ -934,7 +938,7 @@ class GymAPI:
             summary="Create workout",
             description="Create a new workout session.",
         )
-        def create_workout(
+        async def create_workout(
             date: str = None,
             training_type: str = "strength",
             notes: str | None = None,
@@ -962,7 +966,7 @@ class GymAPI:
                 raise HTTPException(
                     status_code=400, detail="date cannot be in the future"
                 )
-            workout_id = self.workouts.create(
+            workout_id = await self.async_workouts.create(
                 workout_date.isoformat(),
                 None,
                 timezone,
@@ -979,10 +983,10 @@ class GymAPI:
             if notes:
                 tags = re.findall(r"#(\w+)", notes)
                 for t in tags:
-                    tid = self.tags.get_id(t)
+                    tid = await self.async_tags.get_id(t)
                     if tid is None:
-                        tid = self.tags.add(t)
-                    self.tags.assign(workout_id, tid)
+                        tid = await self.async_tags.add(t)
+                    await self.async_tags.assign(workout_id, tid)
             self._notify_slack(f"Workout logged on {workout_date.isoformat()}")
             self._broadcast_event({"type": "workout_added", "id": workout_id})
             return {"id": workout_id}
@@ -992,7 +996,7 @@ class GymAPI:
             summary="List workouts",
             description="Retrieve logged workouts optionally filtered by date range.",
         )
-        def list_workouts(
+        async def list_workouts(
             start_date: str = None,
             end_date: str = None,
             sort_by: str = "id",
@@ -1003,7 +1007,7 @@ class GymAPI:
             limit: int | None = None,
             offset: int | None = None,
         ):
-            workouts = self.workouts.fetch_all_workouts(
+            workouts = await self.async_workouts.fetch_all_workouts(
                 start_date,
                 end_date,
                 start_time=start_time,
@@ -1033,7 +1037,7 @@ class GymAPI:
             summary="Workout history",
             description="Detailed workout list with volume and RPE summary.",
         )
-        def workout_history(
+        async def workout_history(
             start_date: str,
             end_date: str,
             training_type: str = None,
@@ -1045,7 +1049,7 @@ class GymAPI:
             limit: int | None = None,
             offset: int | None = None,
         ):
-            workouts = self.workouts.fetch_all_workouts(
+            workouts = await self.async_workouts.fetch_all_workouts(
                 start_date,
                 end_date,
                 start_time=start_time,
@@ -1076,8 +1080,8 @@ class GymAPI:
             return result
 
         @self.app.get("/calendar")
-        def calendar(start_date: str, end_date: str):
-            logged = self.workouts.fetch_all_workouts(start_date, end_date)
+        async def calendar(start_date: str, end_date: str):
+            logged = await self.async_workouts.fetch_all_workouts(start_date, end_date)
             planned = self.planned_workouts.fetch_all(start_date, end_date)
             result = []
             for wid, date, _s, _e, t_type, _notes, _rating, *_ in logged:
@@ -1107,7 +1111,7 @@ class GymAPI:
             return {"workout_ids": ids}
 
         @self.app.get("/workouts/{workout_id}")
-        def get_workout(workout_id: int):
+        async def get_workout(workout_id: int):
             (
                 wid,
                 date,
@@ -1122,7 +1126,7 @@ class GymAPI:
                 rating,
                 mood_before,
                 mood_after,
-            ) = self.workouts.fetch_detail(workout_id)
+            ) = await self.async_workouts.fetch_detail(workout_id)
             return {
                 "id": wid,
                 "date": date,
@@ -1218,94 +1222,94 @@ class GymAPI:
             return [{"id": cid, "timestamp": ts, "comment": c} for cid, ts, c in rows]
 
         @self.app.put("/workouts/{workout_id}/type")
-        def update_workout_type(
+        async def update_workout_type(
             workout_id: int,
             training_type: str,
         ):
-            self.workouts.set_training_type(workout_id, training_type)
+            await self.async_workouts.set_training_type(workout_id, training_type)
             return {"status": "updated"}
 
         @self.app.put("/workouts/{workout_id}/note")
-        def update_workout_note(
+        async def update_workout_note(
             workout_id: int,
             notes: str = None,
         ):
-            self.workouts.set_note(workout_id, notes)
+            await self.async_workouts.set_note(workout_id, notes)
             if notes:
                 tags = re.findall(r"#(\w+)", notes)
                 for t in tags:
-                    tid = self.tags.get_id(t)
+                    tid = await self.async_tags.get_id(t)
                     if tid is None:
-                        tid = self.tags.add(t)
-                    self.tags.assign(workout_id, tid)
+                        tid = await self.async_tags.add(t)
+                    await self.async_tags.assign(workout_id, tid)
             return {"status": "updated"}
 
         @self.app.put("/workouts/{workout_id}/name")
-        def rename_workout(workout_id: int, name: str | None = None):
-            self.workouts.set_name(workout_id, name)
+        async def rename_workout(workout_id: int, name: str | None = None):
+            await self.async_workouts.set_name(workout_id, name)
             return {"status": "updated"}
 
         @self.app.put("/workouts/{workout_id}/location")
-        def update_workout_location(
+        async def update_workout_location(
             workout_id: int,
             location: str = None,
         ):
-            self.workouts.set_location(workout_id, location)
+            await self.async_workouts.set_location(workout_id, location)
             return {"status": "updated"}
 
         @self.app.put("/workouts/{workout_id}/icon")
-        def update_workout_icon(workout_id: int, icon: str | None = None):
-            self.workouts.set_icon(workout_id, icon)
+        async def update_workout_icon(workout_id: int, icon: str | None = None):
+            await self.async_workouts.set_icon(workout_id, icon)
             return {"status": "updated"}
 
         @self.app.put("/workouts/{workout_id}/timezone")
-        def update_workout_timezone(workout_id: int, timezone: str):
-            self.workouts.set_timezone(workout_id, timezone)
+        async def update_workout_timezone(workout_id: int, timezone: str):
+            await self.async_workouts.set_timezone(workout_id, timezone)
             return {"status": "updated"}
 
 
         @self.app.put("/workouts/{workout_id}/rating")
-        def update_workout_rating(
+        async def update_workout_rating(
             workout_id: int,
             rating: int | None = None,
         ):
-            self.workouts.set_rating(workout_id, rating)
+            await self.async_workouts.set_rating(workout_id, rating)
             return {"status": "updated"}
 
         @self.app.put("/workouts/{workout_id}/mood_before")
-        def update_mood_before(
+        async def update_mood_before(
             workout_id: int,
             mood: int | None = None,
         ):
-            self.workouts.set_mood_before(workout_id, mood)
+            await self.async_workouts.set_mood_before(workout_id, mood)
             return {"status": "updated"}
 
         @self.app.put("/workouts/{workout_id}/mood_after")
-        def update_mood_after(
+        async def update_mood_after(
             workout_id: int,
             mood: int | None = None,
         ):
-            self.workouts.set_mood_after(workout_id, mood)
+            await self.async_workouts.set_mood_after(workout_id, mood)
             return {"status": "updated"}
 
         @self.app.delete("/workouts/{workout_id}")
-        def delete_workout(workout_id: int):
+        async def delete_workout(workout_id: int):
             try:
-                self.workouts.delete(workout_id)
+                await self.async_workouts.delete(workout_id)
                 return {"status": "deleted"}
             except ValueError as e:
                 raise HTTPException(status_code=404, detail=str(e))
 
         @self.app.post("/workouts/{workout_id}/start")
-        def start_workout(workout_id: int):
+        async def start_workout(workout_id: int):
             timestamp = datetime.datetime.now().isoformat(timespec="seconds")
-            self.workouts.set_start_time(workout_id, timestamp)
+            await self.async_workouts.set_start_time(workout_id, timestamp)
             return {"status": "started", "timestamp": timestamp}
 
         @self.app.post("/workouts/{workout_id}/finish")
-        def finish_workout(workout_id: int):
+        async def finish_workout(workout_id: int):
             timestamp = datetime.datetime.now().isoformat(timespec="seconds")
-            self.workouts.set_end_time(workout_id, timestamp)
+            await self.async_workouts.set_end_time(workout_id, timestamp)
             if (
                 self.statistics.volume_model is not None
                 and self.settings.get_bool("ml_all_enabled", True)
@@ -1405,6 +1409,18 @@ class GymAPI:
         ):
             plans = self.planned_workouts.fetch_all(
                 start_date, end_date, sort_by, descending
+            )
+            return [
+                {"id": pid, "date": date, "training_type": t, "position": pos}
+                for pid, date, t, pos in plans
+            ]
+
+        @self.app.get("/planned_workouts/weekly")
+        def weekly_planner():
+            today = datetime.date.today()
+            end = today + datetime.timedelta(days=6)
+            plans = self.planned_workouts.fetch_all(
+                today.isoformat(), end.isoformat(), sort_by="date", descending=False
             )
             return [
                 {"id": pid, "date": date, "training_type": t, "position": pos}
