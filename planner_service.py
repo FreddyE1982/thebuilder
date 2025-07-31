@@ -235,3 +235,18 @@ class PlannerService:
                 if etime:
                     self.sets.set_end_time(new_set_id, etime)
         return new_id
+
+    def search_plans(
+        self,
+        query: str | None = None,
+        training_type: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> list[tuple[int, str, str, int]]:
+        """Search planned workouts by multiple filters."""
+        return self.planned_workouts.search(
+            query_str=query,
+            training_type=training_type,
+            start_date=start_date,
+            end_date=end_date,
+        )

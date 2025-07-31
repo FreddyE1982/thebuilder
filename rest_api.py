@@ -374,6 +374,18 @@ class GymAPI:
             prefix="/muscle_groups", tags=["Muscle Groups"]
         )
 
+        @self.app.get("/manifest.json")
+        def manifest():
+            """Return progressive web app manifest."""
+            with open("manifest.json", "r", encoding="utf-8") as f:
+                return json.load(f)
+
+        @self.app.get("/sw.js")
+        def service_worker():
+            """Return service worker script."""
+            with open("sw.js", "r", encoding="utf-8") as f:
+                return Response(f.read(), media_type="application/javascript")
+
 
         @self.app.get(
             "/health",
@@ -431,6 +443,12 @@ class GymAPI:
         @equipment_router.get("/search")
         def search_equipment(query: str, limit: int = 5):
             return self.equipment.fuzzy_search(query, limit)
+
+        @equipment_router.get("/suggest")
+        def suggest_equipment(exercise: str):
+            options = self.equipment.fetch_names()
+            suggestion = self.recommender.suggest_equipment(exercise, options)
+            return {"equipment": suggestion}
 
         @equipment_router.get("/{name}")
         def get_equipment(name: str):
@@ -1331,6 +1349,24 @@ class GymAPI:
         ):
             plans = self.planned_workouts.fetch_all(
                 start_date, end_date, sort_by, descending
+            )
+            return [
+                {"id": pid, "date": date, "training_type": t, "position": pos}
+                for pid, date, t, pos in plans
+            ]
+
+        @self.app.get("/planned_workouts/search")
+        def search_planned_workouts(
+            query: str = None,
+            training_type: str = None,
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            plans = self.planner.search_plans(
+                query=query,
+                training_type=training_type,
+                start_date=start_date,
+                end_date=end_date,
             )
             return [
                 {"id": pid, "date": date, "training_type": t, "position": pos}
