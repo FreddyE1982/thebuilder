@@ -159,6 +159,18 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), [])
 
+    def test_workout_icon(self) -> None:
+        resp = self.client.post("/workouts", params={"icon": "🔥"})
+        self.assertEqual(resp.status_code, 200)
+        wid = resp.json()["id"]
+        resp = self.client.get(f"/workouts/{wid}")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["icon"], "🔥")
+        resp = self.client.put(f"/workouts/{wid}/icon", params={"icon": "💧"})
+        self.assertEqual(resp.status_code, 200)
+        resp = self.client.get(f"/workouts/{wid}")
+        self.assertEqual(resp.json()["icon"], "💧")
+
         response = self.client.delete("/workouts/1")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"status": "deleted"})

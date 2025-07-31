@@ -9,4 +9,6 @@ class VoiceCommandTest(unittest.TestCase):
         with open(path, "r", encoding="utf-8") as f:
             content = f.read()
         self.assertIn("startVoiceCommand()", content)
+        self.assertIn("startSetDictation", content)
+        self.assertIn("engine.say(str(remaining))", content)
 

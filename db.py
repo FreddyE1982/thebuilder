@@ -28,6 +28,7 @@ class Database:
                     training_type TEXT NOT NULL DEFAULT 'strength',
                     notes TEXT,
                     location TEXT,
+                    icon TEXT,
                     rating INTEGER,
                     mood_before INTEGER,
                     mood_after INTEGER
@@ -42,6 +43,7 @@ class Database:
                 "training_type",
                 "notes",
                 "location",
+                "icon",
                 "rating",
                 "mood_before",
                 "mood_after",
@@ -624,6 +626,8 @@ class Database:
                         return "0"
                     if col in ("diff_reps", "diff_weight", "diff_rpe", "warmup"):
                         return "0"
+                    if col == "icon":
+                        return "''"
                     return "NULL"
 
                 defaults = ", ".join(default_val(c) for c in missing)
@@ -972,11 +976,12 @@ class WorkoutRepository(BaseRepository):
         rating: Optional[int] = None,
         mood_before: Optional[int] = None,
         mood_after: Optional[int] = None,
+        icon: str | None = None,
         start_time: str | None = None,
         end_time: str | None = None,
     ) -> int:
         return self.execute(
-            "INSERT INTO workouts (date, name, timezone, training_type, notes, location, rating, mood_before, mood_after, start_time, end_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+            "INSERT INTO workouts (date, name, timezone, training_type, notes, location, icon, rating, mood_before, mood_after, start_time, end_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
             (
                 date,
                 name,
@@ -984,6 +989,7 @@ class WorkoutRepository(BaseRepository):
                 training_type,
                 notes,
                 location,
+                icon,
                 rating,
                 mood_before,
                 mood_after,
@@ -1008,8 +1014,11 @@ class WorkoutRepository(BaseRepository):
             str,
             Optional[str],
             Optional[str],
+            Optional[str],
             str,
             str,
+            Optional[str],
+            Optional[str],
             Optional[str],
             Optional[int],
             Optional[int],
@@ -1017,7 +1026,7 @@ class WorkoutRepository(BaseRepository):
         ]
     ]:
         query = (
-            "SELECT id, date, name, start_time, end_time, timezone, training_type, notes, rating, mood_before, mood_after FROM workouts"
+            "SELECT id, date, name, start_time, end_time, timezone, training_type, notes, location, icon, rating, mood_before, mood_after FROM workouts"
         )
         params: list[str | int] = []
         where_clauses: list[str] = []
@@ -1141,12 +1150,13 @@ class WorkoutRepository(BaseRepository):
         str,
         Optional[str],
         Optional[str],
+        Optional[str],
         Optional[int],
         Optional[int],
         Optional[int],
     ]:
         rows = self.fetch_all(
-            "SELECT id, date, name, start_time, end_time, timezone, training_type, notes, location, rating, mood_before, mood_after FROM workouts WHERE id = ?;",
+            "SELECT id, date, name, start_time, end_time, timezone, training_type, notes, location, icon, rating, mood_before, mood_after FROM workouts WHERE id = ?;",
             (workout_id,),
         )
         if not rows:
@@ -1191,6 +1201,18 @@ class WorkoutRepository(BaseRepository):
         self.execute(
             "DELETE FROM workouts WHERE id NOT IN (SELECT DISTINCT workout_id FROM exercises);"
         )
+
+    def set_icon(self, workout_id: int, icon: str | None) -> None:
+        self.execute(
+            "UPDATE workouts SET icon = ? WHERE id = ?;",
+            (icon, workout_id),
+        )
+
+    def monthly_counts(self) -> List[Tuple[str, int]]:
+        rows = self.fetch_all(
+            "SELECT substr(date,1,7) AS m, COUNT(*) FROM workouts GROUP BY m ORDER BY m;"
+        )
+        return [(m, int(c)) for m, c in rows]
 
 
 class ExerciseRepository(BaseRepository):

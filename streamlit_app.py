@@ -99,6 +99,7 @@ class LayoutManager:
 
     def start_page(self) -> None:
         st.markdown("<div class='page-wrapper'>", unsafe_allow_html=True)
+        st.markdown("<div id='unsaved-indicator'>Unsaved changes</div>", unsafe_allow_html=True)
 
     def end_page(self) -> None:
         st.markdown("</div>", unsafe_allow_html=True)
@@ -423,6 +424,13 @@ class GymApp:
                 except Exception:
                     pass
             return
+        if remaining <= 3 and os.environ.get("TEST_MODE") != "1":
+            try:
+                engine = pyttsx3.init()
+                engine.say(str(remaining))
+                engine.runAndWait()
+            except Exception:
+                pass
         pct = int((1 - remaining / rest_sec) * 100)
         st.markdown(
             f"<div id='rest-timer'>Rest: {remaining}s ({pct}%)</div>", unsafe_allow_html=True
@@ -663,6 +671,22 @@ class GymApp:
                 };
                 rec.start();
             }
+            function startSetDictation(repsId, weightId) {
+                const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!Rec) return;
+                const rec = new Rec();
+                rec.onresult = e => {
+                    const txt = e.results[0][0].transcript.toLowerCase();
+                    const parts = txt.split(/\s+/);
+                    const r = parseInt(parts[0]);
+                    const w = parseFloat(parts[1]);
+                    const repsInput = document.getElementById(repsId);
+                    const weightInput = document.getElementById(weightId);
+                    if(!isNaN(r) && repsInput) repsInput.value = r;
+                    if(!isNaN(w) && weightInput) weightInput.value = w;
+                };
+                rec.start();
+            }
             window.addEventListener('resize', handleResize);
             window.addEventListener('orientationchange', handleResize);
             if (window.visualViewport) {
@@ -751,7 +775,10 @@ class GymApp:
             document.addEventListener('keydown', e => {
                 if (e.key === 'Enter') saveScroll();
             }, true);
-            window.addEventListener('beforeunload', saveScroll);
+            let unsaved=false;
+            document.addEventListener('input', () => {unsaved=true; document.body.classList.add('unsaved');}, true);
+            document.addEventListener('submit', () => {unsaved=false; document.body.classList.remove('unsaved');}, true);
+            window.addEventListener('beforeunload', e => {if(unsaved){e.preventDefault(); e.returnValue='';} saveScroll();});
             </script>
             """
             )
@@ -842,6 +869,31 @@ class GymApp:
                 z-index: 1100;
                 padding: 1rem;
                 overflow-y: auto;
+            }
+            #unsaved-indicator {
+                position: fixed;
+                bottom: 0.5rem;
+                right: 0.5rem;
+                background: #ffc;
+                border: 1px solid var(--border-color);
+                padding: 0.25rem 0.5rem;
+                border-radius: 0.25rem;
+                display: none;
+                z-index: 1102;
+            }
+            body.unsaved #unsaved-indicator {display:block;}
+            .month-timeline {
+                display:flex;
+                overflow-x:auto;
+                gap:0.5rem;
+                padding-bottom:0.25rem;
+            }
+            .month-timeline .month {
+                border:1px solid var(--border-color);
+                padding:0.25rem 0.5rem;
+                border-radius:0.25rem;
+                min-width:6rem;
+                text-align:center;
             }
             .tips-panel.open {
                 transform: translateX(0);
@@ -2849,16 +2901,22 @@ class GymApp:
                 new_location = st.text_input(
                     "Location", key="new_workout_location", help="Where the workout takes place"
                 )
+                new_icon = st.text_input("Icon", key="new_workout_icon")
                 st.markdown("</div>", unsafe_allow_html=True)
                 st.markdown("", help="Select the primary training focus")
                 submitted = st.form_submit_button("New Workout")
                 if submitted:
                     new_id = self.workouts.create(
                         new_date.isoformat(),
+                        None,
                         self.timezone,
                         new_type,
                         None,
                         new_location or None,
+                        new_icon or None,
+                        None,
+                        None,
+                        None,
                         None,
                     )
                     self._select_workout(new_id)
@@ -2889,12 +2947,13 @@ class GymApp:
                     unsafe_allow_html=True,
                 )
                 detail = self.workouts.fetch_detail(int(selected))
-                start_time = detail[2]
-                end_time = detail[3]
-                current_type = detail[5]
-                notes_val = detail[6] or ""
-                loc_val = detail[7] or ""
-                rating_val = detail[8]
+                start_time = detail[3]
+                end_time = detail[4]
+                current_type = detail[6]
+                notes_val = detail[7] or ""
+                loc_val = detail[8] or ""
+                icon_val = detail[9] or ""
+                rating_val = detail[10]
                 status_class = "status-idle"
                 status_label = "Idle"
                 if start_time and end_time:
@@ -2982,8 +3041,15 @@ class GymApp:
                     on_change=self._update_workout_location,
                     args=(int(selected),),
                 )
+                icon_edit = st.text_input(
+                    "Icon",
+                    value=icon_val,
+                    key=f"workout_icon_{selected}",
+                    on_change=self._update_workout_icon,
+                    args=(int(selected),),
+                )
                 all_tz = sorted(available_timezones())
-                tz_index = all_tz.index(detail[4]) if detail[4] in all_tz else 0
+                tz_index = all_tz.index(detail[5]) if detail[5] in all_tz else 0
                 tz_sel = st.selectbox(
                     "Timezone",
                     all_tz,
@@ -3002,8 +3068,8 @@ class GymApp:
                     on_change=self._update_workout_rating,
                     args=(int(selected),),
                 )
-                mb_val = detail[8] if len(detail) > 8 else None
-                ma_val = detail[9] if len(detail) > 9 else None
+                mb_val = detail[11] if len(detail) > 11 else None
+                ma_val = detail[12] if len(detail) > 12 else None
                 mood_before = st.slider(
                     "Mood Before",
                     1,
@@ -3702,6 +3768,11 @@ class GymApp:
             options=self._rpe_options(),
             key=f"new_rpe_{exercise_id}",
         )
+        if st.button("🎤", key=f"dictate_{exercise_id}"):
+            components.html(
+                f"<script>startSetDictation('new_reps_{exercise_id}','new_weight_{exercise_id}');</script>",
+                height=0,
+            )
         note = None
         duration = 0.0
         warmup = False
@@ -3985,6 +4056,11 @@ class GymApp:
     def _update_workout_timezone(self, workout_id: int) -> None:
         val = st.session_state.get(f"workout_tz_{workout_id}", self.timezone)
         self.workouts.set_timezone(workout_id, val)
+        self._trigger_refresh()
+
+    def _update_workout_icon(self, workout_id: int) -> None:
+        val = st.session_state.get(f"workout_icon_{workout_id}", "")
+        self.workouts.set_icon(workout_id, val or None)
         self._trigger_refresh()
 
     def _update_workout_rating(self, workout_id: int) -> None:
@@ -5191,6 +5267,11 @@ class GymApp:
 
     def _history_tab(self) -> None:
         st.header("Workout History")
+        months = self.workouts.monthly_counts()
+        html = "<div class='month-timeline'>" + "".join(
+            f"<div class='month'>{m} ({c})</div>" for m, c in months
+        ) + "</div>"
+        st.markdown(html, unsafe_allow_html=True)
         favs = self.favorite_workouts_repo.fetch_all()
         with st.expander("Favorite Workouts", expanded=True):
             if favs:
@@ -6460,6 +6541,16 @@ class GymApp:
                     pct = (current / gval * 100) if gval else 0
                     metrics.append((gname, f"{pct:.1f}%"))
                 self._metric_grid(metrics)
+                df = pd.DataFrame([
+                    {"goal": m[0], "progress": float(m[1].strip('%'))}
+                    for m in metrics
+                ])
+                chart = (
+                    alt.Chart(df)
+                    .mark_arc(innerRadius=40)
+                    .encode(theta="progress", color="goal", tooltip=["goal", "progress"])
+                )
+                st.altair_chart(chart, use_container_width=True)
 
     def _settings_tab(self) -> None:
         st.header("Settings")

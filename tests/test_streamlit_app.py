@@ -1151,6 +1151,18 @@ class StreamlitFullGUITest(unittest.TestCase):
         self.assertEqual(tab.header[0].value, "Goals")
         self.assertGreater(len(tab.expander), 1)
 
+    def test_goal_donut_chart(self) -> None:
+        tab = self._get_tab("Goals")
+        self.assertTrue(hasattr(tab, "altair_chart"))
+
+    def test_unsaved_indicator_present(self) -> None:
+        indicator = any("unsaved-indicator" in m.body for m in self.at.markdown)
+        self.assertTrue(indicator)
+
+    def test_month_timeline(self) -> None:
+        tab = self._get_tab("History")
+        self.assertTrue(any("month-timeline" in m.body for m in tab.markdown))
+
     def test_forecast_sections_collapsible(self) -> None:
         idx = _find_by_label(self.at.selectbox, "Exercise", key="stats_ex")
         self.at = self.at.selectbox[idx].select("Barbell Bench Press").run()

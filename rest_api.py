@@ -907,6 +907,7 @@ class GymAPI:
             rating: int | None = None,
             mood_before: int | None = None,
             mood_after: int | None = None,
+            icon: str | None = None,
             start_time: str | None = None,
             end_time: str | None = None,
         ):
@@ -932,11 +933,12 @@ class GymAPI:
                 training_type,
                 notes,
                 location,
-                rating,
-                mood_before,
-                mood_after,
-                start_time,
-                end_time,
+                rating=rating,
+                mood_before=mood_before,
+                mood_after=mood_after,
+                icon=icon,
+                start_time=start_time,
+                end_time=end_time,
             )
             if notes:
                 tags = re.findall(r"#(\w+)", notes)
@@ -1075,6 +1077,7 @@ class GymAPI:
                 training_type,
                 notes,
                 location,
+                icon,
                 rating,
                 mood_before,
                 mood_after,
@@ -1089,6 +1092,7 @@ class GymAPI:
                 "training_type": training_type,
                 "notes": notes,
                 "location": location,
+                "icon": icon,
                 "rating": rating,
                 "mood_before": mood_before,
                 "mood_after": mood_after,
@@ -1201,6 +1205,11 @@ class GymAPI:
             location: str = None,
         ):
             self.workouts.set_location(workout_id, location)
+            return {"status": "updated"}
+
+        @self.app.put("/workouts/{workout_id}/icon")
+        def update_workout_icon(workout_id: int, icon: str | None = None):
+            self.workouts.set_icon(workout_id, icon)
             return {"status": "updated"}
 
         @self.app.put("/workouts/{workout_id}/timezone")
