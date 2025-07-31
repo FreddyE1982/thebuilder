@@ -19,6 +19,11 @@ from db import (
     TemplateWorkoutRepository,
     FavoriteTemplateRepository,
     PlannedWorkoutRepository,
+    PlannedExerciseRepository,
+    PlannedSetRepository,
+    WorkoutRepository,
+    ExerciseRepository,
+    SetRepository,
     GoalRepository,
 )
 
@@ -1604,6 +1609,12 @@ class StreamlitHeartRateGUITest(unittest.TestCase):
     def _connect(self) -> sqlite3.Connection:
         return sqlite3.connect(self.db_path)
 
+    def _get_tab(self, label: str):
+        for tab in self.at.tabs:
+            if tab.label == label:
+                return tab
+        self.fail(f"Tab {label} not found")
+
     def test_log_heart_rate(self) -> None:
         idx_new = _find_by_label(
             self.at.button,
@@ -1722,11 +1733,24 @@ class RecommendationIntegrationTest(unittest.TestCase):
         for path in [self.db_path, self.yaml_path]:
             if os.path.exists(path):
                 os.remove(path)
+        os.environ["DB_PATH"] = self.db_path
+        os.environ["YAML_PATH"] = self.yaml_path
+        os.environ["TEST_MODE"] = "0"
+        self.at = AppTest.from_file("streamlit_app.py", default_timeout=20)
+        self.at.query_params["mode"] = "desktop"
+        self.at.query_params["tab"] = "settings"
+        self.at.run(timeout=20)
 
     def tearDown(self) -> None:
         for path in [self.db_path, self.yaml_path]:
             if os.path.exists(path):
                 os.remove(path)
+
+    def _get_tab(self, label: str):
+        for tab in self.at.tabs:
+            if tab.label == label:
+                return tab
+        self.fail(f"Tab {label} not found")
 
     def test_goals_passed_to_recommender(self) -> None:
         os.environ["DB_PATH"] = self.db_path
