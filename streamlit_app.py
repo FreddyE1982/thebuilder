@@ -2343,9 +2343,88 @@ class GymApp:
             if st.button("Close", key="wn_close"):
                 self.settings_repo.set_text("app_version", APP_VERSION)
                 st.session_state.show_whats_new = False
+                st.session_state.show_feature_onboarding = True
                 self._trigger_refresh()
 
         self._show_dialog("What's New", _content)
+
+    def _new_feature_onboarding(self) -> None:
+        """Guide users through new features step by step."""
+
+        steps = [
+            "1. Access the new personal record tracker via the Progress tab.",
+            "2. Enable daily reminders in Settings > General.",
+            "3. Use the help icons on each page for contextual tips.",
+        ]
+        step = st.session_state.get("feature_onboard_step", 0)
+
+        def _content() -> None:
+            st.markdown(steps[step])
+            col1, col2 = st.columns(2)
+            if step > 0:
+                if col1.button("Back", key="feat_back"):
+                    st.session_state.feature_onboard_step -= 1
+                    self._trigger_refresh()
+            if step < len(steps) - 1:
+                if col2.button("Next", key="feat_next"):
+                    st.session_state.feature_onboard_step += 1
+                    self._trigger_refresh()
+            else:
+                if col2.button("Done", key="feat_done"):
+                    st.session_state.show_feature_onboarding = False
+                    st.session_state.pop("feature_onboard_step", None)
+                    self._trigger_refresh()
+
+        self._show_dialog("Feature Guide", _content)
+
+    def _first_workout_tutorial(self) -> None:
+        """Interactive guide for creating the first workout."""
+
+        steps = [
+            "Click **Add Workout** on the Workouts tab.",
+            "Choose a training type and optional location.",
+            "Use **Add Exercise** to record movements and sets.",
+            "Finish the workout to save and view stats.",
+        ]
+        step = st.session_state.get("fw_tut_step", 0)
+
+        def _content() -> None:
+            st.markdown(steps[step])
+            b1, b2 = st.columns(2)
+            if step > 0:
+                if b1.button("Back", key="fw_back"):
+                    st.session_state.fw_tut_step -= 1
+                    self._trigger_refresh()
+            if step < len(steps) - 1:
+                if b2.button("Next", key="fw_next"):
+                    st.session_state.fw_tut_step += 1
+                    self._trigger_refresh()
+            else:
+                if b2.button("Got it", key="fw_done"):
+                    st.session_state.show_workout_tutorial = False
+                    st.session_state.pop("fw_tut_step", None)
+                    self._trigger_refresh()
+
+        self._show_dialog("First Workout", _content)
+
+    def _show_help_tip(self, page: str) -> None:
+        """Display contextual help tip for ``page``."""
+
+        tips = {
+            "Workouts": "Use the **Add Workout** button to start tracking your session.",
+            "Progress": "Select an exercise to view detailed charts and records.",
+            "Settings": "Adjust your preferences including reminders and theme.",
+        }
+        tip = tips.get(page)
+        if tip:
+            with st.expander("Need Help?", expanded=False):
+                st.info(tip)
+
+    def _show_completion_animation(self) -> None:
+        """Show short celebration animation when a workout is completed."""
+        if os.environ.get("TEST_MODE") == "1":
+            return
+        st.balloons()
 
     def _notifications_dialog(self) -> None:
         def _content() -> None:
@@ -2635,6 +2714,8 @@ class GymApp:
             st.session_state.show_whats_new = True
         if st.session_state.get("show_whats_new"):
             self._whats_new_dialog()
+        if st.session_state.get("show_feature_onboarding"):
+            self._new_feature_onboarding()
         self._open_header()
         st.markdown("<div class='title-section'>", unsafe_allow_html=True)
         cols = st.columns([3, 1, 1, 1, 1, 3])
@@ -2900,12 +2981,18 @@ class GymApp:
 
     def _workout_section(self) -> None:
         with self._section("Workouts"):
+            if not self.workouts.fetch_all_workouts() and not st.session_state.get("show_workout_tutorial_shown"):
+                st.session_state.show_workout_tutorial = True
+                st.session_state.show_workout_tutorial_shown = True
+            if st.session_state.get("show_workout_tutorial"):
+                self._first_workout_tutorial()
             with st.expander("Existing Workouts", expanded=True):
                 create_tab, manage_tab = st.tabs(["Create New", "Existing"])
                 with create_tab:
                     self._create_workout_form(self.training_options)
                 with manage_tab:
                     self._existing_workout_form(self.training_options)
+            self._show_help_tip("Workouts")
 
     def _create_workout_form(self, training_options: list[str]) -> None:
         with st.container():
@@ -3010,6 +3097,7 @@ class GymApp:
                         st.success(
                             f"Logged {summary['sets']} sets, volume {self._format_weight(summary['volume'])}, avg RPE {summary['avg_rpe']}"
                         )
+                        self._show_completion_animation()
                     type_choice = st.selectbox(
                         "Type",
                         training_options,
@@ -3038,6 +3126,7 @@ class GymApp:
                         st.success(
                             f"Logged {summary['sets']} sets, volume {self._format_weight(summary['volume'])}, avg RPE {summary['avg_rpe']}"
                         )
+                        self._show_completion_animation()
                     type_choice = cols[2].selectbox(
                         "Type",
                         training_options,
@@ -5791,6 +5880,7 @@ class GymApp:
                     )
         else:
             st.info("Select an exercise to view insights.")
+        self._show_help_tip("Progress")
 
     def _weight_tab(self) -> None:
         st.header("Body Weight")

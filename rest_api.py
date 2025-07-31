@@ -134,6 +134,24 @@ class EmailScheduler(threading.Thread):
             time.sleep(self.interval)
 
 
+class ReminderScheduler(threading.Thread):
+    """Background thread creating daily workout reminder notifications."""
+
+    def __init__(self, api: "GymAPI", interval_hours: int = 24) -> None:
+        super().__init__(daemon=True)
+        self.api = api
+        self.interval = interval_hours * 3600
+        self.running = True
+
+    def run(self) -> None:
+        while self.running:
+            try:
+                self.api.send_daily_reminder()
+            except Exception:
+                pass
+            time.sleep(self.interval)
+
+
 class GymAPI:
     """Provides REST endpoints for workout logging."""
 
@@ -143,6 +161,7 @@ class GymAPI:
         yaml_path: str = "settings.yaml",
         *,
         start_scheduler: bool = False,
+        start_reminder: bool = False,
         rate_limit: int | None = None,
         rate_window: int = 60,
     ) -> None:
@@ -282,6 +301,9 @@ class GymAPI:
         if start_scheduler:
             self.scheduler = EmailScheduler(self)
             self.scheduler.start()
+        if start_reminder:
+            self.reminder_scheduler = ReminderScheduler(self)
+            self.reminder_scheduler.start()
         self._setup_routes()
 
     def send_weekly_email_report(self, address: str | None = None) -> None:
@@ -323,6 +345,15 @@ class GymAPI:
             data = base64.b64encode(f.read()).decode()
         self.email_logs.add(address, "full export", data, True)
         os.remove(zip_path)
+
+    def send_daily_reminder(self) -> None:
+        """Create reminder notification if no workout logged today."""
+        if not self.settings.get_bool("daily_reminders_enabled", False):
+            return
+        today = datetime.date.today().isoformat()
+        workouts = self.workouts.fetch_all_workouts(start_date=today, end_date=today)
+        if not workouts:
+            self.notifications.add("Don't forget your workout today!")
 
     async def _broadcast(self, event: dict) -> None:
         for ws in list(self.watchers):
@@ -3048,6 +3079,7 @@ class GymAPI:
             show_onboarding: bool = None,
             auto_open_last_workout: bool = None,
             email_weekly_enabled: bool = None,
+            daily_reminders_enabled: bool = None,
             weekly_report_email: str = None,
             webhook_url: str = None,
             experimental_models_enabled: bool = None,
@@ -3142,6 +3174,8 @@ class GymAPI:
                 self.settings.set_bool("auto_open_last_workout", auto_open_last_workout)
             if email_weekly_enabled is not None:
                 self.settings.set_bool("email_weekly_enabled", email_weekly_enabled)
+            if daily_reminders_enabled is not None:
+                self.settings.set_bool("daily_reminders_enabled", daily_reminders_enabled)
             if weekly_report_email is not None:
                 self.settings.set_text("weekly_report_email", weekly_report_email)
             if webhook_url is not None:
