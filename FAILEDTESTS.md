@@ -1,3 +1,20 @@
-test_tooltips_present and test_workout_search failed during run
-API tests failed: calendar_endpoint, copy_workout_to_template, duplicate_workout, general_settings, plan_progress, plan_workflow, schema_migration, training_type_summary_endpoint, workout_history_endpoint
-test_ml_service failed: test_performance_model_train_predict
+Streamlit GUI tests failing:
+test_finish_summary_banner
+test_intensity_badge_html
+test_pinned_stats_header
+test_quick_weight_buttons
+test_set_edit_keeps_open
+test_set_reordering_buttons
+test_status_badges
+test_tooltips_present
+test_workout_search
+test_goal_donut_chart
+test_planned_summary
+test_expander_persistence_on_add_set
+test_plan_progress_ring
+test_quick_workout_fab
+test_sidebar_new_workout
+test_tab_persistence_on_add_set
+test_template_plan_to_workout
+test_compact_mode_toggle
+test_csv_uploader_present

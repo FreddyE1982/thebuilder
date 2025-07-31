@@ -632,6 +632,8 @@ class Database:
                         return "'strength'"
                     if col == "position":
                         return "0"
+                    if col == "timezone":
+                        return "'UTC'"
                     if col in ("diff_reps", "diff_weight", "diff_rpe", "warmup"):
                         return "0"
                     if col == "icon":
