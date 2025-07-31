@@ -18,3 +18,17 @@ test_tab_persistence_on_add_set
 test_template_plan_to_workout
 test_compact_mode_toggle
 test_csv_uploader_present
+StreamlitAppTest failing tests on 2025-07-31:
+- test_custom_exercise_and_logs
+- test_enable_onboarding_tutorial
+- test_tooltips_present
+- test_workout_search
+StreamlitFullGUITest failing tests:
+- test_goal_donut_chart
+- test_planned_summary
+StreamlitAdditionalGUITest failing tests:
+- test_plan_progress_ring
+- test_quick_workout_fab
+- test_sidebar_new_workout
+StreamlitTemplateWorkflowTest failing tests:
+- test_template_plan_to_workout
