@@ -228,3 +228,12 @@
 [complete] 199. Flexible grid layout toggle.
 [complete] 200. "Clear filters" button in history tab.
 [complete] 201. Remove all multiuser features from the code base.
+
+202. Replace expander sections in History tab with nested tabs. [pending]
+203. Convert Progress tab expanders to subtabs for metrics and charts. [pending]
+204. Use subtabs in Planner tab instead of expanders for goal planner and templates. [pending]
+205. Replace settings expanders with subtab sections. [pending]
+206. Update JS persistence logic for tabs and remove expander code. [pending]
+207. Remove references to self.at.expander in GUI tests and add tab checks. [pending]
+208. Adjust responsive CSS for nested tabs and subtabs. [pending]
+209. Fully remove all Streamlit expander usage across the application. [pending]
