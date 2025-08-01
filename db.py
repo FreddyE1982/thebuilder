@@ -1385,6 +1385,62 @@ class ExerciseRepository(BaseRepository):
         )
 
 
+class AsyncExerciseRepository(AsyncBaseRepository):
+    """Asynchronous repository for exercises."""
+
+    def __init__(self, db_path: str = "workout.db") -> None:
+        super().__init__(db_path)
+        self.exercise_names = ExerciseNameRepository(db_path)
+
+    async def add(
+        self,
+        workout_id: int,
+        name: str,
+        equipment_name: Optional[str] = None,
+        note: Optional[str] = None,
+    ) -> int:
+        self.exercise_names.ensure([name])
+        return await self.execute(
+            "INSERT INTO exercises (workout_id, name, equipment_name, note) VALUES (?, ?, ?, ?);",
+            (workout_id, name, equipment_name, note),
+        )
+
+    async def remove(self, exercise_id: int) -> None:
+        await self.execute("DELETE FROM exercises WHERE id = ?;", (exercise_id,))
+
+    async def fetch_for_workout(
+        self, workout_id: int
+    ) -> List[Tuple[int, str, Optional[str], Optional[str]]]:
+        return await self.fetch_all(
+            "SELECT id, name, equipment_name, note FROM exercises WHERE workout_id = ?;",
+            (workout_id,),
+        )
+
+    async def fetch_detail(
+        self, exercise_id: int
+    ) -> Tuple[int, str, Optional[str], Optional[str]]:
+        rows = await self.fetch_all(
+            "SELECT workout_id, name, equipment_name, note FROM exercises WHERE id = ?;",
+            (exercise_id,),
+        )
+        if not rows:
+            raise ValueError("exercise not found")
+        return rows[0]
+
+    async def update_note(self, exercise_id: int, note: Optional[str]) -> None:
+        await self.execute(
+            "UPDATE exercises SET note = ? WHERE id = ?;",
+            (note, exercise_id),
+        )
+
+    async def update_name(self, exercise_id: int, name: str) -> None:
+        self.exercise_names.ensure([name])
+        await self.execute(
+            "UPDATE exercises SET name = ? WHERE id = ?;",
+            (name, exercise_id),
+        )
+
+
 class SetRepository(BaseRepository):
     """Repository for sets table operations."""
 

@@ -24,6 +24,7 @@ from fastapi import (
 from db import (
     WorkoutRepository,
     AsyncWorkoutRepository,
+    AsyncExerciseRepository,
     ExerciseRepository,
     SetRepository,
     PlannedWorkoutRepository,
@@ -171,6 +172,7 @@ class GymAPI:
         self.settings = SettingsRepository(db_path, yaml_path)
         self.workouts = WorkoutRepository(db_path)
         self.async_workouts = AsyncWorkoutRepository(db_path)
+        self.async_exercises = AsyncExerciseRepository(db_path)
         self.exercises = ExerciseRepository(db_path)
         self.sets = SetRepository(db_path, self.settings)
         self.planned_workouts = PlannedWorkoutRepository(db_path)
@@ -1340,7 +1342,7 @@ class GymAPI:
             return {"status": "finished", "timestamp": timestamp}
 
         @self.app.post("/workouts/{workout_id}/exercises")
-        def add_exercise(
+        async def add_exercise(
             workout_id: int,
             name: str,
             equipment: str,
@@ -1348,18 +1350,18 @@ class GymAPI:
         ):
             if not equipment:
                 raise HTTPException(status_code=400, detail="equipment required")
-            ex_id = self.exercises.add(workout_id, name, equipment, note)
+            ex_id = await self.async_exercises.add(workout_id, name, equipment, note)
             return {"id": ex_id}
 
         @self.app.delete("/exercises/{exercise_id}")
-        def delete_exercise(exercise_id: int):
-            self.exercises.remove(exercise_id)
+        async def delete_exercise(exercise_id: int):
+            await self.async_exercises.remove(exercise_id)
             return {"status": "deleted"}
 
         @self.app.get("/exercises/{exercise_id}")
-        def get_exercise(exercise_id: int):
+        async def get_exercise(exercise_id: int):
             try:
-                wid, name, equipment, note = self.exercises.fetch_detail(exercise_id)
+                wid, name, equipment, note = await self.async_exercises.fetch_detail(exercise_id)
                 return {
                     "id": exercise_id,
                     "workout_id": wid,
@@ -1371,24 +1373,24 @@ class GymAPI:
                 raise HTTPException(status_code=404, detail=str(e))
 
         @self.app.put("/exercises/{exercise_id}/note")
-        def update_exercise_note(
+        async def update_exercise_note(
             exercise_id: int,
             note: str | None = None,
         ):
-            self.exercises.update_note(exercise_id, note)
+            await self.async_exercises.update_note(exercise_id, note)
             return {"status": "updated"}
 
         @self.app.put("/exercises/{exercise_id}/name")
-        def update_exercise_name(
+        async def update_exercise_name(
             exercise_id: int,
             name: str,
         ):
-            self.exercises.update_name(exercise_id, name)
+            await self.async_exercises.update_name(exercise_id, name)
             return {"status": "updated"}
 
         @self.app.get("/workouts/{workout_id}/exercises")
-        def list_exercises(workout_id: int):
-            exercises = self.exercises.fetch_for_workout(workout_id)
+        async def list_exercises(workout_id: int):
+            exercises = await self.async_exercises.fetch_for_workout(workout_id)
             return [
                 {"id": ex_id, "name": name, "equipment": eq, "note": note}
                 for ex_id, name, eq, note in exercises
