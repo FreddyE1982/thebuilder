@@ -4588,6 +4588,43 @@ class NotificationRepository(BaseRepository):
         return rows[0][0] if rows else 0
 
 
+class AsyncNotificationRepository(AsyncBaseRepository):
+    """Asynchronous repository for user notifications."""
+
+    async def add(self, message: str) -> int:
+        return await self.execute(
+            "INSERT INTO notifications (timestamp, message, read) VALUES (?, ?, 0);",
+            (datetime.datetime.now().isoformat(), message),
+        )
+
+    async def fetch_all(self, unread_only: bool = False) -> list[dict[str, object]]:
+        sql = "SELECT id, timestamp, message, read FROM notifications"
+        if unread_only:
+            sql += " WHERE read=0"
+        sql += " ORDER BY id;"
+        rows = await super().fetch_all(sql)
+        result: list[dict[str, object]] = []
+        for r in rows:
+            result.append(
+                {
+                    "id": r[0],
+                    "timestamp": r[1],
+                    "message": r[2],
+                    "read": bool(r[3]),
+                }
+            )
+        return result
+
+    async def mark_read(self, nid: int) -> None:
+        await self.execute("UPDATE notifications SET read=1 WHERE id=?;", (nid,))
+
+    async def unread_count(self) -> int:
+        rows = await super().fetch_all(
+            "SELECT COUNT(*) FROM notifications WHERE read=0;"
+        )
+        return rows[0][0] if rows else 0
+
+
 class WorkoutCommentRepository(BaseRepository):
     """Repository for workout comments."""
 

@@ -48,6 +48,7 @@ from db import (
     MLLogRepository,
     MLModelStatusRepository,
     NotificationRepository,
+    AsyncNotificationRepository,
     WorkoutCommentRepository,
     MLTrainingRawRepository,
     AutoPlannerLogRepository,
@@ -206,6 +207,7 @@ class GymAPI:
         self.ml_logs = MLLogRepository(db_path)
         self.ml_status = MLModelStatusRepository(db_path)
         self.notifications = NotificationRepository(db_path)
+        self.async_notifications = AsyncNotificationRepository(db_path)
         self.comments = WorkoutCommentRepository(db_path)
         self.api_keys = APIKeyRepository(db_path)
         self.ml_training_raw = MLTrainingRawRepository(db_path)
@@ -3372,22 +3374,23 @@ class GymAPI:
             return Response(content=data, media_type="application/pdf")
 
         @self.app.post("/notifications")
-        def create_notification(message: str = Body(...)):
-            nid = self.notifications.add(message)
+        async def create_notification(message: str = Body(...)):
+            nid = await self.async_notifications.add(message)
             return {"id": nid}
 
         @self.app.get("/notifications")
-        def get_notifications(unread_only: bool = False):
-            return self.notifications.fetch_all(unread_only)
+        async def get_notifications(unread_only: bool = False):
+            return await self.async_notifications.fetch_all(unread_only)
 
         @self.app.put("/notifications/{nid}/read")
-        def mark_notification_read(nid: int):
-            self.notifications.mark_read(nid)
+        async def mark_notification_read(nid: int):
+            await self.async_notifications.mark_read(nid)
             return {"status": "read"}
 
         @self.app.get("/notifications/unread_count")
-        def unread_count():
-            return {"count": self.notifications.unread_count()}
+        async def unread_count():
+            count = await self.async_notifications.unread_count()
+            return {"count": count}
 
         @self.app.get("/api_keys")
         def list_api_keys():
