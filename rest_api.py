@@ -25,6 +25,7 @@ from db import (
     WorkoutRepository,
     AsyncWorkoutRepository,
     AsyncExerciseRepository,
+    AsyncSetRepository,
     ExerciseRepository,
     SetRepository,
     PlannedWorkoutRepository,
@@ -178,6 +179,7 @@ class GymAPI:
         self.async_exercises = AsyncExerciseRepository(db_path)
         self.exercises = ExerciseRepository(db_path)
         self.sets = SetRepository(db_path, self.settings)
+        self.async_sets = AsyncSetRepository(db_path, self.settings)
         self.planned_workouts = PlannedWorkoutRepository(db_path)
         self.planned_exercises = PlannedExerciseRepository(db_path)
         self.planned_sets = PlannedSetRepository(db_path, self.settings)
@@ -1749,7 +1751,7 @@ class GymAPI:
             summary="Add set",
             description="Record a new set for the specified exercise.",
         )
-        def add_set(
+        async def add_set(
             exercise_id: int,
             reps: int,
             weight: float,
@@ -1757,9 +1759,9 @@ class GymAPI:
             note: str | None = None,
             warmup: bool = False,
         ):
-            prev = self.sets.last_rpe(exercise_id)
+            prev = await self.async_sets.last_rpe(exercise_id)
             try:
-                set_id = self.sets.add(
+                set_id = await self.async_sets.add(
                     exercise_id, reps, weight, rpe, note, warmup=warmup
                 )
             except ValueError as e:
@@ -1790,7 +1792,7 @@ class GymAPI:
             summary="Bulk add sets",
             description="Add multiple sets separated by '|' in 'reps,weight,rpe' format.",
         )
-        def bulk_add_sets(
+        async def bulk_add_sets(
             exercise_id: int,
             sets: str,
         ):
@@ -1806,7 +1808,7 @@ class GymAPI:
                         detail="invalid sets format; expected 'reps,weight,rpe|...'",
                     )
             try:
-                ids = self.sets.bulk_add(exercise_id, entries)
+                ids = await self.async_sets.bulk_add(exercise_id, entries)
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
             for rid, (reps_i, weight_i, rpe_i) in zip(ids, entries):
@@ -1814,7 +1816,7 @@ class GymAPI:
             return {"added": len(ids)}
 
         @self.app.post("/exercises/{exercise_id}/warmup_sets")
-        def add_warmup_sets(
+        async def add_warmup_sets(
             exercise_id: int,
             target_weight: float,
             target_reps: int,
@@ -1826,7 +1828,7 @@ class GymAPI:
                 raise HTTPException(status_code=400, detail=str(e))
             ids: list[int] = []
             for reps_i, weight_i in plan:
-                sid = self.sets.add(
+                sid = await self.async_sets.add(
                     exercise_id,
                     int(reps_i),
                     float(weight_i),
@@ -1844,27 +1846,27 @@ class GymAPI:
             return {"added": len(ids), "ids": ids}
 
         @self.app.put("/sets/bulk_update")
-        def bulk_update_sets(updates: List[Dict] = Body(...)):
+        async def bulk_update_sets(updates: List[Dict] = Body(...)):
             try:
-                self.sets.bulk_update(updates)
+                await self.async_sets.bulk_update(updates)
             except Exception as e:
                 raise HTTPException(status_code=400, detail=str(e))
             return {"updated": len(updates)}
 
         @self.app.put("/sets/{set_id}")
-        def update_set(
+        async def update_set(
             set_id: int,
             reps: int,
             weight: float,
             rpe: int,
             warmup: bool | None = None,
         ):
-            prev = self.sets.previous_rpe(set_id)
+            prev = await self.async_sets.previous_rpe(set_id)
             try:
-                self.sets.update(set_id, reps, weight, rpe, warmup)
+                await self.async_sets.update(set_id, reps, weight, rpe, warmup)
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
-            ex_id = self.sets.fetch_exercise_id(set_id)
+            ex_id = await self.async_sets.fetch_exercise_id(set_id)
             _, name, _, _ = self.exercises.fetch_detail(ex_id)
             if (
                 self.settings.get_bool("ml_all_enabled", True)
@@ -1882,32 +1884,32 @@ class GymAPI:
             return {"status": "updated"}
 
         @self.app.put("/sets/{set_id}/note")
-        def update_set_note(set_id: int, note: str | None = None):
-            self.sets.update_note(set_id, note)
+        async def update_set_note(set_id: int, note: str | None = None):
+            await self.async_sets.update_note(set_id, note)
             return {"status": "updated"}
 
         @self.app.put("/sets/{set_id}/rest_note")
-        def update_set_rest_note(set_id: int, note: str | None = None):
-            self.sets.set_rest_note(set_id, note)
+        async def update_set_rest_note(set_id: int, note: str | None = None):
+            await self.async_sets.set_rest_note(set_id, note)
             return {"status": "updated"}
 
         @self.app.delete("/sets/{set_id}")
-        def delete_set(set_id: int):
-            self.sets.remove(set_id)
+        async def delete_set(set_id: int):
+            await self.async_sets.remove(set_id)
             return {"status": "deleted"}
 
         @self.app.post("/sets/{set_id}/start")
-        def start_set(set_id: int, timestamp: str | None = None):
+        async def start_set(set_id: int, timestamp: str | None = None):
             ts = (
                 datetime.datetime.now().isoformat(timespec="seconds")
                 if timestamp is None
                 else timestamp
             )
-            self.sets.set_start_time(set_id, ts)
+            await self.async_sets.set_start_time(set_id, ts)
             return {"status": "started", "timestamp": ts}
 
         @self.app.post("/sets/{set_id}/finish")
-        def finish_set(
+        async def finish_set(
             set_id: int,
             timestamp: str | None = None,
         ):
@@ -1916,17 +1918,17 @@ class GymAPI:
                 if timestamp is None
                 else timestamp
             )
-            self.sets.set_end_time(set_id, ts)
+            await self.async_sets.set_end_time(set_id, ts)
             return {"status": "finished", "timestamp": ts}
 
         @self.app.post("/sets/{set_id}/duration")
-        def set_duration(
+        async def set_duration(
             set_id: int,
             seconds: float,
             end: str | None = None,
         ):
             try:
-                self.sets.set_duration(set_id, seconds, end)
+                await self.async_sets.set_duration(set_id, seconds, end)
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
             end_dt = (
@@ -1942,22 +1944,22 @@ class GymAPI:
             }
 
         @self.app.post("/sets/bulk_complete")
-        def bulk_complete(set_ids: str):
+        async def bulk_complete(set_ids: str):
             ids = [int(i) for i in set_ids.split(",") if i]
             ts = datetime.datetime.now().isoformat(timespec="seconds")
-            self.sets.bulk_complete(ids, ts)
+            await self.async_sets.bulk_complete(ids, ts)
             return {"status": "completed", "timestamp": ts}
 
         @self.app.get("/sets/{set_id}")
-        def get_set(set_id: int):
-            data = self.sets.fetch_detail(set_id)
+        async def get_set(set_id: int):
+            data = await self.async_sets.fetch_detail(set_id)
             if data.get("rest_note") is None:
                 data.pop("rest_note", None)
             return data
 
         @self.app.get("/exercises/{exercise_id}/sets")
-        def list_sets(exercise_id: int):
-            sets = self.sets.fetch_for_exercise(exercise_id)
+        async def list_sets(exercise_id: int):
+            sets = await self.async_sets.fetch_for_exercise(exercise_id)
             result = []
             for sid, reps, weight, rpe, start_time, end_time, rest_note, warm, pos in sets:
                 entry = {
@@ -1982,7 +1984,7 @@ class GymAPI:
             summary="Reorder sets",
             description="Update set order using comma-separated ids",
         )
-        def reorder_sets(
+        async def reorder_sets(
             exercise_id: int,
             order: str,
         ):
@@ -1994,7 +1996,7 @@ class GymAPI:
                     detail="invalid order parameter; expected comma-separated ids",
                 )
             try:
-                self.sets.reorder_sets(exercise_id, ids)
+                await self.async_sets.reorder_sets(exercise_id, ids)
                 return {"status": "updated"}
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
