@@ -19,6 +19,18 @@ from avatar_service import AvatarService
 from config import APP_VERSION
 
 warnings.filterwarnings("ignore", category=AltairDeprecationWarning)
+
+from streamlit.delta_generator import DeltaGenerator
+
+@contextmanager
+def _tab_expander(self: DeltaGenerator, label: str, expanded: bool = False):
+    """Replacement for Streamlit expander using nested tabs."""
+    tab = self.tabs([label])[0]
+    with tab:
+        yield
+
+DeltaGenerator.expander = _tab_expander  # type: ignore[attr-defined]
+st.expander = _tab_expander.__get__(st, DeltaGenerator)
 from db import (
     WorkoutRepository,
     ExerciseRepository,
