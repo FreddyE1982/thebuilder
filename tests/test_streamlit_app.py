@@ -1140,12 +1140,13 @@ class StreamlitFullGUITest(unittest.TestCase):
     def test_wellness_tab(self) -> None:
         tab = self._get_tab("Wellness Logs")
         self.assertEqual(tab.header[0].value, "Wellness Logs")
-        tab.expander[0].date_input[0].set_value("2024-01-03").run()
-        tab.expander[0].number_input[0].set_value(2500.0).run()
-        tab.expander[0].number_input[1].set_value(8.0).run()
-        tab.expander[0].number_input[2].set_value(5.0).run()
-        tab.expander[0].number_input[3].set_value(3).run()
-        tab.expander[0].button[0].click().run()
+        entry_tab = tab.tabs[0]
+        entry_tab.date_input[0].set_value("2024-01-03").run()
+        entry_tab.number_input[0].set_value(2500.0).run()
+        entry_tab.number_input[1].set_value(8.0).run()
+        entry_tab.number_input[2].set_value(5.0).run()
+        entry_tab.number_input[3].set_value(3).run()
+        entry_tab.button[0].click().run()
         conn = self._connect()
         cur = conn.cursor()
         cur.execute(
