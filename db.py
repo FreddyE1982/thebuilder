@@ -3774,6 +3774,34 @@ class ReactionRepository(BaseRepository):
         return [(r[0], int(r[1])) for r in rows]
 
 
+class AsyncReactionRepository(AsyncBaseRepository):
+    """Async repository for storing emoji reactions."""
+
+    async def react(self, workout_id: int, emoji: str) -> None:
+        row = await super().fetch_all(
+            "SELECT count FROM workout_reactions WHERE workout_id = ? AND emoji = ?;",
+            (workout_id, emoji),
+        )
+        if row:
+            new_count = int(row[0][0]) + 1
+            await self.execute(
+                "UPDATE workout_reactions SET count = ? WHERE workout_id = ? AND emoji = ?;",
+                (new_count, workout_id, emoji),
+            )
+        else:
+            await self.execute(
+                "INSERT INTO workout_reactions (workout_id, emoji, count) VALUES (?, ?, 1);",
+                (workout_id, emoji),
+            )
+
+    async def list_for_workout(self, workout_id: int) -> list[tuple[str, int]]:
+        rows = await super().fetch_all(
+            "SELECT emoji, count FROM workout_reactions WHERE workout_id = ? ORDER BY emoji;",
+            (workout_id,),
+        )
+        return [(r[0], int(r[1])) for r in rows]
+
+
 class APIKeyRepository(BaseRepository):
     """Repository for managing third-party API keys."""
 

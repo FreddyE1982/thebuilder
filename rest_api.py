@@ -62,7 +62,7 @@ from db import (
     FavoriteTemplateRepository,
     FavoriteWorkoutRepository,
     DefaultEquipmentRepository,
-    ReactionRepository,
+    AsyncReactionRepository,
     TagRepository,
     AsyncTagRepository,
     APIKeyRepository,
@@ -195,7 +195,7 @@ class GymAPI:
         self.favorite_templates = FavoriteTemplateRepository(db_path)
         self.favorite_workouts = FavoriteWorkoutRepository(db_path)
         self.default_equipment = DefaultEquipmentRepository(db_path, self.exercise_names)
-        self.reactions = ReactionRepository(db_path)
+        self.reactions = AsyncReactionRepository(db_path)
         self.tags = TagRepository(db_path)
         self.async_tags = AsyncTagRepository(db_path)
         self.pyramid_tests = PyramidTestRepository(db_path)
@@ -1201,13 +1201,13 @@ class GymAPI:
             return {"calories": cal}
 
         @self.app.post("/workouts/{workout_id}/reactions")
-        def add_reaction(workout_id: int, emoji: str = Body(...)):
-            self.reactions.react(workout_id, emoji)
+        async def add_reaction(workout_id: int, emoji: str = Body(...)):
+            await self.reactions.react(workout_id, emoji)
             return {"status": "recorded"}
 
         @self.app.get("/workouts/{workout_id}/reactions")
-        def list_reactions(workout_id: int):
-            data = self.reactions.list_for_workout(workout_id)
+        async def list_reactions(workout_id: int):
+            data = await self.reactions.list_for_workout(workout_id)
             return [{"emoji": e, "count": c} for e, c in data]
 
         @self.app.post("/workouts/{workout_id}/comments")

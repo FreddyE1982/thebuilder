@@ -9,6 +9,7 @@ from db import (
     AsyncWorkoutRepository,
     AsyncTagRepository,
     AsyncExerciseRepository,
+    AsyncReactionRepository,
 )
 
 class NumberRepository(AsyncBaseRepository):
@@ -68,4 +69,15 @@ async def test_async_exercise_repo(tmp_path):
     assert detail[1] == "Bench Press"
     await ex_repo.remove(ex_id)
     assert await ex_repo.fetch_for_workout(wid) == []
+
+
+@pytest.mark.asyncio
+async def test_async_reaction_repo(tmp_path):
+    db_file = str(tmp_path / "react.db")
+    workout_repo = AsyncWorkoutRepository(db_file)
+    wid = await workout_repo.create("2024-01-03")
+    repo = AsyncReactionRepository(db_file)
+    await repo.react(wid, "👍")
+    rows = await repo.list_for_workout(wid)
+    assert rows == [("👍", 1)]
 
