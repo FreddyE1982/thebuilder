@@ -887,6 +887,41 @@ class StatisticsService:
                 }
         return sorted(records.values(), key=lambda x: x["exercise"])
 
+    def personal_record_history(
+        self,
+        exercise: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> List[Dict[str, float]]:
+        """Return chronological personal records with improvements."""
+        names = self._alias_names(exercise)
+        rows = self.sets.fetch_history_by_names(
+            names,
+            start_date=start_date,
+            end_date=end_date,
+            with_equipment=True,
+        )
+        history: List[Dict[str, float]] = []
+        best = 0.0
+        for reps, weight, rpe, date, ex_name, eq_name in rows:
+            est = MathTools.epley_1rm(float(weight), int(reps))
+            if est > best:
+                diff = est - best if best else 0.0
+                best = est
+                history.append(
+                    {
+                        "exercise": ex_name,
+                        "date": date,
+                        "equipment": eq_name,
+                        "reps": int(reps),
+                        "weight": float(weight),
+                        "rpe": int(rpe),
+                        "est_1rm": round(est, 2),
+                        "improvement": round(diff, 2),
+                    }
+                )
+        return history
+
     def previous_personal_record(
         self, exercise: str, before_date: str
     ) -> Optional[Dict[str, float]]:

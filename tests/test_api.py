@@ -1168,6 +1168,18 @@ class APITestCase(unittest.TestCase):
         self.assertAlmostEqual(rec["weight"], 110.0)
         self.assertAlmostEqual(rec["est_1rm"], 139.3, places=1)
 
+        resp = self.client.get(
+            "/stats/personal_record_history",
+            params={"exercise": "Bench Press"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        history = resp.json()
+        self.assertEqual(len(history), 2)
+        self.assertEqual(history[0]["reps"], 10)
+        self.assertAlmostEqual(history[0]["est_1rm"], 126.6, places=1)
+        self.assertEqual(history[1]["reps"], 8)
+        self.assertAlmostEqual(history[-1]["est_1rm"], 139.3, places=1)
+
     def test_progress_insights(self) -> None:
         self.client.post("/workouts")
         self.client.post(

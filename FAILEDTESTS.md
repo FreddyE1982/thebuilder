@@ -32,3 +32,4 @@ StreamlitAdditionalGUITest failing tests:
 - test_sidebar_new_workout
 StreamlitTemplateWorkflowTest failing tests:
 - test_template_plan_to_workout
+test_streamlit_app.py failures after PR tracker addition
