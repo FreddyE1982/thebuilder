@@ -11,6 +11,7 @@ from db import (
     AsyncExerciseRepository,
     AsyncReactionRepository,
     AsyncBodyWeightRepository,
+    AsyncNotificationRepository,
 )
 
 class NumberRepository(AsyncBaseRepository):
@@ -96,4 +97,20 @@ async def test_async_body_weight_repo(tmp_path):
     assert rows[0][1] == "2024-01-02"
     await repo.delete(eid)
     assert await repo.fetch_history() == []
+
+
+@pytest.mark.asyncio
+async def test_async_notification_repo(tmp_path):
+    db_file = str(tmp_path / "notif.db")
+    repo = AsyncNotificationRepository(db_file)
+    nid = await repo.add("hello")
+    notes = await repo.fetch_all()
+    assert notes[0]["id"] == nid
+    assert notes[0]["message"] == "hello"
+    assert notes[0]["read"] is False
+    await repo.mark_read(nid)
+    notes = await repo.fetch_all()
+    assert notes[0]["read"] is True
+    count = await repo.unread_count()
+    assert count == 0
 
