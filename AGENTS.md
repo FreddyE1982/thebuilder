@@ -52,7 +52,8 @@ The correct procedure for the agent is: 1. run test1.py, fix errors (if any)...r
 1. ALL functionality MUST be available via the GUI. The assistant groups functionality logically in tabs. It uses the existing tabs for grouping of functionality when possible but creates new tabs if that seems more sensible.
    The agent must ensure that it never creates a new tab for things that can be logically put into a existing tab. for example: there may not be multiple tabs containing statistics..that would all belong into ONE tab.
 2. The agent must ensure that the streamlit GUI will show correctly on desktop AND mobile phones.  the correct "mode" to show in should be recognised automatically. you may NOT remove or simplify ANY part of the gui in ANY mode.
-3. The agent must use st.expander to group multiple things that belong to the same functionality or workflow together in a tab as explained here: https://docs.streamlit.io/develop/api-reference/layout/st.expander
+3. The agent must use group multiple things together that belong to the same functionality or workflow. It must use tabs, subtabs, subsubtabs etc.
+3.1 Dropdown fields must use the iphones "native" dropdown box functionality (in browser) for easier selection on iphone (if we ARE running on iphone)
 4. The agent must use st.dialog where appropriate as explained here: https://docs.streamlit.io/develop/api-reference/execution-flow/st.dialog
 5. The agent is absolutley forbidden to ever remove existing functionality from the GUI.
 6. group things where it makes sense logically together using expandables. you are allowed to create expendables inside expandables if it makes sense logically
