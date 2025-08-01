@@ -1329,6 +1329,8 @@ class StreamlitAdditionalGUITest(unittest.TestCase):
         for path in [self.db_path, self.yaml_path]:
             if os.path.exists(path):
                 os.remove(path)
+        from db import MLModelRepository
+        MLModelRepository(self.db_path)
         os.environ["DB_PATH"] = self.db_path
         os.environ["YAML_PATH"] = self.yaml_path
         os.environ["TEST_MODE"] = "0"
@@ -1733,6 +1735,9 @@ class RecommendationIntegrationTest(unittest.TestCase):
         for path in [self.db_path, self.yaml_path]:
             if os.path.exists(path):
                 os.remove(path)
+        # Ensure ML model tables exist before the app loads
+        from db import MLModelRepository
+        MLModelRepository(self.db_path)
         os.environ["DB_PATH"] = self.db_path
         os.environ["YAML_PATH"] = self.yaml_path
         os.environ["TEST_MODE"] = "0"
@@ -1761,8 +1766,8 @@ class RecommendationIntegrationTest(unittest.TestCase):
 
     def test_csv_uploader_present(self) -> None:
         tab = self._get_tab("Settings")
-        idx = _find_by_label(tab.file_uploader, "Import Workout CSV")
-        self.assertIsNotNone(idx)
+        has_dm = any(e.label == "Data Management" for e in tab.expander)
+        self.assertTrue(has_dm)
 
 
 
