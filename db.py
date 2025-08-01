@@ -1920,6 +1920,433 @@ class SetRepository(BaseRepository):
         return result
 
 
+class AsyncSetRepository(AsyncBaseRepository):
+    """Asynchronous repository for sets table operations."""
+
+    def __init__(self, db_path: str, settings: Optional["SettingsRepository"] = None) -> None:
+        super().__init__(db_path)
+        self.settings = settings
+
+    @staticmethod
+    def _velocity(reps: int, start: Optional[str], end: Optional[str]) -> float:
+        if not start or not end or reps <= 0:
+            return 0.0
+        t0 = datetime.datetime.fromisoformat(start)
+        t1 = datetime.datetime.fromisoformat(end)
+        secs = (t1 - t0).total_seconds()
+        return (reps * 0.5) / secs if secs > 0 else 0.0
+
+    async def add(
+        self,
+        exercise_id: int,
+        reps: int,
+        weight: float,
+        rpe: int,
+        note: Optional[str] = None,
+        planned_set_id: Optional[int] = None,
+        diff_reps: int = 0,
+        diff_weight: float = 0.0,
+        diff_rpe: int = 0,
+        warmup: bool = False,
+    ) -> int:
+        if reps <= 0:
+            raise ValueError("reps must be positive")
+        if weight < 0:
+            raise ValueError("weight must be non-negative")
+        max_rpe = 10
+        if self.settings is not None:
+            max_rpe = self.settings.get_int("rpe_scale", 10)
+        if rpe < 0 or rpe > max_rpe:
+            raise ValueError(f"rpe must be between 0 and {max_rpe}")
+        rows = await self.fetch_all(
+            "SELECT COALESCE(MAX(position), 0) + 1 FROM sets WHERE exercise_id = ?;",
+            (exercise_id,),
+        )
+        position = int(rows[0][0]) if rows else 1
+        return await self.execute(
+            "INSERT INTO sets (exercise_id, reps, weight, rpe, note, planned_set_id, diff_reps, diff_weight, diff_rpe, warmup, position) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+            (
+                exercise_id,
+                reps,
+                weight,
+                rpe,
+                note,
+                planned_set_id,
+                diff_reps,
+                diff_weight,
+                diff_rpe,
+                int(warmup),
+                position,
+            ),
+        )
+
+    async def bulk_add(
+        self, exercise_id: int, entries: Iterable[tuple[int, float, int]]
+    ) -> list[int]:
+        ids: list[int] = []
+        for reps, weight, rpe in entries:
+            ids.append(
+                await self.add(exercise_id, reps, weight, rpe, None)
+            )
+        return ids
+
+    async def update(
+        self, set_id: int, reps: int, weight: float, rpe: int, warmup: bool | None = None
+    ) -> None:
+        if reps <= 0:
+            raise ValueError("reps must be positive")
+        if weight < 0:
+            raise ValueError("weight must be non-negative")
+        max_rpe = 10
+        if self.settings is not None:
+            max_rpe = self.settings.get_int("rpe_scale", 10)
+        if rpe < 0 or rpe > max_rpe:
+            raise ValueError(f"rpe must be between 0 and {max_rpe}")
+        row = await self.fetch_all("SELECT planned_set_id FROM sets WHERE id = ?;", (set_id,))
+        diff_reps = 0
+        diff_weight = 0.0
+        diff_rpe = 0
+        if row and row[0][0] is not None:
+            planned_id = row[0][0]
+            plan = await self.fetch_all(
+                "SELECT reps, weight, rpe FROM planned_sets WHERE id = ?;",
+                (planned_id,),
+            )
+            if plan:
+                diff_reps = reps - int(plan[0][0])
+                diff_weight = weight - float(plan[0][1])
+                diff_rpe = rpe - int(plan[0][2])
+        query = (
+            "UPDATE sets SET reps = ?, weight = ?, rpe = ?, diff_reps = ?, diff_weight = ?, diff_rpe = ?"
+        )
+        params = [reps, weight, rpe, diff_reps, diff_weight, diff_rpe]
+        if warmup is not None:
+            query += ", warmup = ?"
+            params.append(int(warmup))
+        query += " WHERE id = ?;"
+        params.append(set_id)
+        await self.execute(query, tuple(params))
+
+    async def bulk_update(self, updates: Iterable[dict]) -> None:
+        for upd in updates:
+            sid = int(upd.get("id"))
+            reps = int(upd.get("reps"))
+            weight = float(upd.get("weight"))
+            rpe = int(upd.get("rpe"))
+            warmup_val = upd.get("warmup")
+            warm = bool(warmup_val) if warmup_val is not None else None
+            await self.update(sid, reps, weight, rpe, warm)
+
+    async def remove(self, set_id: int) -> None:
+        await self.execute("DELETE FROM sets WHERE id = ?;", (set_id,))
+
+    async def reorder_sets(self, exercise_id: int, order: list[int]) -> None:
+        existing = [
+            row[0]
+            for row in await self.fetch_all(
+                "SELECT id FROM sets WHERE exercise_id = ? ORDER BY position;",
+                (exercise_id,),
+            )
+        ]
+        if set(order) != set(existing) or len(order) != len(existing):
+            raise ValueError("invalid order")
+        for pos, sid in enumerate(order, start=1):
+            await self.execute(
+                "UPDATE sets SET position = ? WHERE id = ?;",
+                (pos, sid),
+            )
+
+    async def set_start_time(self, set_id: int, timestamp: str) -> None:
+        await self.execute(
+            "UPDATE sets SET start_time = ? WHERE id = ?;",
+            (timestamp, set_id),
+        )
+
+    async def set_end_time(self, set_id: int, timestamp: str) -> None:
+        await self.execute(
+            "UPDATE sets SET end_time = ? WHERE id = ?;",
+            (timestamp, set_id),
+        )
+
+    async def bulk_complete(self, set_ids: list[int], timestamp: str) -> None:
+        if not set_ids:
+            return
+        async with self._async_connection() as conn:
+            for sid in set_ids:
+                await conn.execute(
+                    "UPDATE sets SET start_time = ?, end_time = ? WHERE id = ?;",
+                    (timestamp, timestamp, sid),
+                )
+            await conn.commit()
+
+    async def set_duration(self, set_id: int, seconds: float, end_timestamp: str | None = None) -> None:
+        if seconds <= 0:
+            raise ValueError("seconds must be positive")
+        end_dt = (
+            datetime.datetime.now()
+            if end_timestamp is None
+            else datetime.datetime.fromisoformat(end_timestamp)
+        )
+        start_dt = end_dt - datetime.timedelta(seconds=float(seconds))
+        await self.set_start_time(set_id, start_dt.isoformat(timespec="seconds"))
+        await self.set_end_time(set_id, end_dt.isoformat(timespec="seconds"))
+
+    async def update_note(self, set_id: int, note: Optional[str]) -> None:
+        await self.execute(
+            "UPDATE sets SET note = ? WHERE id = ?;",
+            (note, set_id),
+        )
+
+    async def set_rest_note(self, set_id: int, rest_note: Optional[str]) -> None:
+        await self.execute(
+            "UPDATE sets SET rest_note = ? WHERE id = ?;",
+            (rest_note, set_id),
+        )
+
+    async def fetch_exercise_id(self, set_id: int) -> int:
+        rows = await self.fetch_all(
+            "SELECT exercise_id FROM sets WHERE id = ?;",
+            (set_id,),
+        )
+        if not rows:
+            raise ValueError("set not found")
+        return int(rows[0][0])
+
+    async def fetch_for_exercise(
+        self, exercise_id: int
+    ) -> List[Tuple[int, int, float, int, Optional[str], Optional[str], Optional[str], int, int]]:
+        return await self.fetch_all(
+            "SELECT id, reps, weight, rpe, start_time, end_time, rest_note, warmup, position FROM sets WHERE exercise_id = ? ORDER BY position;",
+            (exercise_id,),
+        )
+
+    async def fetch_detail(self, set_id: int) -> dict:
+        rows = await self.fetch_all(
+            "SELECT id, reps, weight, rpe, note, rest_note, planned_set_id, diff_reps, diff_weight, diff_rpe, start_time, end_time, warmup, position FROM sets WHERE id = ?;",
+            (set_id,),
+        )
+        (
+            sid,
+            reps,
+            weight,
+            rpe,
+            note,
+            rest_note,
+            planned_set_id,
+            diff_reps,
+            diff_weight,
+            diff_rpe,
+            start_time,
+            end_time,
+            warmup,
+            position,
+        ) = rows[0]
+        velocity = self._velocity(int(reps), start_time, end_time)
+        return {
+            "id": sid,
+            "reps": reps,
+            "weight": weight,
+            "rpe": rpe,
+            "planned_set_id": planned_set_id,
+            "diff_reps": diff_reps,
+            "diff_weight": diff_weight,
+            "diff_rpe": diff_rpe,
+            "start_time": start_time,
+            "end_time": end_time,
+            "note": note,
+            "rest_note": rest_note,
+            "warmup": bool(warmup),
+            "position": position,
+            "velocity": velocity,
+        }
+
+    async def last_rpe(self, exercise_id: int) -> int | None:
+        rows = await self.fetch_all(
+            "SELECT rpe FROM sets WHERE exercise_id = ? ORDER BY id DESC LIMIT 1;",
+            (exercise_id,),
+        )
+        return int(rows[0][0]) if rows else None
+
+    async def previous_rpe(self, set_id: int) -> int | None:
+        ex_rows = await self.fetch_all(
+            "SELECT exercise_id FROM sets WHERE id = ?;",
+            (set_id,),
+        )
+        if not ex_rows:
+            return None
+        ex_id = int(ex_rows[0][0])
+        rows = await self.fetch_all(
+            "SELECT rpe FROM sets WHERE exercise_id = ? AND id < ? ORDER BY id DESC LIMIT 1;",
+            (ex_id, set_id),
+        )
+        return int(rows[0][0]) if rows else None
+
+    async def fetch_history_by_names(
+        self,
+        names: List[str],
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        equipment: Optional[List[str]] = None,
+        with_equipment: bool = False,
+        with_duration: bool = False,
+        with_workout_id: bool = False,
+        with_location: bool = False,
+    ) -> List[Tuple]:
+        placeholders = ", ".join(["?" for _ in names])
+        select = "SELECT s.reps, s.weight, s.rpe, w.date"
+        if with_equipment:
+            select += ", e.name, e.equipment_name"
+        if with_duration:
+            select += ", s.start_time, s.end_time"
+        if with_workout_id:
+            select += ", w.id"
+        if with_location:
+            select += ", w.location"
+        query = (
+            f"{select} FROM sets s "
+            "JOIN exercises e ON s.exercise_id = e.id "
+            "JOIN workouts w ON e.workout_id = w.id "
+            f"WHERE e.name IN ({placeholders})"
+        )
+        params: List[str] = list(names)
+        if equipment:
+            eq_placeholders = ", ".join(["?" for _ in equipment])
+            query += f" AND e.equipment_name IN ({eq_placeholders})"
+            params.extend(equipment)
+        if start_date:
+            query += " AND w.date >= ?"
+            params.append(start_date)
+        if end_date:
+            query += " AND w.date <= ?"
+            params.append(end_date)
+        query += " ORDER BY w.date, s.id;"
+        return await self.fetch_all(query, tuple(params))
+
+    async def fetch_for_workout(
+        self, workout_id: int
+    ) -> List[Tuple[str, Optional[str], int, float, int, Optional[str], Optional[str]]]:
+        return await self.fetch_all(
+            "SELECT e.name, e.equipment_name, s.reps, s.weight, s.rpe, s.start_time, s.end_time "
+            "FROM sets s JOIN exercises e ON s.exercise_id = e.id "
+            "WHERE e.workout_id = ? ORDER BY e.id, s.position;",
+            (workout_id,),
+        )
+
+    async def export_workout_csv(self, workout_id: int) -> str:
+        rows = await self.fetch_for_workout(workout_id)
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(
+            [
+                "Exercise",
+                "Equipment",
+                "Reps",
+                "Weight",
+                "RPE",
+                "Start",
+                "End",
+            ]
+        )
+        for name, eq, reps, weight, rpe, start, end in rows:
+            writer.writerow(
+                [
+                    name,
+                    eq or "",
+                    reps,
+                    weight,
+                    rpe,
+                    start or "",
+                    end or "",
+                ]
+            )
+        return output.getvalue()
+
+    async def export_workout_json(self, workout_id: int) -> str:
+        rows = await self.fetch_for_workout(workout_id)
+        data = [
+            {
+                "exercise": name,
+                "equipment": eq,
+                "reps": int(reps),
+                "weight": float(weight),
+                "rpe": int(rpe),
+                "start": start,
+                "end": end,
+            }
+            for name, eq, reps, weight, rpe, start, end in rows
+        ]
+        return json.dumps(data)
+
+    async def export_workout_xml(self, workout_id: int) -> str:
+        rows = await self.fetch_for_workout(workout_id)
+        from xml.etree.ElementTree import Element, SubElement, tostring
+
+        root = Element("workout", id=str(workout_id))
+        for name, eq, reps, weight, rpe, start, end in rows:
+            set_elem = SubElement(root, "set")
+            SubElement(set_elem, "exercise").text = name
+            if eq:
+                SubElement(set_elem, "equipment").text = eq
+            SubElement(set_elem, "reps").text = str(reps)
+            SubElement(set_elem, "weight").text = str(weight)
+            SubElement(set_elem, "rpe").text = str(rpe)
+            if start:
+                SubElement(set_elem, "start").text = start
+            if end:
+                SubElement(set_elem, "end").text = end
+        return tostring(root, encoding="unicode")
+
+    async def workout_summary(self, workout_id: int) -> dict:
+        rows = await self.fetch_for_workout(workout_id)
+        volume = 0.0
+        rpe_total = 0
+        count = 0
+        for _name, _eq, reps, weight, rpe, _s, _e in rows:
+            volume += int(reps) * float(weight)
+            rpe_total += int(rpe)
+            count += 1
+        avg_rpe = rpe_total / count if count else 0.0
+        return {
+            "volume": round(volume, 2),
+            "sets": count,
+            "avg_rpe": round(avg_rpe, 2),
+        }
+
+    async def planned_completion(self, plan_id: int) -> float:
+        total_rows = await self.fetch_all(
+            "SELECT COUNT(*) FROM planned_sets ps JOIN planned_exercises pe ON ps.planned_exercise_id = pe.id WHERE pe.planned_workout_id = ?;",
+            (plan_id,),
+        )
+        total = int(total_rows[0][0]) if total_rows else 0
+        if total == 0:
+            return 0.0
+        logged_rows = await self.fetch_all(
+            "SELECT COUNT(*) FROM sets s JOIN planned_sets ps ON s.planned_set_id = ps.id JOIN planned_exercises pe ON ps.planned_exercise_id = pe.id WHERE pe.planned_workout_id = ?;",
+            (plan_id,),
+        )
+        logged = int(logged_rows[0][0]) if logged_rows else 0
+        return round(100 * logged / total, 2)
+
+    async def recent_equipment(self, limit: int = 5) -> list[str]:
+        rows = await self.fetch_all(
+            """
+            SELECT e.equipment_name FROM sets s
+            JOIN exercises e ON s.exercise_id = e.id
+            JOIN workouts w ON e.workout_id = w.id
+            WHERE e.equipment_name IS NOT NULL
+            ORDER BY w.date DESC, s.id DESC LIMIT ?;
+            """,
+            (limit,),
+        )
+        result: list[str] = []
+        for r in rows:
+            name = r[0]
+            if name and name not in result:
+                result.append(name)
+        return result
+
+
 class PlannedWorkoutRepository(BaseRepository):
     """Repository for planned workouts."""
 
