@@ -2253,6 +2253,18 @@ class GymAPI:
                 end_date,
             )
 
+        @self.app.get("/stats/personal_record_history")
+        def stats_personal_record_history(
+            exercise: str = None,
+            start_date: str = None,
+            end_date: str = None,
+        ):
+            return self.statistics.personal_record_history(
+                exercise,
+                start_date,
+                end_date,
+            )
+
         @self.app.get("/stats/training_stress")
         def stats_training_stress(
             start_date: str = None,

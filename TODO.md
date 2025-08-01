@@ -193,7 +193,7 @@
 [complete] 175. Voice prompts for workout start and stop.
 [complete] 176. Favorite templates directly from history.
 [complete] 177. "Open last workout" button on start page.
-178. Interactive personal record tracker.
+[complete] 178. Interactive personal record tracker.
 [complete] 179. Quick-add macro entries to notes.
 [complete] 180. Color-code templates for organization.
 [complete] 181. Automatic cleanup of empty workouts.

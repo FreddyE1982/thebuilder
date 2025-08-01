@@ -2802,6 +2802,7 @@ class GymApp:
                     dash_sub,
                     stats_sub,
                     insights_sub,
+                    pr_track_sub,
                     weight_sub,
                     well_sub,
                     rep_sub,
@@ -2819,6 +2820,7 @@ class GymApp:
                         "Dashboard",
                         "Exercise Stats",
                         "Insights",
+                        "PR Tracker",
                         "Body Weight",
                         "Wellness Logs",
                         "Reports",
@@ -2843,6 +2845,8 @@ class GymApp:
                     self._stats_tab()
                 with insights_sub:
                     self._insights_tab()
+                with pr_track_sub:
+                    self._pr_tracker_tab()
                 with weight_sub:
                     self._weight_tab()
                 with well_sub:
@@ -5907,6 +5911,41 @@ class GymApp:
             st.info("Select an exercise to view insights.")
         if self.show_help_tips:
             self._show_help_tip("Progress")
+
+    def _pr_tracker_tab(self) -> None:
+        st.header("PR Tracker")
+        exercises = [""] + self.exercise_names_repo.fetch_all()
+        with st.expander("Filters", expanded=False):
+            ex_choice = st.selectbox("Exercise", exercises, key="pr_track_ex")
+            col1, col2 = st.columns(2)
+            with col1:
+                start = st.date_input(
+                    "Start",
+                    datetime.date.today() - datetime.timedelta(days=180),
+                    key="pr_track_start",
+                )
+            with col2:
+                end = st.date_input("End", datetime.date.today(), key="pr_track_end")
+            if st.button("Reset", key="pr_track_reset"):
+                st.session_state.pr_track_start = datetime.date.today() - datetime.timedelta(
+                    days=180
+                )
+                st.session_state.pr_track_end = datetime.date.today()
+                st.session_state.pr_track_ex = ""
+                self._trigger_refresh()
+            start_str = start.isoformat()
+            end_str = end.isoformat()
+        history = self.stats.personal_record_history(
+            ex_choice if ex_choice else None,
+            start_str,
+            end_str,
+        )
+        if history:
+            df = pd.DataFrame(history).set_index("date")
+            self._line_chart({"1RM": df["est_1rm"].tolist()}, df.index.tolist())
+            self._responsive_table(history)
+        else:
+            st.write("No personal records")
 
     def _weight_tab(self) -> None:
         st.header("Body Weight")

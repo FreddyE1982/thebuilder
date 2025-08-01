@@ -19,6 +19,7 @@ The Builder is a full featured workout planner, logger and analytics platform bu
 - Mark favorite workout templates for faster planning.
 - Create aliases for muscles and exercise names so queries treat them as the same entry.
 - Extensive statistics including daily volume, progression forecasts, stress metrics, readiness scores and personal records.
+- Interactive personal record tracker available in the Progress tab.
 - Optional gamification awarding points for completed sets.
 - Machine learning models for RPE, volume, readiness and progress predictions. The RPE predictor now uses reps, weight and previous effort for multi‑modal estimation. Training and prediction can be toggled in the settings. Reinforcement learning dynamically adjusts exercise goals and an LSTM model tracks long‑term adaptation. Injury risk analytics provide preventive insights.
 - Model confidence scores are logged and fused with algorithmic recommendations using weighted averaging for transparent prescriptions.
