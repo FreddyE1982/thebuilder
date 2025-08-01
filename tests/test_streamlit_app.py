@@ -142,9 +142,9 @@ class StreamlitAppTest(unittest.TestCase):
         conn.close()
 
         ex_idx = _find_by_label(
-            self.at.expander, "Barbell Bench Press (Olympic Barbell)"
+            self.at.tabs, "Barbell Bench Press (Olympic Barbell)"
         )
-        exp = self.at.expander[ex_idx]
+        exp = self.at.tabs[ex_idx]
         btn_idx = _find_by_label(exp.button, "Move Down", key=f"move_down_{ids[0]}")
         exp.button[btn_idx].click().run()
 
@@ -222,8 +222,8 @@ class StreamlitAppTest(unittest.TestCase):
         self.assertTrue(any("Logged" in m for m in messages))
 
     def test_no_workouts_message(self) -> None:
-        exp_idx = _find_by_label(self.at.expander, "Existing Workouts")
-        exp = self.at.expander[exp_idx]
+        exp_idx = _find_by_label(self.at.tabs, "Existing Workouts")
+        exp = self.at.tabs[exp_idx]
         texts = [i.body for i in getattr(exp, "info", [])]
         self.assertIn("No workouts found.", texts)
 
@@ -249,12 +249,12 @@ class StreamlitAppTest(unittest.TestCase):
         cur.execute("UPDATE workouts SET notes=? WHERE id=2", ("Gym Workout",))
         conn.commit()
         conn.close()
-        exp_idx = _find_by_label(self.at.expander, "Existing Workouts")
-        ex_exp = self.at.expander[exp_idx]
+        exp_idx = _find_by_label(self.at.tabs, "Existing Workouts")
+        ex_exp = self.at.tabs[exp_idx]
         s_idx = _find_by_label(ex_exp.text_input, "Search", key="workout_search")
         ex_exp.text_input[s_idx].input("Gym Workout").run()
         self.at.run()
-        ex_exp = self.at.expander[exp_idx]
+        ex_exp = self.at.tabs[exp_idx]
         options = ex_exp.selectbox[0].options
         self.assertEqual(len(options), 1)
     def test_plan_to_workout(self) -> None:
@@ -269,8 +269,8 @@ class StreamlitAppTest(unittest.TestCase):
         )
         self.at.button[idx].click().run()
         self.at.run()
-        exp_idx = _find_by_label(self.at.expander, "Use Planned Workout")
-        self.at.expander[exp_idx].selectbox[0].select("1").run()
+        exp_idx = _find_by_label(self.at.tabs, "Use Planned Workout")
+        self.at.tabs[exp_idx].selectbox[0].select("1").run()
         self.at.run()
         b_idx = _find_by_label(self.at.button, "Use Plan")
         self.at.button[b_idx].click().run()
@@ -320,7 +320,7 @@ class StreamlitAppTest(unittest.TestCase):
         self.at.query_params["tab"] = "library"
         self.at.run()
         fav_tab = next(
-            e for e in self._get_tab("Library").expander if e.label == "Favorites"
+            e for e in self._get_tab("Library").tabs if e.label == "Favorites"
         )
         idx = _find_by_label(
             fav_tab.selectbox, "Add Favorite", "Barbell Bench Press", key="fav_add_name"
@@ -339,7 +339,7 @@ class StreamlitAppTest(unittest.TestCase):
         )
         log_tab.button[idx_new].click().run()
         log_tab = self._get_tab("Workouts").tabs[0]
-        mgmt_exp = next(e for e in log_tab.expander if e.label == "Exercise Management")
+        mgmt_exp = next(e for e in log_tab.tabs if e.label == "Exercise Management")
         q_idx = _find_by_label(mgmt_exp.button, "Barbell Bench Press")
         mgmt_exp.button[q_idx].click().run()
 
@@ -378,32 +378,32 @@ class StreamlitAppTest(unittest.TestCase):
         self.at.query_params["tab"] = "library"
         self.at.run()
         lib_tab = self._get_tab("Library")
-        eq_tab = next(e for e in lib_tab.expander if e.label == "Equipment")
+        eq_tab = next(e for e in lib_tab.tabs if e.label == "Equipment")
         eq_tab.multiselect[0].select("Free Weights").run()
         self.at.run()
         lib_tab = self._get_tab("Library")
-        eq_tab = next(e for e in lib_tab.expander if e.label == "Equipment")
+        eq_tab = next(e for e in lib_tab.tabs if e.label == "Equipment")
         self.assertIn("Olympic Barbell", eq_tab.selectbox[0].options)
 
     def test_exercise_filtering(self) -> None:
         self.at.query_params["tab"] = "library"
         self.at.run()
         lib_tab = self._get_tab("Library")
-        ex_tab = next(e for e in lib_tab.expander if e.label == "Exercises")
+        ex_tab = next(e for e in lib_tab.tabs if e.label == "Exercises")
         ex_tab.multiselect[0].select("Chest").run()
         self.at.run()
         lib_tab = self._get_tab("Library")
-        ex_tab = next(e for e in lib_tab.expander if e.label == "Exercises")
+        ex_tab = next(e for e in lib_tab.tabs if e.label == "Exercises")
         self.assertIn("Barbell Bench Press", ex_tab.selectbox[1].options)
 
     def test_reset_buttons_present(self) -> None:
         self.at.query_params["tab"] = "library"
         self.at.run()
         lib_tab = self._get_tab("Library")
-        eq_tab = next(e for e in lib_tab.expander if e.label == "Equipment")
+        eq_tab = next(e for e in lib_tab.tabs if e.label == "Equipment")
         idx_eq = _find_by_label(eq_tab.button, "Reset Filters", key="lib_eq_reset")
         self.assertIsNotNone(idx_eq)
-        ex_tab = next(e for e in lib_tab.expander if e.label == "Exercises")
+        ex_tab = next(e for e in lib_tab.tabs if e.label == "Exercises")
         idx_ex = _find_by_label(ex_tab.button, "Reset Filters", key="lib_ex_reset")
         self.assertIsNotNone(idx_ex)
 
@@ -498,14 +498,14 @@ class StreamlitAppTest(unittest.TestCase):
         self.at.button[idx_add_set].click().run()
 
         ex_idx = _find_by_label(
-            self.at.expander, "Barbell Bench Press (Olympic Barbell)"
+            self.at.tabs, "Barbell Bench Press (Olympic Barbell)"
         )
-        ex_exp = self.at.expander[ex_idx]
-        set_exp = next(e for e in ex_exp.expander if e.label.startswith("Set 1"))
+        ex_exp = self.at.tabs[ex_idx]
+        set_exp = next(e for e in ex_exp.tabs if e.label.startswith("Set 1"))
         set_exp.number_input[1].set_value(110.0).run()
 
-        ex_exp = self.at.expander[ex_idx]
-        set_exp = next(e for e in ex_exp.expander if e.label.startswith("Set 1"))
+        ex_exp = self.at.tabs[ex_idx]
+        set_exp = next(e for e in ex_exp.tabs if e.label.startswith("Set 1"))
         self.assertTrue(set_exp.proto.expanded)
 
     def test_custom_exercise_and_logs(self) -> None:
@@ -631,15 +631,15 @@ class StreamlitAppTest(unittest.TestCase):
         self.at.run()
         settings_tab = self._get_tab("Settings")
         mus_tab = next(t for t in settings_tab.tabs if t.label == "Muscles")
-        group_exp = mus_tab.expander[3]
+        group_exp = mus_tab.tabs[3]
         group_exp.text_input[0].input("Arms").run()
         group_exp.button[0].click().run()
         self.at.run()
         settings_tab = self._get_tab("Settings")
         mus_tab = next(t for t in settings_tab.tabs if t.label == "Muscles")
-        group_exp = mus_tab.expander[3]
+        group_exp = mus_tab.tabs[3]
         target = None
-        for exp in group_exp.expander:
+        for exp in group_exp.tabs:
             if exp.label == "Arms":
                 target = exp
                 break
@@ -674,7 +674,7 @@ class StreamlitAppTest(unittest.TestCase):
         settings_tab = self._get_tab("Settings")
         eq_tab = next(t for t in settings_tab.tabs if t.label == "Equipment")
         target = None
-        for exp in eq_tab.expander:
+        for exp in eq_tab.tabs:
             if exp.label == "TestEq":
                 target = exp
                 break
@@ -684,7 +684,7 @@ class StreamlitAppTest(unittest.TestCase):
         settings_tab = self._get_tab("Settings")
         eq_tab = next(t for t in settings_tab.tabs if t.label == "Equipment")
         found = None
-        for exp in eq_tab.expander:
+        for exp in eq_tab.tabs:
             if exp.label == "TestEq2":
                 exp.button[0].click().run()
                 found = exp
@@ -730,7 +730,7 @@ class StreamlitAppTest(unittest.TestCase):
         self.at.query_params["tab"] = "settings"
         self.at.run()
         cust_tab = next(t for t in self.at.tabs if t.label == "Exercise Management")
-        var_exp = cust_tab.expander[_find_by_label(cust_tab.expander, "Link Variants")]
+        var_exp = cust_tab.tabs[_find_by_label(cust_tab.tabs, "Link Variants")]
         var_exp.selectbox[0].select("Barbell Bench Press").run()
         var_exp.selectbox[1].select("Dumbbell Bench Press").run()
         var_exp.button[0].click().run()
@@ -752,9 +752,9 @@ class StreamlitAppTest(unittest.TestCase):
         self.at.button[idx_add_ex].click().run()
         self.at.run()
         ex_idx = _find_by_label(
-            self.at.expander, "Barbell Bench Press (Olympic Barbell)"
+            self.at.tabs, "Barbell Bench Press (Olympic Barbell)"
         )
-        exp = self.at.expander[ex_idx]
+        exp = self.at.tabs[ex_idx]
         btn_idx = _find_by_label(exp.button, "Dumbbell Bench Press")
         exp.button[btn_idx].click().run()
         self.at.run()
@@ -787,7 +787,7 @@ class StreamlitAppTest(unittest.TestCase):
         self.assertTrue(help_text)
 
     def test_help_tips_disabled_by_default(self) -> None:
-        tips_present = any(e.label == "Need Help?" for e in self.at.expander)
+        tips_present = any(e.label == "Need Help?" for e in self.at.tabs)
         self.assertFalse(tips_present)
 
     def test_help_overlay_button_disabled_by_default(self) -> None:
@@ -803,7 +803,7 @@ class StreamlitAppTest(unittest.TestCase):
         with open(self.yaml_path, "w", encoding="utf-8") as f:
             yaml.safe_dump(data, f)
         self.at.run()
-        tips_present = any(e.label == "Need Help?" for e in self.at.expander)
+        tips_present = any(e.label == "Need Help?" for e in self.at.tabs)
         overlay_present = any(
             getattr(b, "key", None) == "help_overlay_btn" for b in self.at.button
         )
@@ -876,9 +876,9 @@ class StreamlitAppTest(unittest.TestCase):
         idx_add_ex = _find_by_label(self.at.button, "Add Exercise", key="add_ex_btn")
         self.at.button[idx_add_ex].click().run()
         ex_idx = _find_by_label(
-            self.at.expander, "Barbell Bench Press (Olympic Barbell)"
+            self.at.tabs, "Barbell Bench Press (Olympic Barbell)"
         )
-        exp = self.at.expander[ex_idx]
+        exp = self.at.tabs[ex_idx]
         rm_idx = _find_by_label(exp.button, "Remove Exercise", key="remove_ex_1")
         exp.button[rm_idx].click().run()
         confirm = any("Delete exercise 1?" in m.body for m in self.at.markdown)
@@ -905,8 +905,8 @@ class StreamlitAppTest(unittest.TestCase):
         self.at.selectbox[sel_idx].select(option).run()
         o_idx = _find_by_label(self.at.button, "Open", key="header_search_open")
         self.at.button[o_idx].click().run()
-        exp_idx = _find_by_label(self.at.expander, "Exercise Management")
-        self.assertGreater(len(self.at.expander[exp_idx].button), 0)
+        exp_idx = _find_by_label(self.at.tabs, "Exercise Management")
+        self.assertGreater(len(self.at.tabs[exp_idx].button), 0)
 
     def test_git_pull_button(self) -> None:
         self.at.query_params["tab"] = "settings"
@@ -1077,7 +1077,7 @@ class StreamlitFullGUITest(unittest.TestCase):
     def test_calendar_tab(self) -> None:
         tab = self._get_tab("Calendar")
         self.assertEqual(tab.header[0].value, "Calendar")
-        self.assertGreater(len(tab.expander), 0)
+        self.assertGreater(len(tab.tabs), 0)
 
     def test_history_tab(self) -> None:
         tab = self._get_tab("History")
@@ -1130,7 +1130,7 @@ class StreamlitFullGUITest(unittest.TestCase):
     def test_insights_tab(self) -> None:
         tab = self._get_tab("Insights")
         self.assertEqual(tab.header[0].value, "Insights")
-        self.assertGreater(len(tab.expander), 0)
+        self.assertGreater(len(tab.tabs), 0)
 
     def test_weight_tab(self) -> None:
         tab = self._get_tab("Body Weight")
@@ -1162,7 +1162,7 @@ class StreamlitFullGUITest(unittest.TestCase):
 
     def test_quick_report_buttons(self) -> None:
         tab = self._get_tab("Reports")
-        range_exp = tab.expander[0]
+        range_exp = tab.tabs[0]
         buttons = [b.label for b in range_exp.button]
         self.assertIn("Last Week", buttons)
         self.assertIn("Last Month", buttons)
@@ -1184,17 +1184,17 @@ class StreamlitFullGUITest(unittest.TestCase):
     def test_challenges_tab(self) -> None:
         tab = self._get_tab("Challenges")
         self.assertEqual(tab.header[0].value, "Challenges")
-        self.assertGreater(len(tab.expander), 0)
+        self.assertGreater(len(tab.tabs), 0)
 
     def test_tests_tab(self) -> None:
         tab = self._get_tab("Tests")
         self.assertEqual(tab.header[0].value, "Pyramid Test")
-        self.assertGreater(len(tab.expander), 1)
+        self.assertGreater(len(tab.tabs), 1)
 
     def test_goals_tab(self) -> None:
         tab = self._get_tab("Goals")
         self.assertEqual(tab.header[0].value, "Goals")
-        self.assertGreater(len(tab.expander), 1)
+        self.assertGreater(len(tab.tabs), 1)
 
     def test_goal_donut_chart(self) -> None:
         tab = self._get_tab("Goals")
@@ -1212,7 +1212,7 @@ class StreamlitFullGUITest(unittest.TestCase):
         idx = _find_by_label(self.at.selectbox, "Exercise", key="stats_ex")
         self.at = self.at.selectbox[idx].select("Barbell Bench Press").run()
         prog_tab = self._get_tab("Exercise Stats").tabs[3]
-        labels = [e.label for e in prog_tab.expander]
+        labels = [e.label for e in prog_tab.tabs]
         self.assertIn("Progress Forecast", labels)
         self.assertIn("Volume Forecast", labels)
 
@@ -1233,7 +1233,7 @@ class StreamlitFullGUITest(unittest.TestCase):
         self.at.query_params["tab"] = "workouts"
         self.at.run()
         plan_tab = self._get_tab("Plan")
-        labels = [e.label for e in plan_tab.expander]
+        labels = [e.label for e in plan_tab.tabs]
         for name in ["AI Planner", "Goal Planner", "Templates", "Planned Workouts"]:
             self.assertIn(name, labels)
 
@@ -1245,7 +1245,7 @@ class StreamlitFullGUITest(unittest.TestCase):
         self.at.query_params["tab"] = "workouts"
         self.at.run()
         plan_tab = self._get_tab("Plan")
-        gp_exp = next(e for e in plan_tab.expander if e.label == "Goal Planner")
+        gp_exp = next(e for e in plan_tab.tabs if e.label == "Goal Planner")
         gp_exp.button[0].click().run()
         pw_repo = PlannedWorkoutRepository(self.db_path)
         self.assertEqual(len(pw_repo.fetch_all(None, None)), 1)
@@ -1254,7 +1254,7 @@ class StreamlitFullGUITest(unittest.TestCase):
         self.at.query_params["tab"] = "library"
         self.at.run()
         tab = self._get_tab("Library")
-        labels = [e.label for e in tab.expander]
+        labels = [e.label for e in tab.tabs]
         for name in ["Favorites", "Templates", "Equipment", "Exercises"]:
             self.assertIn(name, labels)
 
@@ -1320,8 +1320,8 @@ class StreamlitFullGUITest(unittest.TestCase):
         conn.close()
         self.at.query_params["tab"] = "workouts"
         self.at.run()
-        exp_idx = _find_by_label(self.at.expander, "Upcoming Planned Workouts")
-        self.assertIsNotNone(self.at.expander[exp_idx])
+        exp_idx = _find_by_label(self.at.tabs, "Upcoming Planned Workouts")
+        self.assertIsNotNone(self.at.tabs[exp_idx])
 
 
 class StreamlitAdditionalGUITest(unittest.TestCase):
@@ -1435,8 +1435,8 @@ class StreamlitAdditionalGUITest(unittest.TestCase):
         cur.execute("UPDATE workouts SET notes='Gym' WHERE id=2")
         conn.commit()
         conn.close()
-        exp_idx = _find_by_label(self.at.sidebar.expander, "Quick Search")
-        exp = self.at.sidebar.expander[exp_idx]
+        exp_idx = _find_by_label(self.at.sidebar.tabs, "Quick Search")
+        exp = self.at.sidebar.tabs[exp_idx]
         self.assertEqual(exp.button[0].label, "Search")
 
     def test_tab_persistence_on_refresh(self) -> None:
@@ -1462,26 +1462,6 @@ class StreamlitAdditionalGUITest(unittest.TestCase):
         idx_add_set = _find_by_label(self.at.button, "Add Set", key="add_set_1")
         self.at.button[idx_add_set].click().run()
         self.assertEqual(self.at.query_params.get("tab"), before)
-
-    def test_expander_persistence_on_add_set(self) -> None:
-        exp_idx = _find_by_label(self.at.expander, "Existing Workouts")
-        self.assertTrue(self.at.expander[exp_idx].proto.expanded)
-        idx_new = _find_by_label(
-            self.at.button,
-            "New Workout",
-            key="FormSubmitter:new_workout_form-New Workout",
-        )
-        self.at.button[idx_new].click().run()
-        idx_ex = _find_by_label(self.at.selectbox, "Exercise", "Barbell Bench Press")
-        self.at.selectbox[idx_ex].select("Barbell Bench Press").run()
-        idx_eq = _find_by_label(self.at.selectbox, "Equipment Name", "Olympic Barbell")
-        self.at.selectbox[idx_eq].select("Olympic Barbell").run()
-        idx_add_ex = _find_by_label(self.at.button, "Add Exercise", key="add_ex_btn")
-        self.at.button[idx_add_ex].click().run()
-        idx_add_set = _find_by_label(self.at.button, "Add Set", key="add_set_1")
-        self.at.button[idx_add_set].click().run()
-        exp_idx = _find_by_label(self.at.expander, "Existing Workouts")
-        self.assertTrue(self.at.expander[exp_idx].proto.expanded)
 
     def test_workout_context_menu_present(self) -> None:
         idx_new = _find_by_label(
@@ -1509,8 +1489,8 @@ class StreamlitAdditionalGUITest(unittest.TestCase):
         set_repo.add(eid, 5, 100.0, 8, planned_set_id=sid)
         self.at.query_params["tab"] = "plan"
         self.at.run()
-        exp_idx = _find_by_label(self.at.expander, "Existing Plans")
-        plan_exp = self.at.expander[exp_idx].expander[0]
+        exp_idx = _find_by_label(self.at.tabs, "Existing Plans")
+        plan_exp = self.at.tabs[exp_idx].tabs[0]
         html = "".join(m.body for m in plan_exp.markdown)
         self.assertIn("progress-ring", html)
         self.assertIn("--val:100.0", html)
@@ -1547,7 +1527,7 @@ class StreamlitTemplateWorkflowTest(unittest.TestCase):
 
     def test_template_plan_to_workout(self) -> None:
         plan_tab = self._get_tab("Plan")
-        tmpl_exp = next(e for e in plan_tab.expander if e.label == "Templates")
+        tmpl_exp = next(e for e in plan_tab.tabs if e.label == "Templates")
         tmpl_exp.text_input[0].input("Tpl1").run()
         idx = _find_by_label(tmpl_exp.selectbox, "Training Type")
         tmpl_exp.selectbox[idx].select("strength").run()
@@ -1555,8 +1535,8 @@ class StreamlitTemplateWorkflowTest(unittest.TestCase):
         tmpl_exp.button[b_idx].click().run()
         self.at.run()
         plan_tab = self._get_tab("Plan")
-        tmpl_exp = next(e for e in plan_tab.expander if e.label == "Templates")
-        for exp in tmpl_exp.expander:
+        tmpl_exp = next(e for e in plan_tab.tabs if e.label == "Templates")
+        for exp in tmpl_exp.tabs:
             if exp.label.startswith("Tpl1"):
                 exp.button[1].click().run()
                 break
@@ -1585,7 +1565,7 @@ class StreamlitTemplateWorkflowTest(unittest.TestCase):
         self.at.query_params["tab"] = "library"
         self.at.run()
         lib_tab = self._get_tab("Library")
-        tmpl_sec = next(e for e in lib_tab.expander if e.label == "Existing Templates")
+        tmpl_sec = next(e for e in lib_tab.tabs if e.label == "Existing Templates")
         options = tmpl_sec.selectbox[0].options
         self.assertEqual(options[0], "B")
 
@@ -1626,15 +1606,15 @@ class StreamlitHeartRateGUITest(unittest.TestCase):
             key="FormSubmitter:new_workout_form-New Workout",
         )
         self.at.button[idx_new].click().run()
-        hr_idx = _find_by_label(self.at.expander, "Heart Rate")
-        self.at.expander[hr_idx].text_input[0].input("2023-01-01T10:00:00").run()
-        self.at.expander[hr_idx].number_input[0].set_value(120).run()
+        hr_idx = _find_by_label(self.at.tabs, "Heart Rate")
+        self.at.tabs[hr_idx].text_input[0].input("2023-01-01T10:00:00").run()
+        self.at.tabs[hr_idx].number_input[0].set_value(120).run()
         b_idx = _find_by_label(
-            self.at.expander[hr_idx].button,
+            self.at.tabs[hr_idx].button,
             "Log Heart Rate",
             key="FormSubmitter:hr_form_1-Log Heart Rate",
         )
-        self.at.expander[hr_idx].button[b_idx].click().run()
+        self.at.tabs[hr_idx].button[b_idx].click().run()
 
         conn = self._connect()
         cur = conn.cursor()
@@ -1768,7 +1748,7 @@ class RecommendationIntegrationTest(unittest.TestCase):
 
     def test_csv_uploader_present(self) -> None:
         tab = self._get_tab("Settings")
-        has_dm = any(e.label == "Data Management" for e in tab.expander)
+        has_dm = any(e.label == "Data Management" for e in tab.tabs)
         self.assertTrue(has_dm)
 
 

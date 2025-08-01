@@ -527,3 +527,4 @@ keep the AGENTS.md updated by adding new sensible rules when they occur to you. 
 - The header must automatically collapse when scrolling down and reappear when scrolling up.
 - Multiuser features are prohibited. The application must remain single-user and any existing multiuser functionality should be removed.
 - The "Jump to Section" dropdown has been removed from the UI and must not be reintroduced.
+- When replacing expanders with tabs, corresponding GUI tests must be updated to verify tab behavior.
