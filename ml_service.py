@@ -8,6 +8,9 @@ from db import (
     MLModelStatusRepository,
 )
 from typing import Iterable, Optional
+from ml_plugins import PluginManager
+
+plugin_manager = PluginManager()
 
 torch.manual_seed(0)
 
@@ -93,6 +96,7 @@ class PerformanceModelService:
         self.lr = lr
         self.raw_repo = raw_repo
         self.models: dict[str, tuple[RPEModel, torch.optim.Optimizer]] = {}
+        plugin_manager.load_plugins(self)
 
     def _get(self, name: str) -> tuple[RPEModel, torch.optim.Optimizer]:
         canonical = self.names.canonical(name)
