@@ -29,6 +29,11 @@ def migrate(db_path='workout.db'):
     cols = [r[1] for r in cur.fetchall()]
     if 'last_used' not in cols:
         cur.execute("ALTER TABLE workout_templates ADD COLUMN last_used TEXT;")
+    cur.execute("PRAGMA table_info(step_count_logs);")
+    if not cur.fetchall():
+        cur.execute(
+            "CREATE TABLE step_count_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, workout_id INTEGER NOT NULL, timestamp TEXT NOT NULL, steps INTEGER NOT NULL, FOREIGN KEY(workout_id) REFERENCES workouts(id) ON DELETE CASCADE);"
+        )
     conn.commit()
     conn.close()
 

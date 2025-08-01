@@ -2950,6 +2950,58 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(data[4]["count"], 1)
         self.assertEqual(data[4]["percent"], 50.0)
 
+    def test_step_logging(self) -> None:
+        self.client.post("/workouts", params={"date": "2023-01-01"})
+        resp = self.client.post(
+            "/workouts/1/steps",
+            params={"timestamp": "2023-01-01T10:00:00", "steps": 5000},
+        )
+        self.assertEqual(resp.status_code, 200)
+        sid = resp.json()["id"]
+
+        resp = self.client.get("/workouts/1/steps")
+        self.assertEqual(len(resp.json()), 1)
+        self.assertEqual(resp.json()[0]["id"], sid)
+
+        resp = self.client.get(
+            "/steps",
+            params={"start_date": "2023-01-01", "end_date": "2023-01-02"},
+        )
+        self.assertEqual(len(resp.json()), 1)
+
+        upd = self.client.put(
+            f"/steps/{sid}",
+            params={"timestamp": "2023-01-01T10:10:00", "steps": 5200},
+        )
+        self.assertEqual(upd.status_code, 200)
+
+        resp = self.client.get("/workouts/1/steps")
+        self.assertEqual(resp.json()[0]["steps"], 5200)
+
+        del_resp = self.client.delete(f"/steps/{sid}")
+        self.assertEqual(del_resp.status_code, 200)
+        self.assertEqual(self.client.get("/workouts/1/steps").json(), [])
+
+    def test_step_summary(self) -> None:
+        self.client.post("/workouts", params={"date": "2023-01-01"})
+        self.client.post(
+            "/workouts/1/steps",
+            params={"timestamp": "2023-01-01T10:00:00", "steps": 3000},
+        )
+        self.client.post(
+            "/workouts/1/steps",
+            params={"timestamp": "2023-01-01T12:00:00", "steps": 2000},
+        )
+
+        resp = self.client.get(
+            "/stats/step_summary",
+            params={"start_date": "2023-01-01", "end_date": "2023-01-02"},
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data["total"], 5000)
+        self.assertEqual(data["avg"], 2500.0)
+
     def test_exercise_frequency(self) -> None:
         d1 = (datetime.date.today() - datetime.timedelta(days=7)).isoformat()
         d2 = datetime.date.today().isoformat()
