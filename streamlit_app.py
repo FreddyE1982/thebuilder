@@ -661,19 +661,6 @@ class GymApp:
             function saveScroll() {
                 sessionStorage.setItem('scrollY', window.scrollY);
             }
-            function persistExpanders() {
-                const exps = Array.from(document.querySelectorAll('details'));
-                exps.forEach((exp, idx) => {
-                    const label = exp.querySelector('summary')?.innerText.trim() || '';
-                    const key = exp.dataset.expKey || `expander-${label}-${idx}`;
-                    exp.dataset.expKey = key;
-                    const saved = sessionStorage.getItem(key);
-                    if (saved !== null) exp.open = saved === 'true';
-                    exp.addEventListener('toggle', () => {
-                        sessionStorage.setItem(key, exp.open);
-                    });
-                });
-            }
             function persistTabs() {
                 const containers = document.querySelectorAll('div[data-testid="stTabs"]');
                 containers.forEach((cont, cidx) => {
@@ -747,11 +734,9 @@ class GymApp:
             window.addEventListener('DOMContentLoaded', () => {
                 handleResize();
                 restoreScroll();
-                persistExpanders();
                 persistTabs();
             });
             document.addEventListener('streamlit:rendered', () => {
-                persistExpanders();
                 persistTabs();
                 restoreScroll();
             });
@@ -1038,6 +1023,15 @@ class GymApp:
                     white-space: nowrap;
                 }
                 div[data-testid="stTabs"] button {
+                    flex-shrink: 0;
+                }
+                div[data-testid="stTabs"] div[data-testid="stTabs"] > div:first-child,
+                div[data-testid="stTabs"] div[data-testid="stTabs"] div[data-testid="stTabs"] > div:first-child {
+                    overflow-x: auto;
+                    white-space: nowrap;
+                }
+                div[data-testid="stTabs"] div[data-testid="stTabs"] button,
+                div[data-testid="stTabs"] div[data-testid="stTabs"] div[data-testid="stTabs"] button {
                     flex-shrink: 0;
                 }
                 div[data-testid="stSidebar"] {
