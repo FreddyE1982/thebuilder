@@ -5957,7 +5957,26 @@ class GymApp:
 
     def _weight_tab(self) -> None:
         st.header("Body Weight")
-        with st.expander("Date Range", expanded=True):
+        (
+            range_tab,
+            stats_tab,
+            weight_hist_tab,
+            bmi_tab,
+            well_sum_tab,
+            well_hist_tab,
+            forecast_tab,
+        ) = st.tabs(
+            [
+                "Date Range",
+                "Statistics",
+                "Weight History",
+                "BMI History",
+                "Wellness Summary",
+                "Wellness History",
+                "Forecast",
+            ]
+        )
+        with range_tab:
             col1, col2 = st.columns(2)
             with col1:
                 start = st.date_input(
@@ -5976,7 +5995,7 @@ class GymApp:
             start_str = start.isoformat()
             end_str = end.isoformat()
         stats = self.stats.weight_stats(start_str, end_str, unit=self.weight_unit)
-        with st.expander("Statistics", expanded=True):
+        with stats_tab:
             metrics = [
                 ("Average", stats["avg"]),
                 ("Min", stats["min"]),
@@ -5985,20 +6004,20 @@ class GymApp:
             self._metric_grid(metrics)
         history = self.stats.body_weight_history(start_str, end_str)
         if history:
-            with st.expander("Weight History", expanded=True):
+            with weight_hist_tab:
                 self._line_chart(
                     {"Weight": [h["weight"] for h in history]},
                     [h["date"] for h in history],
                 )
         bmi_hist = self.stats.bmi_history(start_str, end_str)
         if bmi_hist:
-            with st.expander("BMI History", expanded=False):
+            with bmi_tab:
                 self._line_chart(
                     {"BMI": [b["bmi"] for b in bmi_hist]},
                     [b["date"] for b in bmi_hist],
                 )
         wellness = self.stats.wellness_summary(start_str, end_str)
-        with st.expander("Wellness Summary", expanded=False):
+        with well_sum_tab:
             metrics = [
                 ("Calories", wellness["avg_calories"]),
                 ("Sleep Hours", wellness["avg_sleep"]),
@@ -6008,7 +6027,7 @@ class GymApp:
             self._metric_grid(metrics)
         well_hist = self.stats.wellness_history(start_str, end_str)
         if well_hist:
-            with st.expander("Wellness History", expanded=False):
+            with well_hist_tab:
                 self._line_chart(
                     {
                         "Calories": [w["calories"] for w in well_hist],
@@ -6018,7 +6037,7 @@ class GymApp:
                     },
                     [w["date"] for w in well_hist],
                 )
-        with st.expander("Forecast", expanded=False):
+        with forecast_tab:
             days = st.slider("Days", 1, 14, 7, key="bw_fc_days")
             if st.button("Show Forecast", key="bw_fc_btn"):
                 forecast = self.stats.weight_forecast(days)
@@ -6030,7 +6049,8 @@ class GymApp:
 
     def _wellness_tab(self) -> None:
         st.header("Wellness Logs")
-        with st.expander("Add Entry"):
+        entry_tab, history_tab = st.tabs(["Add Entry", "History"])
+        with entry_tab:
             w_date = st.date_input(
                 "Date",
                 datetime.date.today(),
@@ -6065,7 +6085,7 @@ class GymApp:
                 except ValueError as e:
                     st.warning(str(e))
 
-        with st.expander("History", expanded=True):
+        with history_tab:
             rows = self.wellness_repo.fetch_history()
             for rid, d, cal, sh, sq, st_lvl in rows:
                 exp = st.expander(f"{d}")
