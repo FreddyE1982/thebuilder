@@ -5421,7 +5421,9 @@ class GymApp:
         ) + "</div>"
         st.markdown(html, unsafe_allow_html=True)
         favs = self.favorite_workouts_repo.fetch_all()
-        with st.expander("Favorite Workouts", expanded=True):
+        top_tabs = st.tabs(["Favorites", "List", "Summary", "Timeline"])
+
+        with top_tabs[0]:
             if favs:
                 for fid in favs:
                     try:
@@ -5448,7 +5450,8 @@ class GymApp:
             if st.button("Add Favorite", key="fav_wk_add_btn") and add_choice:
                 self.favorite_workouts_repo.add(int(add_choice))
                 self._trigger_refresh()
-        with st.expander("Filters", expanded=False):
+
+        with top_tabs[1]:
             col1, col2 = st.columns(2)
             with col1:
                 start = st.date_input(
@@ -5501,91 +5504,106 @@ class GymApp:
                 self._trigger_refresh()
             start_str = start.isoformat()
             end_str = end.isoformat()
-        load_more = st.session_state.pop("load_more_hist", False)
-        if "hist_offset" not in st.session_state or not load_more:
-            st.session_state.hist_offset = 0
-        limit = 10
-        offset = st.session_state.hist_offset
-        workouts = self.workouts.fetch_all_workouts(
-            start_str, end_str, "date", True, limit, offset
-        )
-        if ttype:
-            workouts = [w for w in workouts if w[4] == ttype]
-        if sel_tags:
-            workouts = [
-                w
-                for w in workouts
-                if set(sel_tags).issubset(
-                    {n for _, n in self.tags_repo.fetch_for_workout(w[0])}
-                )
-            ]
-        if unrated_only:
-            workouts = [w for w in workouts if w[6] is None]
-        pr_dates = {r["date"] for r in self.stats.personal_records()}
-        for wid, date, start_time, end_time, training_type, *_ in workouts:
-            badge = f"<span class='training-badge tt-{training_type}'>{training_type}</span>"
-            status_class = "status-idle"
-            status_label = "Idle"
-            if start_time and end_time:
-                status_class = "status-finished"
-                status_label = "Finished"
-            elif start_time and not end_time:
-                status_class = "status-running"
-                status_label = "Running"
-            status_badge = f"<span class='badge {status_class}'>{status_label}</span>"
-            label = f"{date} {badge} {status_badge}"
-            if date in pr_dates:
-                label = f"**{label}**"
-            with st.expander(label, expanded=False):
-                summary = self.sets.workout_summary(wid)
-                st.markdown(
-                    f"**Volume:** {summary['volume']} | **Sets:** {summary['sets']} | **Avg RPE:** {summary['avg_rpe']}"
-                )
-                reacts = self.reactions.list_for_workout(wid)
-                mapping = {e: c for e, c in reacts}
-                emjs = ["👍", "🔥", "💯", "🤢"]
-                rcols = st.columns(len(emjs))
-                for idx, em in enumerate(emjs):
-                    label = f"{em} {mapping.get(em,0)}"
-                    if rcols[idx].button(label, key=f"react_{wid}_{idx}"):
-                        self.reactions.react(wid, em)
-                        self._trigger_refresh()
-                tags = [n for _, n in self.tags_repo.fetch_for_workout(wid)]
-                if tags:
-                    st.markdown("**Tags:** " + ", ".join(tags))
-                note_val = self.workouts.fetch_detail(wid)[5] or ""
-                st.text_input(
-                    "Notes",
-                    value=note_val,
-                    key=f"hist_note_{wid}",
-                    on_change=self._update_workout_notes,
-                    args=(wid,),
-                )
-                macros = ["Fasted", "Great energy", "Tired"]
-                m_choice = st.selectbox(
-                    "Quick Macro",
-                    [""] + macros,
-                    key=f"macro_sel_{wid}",
-                )
-                if m_choice:
-                    cur = st.session_state.get(f"hist_note_{wid}", "")
-                    new = (cur + " " + m_choice).strip()
-                    st.session_state[f"hist_note_{wid}"] = new
-                    self._update_workout_notes(wid)
-                    st.session_state[f"macro_sel_{wid}"] = ""
-                if st.button("Favorite Template", key=f"fav_tpl_hist_{wid}"):
-                    tid = self.planner.copy_workout_to_template(wid)
-                    self.favorite_templates_repo.add(tid)
-                    st.success("Template favorited")
-                if st.button("Details", key=f"hist_det_{wid}"):
-                    self._workout_details_dialog(wid)
-        if len(workouts) == limit:
-            if st.button("Load More", key="hist_more"):
-                st.session_state.hist_offset += limit
-                st.session_state.load_more_hist = True
-                self._trigger_refresh()
+            load_more = st.session_state.pop("load_more_hist", False)
+            if "hist_offset" not in st.session_state or not load_more:
+                st.session_state.hist_offset = 0
+            limit = 10
+            offset = st.session_state.hist_offset
+            workouts = self.workouts.fetch_all_workouts(
+                start_str, end_str, "date", True, limit, offset
+            )
+            if ttype:
+                workouts = [w for w in workouts if w[4] == ttype]
+            if sel_tags:
+                workouts = [
+                    w
+                    for w in workouts
+                    if set(sel_tags).issubset(
+                        {n for _, n in self.tags_repo.fetch_for_workout(w[0])}
+                    )
+                ]
+            if unrated_only:
+                workouts = [w for w in workouts if w[6] is None]
 
-        with st.expander("Summary Metrics", expanded=False):
+            pr_dates = {r["date"] for r in self.stats.personal_records()}
+            labels = []
+            for wid, date, start_time, end_time, training_type, *_ in workouts:
+                badge = f"<span class='training-badge tt-{training_type}'>{training_type}</span>"
+                status_class = "status-idle"
+                status_label = "Idle"
+                if start_time and end_time:
+                    status_class = "status-finished"
+                    status_label = "Finished"
+                elif start_time and not end_time:
+                    status_class = "status-running"
+                    status_label = "Running"
+                status_badge = f"<span class='badge {status_class}'>{status_label}</span>"
+                label = f"{date} {badge} {status_badge}"
+                if date in pr_dates:
+                    label = f"**{label}**"
+                labels.append(label)
+
+            if labels:
+                wk_tabs = st.tabs(labels)
+                for tab, (wid, date, start_time, end_time, training_type, *_ ) in zip(wk_tabs, workouts):
+                    with tab:
+                        summary = self.sets.workout_summary(wid)
+                        st.markdown(
+                            f"**Volume:** {summary['volume']} | **Sets:** {summary['sets']} | **Avg RPE:** {summary['avg_rpe']}"
+                        )
+                    reacts = self.reactions.list_for_workout(wid)
+                    mapping = {e: c for e, c in reacts}
+                    emjs = ["👍", "🔥", "💯", "🤢"]
+                    rcols = st.columns(len(emjs))
+                    for idx, em in enumerate(emjs):
+                        lbl = f"{em} {mapping.get(em,0)}"
+                        if rcols[idx].button(lbl, key=f"react_{wid}_{idx}"):
+                            self.reactions.react(wid, em)
+                            self._trigger_refresh()
+                    tags = [n for _, n in self.tags_repo.fetch_for_workout(wid)]
+                    if tags:
+                        st.markdown("**Tags:** " + ", ".join(tags))
+                    note_val = self.workouts.fetch_detail(wid)[5] or ""
+                    st.text_input(
+                        "Notes",
+                        value=note_val,
+                        key=f"hist_note_{wid}",
+                        on_change=self._update_workout_notes,
+                        args=(wid,),
+                    )
+                    macros = ["Fasted", "Great energy", "Tired"]
+                    m_choice = st.selectbox(
+                        "Quick Macro",
+                        [""] + macros,
+                        key=f"macro_sel_{wid}",
+                    )
+                    if m_choice:
+                        cur = st.session_state.get(f"hist_note_{wid}", "")
+                        new = (cur + " " + m_choice).strip()
+                        st.session_state[f"hist_note_{wid}"] = new
+                        self._update_workout_notes(wid)
+                        st.session_state[f"macro_sel_{wid}"] = ""
+                        if st.button("Favorite Template", key=f"fav_tpl_hist_{wid}"):
+                            tid = self.planner.copy_workout_to_template(wid)
+                            self.favorite_templates_repo.add(tid)
+                            st.success("Template favorited")
+                        if st.button("Details", key=f"hist_det_{wid}"):
+                            self._workout_details_dialog(wid)
+                if len(workouts) == limit:
+                    if st.button("Load More", key="hist_more"):
+                        st.session_state.hist_offset += limit
+                        st.session_state.load_more_hist = True
+                        self._trigger_refresh()
+            else:
+                st.write("No workouts")
+
+            if len(workouts) == limit:
+                if st.button("Load More", key="hist_more"):
+                    st.session_state.hist_offset += limit
+                    st.session_state.load_more_hist = True
+                    self._trigger_refresh()
+
+        with top_tabs[2]:
             ov = self.stats.overview(start_str, end_str)
             metrics = [
                 ("Workouts", ov["workouts"]),
@@ -5594,7 +5612,7 @@ class GymApp:
             ]
             self._metric_grid(metrics)
 
-        with st.expander("Timeline View", expanded=False):
+        with top_tabs[3]:
             dates = [w[1] for w in workouts]
             if dates:
                 df = pd.DataFrame({"date": dates, "idx": list(range(len(dates)))})
@@ -5602,20 +5620,6 @@ class GymApp:
                 st.altair_chart(chart, use_container_width=True)
             else:
                 st.write("No workouts")
-        components.html(
-            """
-            <script>
-            const items = Array.from(document.querySelectorAll('details'));
-            let idx = items.findIndex(i => i.open);
-            document.addEventListener('keydown', e => {
-                if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-                if(e.key === 'ArrowDown') { idx = Math.min(items.length-1, idx+1); items[idx].querySelector('summary').click(); }
-                if(e.key === 'ArrowUp') { idx = Math.max(0, idx-1); items[idx].querySelector('summary').click(); }
-            });
-            </script>
-            """,
-            height=0,
-        )
 
     def _workout_details_dialog(self, workout_id: int) -> None:
         exercises = self.exercises.fetch_for_workout(workout_id)
@@ -5628,12 +5632,16 @@ class GymApp:
         def _content() -> None:
             if st.button("Print Summary", key="print_sum"):
                 components.html("<script>window.print()</script>", height=0)
-            for ex_id, name, eq, note in exercises:
-                sets = self.sets.fetch_for_exercise(ex_id)
+            headers = []
+            for _ex_id, name, eq, note in exercises:
                 header = name if not eq else f"{name} ({eq})"
                 if note:
                     header += f" - {note}"
-                with st.expander(header, expanded=True):
+                headers.append(header)
+            ex_tabs = st.tabs(headers)
+            for tab, (ex_id, name, eq, note) in zip(ex_tabs, exercises):
+                with tab:
+                    sets = self.sets.fetch_for_exercise(ex_id)
                     for sid, reps, weight, rpe, stime, etime in sets:
                         line = f"{reps} reps x {weight} kg (RPE {rpe})"
                         if stime:

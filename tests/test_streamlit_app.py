@@ -1082,14 +1082,15 @@ class StreamlitFullGUITest(unittest.TestCase):
     def test_history_tab(self) -> None:
         tab = self._get_tab("History")
         self.assertEqual(tab.header[0].value, "Workout History")
-        self.assertGreater(len(tab.expander), 1)
-        filt_exp = tab.expander[1]
-        buttons = [b.label for b in filt_exp.button]
+        labels = [t.label for t in tab.tabs]
+        self.assertIn("List", labels)
+        list_tab = next(t for t in tab.tabs if t.label == "List")
+        buttons = [b.label for b in list_tab.button]
         self.assertIn("Last 7d", buttons)
         self.assertIn("Last 30d", buttons)
         self.assertIn("Last 90d", buttons)
         self.assertIn("Clear Filters", buttons)
-        chk_labels = [c.label for c in filt_exp.checkbox]
+        chk_labels = [c.label for c in list_tab.checkbox]
         self.assertIn("Unrated Only", chk_labels)
 
     def test_dashboard_tab(self) -> None:

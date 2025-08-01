@@ -229,7 +229,7 @@
 [complete] 200. "Clear filters" button in history tab.
 [complete] 201. Remove all multiuser features from the code base.
 
-202. Replace expander sections in History tab with nested tabs. [pending]
+202. Replace expander sections in History tab with nested tabs. [complete]
 203. Convert Progress tab expanders to subtabs for metrics and charts. [pending]
 204. Use subtabs in Planner tab instead of expanders for goal planner and templates. [pending]
 205. Replace settings expanders with subtab sections. [pending]
