@@ -173,7 +173,7 @@
 [complete] 155. Toggle display of estimated 1RM.
 [complete] 156. Indicator for unsaved changes in forms.
 [complete] 157. Collapsible summary metrics in history.
-158. Step counter integration for cardio.
+[complete] 158. Step counter integration for cardio.
 [complete] 159. Quick access to recently used templates.
 [complete] 160. Mini progress widget on home screen.
 [complete] 161. Filter results by muscle group across tabs.

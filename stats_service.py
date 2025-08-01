@@ -9,6 +9,7 @@ from db import (
     EquipmentRepository,
     WellnessRepository,
     HeartRateRepository,
+    StepCountRepository,
     GoalRepository,
     StatsCacheRepository,
 )
@@ -41,6 +42,7 @@ class StatisticsService:
         catalog_repo: "ExerciseCatalogRepository" | None = None,
         workout_repo: "WorkoutRepository" | None = None,
         heart_rate_repo: "HeartRateRepository" | None = None,
+        step_repo: "StepCountRepository" | None = None,
         goal_repo: "GoalRepository" | None = None,
         cache_repo: "StatsCacheRepository" | None = None,
     ) -> None:
@@ -58,6 +60,7 @@ class StatisticsService:
         self.catalog = catalog_repo
         self.workouts = workout_repo
         self.heart_rates = heart_rate_repo
+        self.step_counts = step_repo
         self.goals = goal_repo
         self.stats_cache = cache_repo
         self._cache: dict[tuple, dict] = {}
@@ -2086,6 +2089,32 @@ class StatisticsService:
                 }
             )
         return result
+
+    def step_history(
+        self, start_date: str | None = None, end_date: str | None = None
+    ) -> list[dict[str, int | str]]:
+        """Return logged step count entries ordered by timestamp."""
+        if self.step_counts is None:
+            return []
+        rows = self.step_counts.fetch_range(start_date, end_date)
+        return [
+            {
+                "id": rid,
+                "workout_id": wid,
+                "timestamp": ts,
+                "steps": st,
+            }
+            for rid, wid, ts, st in rows
+        ]
+
+    def step_summary(
+        self, start_date: str | None = None, end_date: str | None = None
+    ) -> dict[str, float]:
+        """Return total steps for the range."""
+        history = self.step_history(start_date, end_date)
+        total = sum(h["steps"] for h in history)
+        avg = round(total / len(history), 2) if history else 0.0
+        return {"total": total, "avg": avg}
 
     def exercise_frequency(
         self,

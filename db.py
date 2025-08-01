@@ -388,6 +388,16 @@ class Database:
                 );""",
             ["id", "workout_id", "timestamp", "heart_rate"],
         ),
+        "step_count_logs": (
+            """CREATE TABLE step_count_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    workout_id INTEGER NOT NULL,
+                    timestamp TEXT NOT NULL,
+                    steps INTEGER NOT NULL,
+                    FOREIGN KEY(workout_id) REFERENCES workouts(id) ON DELETE CASCADE
+                );""",
+            ["id", "workout_id", "timestamp", "steps"],
+        ),
         "favorite_exercises": (
             """CREATE TABLE favorite_exercises (
                     name TEXT PRIMARY KEY
@@ -3545,6 +3555,66 @@ class HeartRateRepository(BaseRepository):
         if not rows:
             raise ValueError("log not found")
         self.execute("DELETE FROM heart_rate_logs WHERE id = ?;", (entry_id,))
+
+
+class StepCountRepository(BaseRepository):
+    """Repository for logging step counts during cardio workouts."""
+
+    def log(self, workout_id: int, timestamp: str, steps: int) -> int:
+        return self.execute(
+            "INSERT INTO step_count_logs (workout_id, timestamp, steps) VALUES (?, ?, ?);",
+            (workout_id, timestamp, steps),
+        )
+
+    def bulk_log(self, workout_id: int, entries: list[tuple[str, int]]) -> list[int]:
+        """Insert multiple step count entries and return their ids."""
+        ids: list[int] = []
+        for ts, st in entries:
+            ids.append(self.log(workout_id, ts, st))
+        return ids
+
+    def fetch_for_workout(self, workout_id: int) -> list[tuple[int, str, int]]:
+        rows = self.fetch_all(
+            "SELECT id, timestamp, steps FROM step_count_logs WHERE workout_id = ? ORDER BY timestamp;",
+            (workout_id,),
+        )
+        return [(int(r[0]), r[1], int(r[2])) for r in rows]
+
+    def fetch_range(self, start_date: str | None = None, end_date: str | None = None) -> list[tuple[int, int, str, int]]:
+        query = (
+            "SELECT sc.id, sc.workout_id, sc.timestamp, sc.steps FROM step_count_logs sc JOIN workouts w ON sc.workout_id = w.id WHERE 1=1"
+        )
+        params: list[str] = []
+        if start_date:
+            query += " AND w.date >= ?"
+            params.append(start_date)
+        if end_date:
+            query += " AND w.date <= ?"
+            params.append(end_date)
+        query += " ORDER BY timestamp;"
+        rows = self.fetch_all(query, tuple(params))
+        return [(int(r[0]), int(r[1]), r[2], int(r[3])) for r in rows]
+
+    def update(self, entry_id: int, timestamp: str, steps: int) -> None:
+        rows = self.fetch_all(
+            "SELECT id FROM step_count_logs WHERE id = ?;",
+            (entry_id,),
+        )
+        if not rows:
+            raise ValueError("log not found")
+        self.execute(
+            "UPDATE step_count_logs SET timestamp = ?, steps = ? WHERE id = ?;",
+            (timestamp, steps, entry_id),
+        )
+
+    def delete(self, entry_id: int) -> None:
+        rows = self.fetch_all(
+            "SELECT id FROM step_count_logs WHERE id = ?;",
+            (entry_id,),
+        )
+        if not rows:
+            raise ValueError("log not found")
+        self.execute("DELETE FROM step_count_logs WHERE id = ?;", (entry_id,))
 
 
 class ExerciseImageRepository(BaseRepository):

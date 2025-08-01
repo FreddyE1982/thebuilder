@@ -56,6 +56,7 @@ from db import (
     BodyWeightRepository,
     WellnessRepository,
     HeartRateRepository,
+    StepCountRepository,
     ExerciseImageRepository,
     FavoriteExerciseRepository,
     FavoriteTemplateRepository,
@@ -213,6 +214,7 @@ class GymAPI:
         self.body_weights = BodyWeightRepository(db_path)
         self.wellness = WellnessRepository(db_path)
         self.heart_rates = HeartRateRepository(db_path)
+        self.step_counts = StepCountRepository(db_path)
         self.exercise_images = ExerciseImageRepository(db_path)
         self.stats_cache = StatsCacheRepository(db_path)
         self.goals = GoalRepository(db_path)
@@ -294,6 +296,7 @@ class GymAPI:
             self.exercise_catalog,
             self.workouts,
             self.heart_rates,
+            self.step_counts,
             self.goals,
             cache_repo=self.stats_cache,
         )
@@ -2862,6 +2865,57 @@ class GymAPI:
             except ValueError as e:
                 raise HTTPException(status_code=404, detail=str(e))
 
+        @self.app.post("/workouts/{workout_id}/steps")
+        def log_steps(workout_id: int, timestamp: str, steps: int):
+            try:
+                sid = self.step_counts.log(workout_id, timestamp, steps)
+                return {"id": sid}
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
+        @self.app.post("/workouts/{workout_id}/steps/bulk")
+        def bulk_log_steps(workout_id: int, items: List[Dict] = Body(...)):
+            try:
+                entries = [(itm["timestamp"], int(itm["steps"])) for itm in items]
+                ids = self.step_counts.bulk_log(workout_id, entries)
+                return {"ids": ids}
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
+        @self.app.get("/workouts/{workout_id}/steps")
+        def list_workout_steps(workout_id: int):
+            rows = self.step_counts.fetch_for_workout(workout_id)
+            return [{"id": rid, "timestamp": ts, "steps": st} for rid, ts, st in rows]
+
+        @self.app.get("/steps")
+        def list_steps(start_date: str = None, end_date: str = None):
+            rows = self.step_counts.fetch_range(start_date, end_date)
+            return [
+                {
+                    "id": rid,
+                    "workout_id": wid,
+                    "timestamp": ts,
+                    "steps": st,
+                }
+                for rid, wid, ts, st in rows
+            ]
+
+        @self.app.put("/steps/{entry_id}")
+        def update_steps(entry_id: int, timestamp: str, steps: int):
+            try:
+                self.step_counts.update(entry_id, timestamp, steps)
+                return {"status": "updated"}
+            except ValueError as e:
+                raise HTTPException(status_code=404, detail=str(e))
+
+        @self.app.delete("/steps/{entry_id}")
+        def delete_steps(entry_id: int):
+            try:
+                self.step_counts.delete(entry_id)
+                return {"status": "deleted"}
+            except ValueError as e:
+                raise HTTPException(status_code=404, detail=str(e))
+
         @self.app.get("/goals")
         def list_goals():
             rows = self.goals.fetch_all()
@@ -2993,6 +3047,10 @@ class GymAPI:
         @self.app.get("/stats/heart_rate_zones")
         def stats_heart_rate_zones(start_date: str = None, end_date: str = None):
             return self.statistics.heart_rate_zones(start_date, end_date)
+
+        @self.app.get("/stats/step_summary")
+        def stats_step_summary(start_date: str = None, end_date: str = None):
+            return self.statistics.step_summary(start_date, end_date)
 
         @self.app.get("/ml_logs/{model_name}")
         def get_ml_logs(model_name: str, start_date: str = None, end_date: str = None):
