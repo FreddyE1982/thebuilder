@@ -1787,10 +1787,8 @@ class GymApp:
         if st.sidebar.button("New Workout"):
             wid = self.workouts.create(
                 datetime.date.today().isoformat(),
-                self.timezone,
-                "strength",
-                None,
-                None,
+                timezone=self.timezone,
+                training_type="strength",
             )
             self._select_workout(wid)
             st.sidebar.success(f"Created workout {wid}")
@@ -2483,11 +2481,9 @@ class GymApp:
                 if submitted:
                     wid = self.workouts.create(
                         datetime.date.today().isoformat(),
-                        self.timezone,
-                        new_type,
-                        None,
-                        new_loc or None,
-                        None,
+                        timezone=self.timezone,
+                        training_type=new_type,
+                        location=new_loc or None,
                     )
                     self._select_workout(wid)
                     st.session_state.open_quick_workout = False
@@ -2903,7 +2899,7 @@ class GymApp:
             upcoming = [p for p in plans if p[1] >= today]
             if upcoming:
                 with st.expander("Upcoming Planned Workouts", expanded=False):
-                    for pid, pdate, ptype in upcoming[:3]:
+                    for pid, pdate, ptype, _pos in upcoming[:3]:
                         st.markdown(f"- {pdate} ({ptype})")
         if options:
             with st.expander("Use Planned Workout", expanded=False):
@@ -3320,7 +3316,7 @@ class GymApp:
                     key="select_planned_workout",
                 )
                 st.session_state.selected_planned_workout = int(selected)
-                for pid, pdate, ptype in plans:
+                for pid, pdate, ptype, _pos in plans:
                     prog = self.sets.planned_completion(pid)
                     ring = f"<div class='progress-ring' style='--val:{prog};'></div>"
                     with st.expander(f"{pdate} (ID {pid})", expanded=False):
@@ -6620,7 +6616,9 @@ class GymApp:
         if not rows:
             st.info("No upcoming plans")
             return
-        df = pd.DataFrame([{"date": d, "type": t} for _pid, d, t in rows])
+        df = pd.DataFrame([
+            {"date": row[1], "type": row[2]} for row in rows
+        ])
         df["date"] = pd.to_datetime(df["date"])
         chart = (
             alt.Chart(df)
