@@ -2408,7 +2408,11 @@ class GymApp:
                     st.session_state.pop("fw_tut_step", None)
                     self._trigger_refresh()
 
-        self._show_dialog("First Workout", _content)
+        if os.environ.get("TEST_MODE") == "1":
+            _content()
+            st.markdown("First Workout")
+        else:
+            self._show_dialog("First Workout", _content)
 
     def _show_help_tip(self, page: str) -> None:
         """Display contextual help tip for ``page``."""
@@ -2707,8 +2711,7 @@ class GymApp:
                 except Exception:
                     pass
         if (
-            os.environ.get("TEST_MODE") is None
-            and self.show_onboarding
+            self.show_onboarding
             and not self.settings_repo.get_bool("onboarding_complete", False)
         ):
             self._onboarding_wizard()
@@ -2718,9 +2721,16 @@ class GymApp:
             and not st.session_state.get("show_whats_new")
         ):
             st.session_state.show_whats_new = True
-        if st.session_state.get("show_whats_new"):
+        if (
+            os.environ.get("TEST_MODE") is None
+            and st.session_state.get("show_whats_new")
+        ):
             self._whats_new_dialog()
-        if st.session_state.get("show_feature_onboarding") and self.show_onboarding:
+        if (
+            os.environ.get("TEST_MODE") is None
+            and st.session_state.get("show_feature_onboarding")
+            and self.show_onboarding
+        ):
             self._new_feature_onboarding()
         self._open_header()
         st.markdown("<div class='title-section'>", unsafe_allow_html=True)
@@ -5194,6 +5204,7 @@ class GymApp:
                     secondary,
                     tertiary,
                     other,
+                    _video,
                     _,
                 ) in records:
                     exp = st.expander(name)
@@ -5327,6 +5338,7 @@ class GymApp:
                     secondary,
                     tertiary,
                     other,
+                    _video,
                     _,
                 ) in records:
                     exp = st.expander(name)
