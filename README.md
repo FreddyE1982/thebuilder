@@ -150,3 +150,7 @@ Several helper commands are available via `cli.py`.
 - `export`/`backup`/`restore` manage database files and workout exports.
 - `import_strava --csv path --db workout.db` imports workouts from a Strava CSV export.
 
+### ML Model Plugins
+
+Custom machine learning models can be added by placing Python modules in a `plugins` directory. Each module must define a class inheriting from `ml_plugins.MLModelPlugin` and implement `register(service)` to extend the ML service. Plugins are loaded automatically on startup.
+

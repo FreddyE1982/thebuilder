@@ -6,7 +6,7 @@ import io
 import datetime
 import json
 import difflib
-from contextlib import contextmanager
+from contextlib import contextmanager, asynccontextmanager
 from typing import List, Tuple, Optional, Iterable, Set
 
 from config import YamlConfig
@@ -600,10 +600,12 @@ class Database:
     def _ensure_schema(self) -> None:
         with self._connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("PRAGMA foreign_keys=off;")
+            if not (self._db_url and self._db_url.startswith("postgresql")):
+                cursor.execute("PRAGMA foreign_keys=off;")
             for table, (sql, columns) in self._TABLE_DEFINITIONS.items():
                 self._ensure_table(conn, table, sql, columns)
-            cursor.execute("PRAGMA foreign_keys=on;")
+            if not (self._db_url and self._db_url.startswith("postgresql")):
+                cursor.execute("PRAGMA foreign_keys=on;")
 
     def _ensure_views(self) -> None:
         """Create required SQLite views for caching."""
@@ -617,6 +619,20 @@ class Database:
     def _ensure_table(
         self, conn: sqlite3.Connection, table: str, sql: str, columns: List[str]
     ) -> None:
+        if self._db_url and self._db_url.startswith("postgresql"):
+            import re
+            sql_pg = re.sub(
+                r"INTEGER PRIMARY KEY AUTOINCREMENT",
+                "SERIAL PRIMARY KEY",
+                sql,
+            )
+            sql_pg = sql_pg.replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS")
+            try:
+                conn.execute(sql_pg)
+            except Exception:
+                pass
+            return
+
         cur = conn.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name=?;", (table,)
         )
@@ -862,8 +878,22 @@ class BaseRepository(Database):
 class AsyncDatabase(Database):
     """Provides asynchronous connection management."""
 
-    def _async_connection(self) -> aiosqlite.Connection:
-        return aiosqlite.connect(self._db_path)
+    @asynccontextmanager
+    async def _async_connection(self):
+        if self._db_url and self._db_url.startswith("postgresql"):
+            import asyncpg
+            conn = await asyncpg.connect(self._db_url)
+            try:
+                yield conn
+            finally:
+                await conn.close()
+        else:
+            conn = await aiosqlite.connect(self._db_path)
+            try:
+                yield conn
+                await conn.commit()
+            finally:
+                await conn.close()
 
 
 class AsyncBaseRepository(AsyncDatabase):
@@ -871,15 +901,24 @@ class AsyncBaseRepository(AsyncDatabase):
 
     async def execute(self, query: str, params: Tuple = ()) -> int:
         async with self._async_connection() as conn:
-            cursor = await conn.execute(query, params)
-            await conn.commit()
-            return cursor.lastrowid
+            if self._db_url and self._db_url.startswith("postgresql"):
+                await conn.execute(query, *params)
+                rowid = await conn.fetchval("SELECT LASTVAL();")
+                return int(rowid) if rowid is not None else 0
+            else:
+                cursor = await conn.execute(query, params)
+                await conn.commit()
+                return cursor.lastrowid
 
     async def fetch_all(self, query: str, params: Tuple = ()) -> List[Tuple]:
         async with self._async_connection() as conn:
-            cursor = await conn.execute(query, params)
-            rows = await cursor.fetchall()
-            return rows
+            if self._db_url and self._db_url.startswith("postgresql"):
+                rows = await conn.fetch(query, *params)
+                return [tuple(r) for r in rows]
+            else:
+                cursor = await conn.execute(query, params)
+                rows = await cursor.fetchall()
+                return rows
 
     async def _delete_all(self, table: str) -> None:
         await self.execute(f"DELETE FROM {table};")

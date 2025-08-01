@@ -54,7 +54,7 @@
 [complete] 38. Refactor tools.py to separate math utilities from CLI utilities.
 [complete] 39. Add coverage reporting to tests.
 [complete] 40. Document environment variables for deployment in README.
-41. Add support for external database like PostgreSQL.
+[complete] 41. Add support for external database like PostgreSQL.
 41a. Add DB_URL env variable for external database configuration. [complete]
 [complete] 42. Add repository pattern for ml_service states.
 [complete] 43. Add progress bar to Streamlit when uploading CSV files.
@@ -93,7 +93,7 @@
 [complete] 76. Encrypt sensitive settings in YAML with keyring.
 [complete] 77. Add endpoint to clear cached statistics.
 [complete] 78. Provide gender-neutral avatar images in GUI.
-79. Implement plugin architecture for custom ML models.
+[complete] 79. Implement plugin architecture for custom ML models.
 [complete] 80. Add data migration script for schema changes.
 [complete] 81. Implement Slack notifications for workout logs.
 [complete] 82. Add API key management for third-party integrations.
