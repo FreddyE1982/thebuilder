@@ -54,6 +54,7 @@ from db import (
     ExercisePrescriptionLogRepository,
     EmailLogRepository,
     BodyWeightRepository,
+    AsyncBodyWeightRepository,
     WellnessRepository,
     HeartRateRepository,
     StepCountRepository,
@@ -212,6 +213,7 @@ class GymAPI:
         self.prescription_logs = ExercisePrescriptionLogRepository(db_path)
         self.email_logs = EmailLogRepository(db_path)
         self.body_weights = BodyWeightRepository(db_path)
+        self.async_body_weights = AsyncBodyWeightRepository(db_path)
         self.wellness = WellnessRepository(db_path)
         self.heart_rates = HeartRateRepository(db_path)
         self.step_counts = StepCountRepository(db_path)
@@ -2684,7 +2686,7 @@ class GymAPI:
             return result
 
         @self.app.post("/body_weight")
-        def log_body_weight(weight: float, date: str = None):
+        async def log_body_weight(weight: float, date: str = None):
             try:
                 log_date = (
                     datetime.date.today()
@@ -2696,17 +2698,17 @@ class GymAPI:
                     status_code=400,
                     detail="date must be in YYYY-MM-DD format",
                 )
-            wid = self.body_weights.log(log_date.isoformat(), weight)
+            wid = await self.async_body_weights.log(log_date.isoformat(), weight)
             return {"id": wid}
 
         @self.app.get("/body_weight")
-        def list_body_weight(start_date: str = None, end_date: str = None):
-            rows = self.body_weights.fetch_history(start_date, end_date)
+        async def list_body_weight(start_date: str = None, end_date: str = None):
+            rows = await self.async_body_weights.fetch_history(start_date, end_date)
             return [{"id": rid, "date": d, "weight": w} for rid, d, w in rows]
 
         @self.app.get("/body_weight/export_csv")
-        def export_body_weight_csv(start_date: str = None, end_date: str = None):
-            rows = self.body_weights.fetch_history(start_date, end_date)
+        async def export_body_weight_csv(start_date: str = None, end_date: str = None):
+            rows = await self.async_body_weights.fetch_history(start_date, end_date)
             lines = ["Date,Weight"]
             for _rid, d, w in rows:
                 lines.append(f"{d},{w}")
@@ -2717,17 +2719,17 @@ class GymAPI:
             )
 
         @self.app.put("/body_weight/{entry_id}")
-        def update_body_weight(entry_id: int, weight: float, date: str):
+        async def update_body_weight(entry_id: int, weight: float, date: str):
             try:
-                self.body_weights.update(entry_id, date, weight)
+                await self.async_body_weights.update(entry_id, date, weight)
                 return {"status": "updated"}
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
 
         @self.app.delete("/body_weight/{entry_id}")
-        def delete_body_weight(entry_id: int):
+        async def delete_body_weight(entry_id: int):
             try:
-                self.body_weights.delete(entry_id)
+                await self.async_body_weights.delete(entry_id)
                 return {"status": "deleted"}
             except ValueError as e:
                 raise HTTPException(status_code=404, detail=str(e))

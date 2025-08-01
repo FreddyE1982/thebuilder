@@ -10,6 +10,7 @@ from db import (
     AsyncTagRepository,
     AsyncExerciseRepository,
     AsyncReactionRepository,
+    AsyncBodyWeightRepository,
 )
 
 class NumberRepository(AsyncBaseRepository):
@@ -80,4 +81,19 @@ async def test_async_reaction_repo(tmp_path):
     await repo.react(wid, "👍")
     rows = await repo.list_for_workout(wid)
     assert rows == [("👍", 1)]
+
+
+@pytest.mark.asyncio
+async def test_async_body_weight_repo(tmp_path):
+    db_file = str(tmp_path / "bw.db")
+    repo = AsyncBodyWeightRepository(db_file)
+    eid = await repo.log("2024-01-01", 80.5)
+    rows = await repo.fetch_history()
+    assert rows == [(eid, "2024-01-01", 80.5)]
+    await repo.update(eid, "2024-01-02", 82.0)
+    rows = await repo.fetch_history("2024-01-02", "2024-01-02")
+    assert rows[0][2] == 82.0
+    assert rows[0][1] == "2024-01-02"
+    await repo.delete(eid)
+    assert await repo.fetch_history() == []
 

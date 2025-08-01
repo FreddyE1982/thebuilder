@@ -27,13 +27,13 @@
 20b1. Convert WorkoutRepository to AsyncWorkoutRepository. [complete]
 20b2a. Convert TagRepository to AsyncTagRepository. [complete]
 20b2b. Convert ExerciseRepository to AsyncExerciseRepository. [complete]
-20b2. Convert remaining repositories to async versions. [partial]
+20b2. Convert remaining repositories to async versions. [partial - BodyWeightRepository converted]
 20c1. Update REST API workouts endpoints to async. [complete]
 20c2. Update remaining endpoints to async. [partial]
 20d1. Add tests for AsyncWorkoutRepository. [complete]
 20d2a. Add tests for AsyncExerciseRepository. [complete]
 20d2. Update remaining tests for async operations. [partial]
-20d2b. Fix failing StreamlitAppTest cases after async refactor.
+20d2b. Fix failing StreamlitAppTest cases after async refactor. [complete]
 [complete] 21. Add unit tests for ml_service models.
 [complete] 22. Provide interactive charts for power and velocity histories.
 [complete] 23. Add endpoint for exercise alias removal.

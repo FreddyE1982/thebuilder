@@ -3458,6 +3458,64 @@ class BodyWeightRepository(BaseRepository):
         return None
 
 
+class AsyncBodyWeightRepository(AsyncBaseRepository):
+    """Asynchronous repository for body weight logs."""
+
+    async def log(self, date: str, weight: float) -> int:
+        if weight <= 0:
+            raise ValueError("weight must be positive")
+        return await self.execute(
+            "INSERT INTO body_weight_logs (date, weight) VALUES (?, ?);",
+            (date, weight),
+        )
+
+    async def fetch_history(
+        self, start_date: Optional[str] = None, end_date: Optional[str] = None
+    ) -> list[tuple[int, str, float]]:
+        query = "SELECT id, date, weight FROM body_weight_logs WHERE 1=1"
+        params: list[str] = []
+        if start_date:
+            query += " AND date >= ?"
+            params.append(start_date)
+        if end_date:
+            query += " AND date <= ?"
+            params.append(end_date)
+        query += " ORDER BY date;"
+        rows = await self.fetch_all(query, tuple(params))
+        return [(int(r[0]), r[1], float(r[2])) for r in rows]
+
+    async def update(self, entry_id: int, date: str, weight: float) -> None:
+        if weight <= 0:
+            raise ValueError("weight must be positive")
+        rows = await self.fetch_all(
+            "SELECT id FROM body_weight_logs WHERE id = ?;",
+            (entry_id,),
+        )
+        if not rows:
+            raise ValueError("log not found")
+        await self.execute(
+            "UPDATE body_weight_logs SET date = ?, weight = ? WHERE id = ?;",
+            (date, weight, entry_id),
+        )
+
+    async def delete(self, entry_id: int) -> None:
+        rows = await self.fetch_all(
+            "SELECT id FROM body_weight_logs WHERE id = ?;",
+            (entry_id,),
+        )
+        if not rows:
+            raise ValueError("log not found")
+        await self.execute("DELETE FROM body_weight_logs WHERE id = ?;", (entry_id,))
+
+    async def fetch_latest_weight(self) -> float | None:
+        row = await self.fetch_all(
+            "SELECT weight FROM body_weight_logs ORDER BY date DESC LIMIT 1;"
+        )
+        if row:
+            return float(row[0][0])
+        return None
+
+
 class WellnessRepository(BaseRepository):
     """Repository for daily wellness logs."""
 
