@@ -29,6 +29,7 @@ from db import (
     ExerciseRepository,
     SetRepository,
     PlannedWorkoutRepository,
+    AsyncPlannedWorkoutRepository,
     PlannedExerciseRepository,
     PlannedSetRepository,
     TemplateWorkoutRepository,
@@ -181,6 +182,7 @@ class GymAPI:
         self.sets = SetRepository(db_path, self.settings)
         self.async_sets = AsyncSetRepository(db_path, self.settings)
         self.planned_workouts = PlannedWorkoutRepository(db_path)
+        self.async_planned_workouts = AsyncPlannedWorkoutRepository(db_path)
         self.planned_exercises = PlannedExerciseRepository(db_path)
         self.planned_sets = PlannedSetRepository(db_path, self.settings)
         self.template_workouts = TemplateWorkoutRepository(db_path)
@@ -1092,7 +1094,7 @@ class GymAPI:
         @self.app.get("/calendar")
         async def calendar(start_date: str, end_date: str):
             logged = await self.async_workouts.fetch_all_workouts(start_date, end_date)
-            planned = self.planned_workouts.fetch_all(start_date, end_date)
+            planned = await self.async_planned_workouts.fetch_all(start_date, end_date)
             result = []
             for wid, date, _s, _e, _tz, t_type, _notes, _loc, _rating, *_ in logged:
                 result.append(
@@ -1406,18 +1408,18 @@ class GymAPI:
             ]
 
         @self.app.post("/planned_workouts")
-        def create_planned_workout(date: str, training_type: str = "strength"):
-            plan_id = self.planned_workouts.create(date, training_type)
+        async def create_planned_workout(date: str, training_type: str = "strength"):
+            plan_id = await self.async_planned_workouts.create(date, training_type)
             return {"id": plan_id}
 
         @self.app.get("/planned_workouts")
-        def list_planned_workouts(
+        async def list_planned_workouts(
             start_date: str = None,
             end_date: str = None,
             sort_by: str = "id",
             descending: bool = True,
         ):
-            plans = self.planned_workouts.fetch_all(
+            plans = await self.async_planned_workouts.fetch_all(
                 start_date, end_date, sort_by, descending
             )
             return [
@@ -1426,10 +1428,10 @@ class GymAPI:
             ]
 
         @self.app.get("/planned_workouts/weekly")
-        def weekly_planner():
+        async def weekly_planner():
             today = datetime.date.today()
             end = today + datetime.timedelta(days=6)
-            plans = self.planned_workouts.fetch_all(
+            plans = await self.async_planned_workouts.fetch_all(
                 today.isoformat(), end.isoformat(), sort_by="date", descending=False
             )
             return [
@@ -1438,14 +1440,14 @@ class GymAPI:
             ]
 
         @self.app.get("/planned_workouts/search")
-        def search_planned_workouts(
+        async def search_planned_workouts(
             query: str = None,
             training_type: str = None,
             start_date: str = None,
             end_date: str = None,
         ):
-            plans = self.planner.search_plans(
-                query=query,
+            plans = await self.async_planned_workouts.search(
+                query_str=query,
                 training_type=training_type,
                 start_date=start_date,
                 end_date=end_date,
@@ -1456,35 +1458,37 @@ class GymAPI:
             ]
 
         @self.app.put("/planned_workouts/{plan_id}")
-        def update_planned_workout(
+        async def update_planned_workout(
             plan_id: int,
             date: str | None = None,
             training_type: str | None = None,
         ):
             try:
                 if date is not None:
-                    self.planned_workouts.update_date(plan_id, date)
+                    await self.async_planned_workouts.update_date(plan_id, date)
                 if training_type is not None:
-                    self.planned_workouts.set_training_type(plan_id, training_type)
+                    await self.async_planned_workouts.set_training_type(
+                        plan_id, training_type
+                    )
                 return {"status": "updated"}
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
 
         @self.app.delete("/planned_workouts/{plan_id}")
-        def delete_planned_workout(plan_id: int):
+        async def delete_planned_workout(plan_id: int):
             try:
-                self.planned_workouts.delete(plan_id)
+                await self.async_planned_workouts.delete(plan_id)
                 return {"status": "deleted"}
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))
 
         @self.app.post("/planned_workouts/delete_bulk")
-        def delete_planned_bulk(ids: str = Body(...)):
+        async def delete_planned_bulk(ids: str = Body(...)):
             try:
                 plan_ids = [int(i) for i in ids.split(",") if i]
             except ValueError:
                 raise HTTPException(status_code=400, detail="invalid ids")
-            self.planned_workouts.delete_bulk(plan_ids)
+            await self.async_planned_workouts.delete_bulk(plan_ids)
             return {"status": "deleted"}
 
         @self.app.post("/planned_workouts/{plan_id}/duplicate")
@@ -1500,13 +1504,13 @@ class GymAPI:
             summary="Reorder planned workouts",
             description="Update the display order of planned workouts using comma-separated ids.",
         )
-        def reorder_planned(order: str):
+        async def reorder_planned(order: str):
             try:
                 ids = [int(i) for i in order.split(",") if i]
             except ValueError:
                 raise HTTPException(status_code=400, detail="invalid order")
             try:
-                self.planned_workouts.reorder(ids)
+                await self.async_planned_workouts.reorder(ids)
                 return {"status": "updated"}
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e))

@@ -1920,6 +1920,135 @@ class SetRepository(BaseRepository):
         return result
 
 
+class AsyncPlannedWorkoutRepository(AsyncBaseRepository):
+    """Asynchronous repository for planned workouts."""
+
+    async def create(self, date: str, training_type: str = "strength") -> int:
+        rows = await self.fetch_all(
+            "SELECT COALESCE(MAX(position),0)+1 FROM planned_workouts"
+        )
+        pos = int(rows[0][0]) if rows else 1
+        return await self.execute(
+            "INSERT INTO planned_workouts (date, training_type, position) VALUES (?, ?, ?);",
+            (date, training_type, pos),
+        )
+
+    async def fetch_all(
+        self,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        sort_by: str = "position",
+        descending: bool = True,
+    ) -> List[Tuple[int, str, str, int]]:
+        query = "SELECT id, date, training_type, position FROM planned_workouts WHERE 1=1"
+        params: list[str] = []
+        if start_date:
+            query += " AND date >= ?"
+            params.append(start_date)
+        if end_date:
+            query += " AND date <= ?"
+            params.append(end_date)
+        allowed = {"id", "date", "training_type", "position"}
+        if sort_by not in allowed:
+            sort_by = "position"
+        order = "DESC" if descending else "ASC"
+        query += f" ORDER BY {sort_by} {order};"
+        return await super().fetch_all(query, tuple(params))
+
+    async def search(
+        self,
+        query_str: str | None = None,
+        training_type: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> List[Tuple[int, str, str, int]]:
+        query = "SELECT id, date, training_type, position FROM planned_workouts WHERE 1=1"
+        params: list[str] = []
+        if query_str:
+            query += " AND lower(training_type) LIKE ?"
+            params.append(f"%{query_str.lower()}%")
+        if training_type:
+            query += " AND training_type = ?"
+            params.append(training_type)
+        if start_date:
+            query += " AND date >= ?"
+            params.append(start_date)
+        if end_date:
+            query += " AND date <= ?"
+            params.append(end_date)
+        query += " ORDER BY position ASC;"
+        return await super().fetch_all(query, tuple(params))
+
+    async def fetch_detail(self, plan_id: int) -> Tuple[int, str, str]:
+        rows = await super().fetch_all(
+            "SELECT id, date, training_type FROM planned_workouts WHERE id = ?;",
+            (plan_id,),
+        )
+        if not rows:
+            raise ValueError("planned workout not found")
+        return rows[0]
+
+    async def update_date(self, plan_id: int, date: str) -> None:
+        rows = await super().fetch_all(
+            "SELECT id FROM planned_workouts WHERE id = ?;",
+            (plan_id,),
+        )
+        if not rows:
+            raise ValueError("planned workout not found")
+        await self.execute(
+            "UPDATE planned_workouts SET date = ? WHERE id = ?;",
+            (date, plan_id),
+        )
+
+    async def set_training_type(self, plan_id: int, training_type: str) -> None:
+        rows = await super().fetch_all(
+            "SELECT id FROM planned_workouts WHERE id = ?;",
+            (plan_id,),
+        )
+        if not rows:
+            raise ValueError("planned workout not found")
+        await self.execute(
+            "UPDATE planned_workouts SET training_type = ? WHERE id = ?;",
+            (training_type, plan_id),
+        )
+
+    async def delete(self, plan_id: int) -> None:
+        rows = await super().fetch_all(
+            "SELECT id FROM planned_workouts WHERE id = ?;",
+            (plan_id,),
+        )
+        if not rows:
+            raise ValueError("planned workout not found")
+        await self.execute("DELETE FROM planned_workouts WHERE id = ?;", (plan_id,))
+
+    async def delete_bulk(self, plan_ids: list[int]) -> None:
+        if not plan_ids:
+            return
+        placeholders = ",".join("?" for _ in plan_ids)
+        await self.execute(
+            f"DELETE FROM planned_workouts WHERE id IN ({placeholders});",
+            tuple(plan_ids),
+        )
+
+    async def delete_all(self) -> None:
+        await self._delete_all("planned_workouts")
+
+    async def reorder(self, order: list[int]) -> None:
+        existing = [
+            row[0]
+            for row in await super().fetch_all(
+                "SELECT id FROM planned_workouts ORDER BY position;"
+            )
+        ]
+        if set(order) != set(existing) or len(order) != len(existing):
+            raise ValueError("invalid order")
+        for pos, pid in enumerate(order, start=1):
+            await self.execute(
+                "UPDATE planned_workouts SET position = ? WHERE id = ?;",
+                (pos, pid),
+            )
+
+
 class AsyncSetRepository(AsyncBaseRepository):
     """Asynchronous repository for sets table operations."""
 
