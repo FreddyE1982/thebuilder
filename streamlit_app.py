@@ -2908,7 +2908,7 @@ class GymApp:
                     for pid, pdate, ptype, _pos in upcoming[:3]:
                         st.markdown(f"- {pdate} ({ptype})")
         if options:
-            with st.expander("Use Planned Workout", expanded=False):
+            with st.expander("Use Planned Workout", expanded=True):
                 selected = st.selectbox(
                     "Planned Workout",
                     [""] + list(options.keys()),
@@ -6784,55 +6784,8 @@ class GymApp:
         if "delete_target" not in st.session_state:
             st.session_state.delete_target = None
 
-        with st.expander("Data Management", expanded=True):
-            if st.button("Delete All Logged and Planned Workouts"):
-                st.session_state.delete_target = "all"
-            if st.button("Delete All Logged Workouts"):
-                st.session_state.delete_target = "logged"
-            if st.button("Delete All Planned Workouts"):
-                st.session_state.delete_target = "planned"
-            with open(self.workouts._db_path, "rb") as f:
-                st.download_button(
-                    "Backup Database",
-                    f.read(),
-                    file_name="backup.db",
-                    mime="application/octet-stream",
-                )
-            up = st.file_uploader("Restore Backup", type=["db"], key="restore_db")
-            if up and st.button("Restore", key="restore_btn"):
-                Path(self.workouts._db_path).write_bytes(up.getvalue())
-                st.success("Database restored")
-            csv_up = st.file_uploader("Import Workout CSV", type=["csv"], key="import_csv")
-            if csv_up and st.button("Import CSV", key="import_btn"):
-                try:
-                    self._import_workout_csv(csv_up)
-                except Exception as e:
-                    st.error(str(e))
-
-        target = st.session_state.get("delete_target")
-        if target:
-
-            def _content() -> None:
-                text = st.text_input("Type 'Yes, I confirm' to delete")
-                if st.button("Confirm"):
-                    if text == "Yes, I confirm":
-                        if target == "all":
-                            self.workouts.delete_all()
-                            self.planned_workouts.delete_all()
-                        elif target == "logged":
-                            self.workouts.delete_all()
-                        elif target == "planned":
-                            self.planned_workouts.delete_all()
-                        st.success("Data deleted")
-                        st.session_state.delete_target = None
-                    else:
-                        st.warning("Confirmation failed")
-                if st.button("Cancel"):
-                    st.session_state.delete_target = None
-
-            self._show_dialog("Confirm Deletion", _content)
-
         (
+            settings_tab,
             gen_tab,
             tag_tab,
             eq_tab,
@@ -6844,6 +6797,7 @@ class GymApp:
             auto_tab,
         ) = st.tabs(
             [
+                translator.gettext("Settings"),
                 translator.gettext("General"),
                 translator.gettext("Workout Tags"),
                 translator.gettext("Equipment"),
@@ -7657,6 +7611,55 @@ class GymApp:
                     f"Last Prediction: <span class='badge warning'>{pred_time}</span>",
                     unsafe_allow_html=True,
                 )
+
+        with settings_tab:
+            with st.expander("Data Management", expanded=True):
+                if st.button("Delete All Logged and Planned Workouts"):
+                    st.session_state.delete_target = "all"
+                if st.button("Delete All Logged Workouts"):
+                    st.session_state.delete_target = "logged"
+                if st.button("Delete All Planned Workouts"):
+                    st.session_state.delete_target = "planned"
+                with open(self.workouts._db_path, "rb") as f:
+                    st.download_button(
+                        "Backup Database",
+                        f.read(),
+                        file_name="backup.db",
+                        mime="application/octet-stream",
+                    )
+                up = st.file_uploader("Restore Backup", type=["db"], key="restore_db")
+                if up and st.button("Restore", key="restore_btn"):
+                    Path(self.workouts._db_path).write_bytes(up.getvalue())
+                    st.success("Database restored")
+                csv_up = st.file_uploader("Import Workout CSV", type=["csv"], key="import_csv")
+                if csv_up and st.button("Import CSV", key="import_btn"):
+                    try:
+                        self._import_workout_csv(csv_up)
+                    except Exception as e:
+                        st.error(str(e))
+
+            target = st.session_state.get("delete_target")
+            if target:
+
+                def _content() -> None:
+                    text = st.text_input("Type 'Yes, I confirm' to delete")
+                    if st.button("Confirm"):
+                        if text == "Yes, I confirm":
+                            if target == "all":
+                                self.workouts.delete_all()
+                                self.planned_workouts.delete_all()
+                            elif target == "logged":
+                                self.workouts.delete_all()
+                            elif target == "planned":
+                                self.planned_workouts.delete_all()
+                            st.success("Data deleted")
+                            st.session_state.delete_target = None
+                        else:
+                            st.warning("Confirmation failed")
+                    if st.button("Cancel"):
+                        st.session_state.delete_target = None
+
+                self._show_dialog("Confirm Deletion", _content)
 
 
 if __name__ == "__main__":
