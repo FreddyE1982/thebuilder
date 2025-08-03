@@ -645,6 +645,7 @@ class Database:
         if existing_cols == columns:
             return
 
+        conn.execute(f"DROP TABLE IF EXISTS {table}_old;")
         conn.execute(f"ALTER TABLE {table} RENAME TO {table}_old;")
         conn.execute(sql)
 

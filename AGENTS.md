@@ -528,3 +528,4 @@ keep the AGENTS.md updated by adding new sensible rules when they occur to you. 
 - Multiuser features are prohibited. The application must remain single-user and any existing multiuser functionality should be removed.
 - The "Jump to Section" dropdown has been removed from the UI and must not be reintroduced.
 - When replacing expanders with tabs, corresponding GUI tests must be updated to verify tab behavior.
+- Schema migrations must drop any leftover tables suffixed with `_old` before renaming to avoid conflicts.
