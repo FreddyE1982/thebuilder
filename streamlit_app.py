@@ -609,7 +609,7 @@ class GymApp:
         st.session_state.is_tablet = mode == "tablet"
         components.html(
             (
-                """
+                r"""
             <script>
             function setMode() {
                 const w = Math.min(window.innerWidth, window.innerHeight);
