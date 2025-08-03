@@ -69,7 +69,13 @@ class StreamlitAppTest(unittest.TestCase):
             self.fail(f"Tab {label} not found")
         if len(matches) == 1:
             return matches[0]
-        expected = {"General", "Workout Tags", "Equipment", "Exercise Management", "Muscles"}
+        expected = {
+            "General",
+            "Workout Tags",
+            "Equipment",
+            "Exercise Management",
+            "Muscles",
+        }
         for m in matches:
             sub_labels = {st.label for st in getattr(m, "tabs", [])}
             if expected.issubset(sub_labels):
@@ -149,9 +155,7 @@ class StreamlitAppTest(unittest.TestCase):
         ids = [r[0] for r in cur.fetchall()]
         conn.close()
 
-        ex_idx = _find_by_label(
-            self.at.tabs, "Barbell Bench Press (Olympic Barbell)"
-        )
+        ex_idx = _find_by_label(self.at.tabs, "Barbell Bench Press (Olympic Barbell)")
         exp = self.at.tabs[ex_idx]
         btn_idx = _find_by_label(exp.button, "Move Down", key=f"move_down_{ids[0]}")
         exp.button[btn_idx].click().run()
@@ -162,6 +166,41 @@ class StreamlitAppTest(unittest.TestCase):
         new_order = [r[0] for r in cur.fetchall()]
         conn.close()
         self.assertEqual(new_order, [ids[1], ids[0], ids[2]])
+
+    def test_multiple_exercises_weight_unit_select(self) -> None:
+        idx_new = _find_by_label(
+            self.at.button,
+            "New Workout",
+            key="FormSubmitter:new_workout_form-New Workout",
+        )
+        self.at.button[idx_new].click().run()
+        idx_ex = _find_by_label(self.at.selectbox, "Exercise", "Barbell Bench Press")
+        self.at.selectbox[idx_ex].select("Barbell Bench Press").run()
+        idx_eq = _find_by_label(self.at.selectbox, "Equipment Name", "Olympic Barbell")
+        self.at.selectbox[idx_eq].select("Olympic Barbell").run()
+        idx_add_ex = _find_by_label(self.at.button, "Add Exercise", key="add_ex_btn")
+        self.at.button[idx_add_ex].click().run()
+
+        idx_ex2 = _find_by_label(self.at.selectbox, "Exercise", "Squat")
+        self.at.selectbox[idx_ex2].select("Squat").run()
+        idx_eq2 = _find_by_label(self.at.selectbox, "Equipment Name", "Power Rack")
+        self.at.selectbox[idx_eq2].select("Power Rack").run()
+        self.at.button[idx_add_ex].click().run()
+
+        unit_idx1 = _find_by_label(
+            self.at.selectbox, "Unit", option="kg", key="weight_unit_select_1"
+        )
+        unit_idx2 = _find_by_label(
+            self.at.selectbox, "Unit", option="kg", key="weight_unit_select_2"
+        )
+        self.at.selectbox[unit_idx1].select("lb").run()
+        self.at.selectbox[unit_idx2].select("kg").run()
+
+        conn = self._connect()
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM exercises;")
+        self.assertEqual(cur.fetchone()[0], 2)
+        conn.close()
 
     def test_workout_metadata(self) -> None:
         idx_new = _find_by_label(
@@ -265,6 +304,7 @@ class StreamlitAppTest(unittest.TestCase):
         ex_exp = self.at.tabs[exp_idx]
         options = ex_exp.selectbox[0].options
         self.assertGreaterEqual(len(options), 1)
+
     def test_plan_to_workout(self) -> None:
         idx_date = _find_by_label(self.at.date_input, "Plan Date", key="plan_date")
         self.at.date_input[idx_date].set_value("2024-01-02").run()
@@ -505,9 +545,7 @@ class StreamlitAppTest(unittest.TestCase):
         idx_add_set = _find_by_label(self.at.button, "Add Set", key="add_set_1")
         self.at.button[idx_add_set].click().run()
 
-        ex_idx = _find_by_label(
-            self.at.tabs, "Barbell Bench Press (Olympic Barbell)"
-        )
+        ex_idx = _find_by_label(self.at.tabs, "Barbell Bench Press (Olympic Barbell)")
         ex_exp = self.at.tabs[ex_idx]
         set_exp = next(e for e in ex_exp.tabs if e.label.startswith("Set 1"))
         set_exp.number_input[1].set_value(110.0).run()
@@ -732,9 +770,7 @@ class StreamlitAppTest(unittest.TestCase):
         idx_add_ex = _find_by_label(self.at.button, "Add Exercise", key="add_ex_btn")
         self.at.button[idx_add_ex].click().run()
         self.at.run()
-        ex_idx = _find_by_label(
-            self.at.tabs, "Barbell Bench Press (Olympic Barbell)"
-        )
+        ex_idx = _find_by_label(self.at.tabs, "Barbell Bench Press (Olympic Barbell)")
         exp = self.at.tabs[ex_idx]
         btn_idx = _find_by_label(exp.button, "Dumbbell Bench Press")
         exp.button[btn_idx].click().run()
@@ -853,9 +889,7 @@ class StreamlitAppTest(unittest.TestCase):
         self.at.selectbox[idx_eq].select("Olympic Barbell").run()
         idx_add_ex = _find_by_label(self.at.button, "Add Exercise", key="add_ex_btn")
         self.at.button[idx_add_ex].click().run()
-        ex_idx = _find_by_label(
-            self.at.tabs, "Barbell Bench Press (Olympic Barbell)"
-        )
+        ex_idx = _find_by_label(self.at.tabs, "Barbell Bench Press (Olympic Barbell)")
         exp = self.at.tabs[ex_idx]
         rm_idx = _find_by_label(exp.button, "Remove Exercise", key="remove_ex_1")
         exp.button[rm_idx].click().run()
@@ -1020,7 +1054,6 @@ class StreamlitAppTest(unittest.TestCase):
         self.assertEqual(res, "07:00")
 
 
-
 class StreamlitFullGUITest(unittest.TestCase):
     def setUp(self) -> None:
         self.db_path = "test_gui_full.db"
@@ -1049,7 +1082,13 @@ class StreamlitFullGUITest(unittest.TestCase):
             self.fail(f"Tab {label} not found")
         if len(matches) == 1:
             return matches[0]
-        expected = {"General", "Workout Tags", "Equipment", "Exercise Management", "Muscles"}
+        expected = {
+            "General",
+            "Workout Tags",
+            "Equipment",
+            "Exercise Management",
+            "Muscles",
+        }
         for m in matches:
             sub_labels = {st.label for st in getattr(m, "tabs", [])}
             if expected.issubset(sub_labels):
@@ -1318,6 +1357,7 @@ class StreamlitAdditionalGUITest(unittest.TestCase):
             if os.path.exists(path):
                 os.remove(path)
         from db import MLModelRepository
+
         MLModelRepository(self.db_path)
         os.environ["DB_PATH"] = self.db_path
         os.environ["YAML_PATH"] = self.yaml_path
@@ -1512,7 +1552,13 @@ class StreamlitTemplateWorkflowTest(unittest.TestCase):
             self.fail(f"Tab {label} not found")
         if len(matches) == 1:
             return matches[0]
-        expected = {"General", "Workout Tags", "Equipment", "Exercise Management", "Muscles"}
+        expected = {
+            "General",
+            "Workout Tags",
+            "Equipment",
+            "Exercise Management",
+            "Muscles",
+        }
         for m in matches:
             sub_labels = {st.label for st in getattr(m, "tabs", [])}
             if expected.issubset(sub_labels):
@@ -1589,7 +1635,13 @@ class StreamlitHeartRateGUITest(unittest.TestCase):
             self.fail(f"Tab {label} not found")
         if len(matches) == 1:
             return matches[0]
-        expected = {"General", "Workout Tags", "Equipment", "Exercise Management", "Muscles"}
+        expected = {
+            "General",
+            "Workout Tags",
+            "Equipment",
+            "Exercise Management",
+            "Muscles",
+        }
         for m in matches:
             sub_labels = {st.label for st in getattr(m, "tabs", [])}
             if expected.issubset(sub_labels):
@@ -1618,6 +1670,7 @@ class StreamlitHeartRateGUITest(unittest.TestCase):
         cur.execute("SELECT heart_rate FROM heart_rate_logs WHERE workout_id = 1;")
         self.assertEqual(cur.fetchone()[0], 120)
         conn.close()
+
     def test_compact_mode_toggle(self) -> None:
         self.at.query_params["tab"] = "settings"
         self.at.run()
@@ -1636,7 +1689,6 @@ class StreamlitHeartRateGUITest(unittest.TestCase):
         val = cur.fetchone()[0]
         conn.close()
         self.assertEqual(bool(int(val)), not current)
-
 
 
 @unittest.skip("Unstable in CI")
@@ -1716,6 +1768,7 @@ class RecommendationIntegrationTest(unittest.TestCase):
                 os.remove(path)
         # Ensure ML model tables exist before the app loads
         from db import MLModelRepository
+
         MLModelRepository(self.db_path)
         os.environ["DB_PATH"] = self.db_path
         os.environ["YAML_PATH"] = self.yaml_path
@@ -1736,7 +1789,13 @@ class RecommendationIntegrationTest(unittest.TestCase):
             self.fail(f"Tab {label} not found")
         if len(matches) == 1:
             return matches[0]
-        expected = {"General", "Workout Tags", "Equipment", "Exercise Management", "Muscles"}
+        expected = {
+            "General",
+            "Workout Tags",
+            "Equipment",
+            "Exercise Management",
+            "Muscles",
+        }
         for m in matches:
             sub_labels = {st.label for st in getattr(m, "tabs", [])}
             if expected.issubset(sub_labels):
@@ -1754,7 +1813,6 @@ class RecommendationIntegrationTest(unittest.TestCase):
         tab = self._get_tab("Settings")
         has_dm = any(e.label == "Data Management" for e in tab.tabs)
         self.assertTrue(has_dm)
-
 
 
 if __name__ == "__main__":

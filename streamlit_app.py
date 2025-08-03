@@ -22,12 +22,14 @@ warnings.filterwarnings("ignore", category=AltairDeprecationWarning)
 
 from streamlit.delta_generator import DeltaGenerator
 
+
 @contextmanager
 def _tab_expander(self: DeltaGenerator, label: str, expanded: bool = False):
     """Replacement for Streamlit expander using nested tabs."""
     tab = self.tabs([label])[0]
     with tab:
         yield
+
 
 DeltaGenerator.expander = _tab_expander  # type: ignore[attr-defined]
 st.expander = _tab_expander.__get__(st, DeltaGenerator)
@@ -112,7 +114,9 @@ class LayoutManager:
 
     def start_page(self) -> None:
         st.markdown("<div class='page-wrapper'>", unsafe_allow_html=True)
-        st.markdown("<div id='unsaved-indicator'>Unsaved changes</div>", unsafe_allow_html=True)
+        st.markdown(
+            "<div id='unsaved-indicator'>Unsaved changes</div>", unsafe_allow_html=True
+        )
 
     def end_page(self) -> None:
         st.markdown("</div>", unsafe_allow_html=True)
@@ -222,7 +226,9 @@ class GymApp:
         self.auto_dark_mode = self.settings_repo.get_bool("auto_dark_mode", False)
         self.compact_mode = self.settings_repo.get_bool("compact_mode", False)
         self.simple_mode = self.settings_repo.get_bool("simple_mode", False)
-        self.hide_advanced_charts = self.settings_repo.get_bool("hide_advanced_charts", False)
+        self.hide_advanced_charts = self.settings_repo.get_bool(
+            "hide_advanced_charts", False
+        )
         self.show_est_1rm = self.settings_repo.get_bool("show_est_1rm", True)
         self.large_font = self.settings_repo.get_bool("large_font_mode", False)
         self.side_nav = self.settings_repo.get_bool("side_nav", False)
@@ -240,7 +246,9 @@ class GymApp:
         self.timezone = self.settings_repo.get_text("timezone", "UTC")
         self.language = self.settings_repo.get_text("language", "en")
         translator.set_language(self.language)
-        self.weight_increment = self.settings_repo.get_float("quick_weight_increment", 0.5)
+        self.weight_increment = self.settings_repo.get_float(
+            "quick_weight_increment", 0.5
+        )
         self.quick_weights = [
             float(v)
             for v in self.settings_repo.get_text(
@@ -450,7 +458,8 @@ class GymApp:
                 pass
         pct = int((1 - remaining / rest_sec) * 100)
         st.markdown(
-            f"<div id='rest-timer'>Rest: {remaining}s ({pct}%)</div>", unsafe_allow_html=True
+            f"<div id='rest-timer'>Rest: {remaining}s ({pct}%)</div>",
+            unsafe_allow_html=True,
         )
         sid = st.session_state.get("flash_set")
         if sid:
@@ -1837,9 +1846,7 @@ class GymApp:
     def _quick_search(self, prefix: str) -> None:
         """Search workouts or exercises and open them."""
         query = st.text_input("Search", key=f"{prefix}_search")
-        w_sug = (
-            self.workouts.search(query)[:5] if query and len(query) >= 2 else []
-        )
+        w_sug = self.workouts.search(query)[:5] if query and len(query) >= 2 else []
         e_sug = (
             self.exercise_names_repo.search(query)[:5]
             if query and len(query) >= 2
@@ -2228,7 +2235,6 @@ class GymApp:
         """End main content container."""
         self.layout.close_content()
 
-
     def _reset_equipment_filters(self) -> None:
         """Clear equipment library filter inputs."""
         st.session_state.lib_eq_type = []
@@ -2350,7 +2356,9 @@ class GymApp:
         """Show features added in new versions."""
 
         def _content() -> None:
-            st.markdown("- New high contrast theme available\n- Weight conversion calculator in CLI\n- Advanced charts toggle")
+            st.markdown(
+                "- New high contrast theme available\n- Weight conversion calculator in CLI\n- Advanced charts toggle"
+            )
             if st.button("Close", key="wn_close"):
                 self.settings_repo.set_text("app_version", APP_VERSION)
                 st.session_state.show_whats_new = False
@@ -2716,9 +2724,8 @@ class GymApp:
                     st.session_state.selected_workout = wid
                 except Exception:
                     pass
-        if (
-            self.show_onboarding
-            and not self.settings_repo.get_bool("onboarding_complete", False)
+        if self.show_onboarding and not self.settings_repo.get_bool(
+            "onboarding_complete", False
         ):
             self._onboarding_wizard()
         if (
@@ -2727,9 +2734,8 @@ class GymApp:
             and not st.session_state.get("show_whats_new")
         ):
             st.session_state.show_whats_new = True
-        if (
-            os.environ.get("TEST_MODE") is None
-            and st.session_state.get("show_whats_new")
+        if os.environ.get("TEST_MODE") is None and st.session_state.get(
+            "show_whats_new"
         ):
             self._whats_new_dialog()
         if (
@@ -3043,7 +3049,9 @@ class GymApp:
                     help="Select the primary training focus",
                 )
                 new_location = st.text_input(
-                    "Location", key="new_workout_location", help="Where the workout takes place"
+                    "Location",
+                    key="new_workout_location",
+                    help="Where the workout takes place",
                 )
                 new_icon = st.text_input("Icon", key="new_workout_icon")
                 st.markdown("</div>", unsafe_allow_html=True)
@@ -3170,8 +3178,7 @@ class GymApp:
                     st.write(f"Start: {self._format_time(start_time)}")
                     if not end_time:
                         elapsed = (
-                            self._now()
-                            - datetime.datetime.fromisoformat(start_time)
+                            self._now() - datetime.datetime.fromisoformat(start_time)
                         ).total_seconds()
                         st.write(f"Time: {int(elapsed)}s")
                 if end_time:
@@ -3295,7 +3302,10 @@ class GymApp:
             with st.form("new_plan_form"):
                 st.markdown("<div class='form-grid'>", unsafe_allow_html=True)
                 plan_date = st.date_input(
-                    "Plan Date", datetime.date.today(), key="plan_date", help="Date the workout is planned for"
+                    "Plan Date",
+                    datetime.date.today(),
+                    key="plan_date",
+                    help="Date the workout is planned for",
                 )
                 plan_type = st.selectbox(
                     "Training Type",
@@ -3509,12 +3519,14 @@ class GymApp:
                 )
             if st.button("Repeat Last Set", key=f"repeat_{exercise_id}"):
                 self._repeat_last_set(exercise_id)
+            weight_key = f"weight_unit_select_{exercise_id}"
             unit = st.selectbox(
                 "Unit",
                 ["kg", "lb"],
                 index=0 if self._current_weight_unit() == "kg" else 1,
-                key="weight_unit_select",
+                key=weight_key,
                 on_change=self._update_weight_unit,
+                args=(weight_key,),
             )
             if equipment:
                 muscles = self.equipment.fetch_muscles(equipment)
@@ -3577,7 +3589,9 @@ class GymApp:
                         status_label = "Idle"
                     registered = start_time is not None and end_time is not None
                     row_class = "set-registered" if registered else "set-unregistered"
-                    status_badge = f"<span class='badge {status_class}'>{status_label}</span>"
+                    status_badge = (
+                        f"<span class='badge {status_class}'>{status_label}</span>"
+                    )
                     if st.session_state.get("flash_set") == set_id:
                         row_class += " flash"
                         st.session_state.flash_set = None
@@ -3662,18 +3676,14 @@ class GymApp:
                             if start_col.button("Start", key=f"start_set_{set_id}"):
                                 self.sets.set_start_time(
                                     set_id,
-                                    self._now().isoformat(
-                                        timespec="seconds"
-                                    ),
+                                    self._now().isoformat(timespec="seconds"),
                                 )
                                 st.session_state.set_timer_start = time.time()
                                 self._trigger_refresh()
                             if finish_col.button("Finish", key=f"finish_set_{set_id}"):
                                 self.sets.set_end_time(
                                     set_id,
-                                    self._now().isoformat(
-                                        timespec="seconds"
-                                    ),
+                                    self._now().isoformat(timespec="seconds"),
                                 )
                                 st.session_state.pop("set_timer_start", None)
                             self._trigger_refresh()
@@ -4122,12 +4132,16 @@ class GymApp:
         note: str,
         duration: float,
         warmup: bool = False,
-        ) -> None:
+    ) -> None:
         """Create a new set and record gamification metrics."""
         sid = self.sets.add(
             exercise_id,
             int(reps),
-            float(weight) / 2.20462 if self._current_weight_unit() == "lb" else float(weight),
+            (
+                float(weight) / 2.20462
+                if self._current_weight_unit() == "lb"
+                else float(weight)
+            ),
             int(rpe),
             note or None,
             warmup=warmup,
@@ -4146,8 +4160,11 @@ class GymApp:
         st.session_state[f"open_add_set_{exercise_id}"] = True
         self._trigger_refresh()
 
-    def _update_weight_unit(self) -> None:
-        val = st.session_state.get("weight_unit_select", self.weight_unit)
+    def _update_weight_unit(self, key: str) -> None:
+        val = st.session_state.get(key, self.weight_unit)
+        for k in list(st.session_state.keys()):
+            if k.startswith("weight_unit_select_"):
+                st.session_state[k] = val
         st.session_state.weight_unit_override = val
         self._trigger_refresh()
 
@@ -4246,6 +4263,7 @@ class GymApp:
 
     def _import_workout_csv(self, file) -> None:
         import csv
+
         text = file.getvalue().decode("utf-8")
         reader = csv.DictReader(text.splitlines())
         required = {"Exercise", "Equipment", "Reps", "Weight", "RPE"}
@@ -4882,7 +4900,9 @@ class GymApp:
                     "Weight", min_value=0.0, step=0.5, key=f"tmpl_new_w_{exercise_id}"
                 )
                 rpe = st.selectbox(
-                    "RPE", options=self._rpe_options(), key=f"tmpl_new_rpe_{exercise_id}"
+                    "RPE",
+                    options=self._rpe_options(),
+                    key=f"tmpl_new_rpe_{exercise_id}",
                 )
                 if st.button("Add Set", key=f"tmpl_add_set_{exercise_id}"):
                     self.template_sets.add(
@@ -5422,9 +5442,11 @@ class GymApp:
     def _history_tab(self) -> None:
         st.header("Workout History")
         months = self.workouts.monthly_counts()
-        html = "<div class='month-timeline'>" + "".join(
-            f"<div class='month'>{m} ({c})</div>" for m, c in months
-        ) + "</div>"
+        html = (
+            "<div class='month-timeline'>"
+            + "".join(f"<div class='month'>{m} ({c})</div>" for m, c in months)
+            + "</div>"
+        )
         st.markdown(html, unsafe_allow_html=True)
         favs = self.favorite_workouts_repo.fetch_all()
         top_tabs = st.tabs(["Favorites", "List", "Summary", "Timeline"])
@@ -5543,7 +5565,9 @@ class GymApp:
                 elif start_time and not end_time:
                     status_class = "status-running"
                     status_label = "Running"
-                status_badge = f"<span class='badge {status_class}'>{status_label}</span>"
+                status_badge = (
+                    f"<span class='badge {status_class}'>{status_label}</span>"
+                )
                 label = f"{date} {badge} {status_badge}"
                 if date in pr_dates:
                     label = f"**{label}**"
@@ -5551,7 +5575,9 @@ class GymApp:
 
             if labels:
                 wk_tabs = st.tabs(labels)
-                for tab, (wid, date, start_time, end_time, training_type, *_ ) in zip(wk_tabs, workouts):
+                for tab, (wid, date, start_time, end_time, training_type, *_) in zip(
+                    wk_tabs, workouts
+                ):
                     with tab:
                         summary = self.sets.workout_summary(wid)
                         st.markdown(
@@ -5658,7 +5684,9 @@ class GymApp:
                             prev = self.stats.previous_personal_record(name, w_date)
                             improv = ""
                             if prev:
-                                diff = MathTools.epley_1rm(weight, reps) - prev["est_1rm"]
+                                diff = (
+                                    MathTools.epley_1rm(weight, reps) - prev["est_1rm"]
+                                )
                                 if diff > 0:
                                     improv = f" (+{diff:.2f}kg)"
                             st.markdown(
@@ -5941,8 +5969,8 @@ class GymApp:
             with col2:
                 end = st.date_input("End", datetime.date.today(), key="pr_track_end")
             if st.button("Reset", key="pr_track_reset"):
-                st.session_state.pr_track_start = datetime.date.today() - datetime.timedelta(
-                    days=180
+                st.session_state.pr_track_start = (
+                    datetime.date.today() - datetime.timedelta(days=180)
                 )
                 st.session_state.pr_track_end = datetime.date.today()
                 st.session_state.pr_track_ex = ""
@@ -6650,9 +6678,7 @@ class GymApp:
         if not rows:
             st.info("No upcoming plans")
             return
-        df = pd.DataFrame([
-            {"date": row[1], "type": row[2]} for row in rows
-        ])
+        df = pd.DataFrame([{"date": row[1], "type": row[2]} for row in rows])
         df["date"] = pd.to_datetime(df["date"])
         chart = (
             alt.Chart(df)
@@ -6762,14 +6788,18 @@ class GymApp:
                     pct = (current / gval * 100) if gval else 0
                     metrics.append((gname, f"{pct:.1f}%"))
                 self._metric_grid(metrics)
-                df = pd.DataFrame([
-                    {"goal": m[0], "progress": float(m[1].strip('%'))}
-                    for m in metrics
-                ])
+                df = pd.DataFrame(
+                    [
+                        {"goal": m[0], "progress": float(m[1].strip("%"))}
+                        for m in metrics
+                    ]
+                )
                 chart = (
                     alt.Chart(df)
                     .mark_arc(innerRadius=40)
-                    .encode(theta="progress", color="goal", tooltip=["goal", "progress"])
+                    .encode(
+                        theta="progress", color="goal", tooltip=["goal", "progress"]
+                    )
                 )
                 st.altair_chart(chart, use_container_width=True)
 
@@ -6812,9 +6842,7 @@ class GymApp:
 
         with gen_tab:
             st.header(translator.gettext("General Settings"))
-            with st.expander(
-                translator.gettext("Display Settings"), expanded=True
-            ):
+            with st.expander(translator.gettext("Display Settings"), expanded=True):
                 bw = st.number_input(
                     "Body Weight (kg)",
                     min_value=1.0,
@@ -6844,7 +6872,15 @@ class GymApp:
                     value=self.auto_dark_mode,
                     help="Match theme to system preference",
                 )
-                colors = ["red", "blue", "green", "purple", "colorblind", "highcontrast", "custom"]
+                colors = [
+                    "red",
+                    "blue",
+                    "green",
+                    "purple",
+                    "colorblind",
+                    "highcontrast",
+                    "custom",
+                ]
                 color_opt = st.selectbox(
                     "Color Theme",
                     colors,
@@ -6947,7 +6983,11 @@ class GymApp:
                     step=1.0,
                 )
                 spacing_in = st.slider(
-                    "Layout Spacing", 0.5, 3.0, value=float(self.layout_spacing), step=0.1
+                    "Layout Spacing",
+                    0.5,
+                    3.0,
+                    value=float(self.layout_spacing),
+                    step=0.1,
                 )
                 flex_grid_opt = st.checkbox(
                     "Flex Metric Grid",
@@ -7192,7 +7232,9 @@ class GymApp:
                 self.settings_repo.set_bool("collapse_header", collapse_header_opt)
                 self.collapse_header = collapse_header_opt
                 self.settings_repo.set_text("hotkey_add_set", add_key_in or "a")
-                self.settings_repo.set_text("hotkey_repeat_last_set", repeat_key_in or "r")
+                self.settings_repo.set_text(
+                    "hotkey_repeat_last_set", repeat_key_in or "r"
+                )
                 self.settings_repo.set_text("hotkey_tab_keys", tab_keys_in or "1,2,3,4")
                 self.settings_repo.set_text("hotkey_toggle_theme", toggle_key_in or "d")
                 self.settings_repo.set_text("quick_weights", qw_in)
@@ -7631,7 +7673,9 @@ class GymApp:
                 if up and st.button("Restore", key="restore_btn"):
                     Path(self.workouts._db_path).write_bytes(up.getvalue())
                     st.success("Database restored")
-                csv_up = st.file_uploader("Import Workout CSV", type=["csv"], key="import_csv")
+                csv_up = st.file_uploader(
+                    "Import Workout CSV", type=["csv"], key="import_csv"
+                )
                 if csv_up and st.button("Import CSV", key="import_btn"):
                     try:
                         self._import_workout_csv(csv_up)
