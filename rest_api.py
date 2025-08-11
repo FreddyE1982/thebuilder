@@ -87,7 +87,8 @@ from ml_service import (
     InjuryRiskModelService,
     AdaptationModelService,
 )
-from tools import ExercisePrescription, MathTools
+from algorithms.exercise_prescription import ExercisePrescription
+from algorithms.math_tools import MathTools
 from cli_tools import GitTools
 
 

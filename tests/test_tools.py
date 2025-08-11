@@ -4,7 +4,9 @@ import math
 import unittest
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-from tools import MathTools, ExercisePrescription, WeightConverter
+from algorithms.math_tools import MathTools
+from algorithms.exercise_prescription import ExercisePrescription
+from algorithms.weight_converter import WeightConverter
 from db import PyramidTestRepository, PyramidEntryRepository
 
 

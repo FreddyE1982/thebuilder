@@ -20,7 +20,9 @@ from ml_service import (
     InjuryRiskModelService,
     AdaptationModelService,
 )
-from tools import MathTools, ExerciseProgressEstimator, ExercisePrescription
+from algorithms.math_tools import MathTools
+from algorithms.exercise_progress_estimator import ExerciseProgressEstimator
+from algorithms.exercise_prescription import ExercisePrescription
 
 
 class StatisticsService:
