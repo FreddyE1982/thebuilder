@@ -83,7 +83,7 @@ from ml_service import (
     ProgressModelService,
     RLGoalModelService,
 )
-from tools import MathTools
+from algorithms.math_tools import MathTools
 from cli_tools import GitTools
 
 # Preinitialize session state for library widget keys to prevent missing state

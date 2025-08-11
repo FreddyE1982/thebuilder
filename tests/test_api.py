@@ -12,7 +12,8 @@ import json
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from rest_api import GymAPI
-from tools import MathTools, ExercisePrescription
+from algorithms.math_tools import MathTools
+from algorithms.exercise_prescription import ExercisePrescription
 
 
 class APITestCase(unittest.TestCase):

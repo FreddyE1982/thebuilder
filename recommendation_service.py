@@ -11,10 +11,10 @@ from db import (
     GoalRepository,
     ExercisePrescriptionLogRepository,
 )
-from tools import ExercisePrescription
+from algorithms.exercise_prescription import ExercisePrescription
 from gamification_service import GamificationService
 from ml_service import PerformanceModelService, RLGoalModelService
-from tools import MathTools
+from algorithms.math_tools import MathTools
 
 
 class RecommendationService:

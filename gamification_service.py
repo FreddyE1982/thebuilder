@@ -6,7 +6,7 @@ from db import (
     SettingsRepository,
     WorkoutRepository,
 )
-from tools import MathTools
+from algorithms.math_tools import MathTools
 
 
 class GamificationService:

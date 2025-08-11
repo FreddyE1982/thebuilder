@@ -7,7 +7,7 @@ import subprocess
 from typing import Optional
 
 from db import WorkoutRepository, SetRepository
-from tools import WeightConverter
+from algorithms.weight_converter import WeightConverter
 from cli_tools import GitTools
 from rest_api import GymAPI
 import requests
